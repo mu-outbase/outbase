@@ -5,19 +5,17 @@ let db;
 let seconds = 0;
 let timerInterval = null;
 let gpsWatcher = null;
-
 let currentSession = null;
 let photos = [];
 let notes = [];
 let audioRecords = [];
 let gpsHistory = [];
-
 let mediaRecorder = null;
 let audioChunks = [];
-
 let startGps = "未取得";
 let endGps = "未取得";
 let distanceKm = "未取得";
+let mapInstance = null;
 
 function createId(){
   return "ob_" + Date.now() + "_" + Math.floor(Math.random()*100000);
@@ -26,25 +24,19 @@ function createId(){
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME,DB_VERSION);
-
     request.onupgradeneeded = e => {
       db = e.target.result;
-
       if(!db.objectStoreNames.contains("records")){
         db.createObjectStore("records",{keyPath:"id"});
       }
     };
-
     request.onsuccess = e => {
       db = e.target.result;
-      document.getElementById("storageInfo").innerHTML =
-        "保存基盤：IndexedDB";
+      document.getElementById("storageInfo").innerHTML = "保存基盤：IndexedDB";
       resolve(db);
     };
-
     request.onerror = () => {
-      document.getElementById("storageInfo").innerHTML =
-        "保存基盤：エラー";
+      document.getElementById("storageInfo").innerHTML = "保存基盤：エラー";
       reject();
     };
   });
@@ -54,6 +46,15 @@ function saveRecord(record){
   return new Promise((resolve,reject)=>{
     const tx = db.transaction("records","readwrite");
     tx.objectStore("records").put(record);
+    tx.oncomplete = resolve;
+    tx.onerror = reject;
+  });
+}
+
+function deleteRecord(id){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction("records","readwrite");
+    tx.objectStore("records").delete(id);
     tx.oncomplete = resolve;
     tx.onerror = reject;
   });
@@ -69,9 +70,9 @@ function getRecords(){
 }
 
 function showPage(pageId){
-  document.getElementById("homePage").classList.add("hidden");
-  document.getElementById("walkPage").classList.add("hidden");
-  document.getElementById("detailPage").classList.add("hidden");
+  ["homePage","walkPage","detailPage"].forEach(id=>{
+    document.getElementById(id).classList.add("hidden");
+  });
   document.getElementById(pageId).classList.remove("hidden");
 }
 
@@ -85,7 +86,6 @@ function startWalk(){
   audioChunks = [];
   gpsHistory = [];
   mediaRecorder = null;
-
   startGps = "取得中";
   endGps = "未取得";
   distanceKm = "未取得";
@@ -109,21 +109,17 @@ function startWalk(){
 
   getGps(gps=>{
     startGps = gps;
-
     gpsHistory.push({
       type:"start",
       gps:gps,
       time:new Date().toLocaleString()
     });
-
-    document.getElementById("gpsInfo").innerHTML =
-      "開始GPS：" + gps;
+    document.getElementById("gpsInfo").innerHTML = "開始GPS：" + gps;
   });
 
   timerInterval = setInterval(()=>{
     seconds++;
-    document.getElementById("timer").innerHTML =
-      formatTime(seconds);
+    document.getElementById("timer").innerHTML = formatTime(seconds);
   },1000);
 
   gpsWatcher = setInterval(()=>{
@@ -141,21 +137,25 @@ function formatTime(sec){
   const h = Math.floor(sec/3600);
   const m = Math.floor((sec%3600)/60);
   const s = sec%60;
-
   return String(h).padStart(2,"0") + ":" +
          String(m).padStart(2,"0") + ":" +
          String(s).padStart(2,"0");
 }
 
+function timeToSeconds(t){
+  if(!t) return 0;
+  const p = t.split(":").map(Number);
+  return (p[0]||0)*3600 + (p[1]||0)*60 + (p[2]||0);
+}
+
 function addPhoto(){
-  const files =
-    document.getElementById("photoInput").files;
+  const files = document.getElementById("photoInput").files;
 
   for(let i=0;i<files.length;i++){
     const file = files[i];
     const reader = new FileReader();
 
-    reader.onload = function(e){
+    reader.onload = e=>{
       const photo = {
         name:file.name,
         type:file.type,
@@ -168,13 +168,10 @@ function addPhoto(){
       const img = document.createElement("img");
       img.className = "photo-thumb";
       img.src = photo.data;
+      img.onclick = ()=>openPhoto(photo.data);
 
-      document
-        .getElementById("photoPreview")
-        .appendChild(img);
-
-      document.getElementById("photoInfo").innerHTML =
-        "写真 " + photos.length + "枚";
+      document.getElementById("photoPreview").appendChild(img);
+      document.getElementById("photoInfo").innerHTML = "写真 " + photos.length + "枚";
     };
 
     reader.readAsDataURL(file);
@@ -199,50 +196,30 @@ function addNote(){
 
   const div = document.createElement("div");
   div.className = "note-item";
-  div.innerHTML =
-    text +
-    '<div class="note-time">' +
-    note.time +
-    '</div>';
+  div.innerHTML = text + '<div class="note-time">' + note.time + '</div>';
 
   document.getElementById("noteList").appendChild(div);
-
-  document.getElementById("noteInfo").innerHTML =
-    "メモ " + notes.length + "件";
-
+  document.getElementById("noteInfo").innerHTML = "メモ " + notes.length + "件";
   input.value = "";
 }
 
 async function startRecording(){
   try{
-    const stream =
-      await navigator.mediaDevices.getUserMedia({
-        audio:true
-      });
-
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
     audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
 
-    mediaRecorder =
-      new MediaRecorder(stream);
-
-    mediaRecorder.ondataavailable = function(event){
-      if(event.data && event.data.size > 0){
-        audioChunks.push(event.data);
+    mediaRecorder.ondataavailable = e=>{
+      if(e.data && e.data.size > 0){
+        audioChunks.push(e.data);
       }
     };
 
-    mediaRecorder.onstop = function(){
+    mediaRecorder.onstop = ()=>{
+      const audioBlob = new Blob(audioChunks,{type:"audio/webm"});
+      const reader = new FileReader();
 
-      const audioBlob =
-        new Blob(audioChunks,{
-          type:"audio/webm"
-        });
-
-      const reader =
-        new FileReader();
-
-      reader.onload = function(e){
-
+      reader.onload = e=>{
         const audioData = {
           name:"audio_" + Date.now() + ".webm",
           type:"audio/webm",
@@ -252,31 +229,19 @@ async function startRecording(){
 
         audioRecords.push(audioData);
 
-        const audio =
-          document.createElement("audio");
-
+        const audio = document.createElement("audio");
         audio.controls = true;
         audio.src = audioData.data;
 
-        document
-          .getElementById("audioList")
-          .appendChild(audio);
-
-        document.getElementById("audioInfo").innerHTML =
-          "音声 " + audioRecords.length + "件";
-
+        document.getElementById("audioList").appendChild(audio);
+        document.getElementById("audioInfo").innerHTML = "音声 " + audioRecords.length + "件";
       };
 
       reader.readAsDataURL(audioBlob);
-
-      stream.getTracks().forEach(track=>{
-        track.stop();
-      });
-
+      stream.getTracks().forEach(track=>track.stop());
     };
 
     mediaRecorder.start();
-
     alert("録音開始");
 
   }catch(error){
@@ -308,15 +273,19 @@ function getGps(callback){
       const lng = pos.coords.longitude.toFixed(6);
       callback(lat + "," + lng);
     },
-    ()=>{
-      callback("未取得");
-    },
-    {
-      enableHighAccuracy:true,
-      timeout:10000,
-      maximumAge:0
-    }
+    ()=>callback("未取得"),
+    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
   );
+}
+
+function gpsToLatLng(gps){
+  if(!gps || gps==="未取得" || gps==="取得中") return null;
+  const p = gps.split(",");
+  if(p.length !== 2) return null;
+  const lat = Number(p[0]);
+  const lng = Number(p[1]);
+  if(Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  return [lat,lng];
 }
 
 function calcDistance(gps1,gps2){
@@ -326,7 +295,6 @@ function calcDistance(gps1,gps2){
 
   const p1 = gps1.split(",");
   const p2 = gps2.split(",");
-
   const lat1 = Number(p1[0]);
   const lon1 = Number(p1[1]);
   const lat2 = Number(p2[0]);
@@ -342,9 +310,7 @@ function calcDistance(gps1,gps2){
     Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon/2) * Math.sin(dLon/2);
 
-  const c =
-    2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-
+  const c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
   return (R*c).toFixed(2) + "km";
 }
 
@@ -355,8 +321,7 @@ function finishWalk(){
     clearInterval(gpsWatcher);
   }
 
-  document.getElementById("gpsInfo").innerHTML =
-    "終了GPS取得中...";
+  document.getElementById("gpsInfo").innerHTML = "終了GPS取得中...";
 
   getGps(async gps=>{
     endGps = gps;
@@ -368,32 +333,25 @@ function finishWalk(){
       time:new Date().toLocaleString()
     });
 
-    currentSession.endTime =
-      new Date().toLocaleString();
-
-    currentSession.status =
-      "closed";
+    currentSession.endTime = new Date().toLocaleString();
+    currentSession.status = "closed";
 
     const record = {
       id:createId(),
       session:currentSession,
       date:new Date().toLocaleString(),
-
       walk:{
         time:document.getElementById("timer").innerHTML,
         distanceKm:distanceKm
       },
-
       gps:{
         start:startGps,
         end:endGps,
         history:gpsHistory
       },
-
       photos:photos,
       audio:audioRecords,
       notes:notes,
-
       summary:{
         photoCount:photos.length,
         audioCount:audioRecords.length,
@@ -420,13 +378,12 @@ function finishWalk(){
 async function loadRecords(){
   const records = await getRecords();
 
-  records.sort((a,b)=>
-    new Date(b.date) - new Date(a.date)
-  );
+  records.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  renderStats(records);
 
   if(records.length === 0){
-    document.getElementById("recordList").innerHTML =
-      "記録なし";
+    document.getElementById("recordList").innerHTML = "記録なし";
     return;
   }
 
@@ -436,7 +393,6 @@ async function loadRecords(){
     html += `
       <div class="record" onclick="showDetail('${r.id}')">
         <div class="record-title">📅 ${r.date}</div>
-
         <div class="record-row">🚶 散歩時間<br>${r.walk.time}</div>
         <div class="record-row">📏 移動距離<br>${r.walk.distanceKm}</div>
         <div class="record-row">📷 写真<br>${r.summary.photoCount}枚</div>
@@ -450,6 +406,34 @@ async function loadRecords(){
   document.getElementById("recordList").innerHTML = html;
 }
 
+function renderStats(records){
+  let totalSec = 0;
+  let totalKm = 0;
+  let totalPhotos = 0;
+  let totalAudio = 0;
+  let totalNotes = 0;
+
+  records.forEach(r=>{
+    totalSec += timeToSeconds(r.walk?.time || "00:00:00");
+    const km = parseFloat((r.walk?.distanceKm || "0").replace("km",""));
+    if(!Number.isNaN(km)) totalKm += km;
+    totalPhotos += r.summary?.photoCount || 0;
+    totalAudio += r.summary?.audioCount || 0;
+    totalNotes += r.summary?.noteCount || 0;
+  });
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-box">記録<br>${records.length}回</div>
+      <div class="stat-box">総時間<br>${formatTime(totalSec)}</div>
+      <div class="stat-box">総距離<br>${totalKm.toFixed(2)}km</div>
+      <div class="stat-box">写真<br>${totalPhotos}枚</div>
+      <div class="stat-box">音声<br>${totalAudio}件</div>
+      <div class="stat-box">メモ<br>${totalNotes}件</div>
+    </div>
+  `;
+}
+
 async function showDetail(id){
   const records = await getRecords();
   const r = records.find(x=>x.id===id);
@@ -459,82 +443,20 @@ async function showDetail(id){
     return;
   }
 
-  let photosHtml = "";
-
-  if(r.photos && r.photos.length > 0){
-    r.photos.forEach(p=>{
-      if(p.data){
-        photosHtml += `
-          <img
-            src="${p.data}"
-            class="photo-thumb"
-          >
-        `;
-      }
-    });
-
-    if(photosHtml === ""){
-      photosHtml = "写真データなし";
-    }
-  }else{
-    photosHtml = "写真なし";
-  }
-
-  let audioHtml = "";
-
-  if(r.audio && r.audio.length > 0){
-    r.audio.forEach(a=>{
-      if(a.data){
-        audioHtml += `
-          <audio
-            controls
-            src="${a.data}"
-          ></audio>
-        `;
-      }
-    });
-
-    if(audioHtml === ""){
-      audioHtml = "音声データなし";
-    }
-  }else{
-    audioHtml = "音声なし";
-  }
-
-  let notesHtml = "";
-
-  if(r.notes && r.notes.length > 0){
-    r.notes.forEach(n=>{
-      notesHtml += `
-        <div class="note-item">
-          ${n.text}
-          <div class="note-time">${n.time}</div>
-        </div>
-      `;
-    });
-  }else{
-    notesHtml = "メモなし";
-  }
-
-  let gpsHistoryHtml = "";
-
-  if(r.gps && r.gps.history && r.gps.history.length > 0){
-    r.gps.history.forEach((p,index)=>{
-      gpsHistoryHtml += `
-        <div class="note-item">
-          ${index + 1}. ${p.type} / ${p.gps}
-          <div class="note-time">${p.time}</div>
-        </div>
-      `;
-    });
-  }else{
-    gpsHistoryHtml = "GPS履歴なし";
-  }
+  const photosHtml = makePhotosHtml(r);
+  const audioHtml = makeAudioHtml(r);
+  const notesHtml = makeNotesHtml(r);
+  const gpsHistoryHtml = makeGpsHistoryHtml(r);
 
   document.getElementById("detailContent").innerHTML = `
     <div class="detail-section">
       <div class="detail-title">📅 日時</div>
       <div class="detail-value">${r.date}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">🗺️ 地図</div>
+      <div id="map"></div>
     </div>
 
     <div class="detail-section">
@@ -556,43 +478,160 @@ async function showDetail(id){
 
     <div class="detail-section">
       <div class="detail-title">📍 GPS履歴</div>
-      <div class="detail-value">
-        ${gpsHistoryHtml}
-      </div>
+      <div class="detail-value">${gpsHistoryHtml}</div>
     </div>
 
     <div class="detail-section">
       <div class="detail-title">📷 写真</div>
-      <div class="detail-value">
-        ${photosHtml}
-      </div>
+      <div class="detail-value photo-list">${photosHtml}</div>
     </div>
 
     <div class="detail-section">
       <div class="detail-title">🎤 音声</div>
-      <div class="detail-value">
-        ${audioHtml}
-      </div>
+      <div class="detail-value">${audioHtml}</div>
     </div>
 
     <div class="detail-section">
       <div class="detail-title">📝 メモ</div>
-      <div class="detail-value">
-        ${notesHtml}
-      </div>
+      <div class="detail-value">${notesHtml}</div>
     </div>
 
     <div class="detail-section">
       <div class="detail-title">🆔 Session</div>
       <div class="session-id">${r.session.id}</div>
     </div>
+
+    <button class="deleteButton" onclick="confirmDelete('${r.id}')">
+      この記録を削除
+    </button>
   `;
 
   showPage("detailPage");
+  renderMap(r);
+}
+
+function makePhotosHtml(r){
+  if(!r.photos || r.photos.length === 0) return "写真なし";
+
+  let html = "";
+  r.photos.forEach(p=>{
+    if(p.data){
+      html += `<img src="${p.data}" class="photo-thumb" onclick="openPhoto('${p.data}')">`;
+    }
+  });
+
+  return html || "写真データなし";
+}
+
+function makeAudioHtml(r){
+  if(!r.audio || r.audio.length === 0) return "音声なし";
+
+  let html = "";
+  r.audio.forEach(a=>{
+    if(a.data){
+      html += `<audio controls src="${a.data}"></audio>`;
+    }
+  });
+
+  return html || "音声データなし";
+}
+
+function makeNotesHtml(r){
+  if(!r.notes || r.notes.length === 0) return "メモなし";
+
+  let html = "";
+  r.notes.forEach(n=>{
+    html += `
+      <div class="note-item">
+        ${n.text}
+        <div class="note-time">${n.time}</div>
+      </div>
+    `;
+  });
+
+  return html;
+}
+
+function makeGpsHistoryHtml(r){
+  if(!r.gps || !r.gps.history || r.gps.history.length === 0){
+    return "GPS履歴なし";
+  }
+
+  let html = "";
+  r.gps.history.forEach((p,index)=>{
+    html += `
+      <div class="note-item">
+        ${index + 1}. ${p.type} / ${p.gps}
+        <div class="note-time">${p.time}</div>
+      </div>
+    `;
+  });
+
+  return html;
+}
+
+function renderMap(r){
+  if(typeof L === "undefined"){
+    return;
+  }
+
+  const points = [];
+
+  if(r.gps && r.gps.history){
+    r.gps.history.forEach(p=>{
+      const latlng = gpsToLatLng(p.gps);
+      if(latlng) points.push({type:p.type,latlng:latlng});
+    });
+  }
+
+  if(points.length === 0){
+    document.getElementById("map").innerHTML = "地図表示できるGPSデータがありません";
+    return;
+  }
+
+  if(mapInstance){
+    mapInstance.remove();
+  }
+
+  mapInstance = L.map("map").setView(points[0].latlng,16);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19
+  }).addTo(mapInstance);
+
+  const latlngs = points.map(p=>p.latlng);
+
+  L.polyline(latlngs).addTo(mapInstance);
+
+  L.marker(points[0].latlng).addTo(mapInstance).bindPopup("開始");
+  L.marker(points[points.length-1].latlng).addTo(mapInstance).bindPopup("終了");
+
+  mapInstance.fitBounds(latlngs,{padding:[30,30]});
+}
+
+async function confirmDelete(id){
+  if(!confirm("この記録を削除しますか？")){
+    return;
+  }
+
+  await deleteRecord(id);
+  alert("削除しました");
+  location.reload();
+}
+
+function openPhoto(data){
+  document.getElementById("modalPhoto").src = data;
+  document.getElementById("photoModal").classList.remove("hidden");
+}
+
+function closePhoto(){
+  document.getElementById("photoModal").classList.add("hidden");
+  document.getElementById("modalPhoto").src = "";
 }
 
 function backToHome(){
   showPage("homePage");
+  loadRecords();
 }
 
 window.onload = async function(){
