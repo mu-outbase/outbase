@@ -635,10 +635,18 @@ function backToHome(){
 }
 
 window.onload = async function(){
+
+  alert("起動開始");
+
   await openDatabase();
+
+  alert("DB OK");
+
   await loadRecords();
+
+  alert("LOAD OK");
 };
 
 window.onerror = function(msg,url,line){
- alert(msg + " / " + line);
+  alert("ERROR\n" + msg + "\nLINE:" + line);
 };
