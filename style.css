@@ -54,6 +54,10 @@ button:active{
 transform:scale(0.98);
 }
 
+.deleteButton{
+background:#b33a3a;
+}
+
 .timer{
 font-size:48px;
 font-weight:bold;
@@ -71,6 +75,20 @@ font-weight:bold;
 margin-top:10px;
 }
 
+.stats-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+}
+
+.stat-box{
+background:#f7f7f7;
+border-radius:14px;
+padding:14px;
+font-weight:bold;
+line-height:1.6;
+}
+
 .record{
 background:white;
 border-radius:16px;
@@ -78,11 +96,6 @@ padding:16px;
 margin-bottom:15px;
 box-shadow:0 2px 8px rgba(0,0,0,0.08);
 cursor:pointer;
-}
-
-.record:hover{
-transform:translateY(-2px);
-transition:0.2s;
 }
 
 .record-title{
@@ -107,7 +120,8 @@ box-sizing:border-box;
 resize:vertical;
 }
 
-#photoPreview{
+#photoPreview,
+.photo-list{
 display:flex;
 flex-wrap:wrap;
 gap:10px;
@@ -122,7 +136,8 @@ border-radius:10px;
 border:1px solid #ddd;
 }
 
-#audioList audio{
+#audioList audio,
+.detail-value audio{
 width:100%;
 margin-top:10px;
 }
@@ -162,31 +177,45 @@ color:#777;
 word-break:break-all;
 }
 
-.empty{
-text-align:center;
-padding:30px;
-color:#888;
+#map{
+height:320px;
+border-radius:16px;
+margin-top:10px;
+}
+
+.modal{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.85);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:999;
+}
+
+.modal img{
+max-width:95%;
+max-height:95%;
+border-radius:12px;
 }
 
 @media(max-width:600px){
-
 header{
 font-size:26px;
 padding:16px;
 }
-
 .timer{
 font-size:40px;
 }
-
 button{
 font-size:16px;
 padding:16px;
 }
-
 .photo-thumb{
 width:80px;
 height:80px;
 }
-
+.stats-grid{
+grid-template-columns:1fr;
+}
 }
