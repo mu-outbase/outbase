@@ -8,6 +8,11 @@ let timerInterval = null;
 let currentSession = null;
 let photos = [];
 let notes = [];
+let audioRecords = [];
+
+let mediaRecorder = null;
+let audioChunks = [];
+
 let startGps = "未取得";
 let endGps = "未取得";
 let distanceKm = "未取得";
@@ -74,6 +79,10 @@ function startWalk(){
   seconds = 0;
   photos = [];
   notes = [];
+  audioRecords = [];
+  audioChunks = [];
+  mediaRecorder = null;
+
   startGps = "取得中";
   endGps = "未取得";
   distanceKm = "未取得";
@@ -89,6 +98,8 @@ function startWalk(){
   document.getElementById("timer").innerHTML = "00:00:00";
   document.getElementById("photoInfo").innerHTML = "写真 0枚";
   document.getElementById("photoPreview").innerHTML = "";
+  document.getElementById("audioInfo").innerHTML = "音声 0件";
+  document.getElementById("audioList").innerHTML = "";
   document.getElementById("noteInfo").innerHTML = "メモ 0件";
   document.getElementById("noteList").innerHTML = "";
   document.getElementById("gpsInfo").innerHTML = "開始GPS取得中...";
@@ -182,12 +193,87 @@ function addNote(){
   input.value = "";
 }
 
-function startRecording(){
-  alert("音声録音は次の強化版で実装");
+async function startRecording(){
+  try{
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+        audio:true
+      });
+
+    audioChunks = [];
+
+    mediaRecorder =
+      new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = function(event){
+      if(event.data && event.data.size > 0){
+        audioChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = function(){
+
+      const audioBlob =
+        new Blob(audioChunks,{
+          type:"audio/webm"
+        });
+
+      const reader =
+        new FileReader();
+
+      reader.onload = function(e){
+
+        const audioData = {
+          name:"audio_" + Date.now() + ".webm",
+          type:"audio/webm",
+          data:e.target.result,
+          time:new Date().toLocaleString()
+        };
+
+        audioRecords.push(audioData);
+
+        const audio =
+          document.createElement("audio");
+
+        audio.controls = true;
+        audio.src = audioData.data;
+
+        document
+          .getElementById("audioList")
+          .appendChild(audio);
+
+        document.getElementById("audioInfo").innerHTML =
+          "音声 " + audioRecords.length + "件";
+
+      };
+
+      reader.readAsDataURL(audioBlob);
+
+      stream.getTracks().forEach(track=>{
+        track.stop();
+      });
+
+    };
+
+    mediaRecorder.start();
+
+    alert("録音開始");
+
+  }catch(error){
+    alert("録音できません");
+  }
 }
 
 function stopRecording(){
-  alert("音声録音は次の強化版で実装");
+  if(!mediaRecorder){
+    alert("録音されていません");
+    return;
+  }
+
+  if(mediaRecorder.state === "recording"){
+    mediaRecorder.stop();
+    alert("録音停止");
+  }
 }
 
 function getGps(callback){
@@ -274,12 +360,12 @@ function finishWalk(){
       },
 
       photos:photos,
-      audio:[],
+      audio:audioRecords,
       notes:notes,
 
       summary:{
         photoCount:photos.length,
-        audioCount:0,
+        audioCount:audioRecords.length,
         noteCount:notes.length
       }
     };
@@ -289,6 +375,7 @@ function finishWalk(){
     alert(
       "散歩終了\n記録時間：" + record.walk.time +
       "\n写真：" + photos.length + "枚" +
+      "\n音声：" + audioRecords.length + "件" +
       "\nメモ：" + notes.length + "件" +
       "\n移動距離：" + distanceKm
     );
@@ -359,6 +446,27 @@ async function showDetail(id){
     photosHtml = "写真なし";
   }
 
+  let audioHtml = "";
+
+  if(r.audio && r.audio.length > 0){
+    r.audio.forEach(a=>{
+      if(a.data){
+        audioHtml += `
+          <audio
+            controls
+            src="${a.data}"
+          ></audio>
+        `;
+      }
+    });
+
+    if(audioHtml === ""){
+      audioHtml = "音声データなし";
+    }
+  }else{
+    audioHtml = "音声なし";
+  }
+
   let notesHtml = "";
 
   if(r.notes && r.notes.length > 0){
@@ -406,7 +514,7 @@ async function showDetail(id){
     <div class="detail-section">
       <div class="detail-title">🎤 音声</div>
       <div class="detail-value">
-        ${r.summary.audioCount}件
+        ${audioHtml}
       </div>
     </div>
 
