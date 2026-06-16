@@ -4,11 +4,13 @@ const DB_VERSION = 1;
 let db;
 let seconds = 0;
 let timerInterval = null;
+let gpsWatcher = null;
 
 let currentSession = null;
 let photos = [];
 let notes = [];
 let audioRecords = [];
+let gpsHistory = [];
 
 let mediaRecorder = null;
 let audioChunks = [];
@@ -81,6 +83,7 @@ function startWalk(){
   notes = [];
   audioRecords = [];
   audioChunks = [];
+  gpsHistory = [];
   mediaRecorder = null;
 
   startGps = "取得中";
@@ -106,6 +109,13 @@ function startWalk(){
 
   getGps(gps=>{
     startGps = gps;
+
+    gpsHistory.push({
+      type:"start",
+      gps:gps,
+      time:new Date().toLocaleString()
+    });
+
     document.getElementById("gpsInfo").innerHTML =
       "開始GPS：" + gps;
   });
@@ -115,6 +125,16 @@ function startWalk(){
     document.getElementById("timer").innerHTML =
       formatTime(seconds);
   },1000);
+
+  gpsWatcher = setInterval(()=>{
+    getGps(gps=>{
+      gpsHistory.push({
+        type:"point",
+        gps:gps,
+        time:new Date().toLocaleString()
+      });
+    });
+  },10000);
 }
 
 function formatTime(sec){
@@ -331,12 +351,22 @@ function calcDistance(gps1,gps2){
 function finishWalk(){
   clearInterval(timerInterval);
 
+  if(gpsWatcher){
+    clearInterval(gpsWatcher);
+  }
+
   document.getElementById("gpsInfo").innerHTML =
     "終了GPS取得中...";
 
   getGps(async gps=>{
     endGps = gps;
     distanceKm = calcDistance(startGps,endGps);
+
+    gpsHistory.push({
+      type:"end",
+      gps:endGps,
+      time:new Date().toLocaleString()
+    });
 
     currentSession.endTime =
       new Date().toLocaleString();
@@ -356,7 +386,8 @@ function finishWalk(){
 
       gps:{
         start:startGps,
-        end:endGps
+        end:endGps,
+        history:gpsHistory
       },
 
       photos:photos,
@@ -366,7 +397,8 @@ function finishWalk(){
       summary:{
         photoCount:photos.length,
         audioCount:audioRecords.length,
-        noteCount:notes.length
+        noteCount:notes.length,
+        gpsPointCount:gpsHistory.length
       }
     };
 
@@ -377,6 +409,7 @@ function finishWalk(){
       "\n写真：" + photos.length + "枚" +
       "\n音声：" + audioRecords.length + "件" +
       "\nメモ：" + notes.length + "件" +
+      "\nGPS：" + gpsHistory.length + "件" +
       "\n移動距離：" + distanceKm
     );
 
@@ -409,6 +442,7 @@ async function loadRecords(){
         <div class="record-row">📷 写真<br>${r.summary.photoCount}枚</div>
         <div class="record-row">🎤 音声<br>${r.summary.audioCount}件</div>
         <div class="record-row">📝 メモ<br>${r.summary.noteCount}件</div>
+        <div class="record-row">📍 GPS<br>${r.summary.gpsPointCount || 0}件</div>
       </div>
     `;
   });
@@ -482,6 +516,21 @@ async function showDetail(id){
     notesHtml = "メモなし";
   }
 
+  let gpsHistoryHtml = "";
+
+  if(r.gps && r.gps.history && r.gps.history.length > 0){
+    r.gps.history.forEach((p,index)=>{
+      gpsHistoryHtml += `
+        <div class="note-item">
+          ${index + 1}. ${p.type} / ${p.gps}
+          <div class="note-time">${p.time}</div>
+        </div>
+      `;
+    });
+  }else{
+    gpsHistoryHtml = "GPS履歴なし";
+  }
+
   document.getElementById("detailContent").innerHTML = `
     <div class="detail-section">
       <div class="detail-title">📅 日時</div>
@@ -500,7 +549,15 @@ async function showDetail(id){
       <div class="detail-title">📍 GPS</div>
       <div class="detail-value">
         開始：${r.gps.start}<br>
-        終了：${r.gps.end}
+        終了：${r.gps.end}<br>
+        取得ポイント：${r.summary.gpsPointCount || 0}件
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">📍 GPS履歴</div>
+      <div class="detail-value">
+        ${gpsHistoryHtml}
       </div>
     </div>
 
