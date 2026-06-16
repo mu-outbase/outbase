@@ -62,8 +62,23 @@ margin:30px 0;
 }
 
 .record{
-padding:10px 0;
-border-bottom:1px solid #ddd;
+background:#ffffff;
+border-radius:16px;
+padding:18px;
+margin-bottom:16px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
+line-height:1.7;
+}
+
+.record-title{
+font-size:18px;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.record-row{
+margin:10px 0;
+font-size:17px;
 }
 
 .photoInfo{
@@ -234,7 +249,6 @@ JSON.stringify(records)
 
 alert(
 "散歩終了\n記録時間 : "
-
 + document.getElementById("timer").innerHTML
 + "\n写真 : "
 + photos.length
@@ -258,9 +272,31 @@ records.forEach(function(r){
 
 html += `
 <div class="record">
-${r.date}<br>
-散歩時間 : ${r.time}<br>
-写真 : ${r.photoCount || 0}枚
+
+<div class="record-title">
+📅 ${r.date}
+</div>
+
+<div class="record-row">
+🚶 散歩時間<br>
+${r.time}
+</div>
+
+<div class="record-row">
+📷 写真<br>
+${r.photoCount || 0}枚
+</div>
+
+<div class="record-row">
+🎤 音声<br>
+0件
+</div>
+
+<div class="record-row">
+📍 GPS<br>
+未取得
+</div>
+
 </div>
 `;
 
