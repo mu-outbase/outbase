@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>OUTBASE</title>
 
 <style>
-
 body{
 margin:0;
 font-family:sans-serif;
@@ -83,7 +81,8 @@ font-size:17px;
 
 .photoInfo,
 .gpsInfo,
-.audioInfo{
+.audioInfo,
+.storageInfo{
 margin-top:10px;
 font-size:18px;
 font-weight:bold;
@@ -93,7 +92,6 @@ audio{
 width:100%;
 margin-top:10px;
 }
-
 </style>
 </head>
 
@@ -104,21 +102,21 @@ margin-top:10px;
 <div id="home" class="page">
 
 <div class="card">
-
 <h1>今日の記録</h1>
 
 <button onclick="startWalk()">散歩開始</button>
 <button onclick="alert('準備中')">キャンプ開始</button>
 <button onclick="alert('準備中')">記録追加</button>
 
+<div id="storageInfo" class="storageInfo">
+保存基盤：準備中
+</div>
+
 </div>
 
 <div class="card">
-
 <h1>最近の記録</h1>
-
 <div id="records">記録なし</div>
-
 </div>
 
 </div>
@@ -161,8 +159,16 @@ onchange="addPhoto()">
 
 <script>
 
+const DB_NAME = "outbase_db";
+const DB_VERSION = 1;
+
+let db;
 let seconds = 0;
 let interval;
+
+let currentSession = null;
+let currentInbox = null;
+
 let photos = [];
 let startGps = "未取得";
 let endGps = "未取得";
@@ -172,11 +178,144 @@ let mediaRecorder;
 let audioChunks = [];
 let audioRecords = [];
 
-if(!localStorage.getItem("outbase_records")){
-localStorage.setItem(
-"outbase_records",
-JSON.stringify([])
-);
+function openDatabase(){
+
+return new Promise(function(resolve,reject){
+
+let request =
+indexedDB.open(DB_NAME,DB_VERSION);
+
+request.onupgradeneeded =
+function(event){
+
+db = event.target.result;
+
+if(!db.objectStoreNames.contains("sessions")){
+db.createObjectStore("sessions",{keyPath:"id"});
+}
+
+if(!db.objectStoreNames.contains("inboxes")){
+db.createObjectStore("inboxes",{keyPath:"sessionId"});
+}
+
+if(!db.objectStoreNames.contains("records")){
+db.createObjectStore("records",{keyPath:"id"});
+}
+
+};
+
+request.onsuccess =
+function(event){
+
+db = event.target.result;
+
+document.getElementById("storageInfo").innerHTML =
+"保存基盤：IndexedDB";
+
+resolve(db);
+
+};
+
+request.onerror =
+function(){
+
+document.getElementById("storageInfo").innerHTML =
+"保存基盤：エラー";
+
+reject();
+
+};
+
+});
+
+}
+
+function saveStore(storeName,data){
+
+return new Promise(function(resolve,reject){
+
+let tx =
+db.transaction(storeName,"readwrite");
+
+let store =
+tx.objectStore(storeName);
+
+store.put(data);
+
+tx.oncomplete =
+function(){
+resolve();
+};
+
+tx.onerror =
+function(){
+reject();
+};
+
+});
+
+}
+
+function getAllStore(storeName){
+
+return new Promise(function(resolve,reject){
+
+let tx =
+db.transaction(storeName,"readonly");
+
+let store =
+tx.objectStore(storeName);
+
+let request =
+store.getAll();
+
+request.onsuccess =
+function(){
+resolve(request.result);
+};
+
+request.onerror =
+function(){
+reject();
+};
+
+});
+
+}
+
+function createId(){
+
+return "ob_" + Date.now() + "_" + Math.floor(Math.random()*100000);
+
+}
+
+function createSession(type){
+
+let now =
+new Date().toLocaleString();
+
+let session = {
+id:createId(),
+type:type,
+status:"open",
+startTime:now,
+endTime:""
+};
+
+return session;
+
+}
+
+function createInbox(sessionId){
+
+return {
+sessionId:sessionId,
+photos:[],
+audio:[],
+gps:[],
+notes:[]
+};
+
 }
 
 function startWalk(){
@@ -194,6 +333,12 @@ startGps = "取得中";
 endGps = "未取得";
 distanceKm = "未取得";
 
+currentSession =
+createSession("walk");
+
+currentInbox =
+createInbox(currentSession.id);
+
 document.getElementById("photoInfo").innerHTML =
 "写真 0枚";
 
@@ -209,6 +354,12 @@ document.getElementById("gpsInfo").innerHTML =
 getGps(function(gps){
 
 startGps = gps;
+
+currentInbox.gps.push({
+type:"start",
+value:gps,
+time:new Date().toLocaleString()
+});
 
 document.getElementById("gpsInfo").innerHTML =
 "開始GPS : " + gps;
@@ -240,7 +391,16 @@ let files =
 document.getElementById("photoInput").files;
 
 for(let i=0;i<files.length;i++){
-photos.push(files[i].name);
+
+let photoData = {
+name:files[i].name,
+type:files[i].type,
+time:new Date().toLocaleString()
+};
+
+photos.push(photoData);
+currentInbox.photos.push(photoData);
+
 }
 
 document.getElementById("photoInfo").innerHTML =
@@ -280,17 +440,24 @@ type:"audio/webm"
 let audioUrl =
 URL.createObjectURL(audioBlob);
 
-audioRecords.push(audioUrl);
+let audioData = {
+url:audioUrl,
+type:"audio/webm",
+time:new Date().toLocaleString()
+};
+
+audioRecords.push(audioData);
+currentInbox.audio.push(audioData);
 
 document.getElementById("audioInfo").innerHTML =
 "音声 " + audioRecords.length + "件";
 
 let audioHtml = "";
 
-audioRecords.forEach(function(url){
+audioRecords.forEach(function(a){
 
 audioHtml += `
-<audio controls src="${url}"></audio>
+<audio controls src="${a.url}"></audio>
 `;
 
 });
@@ -386,61 +553,94 @@ let c =
 
 return (R * c).toFixed(2) + "km";
 
-}
+                   }
 
-function finishWalk(){
+async function finishWalk(){
 
 clearInterval(interval);
 
 document.getElementById("gpsInfo").innerHTML =
 "終了GPS取得中...";
 
-getGps(function(gps){
+getGps(async function(gps){
 
 endGps = gps;
-distanceKm = calcDistance(startGps,endGps);
 
-let records =
-JSON.parse(
-localStorage.getItem("outbase_records")
-);
+currentInbox.gps.push({
+type:"end",
+value:gps,
+time:new Date().toLocaleString()
+});
 
-records.unshift({
+distanceKm =
+calcDistance(startGps,endGps);
 
-date:new Date().toLocaleString(),
+currentSession.status =
+"closed";
 
+currentSession.endTime =
+new Date().toLocaleString();
+
+let record = {
+
+id:createId(),
+
+sessionId:
+currentSession.id,
+
+date:
+new Date().toLocaleString(),
+
+walk:{
 time:document
 .getElementById("timer")
 .innerHTML,
 
-photoCount:photos.length,
+distanceKm:
+distanceKm
+},
 
-audioCount:audioRecords.length,
+gps:{
+start:startGps,
+end:endGps
+},
 
-startGps:startGps,
+summary:{
+photoCount:
+currentInbox.photos.length,
 
-endGps:endGps,
+audioCount:
+currentInbox.audio.length
+}
 
-distanceKm:distanceKm
+};
 
-});
+await saveStore(
+"sessions",
+currentSession
+);
 
-localStorage.setItem(
-"outbase_records",
-JSON.stringify(records)
+await saveStore(
+"inboxes",
+currentInbox
+);
+
+await saveStore(
+"records",
+record
 );
 
 alert(
 "散歩終了\n記録時間 : "
-+ document.getElementById("timer").innerHTML
++ record.walk.time
 + "\n写真 : "
-+ photos.length
++ record.summary.photoCount
 + "枚"
 + "\n音声 : "
-+ audioRecords.length
++ record.summary.audioCount
 + "件"
 + "\n移動距離 : "
-+ distanceKm
++ record.walk.distanceKm
 );
 
 location.reload();
@@ -449,12 +649,18 @@ location.reload();
 
 }
 
-window.onload=function(){
+async function loadRecords(){
 
 let records =
-JSON.parse(
-localStorage.getItem("outbase_records")
-);
+await getAllStore("records");
+
+records.sort(function(a,b){
+
+return new Date(b.date)
+-
+new Date(a.date);
+
+});
 
 let html="";
 
@@ -469,32 +675,37 @@ html += `
 
 <div class="record-row">
 🚶 散歩時間<br>
-${r.time}
-</div>
-
-<div class="record-row">
-📷 写真<br>
-${r.photoCount || 0}枚
-</div>
-
-<div class="record-row">
-🎤 音声<br>
-${r.audioCount || 0}件
-</div>
-
-<div class="record-row">
-📍 開始GPS<br>
-${r.startGps || "未取得"}
-</div>
-
-<div class="record-row">
-📍 終了GPS<br>
-${r.endGps || "未取得"}
+${r.walk.time}
 </div>
 
 <div class="record-row">
 📏 移動距離<br>
-${r.distanceKm || "未取得"}
+${r.walk.distanceKm}
+</div>
+
+<div class="record-row">
+📷 写真<br>
+${r.summary.photoCount}枚
+</div>
+
+<div class="record-row">
+🎤 音声<br>
+${r.summary.audioCount}件
+</div>
+
+<div class="record-row">
+📍 開始GPS<br>
+${r.gps.start}
+</div>
+
+<div class="record-row">
+📍 終了GPS<br>
+${r.gps.end}
+</div>
+
+<div class="record-row">
+🆔 Session<br>
+${r.sessionId}
 </div>
 
 </div>
@@ -507,7 +718,17 @@ html="記録なし";
 }
 
 document.getElementById("records")
-.innerHTML=html;
+.innerHTML =
+html;
+
+}
+
+window.onload =
+async function(){
+
+await openDatabase();
+
+await loadRecords();
 
 }
 
