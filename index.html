@@ -9,61 +9,67 @@
 <style>
 
 body{
-    margin:0;
-    font-family:sans-serif;
-    background:#f2f2f2;
+margin:0;
+font-family:sans-serif;
+background:#f2f2f2;
 }
 
 header{
-    background:#2f6f3a;
-    color:white;
-    text-align:center;
-    padding:20px;
-    font-size:32px;
-    font-weight:bold;
+background:#2f6f3a;
+color:white;
+text-align:center;
+padding:20px;
+font-size:32px;
+font-weight:bold;
 }
 
 .page{
-    padding:20px;
+padding:20px;
 }
 
 .card{
-    background:white;
-    border-radius:20px;
-    padding:25px;
-    margin-bottom:20px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+background:white;
+border-radius:20px;
+padding:25px;
+margin-bottom:20px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
 }
 
 h1{
-    margin-top:0;
+margin-top:0;
 }
 
 button{
-    width:100%;
-    padding:18px;
-    margin:10px 0;
-    border:none;
-    border-radius:10px;
-    background:#2f6f3a;
-    color:white;
-    font-size:20px;
+width:100%;
+padding:18px;
+margin:10px 0;
+border:none;
+border-radius:10px;
+background:#2f6f3a;
+color:white;
+font-size:20px;
 }
 
 .hidden{
-    display:none;
+display:none;
 }
 
 .timer{
-    font-size:48px;
-    font-weight:bold;
-    text-align:center;
-    margin:30px 0;
+font-size:48px;
+font-weight:bold;
+text-align:center;
+margin:30px 0;
 }
 
 .record{
-    padding:10px 0;
-    border-bottom:1px solid #ddd;
+padding:10px 0;
+border-bottom:1px solid #ddd;
+}
+
+.photoInfo{
+margin-top:10px;
+font-size:18px;
+font-weight:bold;
 }
 
 </style>
@@ -75,59 +81,71 @@ button{
 
 <div id="home" class="page">
 
-    <div class="card">
+<div class="card">
 
-        <h1>今日の記録</h1>
+<h1>今日の記録</h1>
 
-        <button onclick="startWalk()">
-            散歩開始
-        </button>
+<button onclick="startWalk()">
+散歩開始
+</button>
 
-        <button onclick="alert('準備中')">
-            キャンプ開始
-        </button>
+<button onclick="alert('準備中')">
+キャンプ開始
+</button>
 
-        <button onclick="alert('準備中')">
-            記録追加
-        </button>
+<button onclick="alert('準備中')">
+記録追加
+</button>
 
-    </div>
+</div>
 
-    <div class="card">
+<div class="card">
 
-        <h1>最近の記録</h1>
+<h1>最近の記録</h1>
 
-        <div id="records">
-            記録なし
-        </div>
+<div id="records">
+記録なし
+</div>
 
-    </div>
+</div>
 
 </div>
 
 <div id="walk" class="page hidden">
 
-    <div class="card">
+<div class="card">
 
-        <h1>散歩中</h1>
+<h1>散歩中</h1>
 
-        <div id="timer" class="timer">
-            00:00:00
-        </div>
+<div id="timer" class="timer">
+00:00:00
+</div>
 
-        <button onclick="alert('次回実装')">
-            写真追加
-        </button>
+<input
+type="file"
+id="photoInput"
+accept="image/*"
+multiple
+style="display:none"
+onchange="addPhoto()">
 
-        <button onclick="alert('次回実装')">
-            音声メモ
-        </button>
+<button onclick="document.getElementById('photoInput').click()">
+写真追加
+</button>
 
-        <button onclick="finishWalk()">
-            散歩終了
-        </button>
+<div id="photoInfo" class="photoInfo">
+写真 0枚
+</div>
 
-    </div>
+<button onclick="alert('次回実装')">
+音声メモ
+</button>
+
+<button onclick="finishWalk()">
+散歩終了
+</button>
+
+</div>
 
 </div>
 
@@ -135,102 +153,125 @@ button{
 
 let seconds = 0;
 let interval;
+let photos = [];
 
 if(!localStorage.getItem("outbase_records")){
-    localStorage.setItem(
-        "outbase_records",
-        JSON.stringify([])
-    );
+localStorage.setItem(
+"outbase_records",
+JSON.stringify([])
+);
 }
 
 function startWalk(){
 
-    document.getElementById("home")
-        .classList.add("hidden");
+document.getElementById("home")
+.classList.add("hidden");
 
-    document.getElementById("walk")
-        .classList.remove("hidden");
+document.getElementById("walk")
+.classList.remove("hidden");
 
-    seconds = 0;
+seconds = 0;
+photos = [];
 
-    interval = setInterval(function(){
+interval = setInterval(function(){
 
-        seconds++;
+seconds++;
 
-        let h=Math.floor(seconds/3600);
-        let m=Math.floor((seconds%3600)/60);
-        let s=seconds%60;
+let h=Math.floor(seconds/3600);
+let m=Math.floor((seconds%3600)/60);
+let s=seconds%60;
 
-        document.getElementById("timer").innerHTML=
-            String(h).padStart(2,"0")
-            + ":"
-            + String(m).padStart(2,"0")
-            + ":"
-            + String(s).padStart(2,"0");
+document.getElementById("timer").innerHTML=
+String(h).padStart(2,"0")
++":"
++String(m).padStart(2,"0")
++":"
++String(s).padStart(2,"0");
 
-    },1000);
+},1000);
+
+}
+
+function addPhoto(){
+
+let files =
+document.getElementById("photoInput").files;
+
+for(let i=0;i<files.length;i++){
+photos.push(files[i].name);
+}
+
+document.getElementById("photoInfo").innerHTML =
+"写真 " + photos.length + "枚";
 
 }
 
 function finishWalk(){
 
-    clearInterval(interval);
+clearInterval(interval);
 
-    let records =
-        JSON.parse(
-            localStorage.getItem("outbase_records")
-        );
+let records =
+JSON.parse(
+localStorage.getItem("outbase_records")
+);
 
-    records.unshift({
+records.unshift({
 
-        date:new Date().toLocaleString(),
+date:new Date().toLocaleString(),
 
-        time:document
-            .getElementById("timer")
-            .innerHTML
+time:document
+.getElementById("timer")
+.innerHTML,
 
-    });
+photoCount:photos.length
 
-    localStorage.setItem(
-        "outbase_records",
-        JSON.stringify(records)
-    );
+});
 
-    alert(
-        "散歩終了\n記録時間 : "
-        + document.getElementById("timer").innerHTML
-    );
+localStorage.setItem(
+"outbase_records",
+JSON.stringify(records)
+);
 
-    location.reload();
+alert(
+"散歩終了\n記録時間 : "
+
++ document.getElementById("timer").innerHTML
++ "\n写真 : "
++ photos.length
++ "枚"
+);
+
+location.reload();
 
 }
 
 window.onload=function(){
 
-    let records =
-        JSON.parse(
-            localStorage.getItem("outbase_records")
-        );
+let records =
+JSON.parse(
+localStorage.getItem("outbase_records")
+);
 
-    let html="";
+let html="";
 
-    records.forEach(function(r){
+records.forEach(function(r){
 
-        html += `
-        <div class="record">
-            ${r.date}<br>
-            散歩時間 : ${r.time}
-        </div>
-        `;
+html += `
+<div class="record">
+${r.date}<br>
+散歩時間 : ${r.time}<br>
+写真 : ${r.photoCount || 0}枚
+</div>
+`;
 
-    });
+});
 
-    if(records.length===0){
-        html="記録なし";
-    }
+if(records.length===0){
+html="記録なし";
+}
 
-    document.getElementById("records")
-        .innerHTML=html;
+document.getElementById("records")
+.innerHTML=html;
 
 }
 
