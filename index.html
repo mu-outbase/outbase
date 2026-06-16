@@ -81,7 +81,8 @@ margin:10px 0;
 font-size:17px;
 }
 
-.photoInfo{
+.photoInfo,
+.gpsInfo{
 margin-top:10px;
 font-size:18px;
 font-weight:bold;
@@ -136,6 +137,10 @@ font-weight:bold;
 00:00:00
 </div>
 
+<div id="gpsInfo" class="gpsInfo">
+GPS取得中...
+</div>
+
 <input
 type="file"
 id="photoInput"
@@ -169,6 +174,9 @@ onchange="addPhoto()">
 let seconds = 0;
 let interval;
 let photos = [];
+let startGps = "未取得";
+let endGps = "未取得";
+let distanceKm = "未取得";
 
 if(!localStorage.getItem("outbase_records")){
 localStorage.setItem(
@@ -187,6 +195,21 @@ document.getElementById("walk")
 
 seconds = 0;
 photos = [];
+startGps = "取得中";
+endGps = "未取得";
+distanceKm = "未取得";
+
+document.getElementById("gpsInfo").innerHTML =
+"開始GPS取得中...";
+
+getGps(function(gps){
+
+startGps = gps;
+
+document.getElementById("gpsInfo").innerHTML =
+"開始GPS : " + gps;
+
+});
 
 interval = setInterval(function(){
 
@@ -221,9 +244,75 @@ document.getElementById("photoInfo").innerHTML =
 
 }
 
+function getGps(callback){
+
+if(!navigator.geolocation){
+callback("未取得");
+return;
+}
+
+navigator.geolocation.getCurrentPosition(
+function(position){
+
+let lat = position.coords.latitude.toFixed(6);
+let lng = position.coords.longitude.toFixed(6);
+
+callback(lat + "," + lng);
+
+},
+function(){
+callback("未取得");
+},
+{
+enableHighAccuracy:true,
+timeout:10000,
+maximumAge:0
+}
+);
+
+}
+
+function calcDistance(gps1,gps2){
+
+if(gps1==="未取得" || gps2==="未取得" || gps1==="取得中"){
+return "未取得";
+}
+
+let p1 = gps1.split(",");
+let p2 = gps2.split(",");
+
+let lat1 = Number(p1[0]);
+let lon1 = Number(p1[1]);
+let lat2 = Number(p2[0]);
+let lon2 = Number(p2[1]);
+
+let R = 6371;
+let dLat = (lat2-lat1) * Math.PI / 180;
+let dLon = (lon2-lon1) * Math.PI / 180;
+
+let a =
+Math.sin(dLat/2) * Math.sin(dLat/2) +
+Math.cos(lat1 * Math.PI / 180) *
+Math.cos(lat2 * Math.PI / 180) *
+Math.sin(dLon/2) * Math.sin(dLon/2);
+
+let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+return (R * c).toFixed(2) + "km";
+
+}
+
 function finishWalk(){
 
 clearInterval(interval);
+
+document.getElementById("gpsInfo").innerHTML =
+"終了GPS取得中...";
+
+getGps(function(gps){
+
+endGps = gps;
+distanceKm = calcDistance(startGps,endGps);
 
 let records =
 JSON.parse(
@@ -238,7 +327,13 @@ time:document
 .getElementById("timer")
 .innerHTML,
 
-photoCount:photos.length
+photoCount:photos.length,
+
+startGps:startGps,
+
+endGps:endGps,
+
+distanceKm:distanceKm
 
 });
 
@@ -253,9 +348,13 @@ alert(
 + "\n写真 : "
 + photos.length
 + "枚"
++ "\n移動距離 : "
++ distanceKm
 );
 
 location.reload();
+
+});
 
 }
 
@@ -293,8 +392,18 @@ ${r.photoCount || 0}枚
 </div>
 
 <div class="record-row">
-📍 GPS<br>
-未取得
+📍 開始GPS<br>
+${r.startGps || "未取得"}
+</div>
+
+<div class="record-row">
+📍 終了GPS<br>
+${r.endGps || "未取得"}
+</div>
+
+<div class="record-row">
+📏 移動距離<br>
+${r.distanceKm || "未取得"}
 </div>
 
 </div>
