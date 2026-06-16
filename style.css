@@ -219,3 +219,11 @@ height:80px;
 grid-template-columns:1fr;
 }
 }
+
+.modal.hidden{
+display:none !important;
+}
+
+.hidden{
+display:none !important;
+}
