@@ -1,135 +1,79 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>OUTBASE</title>
 
-<style>
-body{
-margin:0;
-font-family:sans-serif;
-background:#f2f2f2;
-}
+<link rel="stylesheet" href="style.css">
 
-header{
-background:#2f6f3a;
-color:white;
-text-align:center;
-padding:20px;
-font-size:32px;
-font-weight:bold;
-}
-
-.page{
-padding:20px;
-}
-
-.card{
-background:white;
-border-radius:20px;
-padding:25px;
-margin-bottom:20px;
-box-shadow:0 2px 8px rgba(0,0,0,0.08);
-}
-
-h1{
-margin-top:0;
-}
-
-button{
-width:100%;
-padding:18px;
-margin:10px 0;
-border:none;
-border-radius:10px;
-background:#2f6f3a;
-color:white;
-font-size:20px;
-}
-
-.hidden{
-display:none;
-}
-
-.timer{
-font-size:48px;
-font-weight:bold;
-text-align:center;
-margin:30px 0;
-}
-
-.record{
-background:#ffffff;
-border-radius:16px;
-padding:18px;
-margin-bottom:16px;
-box-shadow:0 2px 8px rgba(0,0,0,0.08);
-line-height:1.7;
-}
-
-.record-title{
-font-size:18px;
-font-weight:bold;
-margin-bottom:10px;
-}
-
-.record-row{
-margin:10px 0;
-font-size:17px;
-}
-
-.photoInfo,
-.gpsInfo,
-.audioInfo,
-.storageInfo{
-margin-top:10px;
-font-size:18px;
-font-weight:bold;
-}
-
-audio{
-width:100%;
-margin-top:10px;
-}
-</style>
 </head>
 
 <body>
 
-<header>OUTBASE</header>
+<header>
+OUTBASE
+</header>
 
-<div id="home" class="page">
+<!-- ホーム -->
+
+<div id="homePage" class="page">
 
 <div class="card">
+
 <h1>今日の記録</h1>
 
-<button onclick="startWalk()">散歩開始</button>
-<button onclick="alert('準備中')">キャンプ開始</button>
-<button onclick="alert('準備中')">記録追加</button>
+<button onclick="startWalk()">
+散歩開始
+</button>
 
-<div id="storageInfo" class="storageInfo">
-保存基盤：準備中
+<button onclick="alert('キャンプモード準備中')">
+キャンプ開始
+</button>
+
+<div id="storageInfo">
+保存基盤確認中...
 </div>
 
 </div>
 
 <div class="card">
+
 <h1>最近の記録</h1>
-<div id="records">記録なし</div>
+
+<div id="recordList">
+
+記録なし
+
+</div>
+
 </div>
 
 </div>
 
-<div id="walk" class="page hidden">
+<!-- 散歩中 -->
+
+<div id="walkPage" class="page hidden">
 
 <div class="card">
 
 <h1>散歩中</h1>
 
-<div id="timer" class="timer">00:00:00</div>
+<div id="timer" class="timer">
+00:00:00
+</div>
 
-<div id="gpsInfo" class="gpsInfo">GPS取得中...</div>
+<div id="gpsInfo">
+GPS取得中...
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>写真</h2>
 
 <input
 type="file"
@@ -143,596 +87,88 @@ onchange="addPhoto()">
 写真追加
 </button>
 
-<div id="photoInfo" class="photoInfo">写真 0枚</div>
+<div id="photoInfo">
+写真 0枚
+</div>
 
-<button onclick="startRecording()">録音開始</button>
-<button onclick="stopRecording()">録音停止</button>
+<div id="photoPreview">
+</div>
 
-<div id="audioInfo" class="audioInfo">音声 0件</div>
-<div id="audioList"></div>
+</div>
 
-<button onclick="finishWalk()">散歩終了</button>
+<div class="card">
+
+<h2>音声</h2>
+
+<button onclick="startRecording()">
+録音開始
+</button>
+
+<button onclick="stopRecording()">
+録音停止
+</button>
+
+<div id="audioInfo">
+音声 0件
+</div>
+
+<div id="audioList">
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>メモ</h2>
+
+<textarea
+id="noteInput"
+placeholder="メモを入力">
+</textarea>
+
+<button onclick="addNote()">
+メモ追加
+</button>
+
+<div id="noteInfo">
+メモ 0件
+</div>
+
+<div id="noteList">
+</div>
+
+</div>
+
+<div class="card">
+
+<button onclick="finishWalk()">
+散歩終了
+</button>
 
 </div>
 
 </div>
 
-<script>
+<!-- 詳細画面 -->
 
-const DB_NAME = "outbase_db";
-const DB_VERSION = 1;
+<div id="detailPage" class="page hidden">
 
-let db;
-let seconds = 0;
-let interval;
+<div class="card">
 
-let currentSession = null;
-let currentInbox = null;
+<h1>記録詳細</h1>
 
-let photos = [];
-let startGps = "未取得";
-let endGps = "未取得";
-let distanceKm = "未取得";
-
-let mediaRecorder;
-let audioChunks = [];
-let audioRecords = [];
-
-function openDatabase(){
-
-return new Promise(function(resolve,reject){
-
-let request =
-indexedDB.open(DB_NAME,DB_VERSION);
-
-request.onupgradeneeded =
-function(event){
-
-db = event.target.result;
-
-if(!db.objectStoreNames.contains("sessions")){
-db.createObjectStore("sessions",{keyPath:"id"});
-}
-
-if(!db.objectStoreNames.contains("inboxes")){
-db.createObjectStore("inboxes",{keyPath:"sessionId"});
-}
-
-if(!db.objectStoreNames.contains("records")){
-db.createObjectStore("records",{keyPath:"id"});
-}
-
-};
-
-request.onsuccess =
-function(event){
-
-db = event.target.result;
-
-document.getElementById("storageInfo").innerHTML =
-"保存基盤：IndexedDB";
-
-resolve(db);
-
-};
-
-request.onerror =
-function(){
-
-document.getElementById("storageInfo").innerHTML =
-"保存基盤：エラー";
-
-reject();
-
-};
-
-});
-
-}
-
-function saveStore(storeName,data){
-
-return new Promise(function(resolve,reject){
-
-let tx =
-db.transaction(storeName,"readwrite");
-
-let store =
-tx.objectStore(storeName);
-
-store.put(data);
-
-tx.oncomplete =
-function(){
-resolve();
-};
-
-tx.onerror =
-function(){
-reject();
-};
-
-});
-
-}
-
-function getAllStore(storeName){
-
-return new Promise(function(resolve,reject){
-
-let tx =
-db.transaction(storeName,"readonly");
-
-let store =
-tx.objectStore(storeName);
-
-let request =
-store.getAll();
-
-request.onsuccess =
-function(){
-resolve(request.result);
-};
-
-request.onerror =
-function(){
-reject();
-};
-
-});
-
-}
-
-function createId(){
-
-return "ob_" + Date.now() + "_" + Math.floor(Math.random()*100000);
-
-}
-
-function createSession(type){
-
-let now =
-new Date().toLocaleString();
-
-let session = {
-id:createId(),
-type:type,
-status:"open",
-startTime:now,
-endTime:""
-};
-
-return session;
-
-}
-
-function createInbox(sessionId){
-
-return {
-sessionId:sessionId,
-photos:[],
-audio:[],
-gps:[],
-notes:[]
-};
-
-}
-
-function startWalk(){
-
-document.getElementById("home")
-.classList.add("hidden");
-
-document.getElementById("walk")
-.classList.remove("hidden");
-
-seconds = 0;
-photos = [];
-audioRecords = [];
-startGps = "取得中";
-endGps = "未取得";
-distanceKm = "未取得";
-
-currentSession =
-createSession("walk");
-
-currentInbox =
-createInbox(currentSession.id);
-
-document.getElementById("photoInfo").innerHTML =
-"写真 0枚";
-
-document.getElementById("audioInfo").innerHTML =
-"音声 0件";
-
-document.getElementById("audioList").innerHTML =
-"";
-
-document.getElementById("gpsInfo").innerHTML =
-"開始GPS取得中...";
-
-getGps(function(gps){
-
-startGps = gps;
-
-currentInbox.gps.push({
-type:"start",
-value:gps,
-time:new Date().toLocaleString()
-});
-
-document.getElementById("gpsInfo").innerHTML =
-"開始GPS : " + gps;
-
-});
-
-interval = setInterval(function(){
-
-seconds++;
-
-let h=Math.floor(seconds/3600);
-let m=Math.floor((seconds%3600)/60);
-let s=seconds%60;
-
-document.getElementById("timer").innerHTML=
-String(h).padStart(2,"0")
-+":"
-+String(m).padStart(2,"0")
-+":"
-+String(s).padStart(2,"0");
-
-},1000);
-
-}
-
-function addPhoto(){
-
-let files =
-document.getElementById("photoInput").files;
-
-for(let i=0;i<files.length;i++){
-
-let photoData = {
-name:files[i].name,
-type:files[i].type,
-time:new Date().toLocaleString()
-};
-
-photos.push(photoData);
-currentInbox.photos.push(photoData);
-
-}
-
-document.getElementById("photoInfo").innerHTML =
-"写真 " + photos.length + "枚";
-
-}
-
-async function startRecording(){
-
-try{
-
-let stream =
-await navigator.mediaDevices.getUserMedia({
-audio:true
-});
-
-audioChunks = [];
-
-mediaRecorder =
-new MediaRecorder(stream);
-
-mediaRecorder.ondataavailable =
-function(event){
-
-audioChunks.push(event.data);
-
-};
-
-mediaRecorder.onstop =
-function(){
-
-let audioBlob =
-new Blob(audioChunks,{
-type:"audio/webm"
-});
-
-let audioUrl =
-URL.createObjectURL(audioBlob);
-
-let audioData = {
-url:audioUrl,
-type:"audio/webm",
-time:new Date().toLocaleString()
-};
-
-audioRecords.push(audioData);
-currentInbox.audio.push(audioData);
-
-document.getElementById("audioInfo").innerHTML =
-"音声 " + audioRecords.length + "件";
-
-let audioHtml = "";
-
-audioRecords.forEach(function(a){
-
-audioHtml += `
-<audio controls src="${a.url}"></audio>
-`;
-
-});
-
-document.getElementById("audioList").innerHTML =
-audioHtml;
-
-};
-
-mediaRecorder.start();
-
-alert("録音開始");
-
-}catch(error){
-
-alert("録音できません");
-
-}
-
-}
-
-function stopRecording(){
-
-if(!mediaRecorder){
-alert("録音されていません");
-return;
-}
-
-if(mediaRecorder.state === "recording"){
-mediaRecorder.stop();
-alert("録音停止");
-}
-
-}
-
-function getGps(callback){
-
-if(!navigator.geolocation){
-callback("未取得");
-return;
-}
-
-navigator.geolocation.getCurrentPosition(
-function(position){
-
-let lat =
-position.coords.latitude.toFixed(6);
-
-let lng =
-position.coords.longitude.toFixed(6);
-
-callback(lat + "," + lng);
-
-},
-function(){
-callback("未取得");
-},
-{
-enableHighAccuracy:true,
-timeout:10000,
-maximumAge:0
-}
-);
-
-}
-
-function calcDistance(gps1,gps2){
-
-if(gps1==="未取得" || gps2==="未取得" || gps1==="取得中"){
-return "未取得";
-}
-
-let p1 = gps1.split(",");
-let p2 = gps2.split(",");
-
-let lat1 = Number(p1[0]);
-let lon1 = Number(p1[1]);
-let lat2 = Number(p2[0]);
-let lon2 = Number(p2[1]);
-
-let R = 6371;
-let dLat = (lat2-lat1) * Math.PI / 180;
-let dLon = (lon2-lon1) * Math.PI / 180;
-
-let a =
-Math.sin(dLat/2) * Math.sin(dLat/2) +
-Math.cos(lat1 * Math.PI / 180) *
-Math.cos(lat2 * Math.PI / 180) *
-Math.sin(dLon/2) * Math.sin(dLon/2);
-
-let c =
-2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-return (R * c).toFixed(2) + "km";
-
-                   }
-
-async function finishWalk(){
-
-clearInterval(interval);
-
-document.getElementById("gpsInfo").innerHTML =
-"終了GPS取得中...";
-
-getGps(async function(gps){
-
-endGps = gps;
-
-currentInbox.gps.push({
-type:"end",
-value:gps,
-time:new Date().toLocaleString()
-});
-
-distanceKm =
-calcDistance(startGps,endGps);
-
-currentSession.status =
-"closed";
-
-currentSession.endTime =
-new Date().toLocaleString();
-
-let record = {
-
-id:createId(),
-
-sessionId:
-currentSession.id,
-
-date:
-new Date().toLocaleString(),
-
-walk:{
-time:document
-.getElementById("timer")
-.innerHTML,
-
-distanceKm:
-distanceKm
-},
-
-gps:{
-start:startGps,
-end:endGps
-},
-
-summary:{
-photoCount:
-currentInbox.photos.length,
-
-audioCount:
-currentInbox.audio.length
-}
-
-};
-
-await saveStore(
-"sessions",
-currentSession
-);
-
-await saveStore(
-"inboxes",
-currentInbox
-);
-
-await saveStore(
-"records",
-record
-);
-
-alert(
-"散歩終了\n記録時間 : "
-+ record.walk.time
-+ "\n写真 : "
-+ record.summary.photoCount
-+ "枚"
-+ "\n音声 : "
-+ record.summary.audioCount
-+ "件"
-+ "\n移動距離 : "
-+ record.walk.distanceKm
-);
-
-location.reload();
-
-});
-
-}
-
-async function loadRecords(){
-
-let records =
-await getAllStore("records");
-
-records.sort(function(a,b){
-
-return new Date(b.date)
--
-new Date(a.date);
-
-});
-
-let html="";
-
-records.forEach(function(r){
-
-html += `
-<div class="record">
-
-<div class="record-title">
-📅 ${r.date}
+<div id="detailContent">
 </div>
 
-<div class="record-row">
-🚶 散歩時間<br>
-${r.walk.time}
-</div>
+<button onclick="backToHome()">
+戻る
+</button>
 
-<div class="record-row">
-📏 移動距離<br>
-${r.walk.distanceKm}
-</div>
-
-<div class="record-row">
-📷 写真<br>
-${r.summary.photoCount}枚
-</div>
-
-<div class="record-row">
-🎤 音声<br>
-${r.summary.audioCount}件
-</div>
-
-<div class="record-row">
-📍 開始GPS<br>
-${r.gps.start}
-</div>
-
-<div class="record-row">
-📍 終了GPS<br>
-${r.gps.end}
-</div>
-
-<div class="record-row">
-🆔 Session<br>
-${r.sessionId}
 </div>
 
 </div>
-`;
 
-});
-
-if(records.length===0){
-html="記録なし";
-}
-
-document.getElementById("records")
-.innerHTML =
-html;
-
-}
-
-window.onload =
-async function(){
-
-await openDatabase();
-
-await loadRecords();
-
-}
-
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>
