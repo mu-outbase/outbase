@@ -56,6 +56,181 @@ text-align:center;
 margin:20px 0;
 }
 
+.record{
+padding:10px 0;
+border-bottom:1px solid #ddd;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>OUTBASE</header>
+
+<div id="home" class="page">
+
+<div class="card">
+
+<h1>今日の記録</h1>
+
+<button onclick="startWalk()">
+散歩開始
+</button>
+
+<button>
+キャンプ開始
+</button>
+
+<button>
+記録追加
+</button>
+
+</div>
+
+<div class="card">
+
+<h1>最近の記録</h1>
+
+<div id="records">
+記録なし
+</div>
+
+</div>
+
+</div>
+
+<div id="walk" class="page hidden">
+
+<div class="card">
+
+<h1>散歩中</h1>
+
+<div id="timer" class="timer">
+00:00:00
+</div>
+
+<button>
+写真追加
+</button>
+
+<button>
+音声メモ
+</button>
+
+<button onclick="finishWalk()">
+散歩終了
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+let seconds = 0;
+let interval;
+
+function startWalk(){
+
+document.getElementById("home").classList.add("hidden");
+document.getElementById("walk").classList.remove("hidden");
+
+seconds = 0;
+
+interval = setInterval(function(){
+
+seconds++;
+
+let h=Math.floor(seconds/3600);
+let m=Math.floor((seconds%3600)/60);
+let s=seconds%60;
+
+document.getElementById("timer").innerHTML=
+String(h).padStart(2,"0")+":"+
+String(m).padStart(2,"0")+":"+
+String(s).padStart(2,"0");
+
+},1000);
+
+}
+
+function finishWalk(){
+
+clearInterval(interval);
+
+let records =
+JSON.parse(localStorage.getItem("outbase_records")) || [];
+
+records.unshift({
+date:new Date().toLocaleString(),
+time:document.getElementById("timer").innerHTML
+});
+
+localStorage.setItem(
+"outbase_records",
+JSON.stringify(records)
+);
+
+alert(
+"散歩終了\n記録時間："+document.getElementById("timer").innerHTML
+);
+
+location.reload();
+
+}
+
+window.onload=function(){
+
+let records =
+JSON.parse(localStorage.getItem("outbase_records")) || [];
+
+let html="";
+
+records.forEach(function(r){
+
+html += `
+<div class="record">
+${r.date}<br>
+散歩時間：${r.time}
+</div>
+`;
+
+});
+
+if(records.length===0){
+html="記録なし";
+}
+
+document.getElementById("records").innerHTML=html;
+
+}
+
+</script>
+
+</body>
+</html>button{
+width:100%;
+padding:18px;
+margin:10px 0;
+border:none;
+border-radius:10px;
+background:#2f6f3a;
+color:white;
+font-size:20px;
+}
+
+.hidden{
+display:none;
+}
+
+.timer{
+font-size:40px;
+font-weight:bold;
+text-align:center;
+margin:20px 0;
+}
+
 </style>
 </head>
 
