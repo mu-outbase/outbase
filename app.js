@@ -638,3 +638,7 @@ window.onload = async function(){
   await openDatabase();
   await loadRecords();
 };
+
+window.onerror = function(msg,url,line){
+ alert(msg + " / " + line);
+};
