@@ -82,10 +82,16 @@ font-size:17px;
 }
 
 .photoInfo,
-.gpsInfo{
+.gpsInfo,
+.audioInfo{
 margin-top:10px;
 font-size:18px;
 font-weight:bold;
+}
+
+audio{
+width:100%;
+margin-top:10px;
 }
 
 </style>
@@ -101,17 +107,9 @@ font-weight:bold;
 
 <h1>今日の記録</h1>
 
-<button onclick="startWalk()">
-散歩開始
-</button>
-
-<button onclick="alert('準備中')">
-キャンプ開始
-</button>
-
-<button onclick="alert('準備中')">
-記録追加
-</button>
+<button onclick="startWalk()">散歩開始</button>
+<button onclick="alert('準備中')">キャンプ開始</button>
+<button onclick="alert('準備中')">記録追加</button>
 
 </div>
 
@@ -119,9 +117,7 @@ font-weight:bold;
 
 <h1>最近の記録</h1>
 
-<div id="records">
-記録なし
-</div>
+<div id="records">記録なし</div>
 
 </div>
 
@@ -133,13 +129,9 @@ font-weight:bold;
 
 <h1>散歩中</h1>
 
-<div id="timer" class="timer">
-00:00:00
-</div>
+<div id="timer" class="timer">00:00:00</div>
 
-<div id="gpsInfo" class="gpsInfo">
-GPS取得中...
-</div>
+<div id="gpsInfo" class="gpsInfo">GPS取得中...</div>
 
 <input
 type="file"
@@ -153,17 +145,15 @@ onchange="addPhoto()">
 写真追加
 </button>
 
-<div id="photoInfo" class="photoInfo">
-写真 0枚
-</div>
+<div id="photoInfo" class="photoInfo">写真 0枚</div>
 
-<button onclick="alert('次回実装')">
-音声メモ
-</button>
+<button onclick="startRecording()">録音開始</button>
+<button onclick="stopRecording()">録音停止</button>
 
-<button onclick="finishWalk()">
-散歩終了
-</button>
+<div id="audioInfo" class="audioInfo">音声 0件</div>
+<div id="audioList"></div>
+
+<button onclick="finishWalk()">散歩終了</button>
 
 </div>
 
@@ -177,6 +167,10 @@ let photos = [];
 let startGps = "未取得";
 let endGps = "未取得";
 let distanceKm = "未取得";
+
+let mediaRecorder;
+let audioChunks = [];
+let audioRecords = [];
 
 if(!localStorage.getItem("outbase_records")){
 localStorage.setItem(
@@ -195,9 +189,19 @@ document.getElementById("walk")
 
 seconds = 0;
 photos = [];
+audioRecords = [];
 startGps = "取得中";
 endGps = "未取得";
 distanceKm = "未取得";
+
+document.getElementById("photoInfo").innerHTML =
+"写真 0枚";
+
+document.getElementById("audioInfo").innerHTML =
+"音声 0件";
+
+document.getElementById("audioList").innerHTML =
+"";
 
 document.getElementById("gpsInfo").innerHTML =
 "開始GPS取得中...";
@@ -244,6 +248,84 @@ document.getElementById("photoInfo").innerHTML =
 
 }
 
+async function startRecording(){
+
+try{
+
+let stream =
+await navigator.mediaDevices.getUserMedia({
+audio:true
+});
+
+audioChunks = [];
+
+mediaRecorder =
+new MediaRecorder(stream);
+
+mediaRecorder.ondataavailable =
+function(event){
+
+audioChunks.push(event.data);
+
+};
+
+mediaRecorder.onstop =
+function(){
+
+let audioBlob =
+new Blob(audioChunks,{
+type:"audio/webm"
+});
+
+let audioUrl =
+URL.createObjectURL(audioBlob);
+
+audioRecords.push(audioUrl);
+
+document.getElementById("audioInfo").innerHTML =
+"音声 " + audioRecords.length + "件";
+
+let audioHtml = "";
+
+audioRecords.forEach(function(url){
+
+audioHtml += `
+<audio controls src="${url}"></audio>
+`;
+
+});
+
+document.getElementById("audioList").innerHTML =
+audioHtml;
+
+};
+
+mediaRecorder.start();
+
+alert("録音開始");
+
+}catch(error){
+
+alert("録音できません");
+
+}
+
+}
+
+function stopRecording(){
+
+if(!mediaRecorder){
+alert("録音されていません");
+return;
+}
+
+if(mediaRecorder.state === "recording"){
+mediaRecorder.stop();
+alert("録音停止");
+}
+
+}
+
 function getGps(callback){
 
 if(!navigator.geolocation){
@@ -254,8 +336,11 @@ return;
 navigator.geolocation.getCurrentPosition(
 function(position){
 
-let lat = position.coords.latitude.toFixed(6);
-let lng = position.coords.longitude.toFixed(6);
+let lat =
+position.coords.latitude.toFixed(6);
+
+let lng =
+position.coords.longitude.toFixed(6);
 
 callback(lat + "," + lng);
 
@@ -296,7 +381,8 @@ Math.cos(lat1 * Math.PI / 180) *
 Math.cos(lat2 * Math.PI / 180) *
 Math.sin(dLon/2) * Math.sin(dLon/2);
 
-let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+let c =
+2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
 return (R * c).toFixed(2) + "km";
 
@@ -329,6 +415,8 @@ time:document
 
 photoCount:photos.length,
 
+audioCount:audioRecords.length,
+
 startGps:startGps,
 
 endGps:endGps,
@@ -348,6 +436,9 @@ alert(
 + "\n写真 : "
 + photos.length
 + "枚"
++ "\n音声 : "
++ audioRecords.length
++ "件"
 + "\n移動距離 : "
 + distanceKm
 );
@@ -388,7 +479,7 @@ ${r.photoCount || 0}枚
 
 <div class="record-row">
 🎤 音声<br>
-0件
+${r.audioCount || 0}件
 </div>
 
 <div class="record-row">
