@@ -22,6 +22,7 @@ function openDatabase(){
 
     request.onupgradeneeded = e => {
       db = e.target.result;
+
       if(!db.objectStoreNames.contains("records")){
         db.createObjectStore("records",{keyPath:"id"});
       }
@@ -29,12 +30,14 @@ function openDatabase(){
 
     request.onsuccess = e => {
       db = e.target.result;
-      document.getElementById("storageInfo").innerHTML = "保存基盤：IndexedDB";
+      document.getElementById("storageInfo").innerHTML =
+        "保存基盤：IndexedDB";
       resolve(db);
     };
 
     request.onerror = () => {
-      document.getElementById("storageInfo").innerHTML = "保存基盤：エラー";
+      document.getElementById("storageInfo").innerHTML =
+        "保存基盤：エラー";
       reject();
     };
   });
@@ -92,12 +95,14 @@ function startWalk(){
 
   getGps(gps=>{
     startGps = gps;
-    document.getElementById("gpsInfo").innerHTML = "開始GPS：" + gps;
+    document.getElementById("gpsInfo").innerHTML =
+      "開始GPS：" + gps;
   });
 
   timerInterval = setInterval(()=>{
     seconds++;
-    document.getElementById("timer").innerHTML = formatTime(seconds);
+    document.getElementById("timer").innerHTML =
+      formatTime(seconds);
   },1000);
 }
 
@@ -105,32 +110,44 @@ function formatTime(sec){
   const h = Math.floor(sec/3600);
   const m = Math.floor((sec%3600)/60);
   const s = sec%60;
+
   return String(h).padStart(2,"0") + ":" +
          String(m).padStart(2,"0") + ":" +
          String(s).padStart(2,"0");
 }
 
 function addPhoto(){
-  const files = document.getElementById("photoInput").files;
+  const files =
+    document.getElementById("photoInput").files;
 
   for(let i=0;i<files.length;i++){
     const file = files[i];
+    const reader = new FileReader();
 
-    const photo = {
-      name:file.name,
-      type:file.type,
-      time:new Date().toLocaleString()
+    reader.onload = function(e){
+      const photo = {
+        name:file.name,
+        type:file.type,
+        data:e.target.result,
+        time:new Date().toLocaleString()
+      };
+
+      photos.push(photo);
+
+      const img = document.createElement("img");
+      img.className = "photo-thumb";
+      img.src = photo.data;
+
+      document
+        .getElementById("photoPreview")
+        .appendChild(img);
+
+      document.getElementById("photoInfo").innerHTML =
+        "写真 " + photos.length + "枚";
     };
 
-    photos.push(photo);
-
-    const img = document.createElement("img");
-    img.className = "photo-thumb";
-    img.src = URL.createObjectURL(file);
-    document.getElementById("photoPreview").appendChild(img);
+    reader.readAsDataURL(file);
   }
-
-  document.getElementById("photoInfo").innerHTML = "写真 " + photos.length + "枚";
 }
 
 function addNote(){
@@ -151,10 +168,17 @@ function addNote(){
 
   const div = document.createElement("div");
   div.className = "note-item";
-  div.innerHTML = text + '<div class="note-time">' + note.time + '</div>';
+  div.innerHTML =
+    text +
+    '<div class="note-time">' +
+    note.time +
+    '</div>';
+
   document.getElementById("noteList").appendChild(div);
 
-  document.getElementById("noteInfo").innerHTML = "メモ " + notes.length + "件";
+  document.getElementById("noteInfo").innerHTML =
+    "メモ " + notes.length + "件";
+
   input.value = "";
 }
 
@@ -212,7 +236,8 @@ function calcDistance(gps1,gps2){
     Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon/2) * Math.sin(dLon/2);
 
-  const c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  const c =
+    2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 
   return (R*c).toFixed(2) + "km";
 }
@@ -220,30 +245,38 @@ function calcDistance(gps1,gps2){
 function finishWalk(){
   clearInterval(timerInterval);
 
-  document.getElementById("gpsInfo").innerHTML = "終了GPS取得中...";
+  document.getElementById("gpsInfo").innerHTML =
+    "終了GPS取得中...";
 
   getGps(async gps=>{
     endGps = gps;
     distanceKm = calcDistance(startGps,endGps);
 
-    currentSession.endTime = new Date().toLocaleString();
-    currentSession.status = "closed";
+    currentSession.endTime =
+      new Date().toLocaleString();
+
+    currentSession.status =
+      "closed";
 
     const record = {
       id:createId(),
       session:currentSession,
       date:new Date().toLocaleString(),
+
       walk:{
         time:document.getElementById("timer").innerHTML,
         distanceKm:distanceKm
       },
+
       gps:{
         start:startGps,
         end:endGps
       },
+
       photos:photos,
       audio:[],
       notes:notes,
+
       summary:{
         photoCount:photos.length,
         audioCount:0,
@@ -267,10 +300,13 @@ function finishWalk(){
 async function loadRecords(){
   const records = await getRecords();
 
-  records.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  records.sort((a,b)=>
+    new Date(b.date) - new Date(a.date)
+  );
 
   if(records.length === 0){
-    document.getElementById("recordList").innerHTML = "記録なし";
+    document.getElementById("recordList").innerHTML =
+      "記録なし";
     return;
   }
 
@@ -300,6 +336,27 @@ async function showDetail(id){
   if(!r){
     alert("記録が見つかりません");
     return;
+  }
+
+  let photosHtml = "";
+
+  if(r.photos && r.photos.length > 0){
+    r.photos.forEach(p=>{
+      if(p.data){
+        photosHtml += `
+          <img
+            src="${p.data}"
+            class="photo-thumb"
+          >
+        `;
+      }
+    });
+
+    if(photosHtml === ""){
+      photosHtml = "写真データなし";
+    }
+  }else{
+    photosHtml = "写真なし";
   }
 
   let notesHtml = "";
@@ -341,17 +398,23 @@ async function showDetail(id){
 
     <div class="detail-section">
       <div class="detail-title">📷 写真</div>
-      <div class="detail-value">${r.summary.photoCount}枚</div>
+      <div class="detail-value">
+        ${photosHtml}
+      </div>
     </div>
 
     <div class="detail-section">
       <div class="detail-title">🎤 音声</div>
-      <div class="detail-value">${r.summary.audioCount}件</div>
+      <div class="detail-value">
+        ${r.summary.audioCount}件
+      </div>
     </div>
 
     <div class="detail-section">
       <div class="detail-title">📝 メモ</div>
-      <div class="detail-value">${notesHtml}</div>
+      <div class="detail-value">
+        ${notesHtml}
+      </div>
     </div>
 
     <div class="detail-section">
