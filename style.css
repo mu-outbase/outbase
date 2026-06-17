@@ -227,3 +227,29 @@ display:none !important;
 .hidden{
 display:none !important;
 }
+
+input[type="text"]{
+width:100%;
+padding:12px;
+font-size:16px;
+border:1px solid #ccc;
+border-radius:10px;
+box-sizing:border-box;
+margin-bottom:12px;
+background:white;
+}
+
+input[type="text"]:focus{
+outline:none;
+border-color:#2f6f3a;
+box-shadow:0 0 0 3px rgba(47,111,58,0.15);
+}
+
+.record-tags{
+margin-top:8px;
+font-size:14px;
+font-weight:bold;
+color:#2f6f3a;
+line-height:1.6;
+word-break:break-word;
+}
