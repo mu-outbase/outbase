@@ -31,15 +31,22 @@ function addGpsHistory(type,gps){
 }
 
 function gpsToLatLng(gps){
-  if(!gps || gps==="未取得" || gps==="取得中") return null;
+  if(!gps || gps==="未取得" || gps==="取得中"){
+    return null;
+  }
 
   const p = gps.split(",");
-  if(p.length !== 2) return null;
+
+  if(p.length !== 2){
+    return null;
+  }
 
   const lat = Number(p[0]);
   const lng = Number(p[1]);
 
-  if(Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  if(Number.isNaN(lat) || Number.isNaN(lng)){
+    return null;
+  }
 
   return [lat,lng];
 }
@@ -48,7 +55,9 @@ function calcDistanceNumber(gps1,gps2){
   const p1 = gpsToLatLng(gps1);
   const p2 = gpsToLatLng(gps2);
 
-  if(!p1 || !p2) return 0;
+  if(!p1 || !p2){
+    return 0;
+  }
 
   const lat1 = p1[0];
   const lon1 = p1[1];
@@ -56,6 +65,7 @@ function calcDistanceNumber(gps1,gps2){
   const lon2 = p2[1];
 
   const R = 6371;
+
   const dLat = (lat2-lat1) * Math.PI / 180;
   const dLon = (lon2-lon1) * Math.PI / 180;
 
@@ -65,14 +75,21 @@ function calcDistanceNumber(gps1,gps2){
     Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon/2) * Math.sin(dLon/2);
 
-  const c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  const c = 2 * Math.atan2(
+    Math.sqrt(a),
+    Math.sqrt(1-a)
+  );
 
   return R * c;
 }
 
 function calcDistance(gps1,gps2){
   const d = calcDistanceNumber(gps1,gps2);
-  if(d === 0) return "未取得";
+
+  if(d === 0){
+    return "未取得";
+  }
+
   return d.toFixed(2) + "km";
 }
 
@@ -104,7 +121,10 @@ function calcTrackDistance(history){
 }
 
 function calcAverageSpeed(distanceText,timeText){
-  const km = parseFloat((distanceText || "0").replace("km",""));
+  const km = parseFloat(
+    (distanceText || "0").replace("km","")
+  );
+
   const sec = timeToSeconds(timeText);
 
   if(!km || !sec){
@@ -112,11 +132,14 @@ function calcAverageSpeed(distanceText,timeText){
   }
 
   const h = sec / 3600;
+
   return (km / h).toFixed(2) + "km/h";
 }
 
 function getValidGpsCount(history){
-  if(!history) return 0;
+  if(!history){
+    return 0;
+  }
 
   let count = 0;
 
@@ -130,8 +153,14 @@ function getValidGpsCount(history){
 }
 
 function formatGpsType(type,index){
-  if(type === "start") return "開始";
-  if(type === "end") return "終了";
+  if(type === "start"){
+    return "開始";
+  }
+
+  if(type === "end"){
+    return "終了";
+  }
+
   return "中間" + index;
 }
 
@@ -140,11 +169,18 @@ function renderMap(r){
     return;
   }
 
+  const mapElement = document.getElementById("map");
+
+  if(!mapElement){
+    return;
+  }
+
   const points = [];
 
   if(r.gps && r.gps.history){
     r.gps.history.forEach(p=>{
       const latlng = gpsToLatLng(p.gps);
+
       if(latlng){
         points.push({
           type:p.type,
@@ -155,7 +191,8 @@ function renderMap(r){
   }
 
   if(points.length === 0){
-    document.getElementById("map").innerHTML = "地図表示できるGPSデータがありません";
+    mapElement.innerHTML =
+      "地図表示できるGPSデータがありません";
     return;
   }
 
@@ -163,26 +200,48 @@ function renderMap(r){
     mapInstance.remove();
   }
 
-  mapInstance = L.map("map").setView(points[0].latlng,16);
+  mapInstance = L.map("map").setView(
+    points[0].latlng,
+    16
+  );
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-    maxZoom:19
-  }).addTo(mapInstance);
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom:19
+    }
+  ).addTo(mapInstance);
 
   const latlngs = points.map(p=>p.latlng);
 
   if(latlngs.length >= 2){
-    L.polyline(latlngs,{
-      weight:5
-    }).addTo(mapInstance);
+    L.polyline(
+      latlngs,
+      {
+        weight:5
+      }
+    ).addTo(mapInstance);
   }
 
-  L.marker(points[0].latlng).addTo(mapInstance).bindPopup("開始");
-  L.marker(points[points.length-1].latlng).addTo(mapInstance).bindPopup("終了");
+  L.marker(points[0].latlng)
+    .addTo(mapInstance)
+    .bindPopup("開始");
+
+  L.marker(points[points.length-1].latlng)
+    .addTo(mapInstance)
+    .bindPopup("終了");
 
   if(latlngs.length >= 2){
-    mapInstance.fitBounds(latlngs,{padding:[30,30]});
+    mapInstance.fitBounds(
+      latlngs,
+      {
+        padding:[30,30]
+      }
+    );
   }else{
-    mapInstance.setView(points[0].latlng,16);
+    mapInstance.setView(
+      points[0].latlng,
+      16
+    );
   }
 }
