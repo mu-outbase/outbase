@@ -121,7 +121,7 @@ function getRecords(){
   return new Promise((resolve,reject)=>{
     const tx = db.transaction("records","readonly");
     const req = tx.objectStore("records").getAll();
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => resolve(req.result || []);
     req.onerror = reject;
   });
 }
@@ -157,6 +157,7 @@ function startWalk(){
 
   const titleInput = document.getElementById("titleInput");
   const tagInput = document.getElementById("tagInput");
+
   if(titleInput) titleInput.value = "";
   if(tagInput) tagInput.value = "";
 
@@ -171,9 +172,7 @@ function startWalk(){
 
   getGps(gps=>{
     startGps = gps;
-
     addGpsHistory("start",gps);
-
     document.getElementById("gpsInfo").innerHTML = "開始GPS：" + gps;
   });
 
@@ -253,7 +252,11 @@ function addNote(){
 
   const div = document.createElement("div");
   div.className = "note-item";
-  div.innerHTML = text + '<div class="note-time">' + note.time + '</div>';
+  div.innerHTML =
+    escapeHtml(text) +
+    '<div class="note-time">' +
+    escapeHtml(note.time) +
+    '</div>';
 
   document.getElementById("noteList").appendChild(div);
   document.getElementById("noteInfo").innerHTML = "メモ " + notes.length + "件";
@@ -330,9 +333,7 @@ function finishWalk(){
 
   getGps(async gps=>{
     endGps = gps;
-
     addGpsHistory("end",endGps);
-
     distanceKm = calcTrackDistance(gpsHistory);
 
     const walkTime = document.getElementById("timer").innerHTML;
@@ -417,18 +418,18 @@ async function loadRecords(){
     const recordType = getRecordType(r);
 
     html += `
-      <div class="record" onclick="showDetail('${r.id}')">
+      <div class="record" onclick="showDetail('${escapeHtml(r.id)}')">
         <div class="record-title">📌 ${escapeHtml(title)}</div>
         <div class="record-row">📂 記録種別<br>${escapeHtml(getRecordTypeLabel(recordType))}</div>
         <div class="record-tags">${formatTags(tags)}</div>
         <div class="record-row">📅 日時<br>${escapeHtml(r.date)}</div>
-        <div class="record-row">🚶 散歩時間<br>${r.walk.time}</div>
-        <div class="record-row">📏 移動距離<br>${r.walk.distanceKm}</div>
-        <div class="record-row">⚡ 平均速度<br>${r.walk.avgSpeed || "0.00km/h"}</div>
-        <div class="record-row">📷 写真<br>${r.summary.photoCount}枚</div>
-        <div class="record-row">🎤 音声<br>${r.summary.audioCount}件</div>
-        <div class="record-row">📝 メモ<br>${r.summary.noteCount}件</div>
-        <div class="record-row">📍 GPS<br>${r.summary.validGpsPointCount || r.summary.gpsPointCount || 0}件</div>
+        <div class="record-row">🚶 散歩時間<br>${escapeHtml(r.walk?.time || "00:00:00")}</div>
+        <div class="record-row">📏 移動距離<br>${escapeHtml(r.walk?.distanceKm || "0.00km")}</div>
+        <div class="record-row">⚡ 平均速度<br>${escapeHtml(r.walk?.avgSpeed || "0.00km/h")}</div>
+        <div class="record-row">📷 写真<br>${r.summary?.photoCount || 0}枚</div>
+        <div class="record-row">🎤 音声<br>${r.summary?.audioCount || 0}件</div>
+        <div class="record-row">📝 メモ<br>${r.summary?.noteCount || 0}件</div>
+        <div class="record-row">📍 GPS<br>${r.summary?.validGpsPointCount || r.summary?.gpsPointCount || 0}件</div>
       </div>
     `;
   });
@@ -466,196 +467,6 @@ function renderStats(records){
   `;
 }
 
-async function showDetail(id){
-  const records = await getRecords();
-  const r = records.find(x=>x.id===id);
-
-  if(!r){
-    alert("記録が見つかりません");
-    return;
-  }
-
-  const photosHtml = makePhotosHtml(r);
-  const audioHtml = makeAudioHtml(r);
-  const notesHtml = makeNotesHtml(r);
-  const gpsHistoryHtml = makeGpsHistoryHtml(r);
-
-  const detailTitle = getRecordTitle(r);
-  const detailTags = Array.isArray(r.tags) ? r.tags : [];
-  const detailType = getRecordType(r);
-
-  document.getElementById("detailContent").innerHTML = `
-    <div class="detail-section">
-      <div class="detail-title">📌 タイトル</div>
-      <div class="detail-value">${escapeHtml(detailTitle)}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">🏷️ タグ</div>
-      <div class="detail-value">${formatTags(detailTags)}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">📂 記録種別</div>
-      <div class="detail-value">${escapeHtml(getRecordTypeLabel(detailType))}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">📅 日時</div>
-      <div class="detail-value">${r.date}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">🗺️ 地図</div>
-      <div id="map"></div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">🚶 散歩</div>
-      <div class="detail-value">
-        時間：${r.walk.time}<br>
-        距離：${r.walk.distanceKm}<br>
-        平均速度：${r.walk.avgSpeed || "0.00km/h"}
-      </div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">📍 GPS</div>
-      <div class="detail-value">
-        開始：${r.gps.start}<br>
-        終了：${r.gps.end}<br>
-        取得ポイント：${r.summary.gpsPointCount || 0}件<br>
-        有効ポイント：${r.summary.validGpsPointCount || getValidGpsCount(r.gps.history)}件
-      </div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">📍 GPS履歴</div>
-      <div class="detail-value">${gpsHistoryHtml}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">📷 写真</div>
-      <div class="detail-value photo-list">${photosHtml}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">🎤 音声</div>
-      <div class="detail-value">${audioHtml}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">📝 メモ</div>
-      <div class="detail-value">${notesHtml}</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-title">🆔 Session</div>
-      <div class="session-id">${r.session.id}</div>
-    </div>
-
-    <button class="deleteButton" onclick="confirmDelete('${r.id}')">
-      この記録を削除
-    </button>
-  `;
-
-  showPage("detailPage");
-  renderMap(r);
-}
-
-function makePhotosHtml(r){
-  if(!r.photos || r.photos.length === 0) return "写真なし";
-
-  let html = "";
-
-  r.photos.forEach(p=>{
-    if(p.data){
-      html += `<img src="${p.data}" class="photo-thumb" onclick="openPhoto('${p.data}')">`;
-    }
-  });
-
-  return html || "写真データなし";
-}
-
-function makeAudioHtml(r){
-  if(!r.audio || r.audio.length === 0) return "音声なし";
-
-  let html = "";
-
-  r.audio.forEach(a=>{
-    if(a.data){
-      html += `<audio controls src="${a.data}"></audio>`;
-    }
-  });
-
-  return html || "音声データなし";
-}
-
-function makeNotesHtml(r){
-  if(!r.notes || r.notes.length === 0) return "メモなし";
-
-  let html = "";
-
-  r.notes.forEach(n=>{
-    html += `
-      <div class="note-item">
-        ${n.text}
-        <div class="note-time">${n.time}</div>
-      </div>
-    `;
-  });
-
-  return html;
-}
-
-function makeGpsHistoryHtml(r){
-  if(!r.gps || !r.gps.history || r.gps.history.length === 0){
-    return "GPS履歴なし";
-  }
-
-  let html = "";
-  let middleCount = 1;
-
-  r.gps.history.forEach((p,index)=>{
-    const label = formatGpsType(p.type,middleCount);
-
-    if(p.type === "point"){
-      middleCount++;
-    }
-
-    const valid = gpsToLatLng(p.gps) ? "有効" : "無効";
-
-    html += `
-      <div class="note-item">
-        ${index + 1}. ${label} / ${p.gps} / ${valid}
-        <div class="note-time">${p.time}</div>
-      </div>
-    `;
-  });
-
-  return html;
-}
-
-async function confirmDelete(id){
-  if(!confirm("この記録を削除しますか？")){
-    return;
-  }
-
-  await deleteRecord(id);
-  alert("削除しました");
-  location.reload();
-}
-
-function openPhoto(data){
-  document.getElementById("modalPhoto").src = data;
-  document.getElementById("photoModal").classList.remove("hidden");
-}
-
-function closePhoto(){
-  document.getElementById("photoModal").classList.add("hidden");
-  document.getElementById("modalPhoto").src = "";
-}
-
 function backToHome(){
   showPage("homePage");
   loadRecords();
@@ -675,8 +486,16 @@ window.onerror = function(msg,url,line){
   alert("ERROR\n" + msg + "\nLINE:" + line);
 };
 
-window.searchRecords = searchRecords;
-window.clearSearch = clearSearch;
-window.showDetail = showDetail;
+if(typeof searchRecords === "function"){
+  window.searchRecords = searchRecords;
+}
+
+if(typeof clearSearch === "function"){
+  window.clearSearch = clearSearch;
+}
+
 window.renderStats = renderStats;
 window.getRecords = getRecords;
+window.saveRecord = saveRecord;
+window.deleteRecord = deleteRecord;
+window.backToHome = backToHome;
