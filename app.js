@@ -674,3 +674,9 @@ window.onload = async function(){
 window.onerror = function(msg,url,line){
   alert("ERROR\n" + msg + "\nLINE:" + line);
 };
+
+window.searchRecords = searchRecords;
+window.clearSearch = clearSearch;
+window.showDetail = showDetail;
+window.renderStats = renderStats;
+window.getRecords = getRecords;
