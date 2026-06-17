@@ -24,6 +24,57 @@ function createId(){
   return "ob_" + Date.now() + "_" + Math.floor(Math.random()*100000);
 }
 
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function getInputValue(id){
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : "";
+}
+
+function parseTags(value){
+  if(!value) return [];
+
+  return value
+    .split(/[，、,\s#]+/)
+    .map(v=>v.trim())
+    .filter(v=>v !== "")
+    .filter((v,i,a)=>a.indexOf(v) === i);
+}
+
+function formatTags(tags){
+  if(!Array.isArray(tags) || tags.length === 0){
+    return "タグなし";
+  }
+
+  return tags.map(tag=>"#" + escapeHtml(tag)).join(" ");
+}
+
+function getRecordTitle(record){
+  return record && record.title ? record.title : "散歩記録";
+}
+
+function getRecordType(record){
+  if(record && record.recordType) return record.recordType;
+  if(record && record.session && record.session.type) return record.session.type;
+  return "walk";
+}
+
+function getRecordTypeLabel(type){
+  if(type === "walk") return "散歩";
+  if(type === "camp") return "キャンプ";
+  if(type === "gear") return "ギア";
+  if(type === "cooking") return "料理";
+  if(type === "memo") return "メモ";
+  return "記録";
+}
+
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME,DB_VERSION);
@@ -103,6 +154,11 @@ function startWalk(){
     endTime:"",
     status:"open"
   };
+
+  const titleInput = document.getElementById("titleInput");
+  const tagInput = document.getElementById("tagInput");
+  if(titleInput) titleInput.value = "";
+  if(tagInput) tagInput.value = "";
 
   document.getElementById("timer").innerHTML = "00:00:00";
   document.getElementById("photoInfo").innerHTML = "写真 0枚";
@@ -263,140 +319,6 @@ function stopRecording(){
   }
 }
 
-function getGps(callback){
-  if(!navigator.geolocation){
-    callback("未取得");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      const lat = pos.coords.latitude.toFixed(6);
-      const lng = pos.coords.longitude.toFixed(6);
-      callback(lat + "," + lng);
-    },
-    ()=>callback("未取得"),
-    {
-      enableHighAccuracy:true,
-      timeout:10000,
-      maximumAge:0
-    }
-  );
-}
-
-function addGpsHistory(type,gps){
-  gpsHistory.push({
-    type:type,
-    gps:gps,
-    time:new Date().toLocaleString()
-  });
-}
-
-function gpsToLatLng(gps){
-  if(!gps || gps==="未取得" || gps==="取得中") return null;
-
-  const p = gps.split(",");
-  if(p.length !== 2) return null;
-
-  const lat = Number(p[0]);
-  const lng = Number(p[1]);
-
-  if(Number.isNaN(lat) || Number.isNaN(lng)) return null;
-
-  return [lat,lng];
-}
-
-function calcDistanceNumber(gps1,gps2){
-  const p1 = gpsToLatLng(gps1);
-  const p2 = gpsToLatLng(gps2);
-
-  if(!p1 || !p2) return 0;
-
-  const lat1 = p1[0];
-  const lon1 = p1[1];
-  const lat2 = p2[0];
-  const lon2 = p2[1];
-
-  const R = 6371;
-  const dLat = (lat2-lat1) * Math.PI / 180;
-  const dLon = (lon2-lon1) * Math.PI / 180;
-
-  const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-
-  return R * c;
-}
-
-function calcDistance(gps1,gps2){
-  const d = calcDistanceNumber(gps1,gps2);
-  if(d === 0) return "未取得";
-  return d.toFixed(2) + "km";
-}
-
-function calcTrackDistance(history){
-  if(!history || history.length < 2){
-    return "0.00km";
-  }
-
-  let total = 0;
-
-  for(let i=1;i<history.length;i++){
-    const prev = history[i-1].gps;
-    const curr = history[i].gps;
-
-    const d = calcDistanceNumber(prev,curr);
-
-    if(d <= 0){
-      continue;
-    }
-
-    if(d > GPS_JUMP_LIMIT_KM){
-      continue;
-    }
-
-    total += d;
-  }
-
-  return total.toFixed(2) + "km";
-}
-
-function calcAverageSpeed(distanceText,timeText){
-  const km = parseFloat((distanceText || "0").replace("km",""));
-  const sec = timeToSeconds(timeText);
-
-  if(!km || !sec){
-    return "0.00km/h";
-  }
-
-  const h = sec / 3600;
-  return (km / h).toFixed(2) + "km/h";
-}
-
-function getValidGpsCount(history){
-  if(!history) return 0;
-
-  let count = 0;
-
-  history.forEach(p=>{
-    if(gpsToLatLng(p.gps)){
-      count++;
-    }
-  });
-
-  return count;
-}
-
-function formatGpsType(type,index){
-  if(type === "start") return "開始";
-  if(type === "end") return "終了";
-  return "中間" + index;
-}
-
 function finishWalk(){
   clearInterval(timerInterval);
 
@@ -415,12 +337,17 @@ function finishWalk(){
 
     const walkTime = document.getElementById("timer").innerHTML;
     const avgSpeed = calcAverageSpeed(distanceKm,walkTime);
+    const inputTitle = getInputValue("titleInput");
+    const inputTags = parseTags(getInputValue("tagInput"));
 
     currentSession.endTime = new Date().toLocaleString();
     currentSession.status = "closed";
 
     const record = {
       id:createId(),
+      title:inputTitle || "散歩記録",
+      tags:inputTags,
+      recordType:"walk",
       session:currentSession,
       date:new Date().toLocaleString(),
       walk:{
@@ -449,7 +376,10 @@ function finishWalk(){
       await saveRecord(record);
 
       alert(
-        "散歩終了\n記録時間：" + record.walk.time +
+        "散歩終了\nタイトル：" + record.title +
+        "\nタグ：" + (record.tags.length ? record.tags.join(",") : "なし") +
+        "\n記録種別：" + getRecordTypeLabel(record.recordType) +
+        "\n記録時間：" + record.walk.time +
         "\n写真：" + photos.length + "枚" +
         "\n音声：" + audioRecords.length + "件" +
         "\nメモ：" + notes.length + "件" +
@@ -482,9 +412,16 @@ async function loadRecords(){
   let html = "";
 
   records.forEach(r=>{
+    const title = getRecordTitle(r);
+    const tags = Array.isArray(r.tags) ? r.tags : [];
+    const recordType = getRecordType(r);
+
     html += `
       <div class="record" onclick="showDetail('${r.id}')">
-        <div class="record-title">📅 ${r.date}</div>
+        <div class="record-title">📌 ${escapeHtml(title)}</div>
+        <div class="record-row">📂 記録種別<br>${escapeHtml(getRecordTypeLabel(recordType))}</div>
+        <div class="record-tags">${formatTags(tags)}</div>
+        <div class="record-row">📅 日時<br>${escapeHtml(r.date)}</div>
         <div class="record-row">🚶 散歩時間<br>${r.walk.time}</div>
         <div class="record-row">📏 移動距離<br>${r.walk.distanceKm}</div>
         <div class="record-row">⚡ 平均速度<br>${r.walk.avgSpeed || "0.00km/h"}</div>
@@ -543,7 +480,26 @@ async function showDetail(id){
   const notesHtml = makeNotesHtml(r);
   const gpsHistoryHtml = makeGpsHistoryHtml(r);
 
+  const detailTitle = getRecordTitle(r);
+  const detailTags = Array.isArray(r.tags) ? r.tags : [];
+  const detailType = getRecordType(r);
+
   document.getElementById("detailContent").innerHTML = `
+    <div class="detail-section">
+      <div class="detail-title">📌 タイトル</div>
+      <div class="detail-value">${escapeHtml(detailTitle)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">🏷️ タグ</div>
+      <div class="detail-value">${formatTags(detailTags)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">📂 記録種別</div>
+      <div class="detail-value">${escapeHtml(getRecordTypeLabel(detailType))}</div>
+    </div>
+
     <div class="detail-section">
       <div class="detail-title">📅 日時</div>
       <div class="detail-value">${r.date}</div>
@@ -678,58 +634,6 @@ function makeGpsHistoryHtml(r){
   });
 
   return html;
-}
-
-function renderMap(r){
-  if(typeof L === "undefined"){
-    return;
-  }
-
-  const points = [];
-
-  if(r.gps && r.gps.history){
-    r.gps.history.forEach(p=>{
-      const latlng = gpsToLatLng(p.gps);
-      if(latlng){
-        points.push({
-          type:p.type,
-          latlng:latlng
-        });
-      }
-    });
-  }
-
-  if(points.length === 0){
-    document.getElementById("map").innerHTML = "地図表示できるGPSデータがありません";
-    return;
-  }
-
-  if(mapInstance){
-    mapInstance.remove();
-  }
-
-  mapInstance = L.map("map").setView(points[0].latlng,16);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-    maxZoom:19
-  }).addTo(mapInstance);
-
-  const latlngs = points.map(p=>p.latlng);
-
-  if(latlngs.length >= 2){
-    L.polyline(latlngs,{
-      weight:5
-    }).addTo(mapInstance);
-  }
-
-  L.marker(points[0].latlng).addTo(mapInstance).bindPopup("開始");
-  L.marker(points[points.length-1].latlng).addTo(mapInstance).bindPopup("終了");
-
-  if(latlngs.length >= 2){
-    mapInstance.fitBounds(latlngs,{padding:[30,30]});
-  }else{
-    mapInstance.setView(points[0].latlng,16);
-  }
 }
 
 async function confirmDelete(id){
