@@ -1,95 +1,47 @@
-<!DOCTYPE html>
-<html lang="ja">
+<!DOCTYPE html><html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OUTBASE</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<title>OUTBASE</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-
-<header>OUTBASE</header>
-
-<div id="homePage" class="page">
-
-<div class="card">
+</head><body><header>OUTBASE</header><div id="homePage" class="page"><div class="card">
 <h1>今日の記録</h1>
 <button onclick="startWalk()">散歩開始</button>
 <button onclick="alert('キャンプモード準備中')">キャンプ開始</button>
 <div id="storageInfo">保存基盤確認中...</div>
-</div>
-
-<div class="card">
-<h1>記録検索</h1>
-
-<input
+</div><div class="card">
+<h1>記録検索</h1><input
 type="text"
 id="searchInput"
 placeholder="タイトル・タグ・メモ検索">
 
 <button onclick="searchRecords()">
 検索
-</button>
-
-<button onclick="clearSearch()">
+</button><button onclick="clearSearch()">
 検索解除
 </button>
-
-</div>
-
-<div class="card">
+</div><div class="card">
 <h1>累計</h1>
 <div id="stats">集計中...</div>
-</div>
-
-<div class="card">
+</div><div class="card">
 <h1>最近の記録</h1>
 <div id="recordList">記録なし</div>
-</div>
-
-</div>
-
-<div id="walkPage" class="page hidden">
-
-<div class="card">
+</div></div><div id="walkPage" class="page hidden"><div class="card">
 <h1>散歩中</h1>
-
-<div id="timer" class="timer">
-00:00:00
-</div>
-
-<div id="gpsInfo">
-GPS取得中...
-</div>
-
-</div>
-
-<div class="card">
-
-<h2>タイトル</h2>
-
-<input
+<div id="timer" class="timer">00:00:00</div>
+<div id="gpsInfo">GPS取得中...</div>
+</div><div class="card"><h2>タイトル</h2><input
 type="text"
 id="titleInput"
 placeholder="例：朝散歩">
 
-<h2>タグ</h2>
-
-<input
+<h2>タグ</h2><input
 type="text"
 id="tagInput"
-placeholder="例：コタ,散歩,公園">
+placeholder="例：コタ,公園,朝">
 
-</div>
-
-<div class="card">
-
-<h2>写真</h2>
-
-<input
+</div><div class="card">
+<h2>写真</h2><input
 type="file"
 id="photoInput"
 accept="image/*"
@@ -99,93 +51,29 @@ onchange="addPhoto()">
 
 <button onclick="document.getElementById('photoInput').click()">
 写真追加
-</button>
-
-<div id="photoInfo">写真 0枚</div>
-
-<div id="photoPreview"></div>
-
-</div>
-
-<div class="card">
-
-<h2>音声</h2>
-
-<button onclick="startRecording()">
+</button><div id="photoInfo">写真 0枚</div>
+<div id="photoPreview"></div></div><div class="card">
+<h2>音声</h2><button onclick="startRecording()">
 録音開始
-</button>
-
-<button onclick="stopRecording()">
+</button><button onclick="stopRecording()">
 録音停止
-</button>
-
-<div id="audioInfo">
-音声 0件
-</div>
-
-<div id="audioList"></div>
-
-</div>
-
-<div class="card">
-
-<h2>メモ</h2>
-
-<textarea
+</button><div id="audioInfo">音声 0件</div>
+<div id="audioList"></div></div><div class="card">
+<h2>メモ</h2><textarea
 id="noteInput"
 placeholder="メモを入力">
-</textarea>
-
-<button onclick="addNote()">
+</textarea><button onclick="addNote()">
 メモ追加
-</button>
-
-<div id="noteInfo">
-メモ 0件
-</div>
-
-<div id="noteList"></div>
-
-</div>
-
+</button><div id="noteInfo">メモ 0件</div>
+<div id="noteList"></div></div><div class="card">
+<button onclick="finishWalk()">散歩終了</button>
+</div></div><div id="detailPage" class="page hidden">
 <div class="card">
-
-<button onclick="finishWalk()">
-散歩終了
-</button>
-
-</div>
-
-</div>
-
-<div id="detailPage" class="page hidden">
-
-<div class="card">
-
 <h1>記録詳細</h1>
-
 <div id="detailContent"></div>
-
-<button onclick="backToHome()">
-戻る
-</button>
-
+<button onclick="backToHome()">戻る</button>
 </div>
-
-</div>
-
-<div
-id="photoModal"
-class="modal hidden"
-onclick="closePhoto()">
-
+</div><div id="photoModal" class="modal hidden" onclick="closePhoto()">
 <img id="modalPhoto">
-
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="gps.js"></script>
-<script src="app.js"></script>
-
-</body>
+</div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="gps.js"></script><script src="app.js"></script></body>
 </html>
