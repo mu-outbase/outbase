@@ -17,6 +17,9 @@ let endGps = "未取得";
 let distanceKm = "未取得";
 let mapInstance = null;
 
+const GPS_INTERVAL_MS = 10000;
+const GPS_JUMP_LIMIT_KM = 1;
+
 function createId(){
   return "ob_" + Date.now() + "_" + Math.floor(Math.random()*100000);
 }
@@ -24,17 +27,20 @@ function createId(){
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME,DB_VERSION);
+
     request.onupgradeneeded = e => {
       db = e.target.result;
       if(!db.objectStoreNames.contains("records")){
         db.createObjectStore("records",{keyPath:"id"});
       }
     };
+
     request.onsuccess = e => {
       db = e.target.result;
       document.getElementById("storageInfo").innerHTML = "保存基盤：IndexedDB";
       resolve(db);
     };
+
     request.onerror = () => {
       document.getElementById("storageInfo").innerHTML = "保存基盤：エラー";
       reject();
@@ -109,11 +115,9 @@ function startWalk(){
 
   getGps(gps=>{
     startGps = gps;
-    gpsHistory.push({
-      type:"start",
-      gps:gps,
-      time:new Date().toLocaleString()
-    });
+
+    addGpsHistory("start",gps);
+
     document.getElementById("gpsInfo").innerHTML = "開始GPS：" + gps;
   });
 
@@ -124,19 +128,16 @@ function startWalk(){
 
   gpsWatcher = setInterval(()=>{
     getGps(gps=>{
-      gpsHistory.push({
-        type:"point",
-        gps:gps,
-        time:new Date().toLocaleString()
-      });
+      addGpsHistory("point",gps);
     });
-  },10000);
+  },GPS_INTERVAL_MS);
 }
 
 function formatTime(sec){
   const h = Math.floor(sec/3600);
   const m = Math.floor((sec%3600)/60);
   const s = sec%60;
+
   return String(h).padStart(2,"0") + ":" +
          String(m).padStart(2,"0") + ":" +
          String(s).padStart(2,"0");
@@ -245,6 +246,7 @@ async function startRecording(){
     alert("録音開始");
 
   }catch(error){
+    console.error(error);
     alert("録音できません");
   }
 }
@@ -274,31 +276,46 @@ function getGps(callback){
       callback(lat + "," + lng);
     },
     ()=>callback("未取得"),
-    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
+    {
+      enableHighAccuracy:true,
+      timeout:10000,
+      maximumAge:0
+    }
   );
+}
+
+function addGpsHistory(type,gps){
+  gpsHistory.push({
+    type:type,
+    gps:gps,
+    time:new Date().toLocaleString()
+  });
 }
 
 function gpsToLatLng(gps){
   if(!gps || gps==="未取得" || gps==="取得中") return null;
+
   const p = gps.split(",");
   if(p.length !== 2) return null;
+
   const lat = Number(p[0]);
   const lng = Number(p[1]);
+
   if(Number.isNaN(lat) || Number.isNaN(lng)) return null;
+
   return [lat,lng];
 }
 
-function calcDistance(gps1,gps2){
-  if(gps1==="未取得" || gps2==="未取得" || gps1==="取得中"){
-    return "未取得";
-  }
+function calcDistanceNumber(gps1,gps2){
+  const p1 = gpsToLatLng(gps1);
+  const p2 = gpsToLatLng(gps2);
 
-  const p1 = gps1.split(",");
-  const p2 = gps2.split(",");
-  const lat1 = Number(p1[0]);
-  const lon1 = Number(p1[1]);
-  const lat2 = Number(p2[0]);
-  const lon2 = Number(p2[1]);
+  if(!p1 || !p2) return 0;
+
+  const lat1 = p1[0];
+  const lon1 = p1[1];
+  const lat2 = p2[0];
+  const lon2 = p2[1];
 
   const R = 6371;
   const dLat = (lat2-lat1) * Math.PI / 180;
@@ -311,7 +328,73 @@ function calcDistance(gps1,gps2){
     Math.sin(dLon/2) * Math.sin(dLon/2);
 
   const c = 2 * Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  return (R*c).toFixed(2) + "km";
+
+  return R * c;
+}
+
+function calcDistance(gps1,gps2){
+  const d = calcDistanceNumber(gps1,gps2);
+  if(d === 0) return "未取得";
+  return d.toFixed(2) + "km";
+}
+
+function calcTrackDistance(history){
+  if(!history || history.length < 2){
+    return "0.00km";
+  }
+
+  let total = 0;
+
+  for(let i=1;i<history.length;i++){
+    const prev = history[i-1].gps;
+    const curr = history[i].gps;
+
+    const d = calcDistanceNumber(prev,curr);
+
+    if(d <= 0){
+      continue;
+    }
+
+    if(d > GPS_JUMP_LIMIT_KM){
+      continue;
+    }
+
+    total += d;
+  }
+
+  return total.toFixed(2) + "km";
+}
+
+function calcAverageSpeed(distanceText,timeText){
+  const km = parseFloat((distanceText || "0").replace("km",""));
+  const sec = timeToSeconds(timeText);
+
+  if(!km || !sec){
+    return "0.00km/h";
+  }
+
+  const h = sec / 3600;
+  return (km / h).toFixed(2) + "km/h";
+}
+
+function getValidGpsCount(history){
+  if(!history) return 0;
+
+  let count = 0;
+
+  history.forEach(p=>{
+    if(gpsToLatLng(p.gps)){
+      count++;
+    }
+  });
+
+  return count;
+}
+
+function formatGpsType(type,index){
+  if(type === "start") return "開始";
+  if(type === "end") return "終了";
+  return "中間" + index;
 }
 
 function finishWalk(){
@@ -325,13 +408,13 @@ function finishWalk(){
 
   getGps(async gps=>{
     endGps = gps;
-    distanceKm = calcDistance(startGps,endGps);
 
-    gpsHistory.push({
-      type:"end",
-      gps:endGps,
-      time:new Date().toLocaleString()
-    });
+    addGpsHistory("end",endGps);
+
+    distanceKm = calcTrackDistance(gpsHistory);
+
+    const walkTime = document.getElementById("timer").innerHTML;
+    const avgSpeed = calcAverageSpeed(distanceKm,walkTime);
 
     currentSession.endTime = new Date().toLocaleString();
     currentSession.status = "closed";
@@ -341,8 +424,9 @@ function finishWalk(){
       session:currentSession,
       date:new Date().toLocaleString(),
       walk:{
-        time:document.getElementById("timer").innerHTML,
-        distanceKm:distanceKm
+        time:walkTime,
+        distanceKm:distanceKm,
+        avgSpeed:avgSpeed
       },
       gps:{
         start:startGps,
@@ -356,22 +440,30 @@ function finishWalk(){
         photoCount:photos.length,
         audioCount:audioRecords.length,
         noteCount:notes.length,
-        gpsPointCount:gpsHistory.length
+        gpsPointCount:gpsHistory.length,
+        validGpsPointCount:getValidGpsCount(gpsHistory)
       }
     };
 
-    await saveRecord(record);
+    try{
+      await saveRecord(record);
 
-    alert(
-      "散歩終了\n記録時間：" + record.walk.time +
-      "\n写真：" + photos.length + "枚" +
-      "\n音声：" + audioRecords.length + "件" +
-      "\nメモ：" + notes.length + "件" +
-      "\nGPS：" + gpsHistory.length + "件" +
-      "\n移動距離：" + distanceKm
-    );
+      alert(
+        "散歩終了\n記録時間：" + record.walk.time +
+        "\n写真：" + photos.length + "枚" +
+        "\n音声：" + audioRecords.length + "件" +
+        "\nメモ：" + notes.length + "件" +
+        "\nGPS：" + record.summary.validGpsPointCount + "件" +
+        "\n移動距離：" + distanceKm +
+        "\n平均速度：" + avgSpeed
+      );
 
-    location.reload();
+      location.reload();
+
+    }catch(error){
+      console.error(error);
+      alert("保存に失敗しました");
+    }
   });
 }
 
@@ -395,10 +487,11 @@ async function loadRecords(){
         <div class="record-title">📅 ${r.date}</div>
         <div class="record-row">🚶 散歩時間<br>${r.walk.time}</div>
         <div class="record-row">📏 移動距離<br>${r.walk.distanceKm}</div>
+        <div class="record-row">⚡ 平均速度<br>${r.walk.avgSpeed || "0.00km/h"}</div>
         <div class="record-row">📷 写真<br>${r.summary.photoCount}枚</div>
         <div class="record-row">🎤 音声<br>${r.summary.audioCount}件</div>
         <div class="record-row">📝 メモ<br>${r.summary.noteCount}件</div>
-        <div class="record-row">📍 GPS<br>${r.summary.gpsPointCount || 0}件</div>
+        <div class="record-row">📍 GPS<br>${r.summary.validGpsPointCount || r.summary.gpsPointCount || 0}件</div>
       </div>
     `;
   });
@@ -415,8 +508,10 @@ function renderStats(records){
 
   records.forEach(r=>{
     totalSec += timeToSeconds(r.walk?.time || "00:00:00");
+
     const km = parseFloat((r.walk?.distanceKm || "0").replace("km",""));
     if(!Number.isNaN(km)) totalKm += km;
+
     totalPhotos += r.summary?.photoCount || 0;
     totalAudio += r.summary?.audioCount || 0;
     totalNotes += r.summary?.noteCount || 0;
@@ -463,7 +558,8 @@ async function showDetail(id){
       <div class="detail-title">🚶 散歩</div>
       <div class="detail-value">
         時間：${r.walk.time}<br>
-        距離：${r.walk.distanceKm}
+        距離：${r.walk.distanceKm}<br>
+        平均速度：${r.walk.avgSpeed || "0.00km/h"}
       </div>
     </div>
 
@@ -472,7 +568,8 @@ async function showDetail(id){
       <div class="detail-value">
         開始：${r.gps.start}<br>
         終了：${r.gps.end}<br>
-        取得ポイント：${r.summary.gpsPointCount || 0}件
+        取得ポイント：${r.summary.gpsPointCount || 0}件<br>
+        有効ポイント：${r.summary.validGpsPointCount || getValidGpsCount(r.gps.history)}件
       </div>
     </div>
 
@@ -514,6 +611,7 @@ function makePhotosHtml(r){
   if(!r.photos || r.photos.length === 0) return "写真なし";
 
   let html = "";
+
   r.photos.forEach(p=>{
     if(p.data){
       html += `<img src="${p.data}" class="photo-thumb" onclick="openPhoto('${p.data}')">`;
@@ -527,6 +625,7 @@ function makeAudioHtml(r){
   if(!r.audio || r.audio.length === 0) return "音声なし";
 
   let html = "";
+
   r.audio.forEach(a=>{
     if(a.data){
       html += `<audio controls src="${a.data}"></audio>`;
@@ -540,6 +639,7 @@ function makeNotesHtml(r){
   if(!r.notes || r.notes.length === 0) return "メモなし";
 
   let html = "";
+
   r.notes.forEach(n=>{
     html += `
       <div class="note-item">
@@ -558,10 +658,20 @@ function makeGpsHistoryHtml(r){
   }
 
   let html = "";
+  let middleCount = 1;
+
   r.gps.history.forEach((p,index)=>{
+    const label = formatGpsType(p.type,middleCount);
+
+    if(p.type === "point"){
+      middleCount++;
+    }
+
+    const valid = gpsToLatLng(p.gps) ? "有効" : "無効";
+
     html += `
       <div class="note-item">
-        ${index + 1}. ${p.type} / ${p.gps}
+        ${index + 1}. ${label} / ${p.gps} / ${valid}
         <div class="note-time">${p.time}</div>
       </div>
     `;
@@ -580,7 +690,12 @@ function renderMap(r){
   if(r.gps && r.gps.history){
     r.gps.history.forEach(p=>{
       const latlng = gpsToLatLng(p.gps);
-      if(latlng) points.push({type:p.type,latlng:latlng});
+      if(latlng){
+        points.push({
+          type:p.type,
+          latlng:latlng
+        });
+      }
     });
   }
 
@@ -601,12 +716,20 @@ function renderMap(r){
 
   const latlngs = points.map(p=>p.latlng);
 
-  L.polyline(latlngs).addTo(mapInstance);
+  if(latlngs.length >= 2){
+    L.polyline(latlngs,{
+      weight:5
+    }).addTo(mapInstance);
+  }
 
   L.marker(points[0].latlng).addTo(mapInstance).bindPopup("開始");
   L.marker(points[points.length-1].latlng).addTo(mapInstance).bindPopup("終了");
 
-  mapInstance.fitBounds(latlngs,{padding:[30,30]});
+  if(latlngs.length >= 2){
+    mapInstance.fitBounds(latlngs,{padding:[30,30]});
+  }else{
+    mapInstance.setView(points[0].latlng,16);
+  }
 }
 
 async function confirmDelete(id){
@@ -635,16 +758,13 @@ function backToHome(){
 }
 
 window.onload = async function(){
-
-  alert("起動開始");
-
-  await openDatabase();
-
-  alert("DB OK");
-
-  await loadRecords();
-
-  alert("LOAD OK");
+  try{
+    await openDatabase();
+    await loadRecords();
+  }catch(error){
+    console.error(error);
+    alert("起動に失敗しました");
+  }
 };
 
 window.onerror = function(msg,url,line){
