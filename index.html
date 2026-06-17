@@ -193,7 +193,17 @@
   class="modal hidden"
   onclick="closePhoto()">
 
-  <img id="modalPhoto">
+  <div class="modal-inner" onclick="event.stopPropagation()">
+
+    <button
+      class="modal-close"
+      onclick="closePhoto()">
+      ×
+    </button>
+
+    <img id="modalPhoto">
+
+  </div>
 
 </div>
 
