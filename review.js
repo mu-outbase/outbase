@@ -36,7 +36,13 @@ function generateSummaryReview(r){
   let text = "";
 
   if(weather){
-    text += `${weather}の`;
+    if(weather.includes("雨")){
+      text += "雨に包まれた";
+    }else if(weather.includes("晴")){
+      text += "開放感のある";
+    }else{
+      text += `${weather}の`;
+    }
   }
 
   text += `${site}`;
@@ -48,7 +54,7 @@ function generateSummaryReview(r){
   text += "でのキャンプ。";
 
   if(gearNames.length && mealNames.length && pet){
-    text += `<br>${gearNames[0]}を使い、${mealNames[0]}を楽しみながら、${pet}と過ごした記録です。`;
+    text += `<br>${gearNames[0]}を拠点に、${mealNames[0]}を楽しみながら、${pet}とゆったり過ごした時間が記録されています。`;
   }else if(gearNames.length && mealNames.length){
     text += `<br>${gearNames[0]}を使い、${mealNames[0]}を楽しんだキャンプ記録です。`;
   }else if(gearNames.length){
