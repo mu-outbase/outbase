@@ -1,22 +1,22 @@
 function generateCampReview(r){
   return `
     <div class="review-block">
-      <strong>■キャンプ日誌</strong><br>
+      <strong>■キャンプ記録</strong><br>
       ${generateDailyLog(r)}<br><br>
 
-      <strong>■写真の思い出</strong><br>
+      <strong>■写真</strong><br>
       ${generatePhotoReview(r)}<br><br>
 
-      <strong>■一緒に過ごしたギア</strong><br>
+      <strong>■使用ギア</strong><br>
       ${generateGearReview(r)}<br><br>
 
-      <strong>■その日の食事</strong><br>
+      <strong>■食事</strong><br>
       ${generateMealReview(r)}<br><br>
 
-      <strong>■その時の言葉</strong><br>
+      <strong>■メモ</strong><br>
       ${generateNoteReview(r)}<br><br>
 
-      <strong>■次回残したい思い出</strong><br>
+      <strong>■次回メモ候補</strong><br>
       ${generateNextAction(r)}
     </div>
   `;
