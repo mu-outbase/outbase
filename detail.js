@@ -20,9 +20,17 @@ async function showDetail(id){
   const detailType = getRecordType(r);
   const isCamp = detailType === "camp";
 
+  const headerHtml = isCamp
+    ? makeCampHeaderHtml(r)
+    : makeStandardHeaderHtml(r,detailTitle,detailTags,detailType);
+
   const campInfoHtml = isCamp ? makeCampInfoHtml(r) : "";
+  const campSummaryHtml = isCamp ? makeCampSummaryHtml(r) : "";
+  const campTimeHtml = isCamp ? makeCampTimeHtml(r) : "";
   const campGearHtml = isCamp ? makeCampGearHtml(r) : "";
   const campMealHtml = isCamp ? makeCampMealHtml(r) : "";
+  const campReviewHtml = isCamp ? makeCampReviewHtml(r) : "";
+
   const walkHtml = isCamp ? "" : makeWalkHtml(r);
   const gpsHtml = isCamp ? "" : makeGpsHtml(r);
   const gpsHistoryHtml = isCamp ? "" : makeGpsHistorySectionHtml(r);
@@ -31,27 +39,13 @@ async function showDetail(id){
   document.getElementById("detailContent").innerHTML = `
     <div id="detailViewArea">
 
-      <div class="detail-section">
-        <div class="detail-title">📌 タイトル</div>
-        <div class="detail-value">${escapeHtml(detailTitle)}</div>
-      </div>
+      ${headerHtml}
 
-      <div class="detail-section">
-        <div class="detail-title">🏷️ タグ</div>
-        <div class="detail-value">${formatTags(detailTags)}</div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-title">📂 記録種別</div>
-        <div class="detail-value">${escapeHtml(getRecordTypeLabel(detailType))}</div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-title">📅 日時</div>
-        <div class="detail-value">${escapeHtml(r.date || "")}</div>
-      </div>
+      ${campSummaryHtml}
 
       ${campInfoHtml}
+
+      ${campTimeHtml}
 
       ${mapHtml}
 
@@ -61,29 +55,28 @@ async function showDetail(id){
 
       ${gpsHistoryHtml}
 
+      <div class="detail-section">
+        <div class="detail-title">📷 写真（${getPhotoCount(r)}枚）</div>
+        <div class="detail-value photo-list">${makePhotosHtml(r)}</div>
+      </div>
+
       ${campGearHtml}
 
       ${campMealHtml}
 
       <div class="detail-section">
-        <div class="detail-title">📷 写真</div>
-        <div class="detail-value photo-list">${makePhotosHtml(r)}</div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-title">🎤 音声</div>
+        <div class="detail-title">🎤 音声（${getAudioCount(r)}件）</div>
         <div class="detail-value">${makeAudioHtml(r)}</div>
       </div>
 
       <div class="detail-section">
-        <div class="detail-title">📝 メモ</div>
+        <div class="detail-title">📝 メモ（${getNoteCount(r)}件）</div>
         <div class="detail-value">${makeNotesHtml(r)}</div>
       </div>
 
-      <div class="detail-section">
-        <div class="detail-title">🆔 Session</div>
-        <div class="session-id">${escapeHtml(r.session?.id || "")}</div>
-      </div>
+      ${campReviewHtml}
+
+      ${makeDeveloperInfoHtml(r)}
 
       <div class="action-area">
         <button class="editButton" onclick="openEditModal('${escapeHtml(r.id)}')">
@@ -103,6 +96,77 @@ async function showDetail(id){
   if(!isCamp){
     renderMap(r);
   }
+}
+
+function makeStandardHeaderHtml(r,detailTitle,detailTags,detailType){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">📌 タイトル</div>
+      <div class="detail-value">${escapeHtml(detailTitle)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">🏷️ タグ</div>
+      <div class="detail-value">${formatTags(detailTags)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">📂 記録種別</div>
+      <div class="detail-value">${escapeHtml(getRecordTypeLabel(detailType))}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">📅 日時</div>
+      <div class="detail-value">${escapeHtml(r.date || "")}</div>
+    </div>
+  `;
+}
+
+function makeCampHeaderHtml(r){
+  const camp = r.camp || {};
+  const title = camp.siteName || r.title || "キャンプ記録";
+  const area = camp.area || "";
+  const tags = makeCampTagList(r);
+
+  return `
+    <div class="detail-section">
+      <div class="detail-title">⛺ キャンプ記録</div>
+      <div class="detail-value">
+        <strong>${escapeHtml(title)}</strong><br>
+        ${area ? escapeHtml(area) + "<br>" : ""}
+        <div class="record-tags">${formatTags(tags)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function makeCampTagList(r){
+  const camp = r.camp || {};
+  const tags = [];
+
+  tags.push("キャンプ");
+
+  if(camp.siteName){
+    tags.push(camp.siteName);
+  }
+
+  if(camp.area){
+    tags.push(camp.area);
+  }
+
+  if(camp.pet){
+    tags.push(camp.pet);
+  }
+
+  if(Array.isArray(r.tags)){
+    r.tags.forEach(t=>{
+      if(t && !tags.includes(t)){
+        tags.push(t);
+      }
+    });
+  }
+
+  return tags;
 }
 
 function makeMapSectionHtml(){
@@ -150,6 +214,20 @@ function makeGpsHistorySectionHtml(r){
   `;
 }
 
+function makeCampSummaryHtml(r){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">📊 キャンプ統計</div>
+      <div class="detail-value">
+        📷 写真：${getPhotoCount(r)}枚<br>
+        🛠 ギア：${getGearCount(r)}件<br>
+        🍳 料理：${getMealCount(r)}件<br>
+        📝 メモ：${getNoteCount(r)}件
+      </div>
+    </div>
+  `;
+}
+
 function makeCampInfoHtml(r){
   const camp = r.camp || {};
 
@@ -168,6 +246,56 @@ function makeCampInfoHtml(r){
   `;
 }
 
+function makeCampTimeHtml(r){
+  const start = r.session?.startTime || "";
+  const end = r.session?.endTime || "";
+
+  return `
+    <div class="detail-section">
+      <div class="detail-title">🕒 キャンプ時間</div>
+      <div class="detail-value">
+        開始：${escapeHtml(start || "未取得")}<br>
+        終了：${escapeHtml(end || "未取得")}<br>
+        滞在時間：${escapeHtml(calcStayTime(start,end))}
+      </div>
+    </div>
+  `;
+}
+
+function calcStayTime(start,end){
+  if(!start || !end){
+    return "未計算";
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())){
+    return "未計算";
+  }
+
+  const diffMs = endDate.getTime() - startDate.getTime();
+
+  if(diffMs < 0){
+    return "未計算";
+  }
+
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if(days > 0){
+    return days + "日 " + hours + "時間 " + minutes + "分";
+  }
+
+  if(hours > 0){
+    return hours + "時間 " + minutes + "分";
+  }
+
+  return minutes + "分";
+}
+
 function makeCampGearHtml(r){
   const camp = r.camp || {};
   const gear = Array.isArray(camp.gear) ? camp.gear : [];
@@ -175,7 +303,7 @@ function makeCampGearHtml(r){
   if(gear.length === 0){
     return `
       <div class="detail-section">
-        <div class="detail-title">🛠 使用ギア</div>
+        <div class="detail-title">🛠 使用ギア（0件）</div>
         <div class="detail-value">ギアなし</div>
       </div>
     `;
@@ -194,7 +322,7 @@ function makeCampGearHtml(r){
 
   return `
     <div class="detail-section">
-      <div class="detail-title">🛠 使用ギア</div>
+      <div class="detail-title">🛠 使用ギア（${gear.length}件）</div>
       <div class="detail-value">${html}</div>
     </div>
   `;
@@ -207,7 +335,7 @@ function makeCampMealHtml(r){
   if(meals.length === 0){
     return `
       <div class="detail-section">
-        <div class="detail-title">🍳 料理</div>
+        <div class="detail-title">🍳 料理（0件）</div>
         <div class="detail-value">料理なし</div>
       </div>
     `;
@@ -226,10 +354,63 @@ function makeCampMealHtml(r){
 
   return `
     <div class="detail-section">
-      <div class="detail-title">🍳 料理</div>
+      <div class="detail-title">🍳 料理（${meals.length}件）</div>
       <div class="detail-value">${html}</div>
     </div>
   `;
+}
+
+function makeCampReviewHtml(r){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">⭐ キャンプレビュー</div>
+      <div class="detail-value">
+        レビュー未生成<br>
+        <span class="note-time">今後、写真・ギア・料理・メモから自動生成予定</span>
+      </div>
+    </div>
+  `;
+}
+
+function makeDeveloperInfoHtml(r){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">🧩 開発情報</div>
+      <div class="detail-value">
+        <details>
+          <summary>表示</summary>
+          <div class="session-id">
+            RecordID：${escapeHtml(r.id || "")}<br>
+            Session：${escapeHtml(r.session?.id || "")}<br>
+            Type：${escapeHtml(getRecordType(r))}<br>
+            Version：Phase9
+          </div>
+        </details>
+      </div>
+    </div>
+  `;
+}
+
+function getPhotoCount(r){
+  return r.summary?.photoCount || (Array.isArray(r.photos) ? r.photos.length : 0);
+}
+
+function getAudioCount(r){
+  return r.summary?.audioCount || (Array.isArray(r.audio) ? r.audio.length : 0);
+}
+
+function getNoteCount(r){
+  return r.summary?.noteCount || (Array.isArray(r.notes) ? r.notes.length : 0);
+}
+
+function getGearCount(r){
+  const camp = r.camp || {};
+  return r.summary?.gearCount || (Array.isArray(camp.gear) ? camp.gear.length : 0);
+}
+
+function getMealCount(r){
+  const camp = r.camp || {};
+  return r.summary?.mealCount || (Array.isArray(camp.meals) ? camp.meals.length : 0);
 }
 
 function makePhotosHtml(r){
