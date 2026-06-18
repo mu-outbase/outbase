@@ -33,39 +33,29 @@ function generateSummaryReview(r){
   const mealNames = getMealNames(r);
   const notes = getImportantNotes(r);
 
-  let text = "";
+  let lines = [];
 
   if(weather){
-    text += `${weather}の`;
+    lines.push(`${weather}に包まれた${site}${area ? area + "サイト" : ""}での時間。`);
+  }else{
+    lines.push(`${site}${area ? area + "サイト" : ""}で過ごしたキャンプ。`);
   }
 
-  text += `${site}`;
-
-  if(area){
-    text += `${area}サイト`;
-  }
-
-  text += "でのキャンプ。";
-
-  if(gearNames.length && mealNames.length && pet){
-    text += `<br>${gearNames[0]}を使い、${mealNames[0]}を楽しみながら、${pet}と過ごした記録です。`;
-  }else if(gearNames.length && mealNames.length){
-    text += `<br>${gearNames[0]}を使い、${mealNames[0]}を楽しんだキャンプ記録です。`;
-  }else if(gearNames.length){
-    text += `<br>${gearNames[0]}の使用記録が残っています。`;
-  }else if(mealNames.length){
-    text += `<br>${mealNames[0]}を楽しんだキャンプ記録です。`;
-  }else if(pet){
-    text += `<br>${pet}と一緒に過ごした記録です。`;
+  if(gearNames.length || mealNames.length || pet){
+    let story = [];
+    if(gearNames.length) story.push(`${gearNames[0]}を拠点に`);
+    if(mealNames.length) story.push(`${mealNames[0]}を楽しみ`);
+    if(pet) story.push(`${pet}とゆっくり過ごしました`);
+    lines.push(story.join("、") + "。");
   }
 
   if(notes.length && isMeaningfulNote(notes[0])){
-    text += `<br>メモには「${notes[0]}」と残されており、当日の気付きも記録されています。`;
-  }else if(notes.length){
-    text += `<br>簡易メモが残されています。次回は感想や改善点も残すとレビューの精度が上がります。`;
+    lines.push(`メモには「${notes[0]}」と残されており、その時の空気感が今も伝わってきます。`);
+  }else{
+    lines.push("何気ない時間でも、あとから振り返ると大切な思い出になります。");
   }
 
-  return text;
+  return lines.join("<br>");
 }
 
 function generatePhotoReview(r){
