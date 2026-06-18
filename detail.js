@@ -18,6 +18,15 @@ async function showDetail(id){
   const detailTitle = getRecordTitle(r);
   const detailTags = Array.isArray(r.tags) ? r.tags : [];
   const detailType = getRecordType(r);
+  const isCamp = detailType === "camp";
+
+  const campInfoHtml = isCamp ? makeCampInfoHtml(r) : "";
+  const campGearHtml = isCamp ? makeCampGearHtml(r) : "";
+  const campMealHtml = isCamp ? makeCampMealHtml(r) : "";
+  const walkHtml = isCamp ? "" : makeWalkHtml(r);
+  const gpsHtml = isCamp ? "" : makeGpsHtml(r);
+  const gpsHistoryHtml = isCamp ? "" : makeGpsHistorySectionHtml(r);
+  const mapHtml = isCamp ? "" : makeMapSectionHtml();
 
   document.getElementById("detailContent").innerHTML = `
     <div id="detailViewArea">
@@ -42,34 +51,19 @@ async function showDetail(id){
         <div class="detail-value">${escapeHtml(r.date || "")}</div>
       </div>
 
-      <div class="detail-section">
-        <div class="detail-title">🗺️ 地図</div>
-        <div id="map"></div>
-      </div>
+      ${campInfoHtml}
 
-      <div class="detail-section">
-        <div class="detail-title">🚶 散歩</div>
-        <div class="detail-value">
-          時間：${escapeHtml(r.walk?.time || "00:00:00")}<br>
-          距離：${escapeHtml(r.walk?.distanceKm || "0.00km")}<br>
-          平均速度：${escapeHtml(r.walk?.avgSpeed || "0.00km/h")}
-        </div>
-      </div>
+      ${mapHtml}
 
-      <div class="detail-section">
-        <div class="detail-title">📍 GPS</div>
-        <div class="detail-value">
-          開始：${escapeHtml(r.gps?.start || "未取得")}<br>
-          終了：${escapeHtml(r.gps?.end || "未取得")}<br>
-          取得ポイント：${r.summary?.gpsPointCount || 0}件<br>
-          有効ポイント：${r.summary?.validGpsPointCount || getValidGpsCount(r.gps?.history || [])}件
-        </div>
-      </div>
+      ${walkHtml}
 
-      <div class="detail-section">
-        <div class="detail-title">📍 GPS履歴</div>
-        <div class="detail-value">${makeGpsHistoryHtml(r)}</div>
-      </div>
+      ${gpsHtml}
+
+      ${gpsHistoryHtml}
+
+      ${campGearHtml}
+
+      ${campMealHtml}
 
       <div class="detail-section">
         <div class="detail-title">📷 写真</div>
@@ -105,7 +99,137 @@ async function showDetail(id){
   `;
 
   showPage("detailPage");
-  renderMap(r);
+
+  if(!isCamp){
+    renderMap(r);
+  }
+}
+
+function makeMapSectionHtml(){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">🗺️ 地図</div>
+      <div id="map"></div>
+    </div>
+  `;
+}
+
+function makeWalkHtml(r){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">🚶 散歩</div>
+      <div class="detail-value">
+        時間：${escapeHtml(r.walk?.time || "00:00:00")}<br>
+        距離：${escapeHtml(r.walk?.distanceKm || "0.00km")}<br>
+        平均速度：${escapeHtml(r.walk?.avgSpeed || "0.00km/h")}
+      </div>
+    </div>
+  `;
+}
+
+function makeGpsHtml(r){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">📍 GPS</div>
+      <div class="detail-value">
+        開始：${escapeHtml(r.gps?.start || "未取得")}<br>
+        終了：${escapeHtml(r.gps?.end || "未取得")}<br>
+        取得ポイント：${r.summary?.gpsPointCount || 0}件<br>
+        有効ポイント：${r.summary?.validGpsPointCount || getValidGpsCount(r.gps?.history || [])}件
+      </div>
+    </div>
+  `;
+}
+
+function makeGpsHistorySectionHtml(r){
+  return `
+    <div class="detail-section">
+      <div class="detail-title">📍 GPS履歴</div>
+      <div class="detail-value">${makeGpsHistoryHtml(r)}</div>
+    </div>
+  `;
+}
+
+function makeCampInfoHtml(r){
+  const camp = r.camp || {};
+
+  return `
+    <div class="detail-section">
+      <div class="detail-title">⛺ キャンプ情報</div>
+      <div class="detail-value">
+        キャンプ場：${escapeHtml(camp.siteName || r.title || "未入力")}<br>
+        エリア・サイト：${escapeHtml(camp.area || "未入力")}<br>
+        宿泊数：${escapeHtml(camp.stay || "未入力")}<br>
+        参加者：${escapeHtml(camp.member || "未入力")}<br>
+        ペット：${escapeHtml(camp.pet || "未入力")}<br>
+        天候：${escapeHtml(camp.weather || "未入力")}
+      </div>
+    </div>
+  `;
+}
+
+function makeCampGearHtml(r){
+  const camp = r.camp || {};
+  const gear = Array.isArray(camp.gear) ? camp.gear : [];
+
+  if(gear.length === 0){
+    return `
+      <div class="detail-section">
+        <div class="detail-title">🛠 使用ギア</div>
+        <div class="detail-value">ギアなし</div>
+      </div>
+    `;
+  }
+
+  let html = "";
+
+  gear.forEach((g,index)=>{
+    html += `
+      <div class="note-item">
+        ${index + 1}. ${escapeHtml(g.name || "")}
+        <div class="note-time">${escapeHtml(g.time || "")}</div>
+      </div>
+    `;
+  });
+
+  return `
+    <div class="detail-section">
+      <div class="detail-title">🛠 使用ギア</div>
+      <div class="detail-value">${html}</div>
+    </div>
+  `;
+}
+
+function makeCampMealHtml(r){
+  const camp = r.camp || {};
+  const meals = Array.isArray(camp.meals) ? camp.meals : [];
+
+  if(meals.length === 0){
+    return `
+      <div class="detail-section">
+        <div class="detail-title">🍳 料理</div>
+        <div class="detail-value">料理なし</div>
+      </div>
+    `;
+  }
+
+  let html = "";
+
+  meals.forEach((m,index)=>{
+    html += `
+      <div class="note-item">
+        ${index + 1}. ${escapeHtml(m.name || "")}
+        <div class="note-time">${escapeHtml(m.time || "")}</div>
+      </div>
+    `;
+  });
+
+  return `
+    <div class="detail-section">
+      <div class="detail-title">🍳 料理</div>
+      <div class="detail-value">${html}</div>
+    </div>
+  `;
 }
 
 function makePhotosHtml(r){
