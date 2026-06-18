@@ -1,7 +1,7 @@
 function generateCampReview(r){
   return `
     <div class="review-block">
-      <strong>■総合レビュー</strong><br>
+      <strong>■思い出レビュー</strong><br>
       ${generateSummaryReview(r)}<br><br>
 
       <strong>■写真評価</strong><br>
@@ -36,13 +36,7 @@ function generateSummaryReview(r){
   let text = "";
 
   if(weather){
-    if(weather.includes("雨")){
-      text += "雨に包まれた";
-    }else if(weather.includes("晴")){
-      text += "開放感のある";
-    }else{
-      text += `${weather}の`;
-    }
+    text += `${weather}の`;
   }
 
   text += `${site}`;
@@ -54,7 +48,7 @@ function generateSummaryReview(r){
   text += "でのキャンプ。";
 
   if(gearNames.length && mealNames.length && pet){
-    text += `<br>${gearNames[0]}を拠点に、${mealNames[0]}を楽しみながら、${pet}とゆったり過ごした時間が記録されています。`;
+    text += `<br>${gearNames[0]}を使い、${mealNames[0]}を楽しみながら、${pet}と過ごした記録です。`;
   }else if(gearNames.length && mealNames.length){
     text += `<br>${gearNames[0]}を使い、${mealNames[0]}を楽しんだキャンプ記録です。`;
   }else if(gearNames.length){
@@ -82,7 +76,7 @@ function generatePhotoReview(r){
   }
 
   if(count < 3){
-    return `写真は${count}枚。最低限の記録はありますが、設営前後やキャンプ中の雰囲気をもう少し残すと、思い出としての価値が高まります。`;
+    return `残された${count}枚の写真が、この日の思い出の入口になります。設営後の景色や過ごした時間も残すと、あとから振り返りやすくなります。`;
   }
 
   if(count < 5){
