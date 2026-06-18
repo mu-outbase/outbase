@@ -22,7 +22,7 @@
       散歩開始
     </button>
 
-    <button onclick="alert('キャンプモード準備中')">
+    <button onclick="startCamp()">
       キャンプ開始
     </button>
 
@@ -172,6 +172,164 @@
 
 </div>
 
+<div id="campPage" class="page hidden">
+
+  <div class="card">
+
+    <h1>キャンプ中</h1>
+
+    <div id="campInfo">
+      キャンプ未開始
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <h2>キャンプ場</h2>
+
+    <input
+      type="text"
+      id="campSiteNameInput"
+      placeholder="例：Lake Lodge YAMANAKA">
+
+    <h2>エリア・サイト</h2>
+
+    <input
+      type="text"
+      id="campAreaInput"
+      placeholder="例：ドッグフリーサイトA">
+
+    <h2>宿泊数</h2>
+
+    <input
+      type="text"
+      id="campStayInput"
+      placeholder="例：2泊3日">
+
+    <h2>参加者</h2>
+
+    <input
+      type="text"
+      id="campMemberInput"
+      placeholder="例：むー、リン">
+
+    <h2>ペット</h2>
+
+    <input
+      type="text"
+      id="campPetInput"
+      placeholder="例：コタ、アオ、エラ、ユキ">
+
+    <h2>天候</h2>
+
+    <input
+      type="text"
+      id="campWeatherInput"
+      placeholder="例：晴れ 24℃">
+
+  </div>
+
+  <div class="card">
+
+    <h2>写真</h2>
+
+    <input
+      type="file"
+      id="campPhotoInput"
+      accept="image/*"
+      multiple
+      style="display:none"
+      onchange="addCampPhoto()">
+
+    <button onclick="document.getElementById('campPhotoInput').click()">
+      写真追加
+    </button>
+
+    <div id="campPhotoInfo">
+      写真 0枚
+    </div>
+
+    <div id="campPhotoPreview"></div>
+
+  </div>
+
+  <div class="card">
+
+    <h2>ギア</h2>
+
+    <input
+      type="text"
+      id="campGearInput"
+      placeholder="例：ランドロックMFS">
+
+    <button onclick="addCampGear()">
+      ギア追加
+    </button>
+
+    <div id="campGearList">
+      ギアなし
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <h2>料理</h2>
+
+    <input
+      type="text"
+      id="campMealInput"
+      placeholder="例：パエリア">
+
+    <button onclick="addCampMeal()">
+      料理追加
+    </button>
+
+    <div id="campMealList">
+      料理なし
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <h2>メモ</h2>
+
+    <textarea
+      id="campNoteInput"
+      placeholder="気付き・改善点・レビュー候補"></textarea>
+
+    <button onclick="addCampNote()">
+      メモ追加
+    </button>
+
+    <div id="campNoteInfo">
+      メモ 0件
+    </div>
+
+    <div id="campNoteList">
+      メモなし
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <button onclick="finishCamp()">
+      キャンプ終了
+    </button>
+
+    <button
+      class="cancelButton"
+      onclick="cancelCamp()">
+      キャンセル
+    </button>
+
+  </div>
+
+</div>
+
 <div id="detailPage" class="page hidden">
 
   <div class="card">
@@ -214,6 +372,7 @@
 <script src="app.js"></script>
 <script src="detail.js"></script>
 <script src="edit.js"></script>
+<script src="camp.js"></script>
 
 </body>
 </html>
