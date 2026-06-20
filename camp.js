@@ -5,6 +5,11 @@ let campGear = [];
 let campMeals = [];
 
 function startCamp(){
+  if(hasActiveState()){
+    alert("進行中の記録があります。復旧または終了してから開始してください。");
+    return;
+  }
+
   showPage("campPage");
 
   currentCampSession = {
@@ -12,7 +17,7 @@ function startCamp(){
     type:"camp",
     startTime:new Date().toLocaleString(),
     endTime:"",
-    status:"open"
+    status:EVENT_STATUS.ACTIVE
   };
 
   campPhotos = [];
@@ -31,6 +36,16 @@ function startCamp(){
   setCampValue("campNoteInput","");
 
   updateCampInfo();
+
+  setAppState({
+    page:"camp",
+    eventId:currentCampSession.id,
+    eventType:"camp",
+    eventStatus:EVENT_STATUS.ACTIVE
+  });
+
+  startAutoSave();
+  saveCampActiveSession("start");
 }
 
 function setCampValue(id,value){
@@ -90,6 +105,7 @@ function addCampPhoto(){
 
       campPhotos.push(photo);
       renderCampPhotos();
+      saveCampActiveSession("photo");
     };
 
     reader.readAsDataURL(file);
@@ -142,6 +158,7 @@ function addCampGear(){
 
   setCampValue("campGearInput","");
   renderCampGear();
+  saveCampActiveSession("gear");
 }
 
 function renderCampGear(){
@@ -185,6 +202,7 @@ function addCampMeal(){
 
   setCampValue("campMealInput","");
   renderCampMeals();
+  saveCampActiveSession("meal");
 }
 
 function renderCampMeals(){
@@ -228,6 +246,7 @@ function addCampNote(){
 
   setCampValue("campNoteInput","");
   renderCampNotes();
+  saveCampActiveSession("note");
 }
 
 function renderCampNotes(){
@@ -270,6 +289,92 @@ function makeCampSummary(){
   };
 }
 
+
+function buildCampActiveSession(reason){
+  if(!currentCampSession || currentCampSession.status !== EVENT_STATUS.ACTIVE){
+    return null;
+  }
+
+  return {
+    id:currentCampSession.id,
+    eventType:"camp",
+    eventStatus:EVENT_STATUS.ACTIVE,
+    payload:{
+      reason:reason || "",
+      currentCampSession:currentCampSession,
+      campPhotos:campPhotos,
+      campNotes:campNotes,
+      campGear:campGear,
+      campMeals:campMeals,
+      fields:{
+        siteName:getCampValue("campSiteNameInput"),
+        area:getCampValue("campAreaInput"),
+        stay:getCampValue("campStayInput"),
+        member:getCampValue("campMemberInput"),
+        pet:getCampValue("campPetInput"),
+        weather:getCampValue("campWeatherInput")
+      }
+    }
+  };
+}
+
+async function saveCampActiveSession(reason){
+  const entry = buildCampActiveSession(reason);
+
+  if(!entry){
+    return;
+  }
+
+  await saveActiveSession(entry);
+}
+
+function restoreCampSession(entry){
+  const payload = entry.payload || {};
+
+  currentCampSession = payload.currentCampSession;
+
+  if(!currentCampSession){
+    alert("キャンプ記録を復旧できませんでした");
+    return;
+  }
+
+  currentCampSession.status = EVENT_STATUS.ACTIVE;
+  campPhotos = Array.isArray(payload.campPhotos) ? payload.campPhotos : [];
+  campNotes = Array.isArray(payload.campNotes) ? payload.campNotes : [];
+  campGear = Array.isArray(payload.campGear) ? payload.campGear : [];
+  campMeals = Array.isArray(payload.campMeals) ? payload.campMeals : [];
+
+  const fields = payload.fields || {};
+
+  setCampValue("campSiteNameInput",fields.siteName || "");
+  setCampValue("campAreaInput",fields.area || "");
+  setCampValue("campStayInput",fields.stay || "");
+  setCampValue("campMemberInput",fields.member || "");
+  setCampValue("campPetInput",fields.pet || "");
+  setCampValue("campWeatherInput",fields.weather || "");
+  setCampValue("campGearInput","");
+  setCampValue("campMealInput","");
+  setCampValue("campNoteInput","");
+
+  showPage("campPage");
+  updateCampInfo();
+  renderCampPhotos();
+  renderCampGear();
+  renderCampMeals();
+  renderCampNotes();
+
+  setAppState({
+    page:"camp",
+    eventId:currentCampSession.id,
+    eventType:"camp",
+    eventStatus:EVENT_STATUS.ACTIVE
+  });
+
+  startAutoSave();
+  saveCampActiveSession("restore");
+}
+
+
 function buildCampRecord(){
   const siteName = getCampValue("campSiteNameInput") || "キャンプ記録";
   const area = getCampValue("campAreaInput");
@@ -279,7 +384,7 @@ function buildCampRecord(){
   const weather = getCampValue("campWeatherInput");
 
   currentCampSession.endTime = new Date().toLocaleString();
-  currentCampSession.status = "closed";
+  currentCampSession.status = EVENT_STATUS.CLOSED;
 
   return {
     id:createId(),
@@ -329,10 +434,14 @@ async function finishCamp(){
     return;
   }
 
+  stopAutoSave();
+
   const record = buildCampRecord();
 
   try{
     await saveRecord(record);
+    await deleteActiveSession(currentCampSession.id);
+    clearAppState();
 
     alert(
       "キャンプ終了\n" +
@@ -359,6 +468,14 @@ function cancelCamp(){
     return;
   }
 
+  const activeId = currentCampSession ? currentCampSession.id : "";
+
+  if(activeId){
+    deleteActiveSession(activeId);
+  }
+
+  clearAppState();
+
   currentCampSession = null;
   campPhotos = [];
   campNotes = [];
@@ -375,3 +492,7 @@ window.addCampMeal = addCampMeal;
 window.addCampNote = addCampNote;
 window.finishCamp = finishCamp;
 window.cancelCamp = cancelCamp;
+
+
+window.saveCampActiveSession = saveCampActiveSession;
+window.restoreCampSession = restoreCampSession;
