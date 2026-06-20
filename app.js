@@ -1,5 +1,5 @@
 const DB_NAME = "outbase_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let db;
 let seconds = 0;
@@ -84,6 +84,10 @@ function openDatabase(){
       if(!db.objectStoreNames.contains("records")){
         db.createObjectStore("records",{keyPath:"id"});
       }
+
+      if(!db.objectStoreNames.contains("activeSessions")){
+        db.createObjectStore("activeSessions",{keyPath:"id"});
+      }
     };
 
     request.onsuccess = e => {
@@ -127,13 +131,18 @@ function getRecords(){
 }
 
 function showPage(pageId){
-  ["homePage","walkPage","detailPage"].forEach(id=>{
+  ["homePage","walkPage","campPage","detailPage"].forEach(id=>{
     document.getElementById(id).classList.add("hidden");
   });
   document.getElementById(pageId).classList.remove("hidden");
 }
 
 function startWalk(){
+  if(hasActiveState()){
+    alert("進行中の記録があります。復旧または終了してから開始してください。");
+    return;
+  }
+
   showPage("walkPage");
 
   seconds = 0;
@@ -152,7 +161,7 @@ function startWalk(){
     type:"walk",
     startTime:new Date().toLocaleString(),
     endTime:"",
-    status:"open"
+    status:EVENT_STATUS.ACTIVE
   };
 
   const titleInput = document.getElementById("titleInput");
@@ -170,10 +179,21 @@ function startWalk(){
   document.getElementById("noteList").innerHTML = "";
   document.getElementById("gpsInfo").innerHTML = "開始GPS取得中...";
 
+  setAppState({
+    page:"walk",
+    eventId:currentSession.id,
+    eventType:"walk",
+    eventStatus:EVENT_STATUS.ACTIVE
+  });
+
+  startAutoSave();
+  saveWalkActiveSession("start");
+
   getGps(gps=>{
     startGps = gps;
     addGpsHistory("start",gps);
     document.getElementById("gpsInfo").innerHTML = "開始GPS：" + gps;
+    saveWalkActiveSession("startGps");
   });
 
   timerInterval = setInterval(()=>{
@@ -184,6 +204,7 @@ function startWalk(){
   gpsWatcher = setInterval(()=>{
     getGps(gps=>{
       addGpsHistory("point",gps);
+      saveWalkActiveSession("gps");
     });
   },GPS_INTERVAL_MS);
 }
@@ -228,6 +249,7 @@ function addPhoto(){
 
       document.getElementById("photoPreview").appendChild(img);
       document.getElementById("photoInfo").innerHTML = "写真 " + photos.length + "枚";
+      saveWalkActiveSession("photo");
     };
 
     reader.readAsDataURL(file);
@@ -261,6 +283,7 @@ function addNote(){
   document.getElementById("noteList").appendChild(div);
   document.getElementById("noteInfo").innerHTML = "メモ " + notes.length + "件";
   input.value = "";
+  saveWalkActiveSession("note");
 }
 
 async function startRecording(){
@@ -295,6 +318,7 @@ async function startRecording(){
 
         document.getElementById("audioList").appendChild(audio);
         document.getElementById("audioInfo").innerHTML = "音声 " + audioRecords.length + "件";
+        saveWalkActiveSession("audio");
       };
 
       reader.readAsDataURL(audioBlob);
@@ -322,8 +346,148 @@ function stopRecording(){
   }
 }
 
+
+function buildWalkActiveSession(reason){
+  if(!currentSession || currentSession.status !== EVENT_STATUS.ACTIVE){
+    return null;
+  }
+
+  return {
+    id:currentSession.id,
+    eventType:"walk",
+    eventStatus:EVENT_STATUS.ACTIVE,
+    payload:{
+      reason:reason || "",
+      currentSession:currentSession,
+      seconds:seconds,
+      photos:photos,
+      notes:notes,
+      audioRecords:audioRecords,
+      gpsHistory:gpsHistory,
+      startGps:startGps,
+      endGps:endGps,
+      distanceKm:distanceKm,
+      title:getInputValue("titleInput"),
+      tags:getInputValue("tagInput")
+    }
+  };
+}
+
+async function saveWalkActiveSession(reason){
+  const entry = buildWalkActiveSession(reason);
+
+  if(!entry){
+    return;
+  }
+
+  await saveActiveSession(entry);
+}
+
+function renderWalkMedia(){
+  document.getElementById("photoInfo").innerHTML = "写真 " + photos.length + "枚";
+  document.getElementById("photoPreview").innerHTML = "";
+
+  photos.forEach(photo=>{
+    if(photo.data){
+      const img = document.createElement("img");
+      img.className = "photo-thumb";
+      img.src = photo.data;
+      img.onclick = ()=>openPhoto(photo.data);
+      document.getElementById("photoPreview").appendChild(img);
+    }
+  });
+
+  document.getElementById("audioInfo").innerHTML = "音声 " + audioRecords.length + "件";
+  document.getElementById("audioList").innerHTML = "";
+
+  audioRecords.forEach(audioData=>{
+    if(audioData.data){
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.src = audioData.data;
+      document.getElementById("audioList").appendChild(audio);
+    }
+  });
+
+  document.getElementById("noteInfo").innerHTML = "メモ " + notes.length + "件";
+  document.getElementById("noteList").innerHTML = "";
+
+  notes.forEach(note=>{
+    const div = document.createElement("div");
+    div.className = "note-item";
+    div.innerHTML =
+      escapeHtml(note.text || "") +
+      '<div class="note-time">' +
+      escapeHtml(note.time || "") +
+      '</div>';
+
+    document.getElementById("noteList").appendChild(div);
+  });
+}
+
+function restoreWalkSession(entry){
+  const payload = entry.payload || {};
+
+  currentSession = payload.currentSession;
+
+  if(!currentSession){
+    alert("散歩記録を復旧できませんでした");
+    return;
+  }
+
+  currentSession.status = EVENT_STATUS.ACTIVE;
+  seconds = payload.seconds || 0;
+  photos = Array.isArray(payload.photos) ? payload.photos : [];
+  notes = Array.isArray(payload.notes) ? payload.notes : [];
+  audioRecords = Array.isArray(payload.audioRecords) ? payload.audioRecords : [];
+  gpsHistory = Array.isArray(payload.gpsHistory) ? payload.gpsHistory : [];
+  startGps = payload.startGps || "未取得";
+  endGps = payload.endGps || "未取得";
+  distanceKm = payload.distanceKm || "未取得";
+  audioChunks = [];
+  mediaRecorder = null;
+
+  showPage("walkPage");
+
+  const titleInput = document.getElementById("titleInput");
+  const tagInput = document.getElementById("tagInput");
+
+  if(titleInput) titleInput.value = payload.title || "";
+  if(tagInput) tagInput.value = payload.tags || "";
+
+  document.getElementById("timer").innerHTML = formatTime(seconds);
+  document.getElementById("gpsInfo").innerHTML =
+    "復旧済み / GPS " + getValidGpsCount(gpsHistory) + "件";
+
+  renderWalkMedia();
+
+  timerInterval = setInterval(()=>{
+    seconds++;
+    document.getElementById("timer").innerHTML = formatTime(seconds);
+  },1000);
+
+  gpsWatcher = setInterval(()=>{
+    getGps(gps=>{
+      addGpsHistory("point",gps);
+      saveWalkActiveSession("gps");
+    });
+  },GPS_INTERVAL_MS);
+
+  setAppState({
+    page:"walk",
+    eventId:currentSession.id,
+    eventType:"walk",
+    eventStatus:EVENT_STATUS.ACTIVE
+  });
+
+  startAutoSave();
+  saveWalkActiveSession("restore");
+}
+
+
 function finishWalk(){
   clearInterval(timerInterval);
+  stopAutoSave();
 
   if(gpsWatcher){
     clearInterval(gpsWatcher);
@@ -342,7 +506,7 @@ function finishWalk(){
     const inputTags = parseTags(getInputValue("tagInput"));
 
     currentSession.endTime = new Date().toLocaleString();
-    currentSession.status = "closed";
+    currentSession.status = EVENT_STATUS.CLOSED;
 
     const record = {
       id:createId(),
@@ -375,6 +539,8 @@ function finishWalk(){
 
     try{
       await saveRecord(record);
+      await deleteActiveSession(currentSession.id);
+      clearAppState();
 
       alert(
         "散歩終了\nタイトル：" + record.title +
@@ -469,6 +635,12 @@ function renderStats(records){
 
 function backToHome(){
   showPage("homePage");
+  setAppState({
+    page:"home",
+    eventId:"",
+    eventType:"",
+    eventStatus:EVENT_STATUS.BEFORE
+  });
   loadRecords();
 }
 
@@ -476,6 +648,7 @@ window.onload = async function(){
   try{
     await openDatabase();
     await loadRecords();
+    await checkActiveSessionRecovery();
   }catch(error){
     console.error(error);
     alert("起動に失敗しました");
@@ -499,3 +672,7 @@ window.getRecords = getRecords;
 window.saveRecord = saveRecord;
 window.deleteRecord = deleteRecord;
 window.backToHome = backToHome;
+
+
+window.saveWalkActiveSession = saveWalkActiveSession;
+window.restoreWalkSession = restoreWalkSession;
