@@ -346,6 +346,47 @@
 
 </div>
 
+
+<div
+  id="recoveryModal"
+  class="modal hidden">
+
+  <div class="modal-inner recovery-inner" onclick="event.stopPropagation()">
+
+    <div class="recovery-card">
+
+      <h1>未終了の記録があります</h1>
+
+      <div class="detail-section">
+        <div class="detail-title">種類</div>
+        <div id="recoveryType" class="detail-value">
+          確認中
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-title">内容</div>
+        <div id="recoveryInfo" class="detail-value">
+          確認中
+        </div>
+      </div>
+
+      <button onclick="restorePendingSession()">
+        復旧する
+      </button>
+
+      <button
+        class="deleteButton"
+        onclick="discardPendingSession()">
+        破棄する
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
 <div
   id="photoModal"
   class="modal hidden"
@@ -368,12 +409,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="gps.js"></script>
+<script src="stateManager.js"></script>
+<script src="sessionManager.js"></script>
+<script src="autoSave.js"></script>
 <script src="search.js"></script>
 <script src="app.js"></script>
 <script src="review.js"></script>
 <script src="detail.js"></script>
 <script src="edit.js"></script>
 <script src="camp.js"></script>
+<script src="recovery.js"></script>
 
 </body>
 </html>
