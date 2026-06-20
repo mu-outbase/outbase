@@ -302,6 +302,26 @@ display:none !important;
 margin-top:20px;
 }
 
+
+.recovery-inner{
+align-items:center;
+justify-content:center;
+}
+
+.recovery-card{
+background:white;
+border-radius:20px;
+padding:20px;
+width:min(92vw,420px);
+box-shadow:0 4px 20px rgba(0,0,0,0.35);
+}
+
+.recovery-card h1{
+color:#333;
+font-size:22px;
+margin-bottom:16px;
+}
+
 @media(max-width:600px){
 header{
 font-size:26px;
