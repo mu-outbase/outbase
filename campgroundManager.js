@@ -2,14 +2,27 @@
    OUTBASE
    campgroundManager.js
 
-   Phase4-A-16
-   キャンプ場DB管理
+   Phase4-A-16-2
+   キャンプ場DB管理 修正版
+
+   方針
+   ・records は正本
+   ・campgrounds は派生DB
+   ・キャンプ場名とサイト名を分離
+   ・同じrecordIdの二重加算防止
 ========================================================= */
 
 const CAMPGROUND_STORE = "campgrounds";
 
 function createCampgroundId(){
   return "cg_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+}
+
+function normalizeCampgroundName(name){
+  return String(name || "")
+    .trim()
+    .replace(/\s+/g,"")
+    .toLowerCase();
 }
 
 function createDefaultCampground(name){
@@ -37,7 +50,8 @@ function createDefaultCampground(name){
       totalNights:0,
       firstVisitDate:"",
       lastVisitDate:"",
-      usedSites:[]
+      usedSites:[],
+      linkedRecordIds:[]
     },
 
     conditions:{
@@ -61,13 +75,6 @@ function createDefaultCampground(name){
 
     representativePhoto:""
   };
-}
-
-function normalizeCampgroundName(name){
-  return String(name || "")
-    .trim()
-    .replace(/\s+/g,"")
-    .toLowerCase();
 }
 
 function getCampgroundDb(){
@@ -153,6 +160,16 @@ async function updateCampground(id, updates){
   return putCampground(next);
 }
 
+function uniqueList(values){
+  return Array.from(
+    new Set(
+      (values || [])
+        .map(v=>String(v || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 function calcNights(checkInDate, checkOutDate){
   if(!checkInDate || !checkOutDate){
     return 0;
@@ -171,14 +188,71 @@ function calcNights(checkInDate, checkOutDate){
   return nights > 0 ? nights : 0;
 }
 
-function uniqueList(values){
-  return Array.from(
-    new Set(
-      (values || [])
-        .map(v=>String(v || "").trim())
-        .filter(Boolean)
-    )
+function extractCampgroundName(record){
+  const camp = record?.camp || {};
+
+  return (
+    camp.campgroundName ||
+    camp.campground?.name ||
+    record?.campgroundName ||
+    record?.campground?.name ||
+    camp.siteName ||
+    record?.title ||
+    ""
   );
+}
+
+function extractSiteName(record){
+  const camp = record?.camp || {};
+
+  return (
+    camp.siteNameDetail ||
+    camp.siteArea ||
+    camp.area ||
+    record?.siteName ||
+    ""
+  );
+}
+
+function extractCheckInDate(record){
+  const camp = record?.camp || {};
+
+  return (
+    camp.checkInDate ||
+    camp.startDate ||
+    record?.checkInDate ||
+    record?.session?.startTime ||
+    record?.date ||
+    ""
+  );
+}
+
+function extractCheckOutDate(record){
+  const camp = record?.camp || {};
+
+  return (
+    camp.checkOutDate ||
+    camp.endDate ||
+    record?.checkOutDate ||
+    record?.session?.endTime ||
+    record?.date ||
+    ""
+  );
+}
+
+function ensureCampgroundStats(campground){
+  return {
+    visitCount:campground?.stats?.visitCount || 0,
+    totalNights:campground?.stats?.totalNights || 0,
+    firstVisitDate:campground?.stats?.firstVisitDate || "",
+    lastVisitDate:campground?.stats?.lastVisitDate || "",
+    usedSites:Array.isArray(campground?.stats?.usedSites)
+      ? campground.stats.usedSites
+      : [],
+    linkedRecordIds:Array.isArray(campground?.stats?.linkedRecordIds)
+      ? campground.stats.linkedRecordIds
+      : []
+  };
 }
 
 async function linkVisitRecord(record){
@@ -186,34 +260,27 @@ async function linkVisitRecord(record){
     return null;
   }
 
-  const camp = record.camp || {};
-  const campgroundName = camp.siteName || record.title || "";
+  if(!record.id){
+    return null;
+  }
+
+  const campgroundName = extractCampgroundName(record);
 
   if(!campgroundName){
     return null;
   }
 
   const campground = await createCampground(campgroundName);
+  const stats = ensureCampgroundStats(campground);
 
-  const checkInDate =
-    camp.checkInDate ||
-    record.session?.startTime ||
-    record.date ||
-    "";
+  if(stats.linkedRecordIds.includes(record.id)){
+    return campground;
+  }
 
-  const checkOutDate =
-    camp.checkOutDate ||
-    record.session?.endTime ||
-    record.date ||
-    "";
-
-  const siteName = camp.area || "";
-
-  const stats = campground.stats || {};
-  const usedSites = uniqueList([
-    ...(stats.usedSites || []),
-    siteName
-  ]);
+  const checkInDate = extractCheckInDate(record);
+  const checkOutDate = extractCheckOutDate(record);
+  const siteName = extractSiteName(record);
+  const nights = calcNights(checkInDate,checkOutDate);
 
   const firstVisitDate = stats.firstVisitDate
     ? [stats.firstVisitDate,checkInDate].filter(Boolean).sort()[0]
@@ -223,18 +290,23 @@ async function linkVisitRecord(record){
     ? [stats.lastVisitDate,checkOutDate].filter(Boolean).sort().reverse()[0]
     : checkOutDate;
 
-  const nights = calcNights(checkInDate,checkOutDate);
-
   const updated = {
     ...campground,
     updatedAt:new Date().toISOString(),
     stats:{
       ...stats,
-      visitCount:(stats.visitCount || 0) + 1,
-      totalNights:(stats.totalNights || 0) + nights,
+      visitCount:stats.visitCount + 1,
+      totalNights:stats.totalNights + nights,
       firstVisitDate:firstVisitDate || "",
       lastVisitDate:lastVisitDate || "",
-      usedSites
+      usedSites:uniqueList([
+        ...stats.usedSites,
+        siteName
+      ]),
+      linkedRecordIds:uniqueList([
+        ...stats.linkedRecordIds,
+        record.id
+      ])
     }
   };
 
