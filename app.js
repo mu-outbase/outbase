@@ -1,5 +1,5 @@
 const DB_NAME = "outbase_db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let db;
 let seconds = 0;
@@ -87,6 +87,10 @@ function openDatabase(){
 
       if(!db.objectStoreNames.contains("activeSessions")){
         db.createObjectStore("activeSessions",{keyPath:"id"});
+      }
+
+      if(!db.objectStoreNames.contains("campgrounds")){
+        db.createObjectStore("campgrounds",{keyPath:"id"});
       }
     };
 
