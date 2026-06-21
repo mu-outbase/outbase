@@ -358,11 +358,18 @@ max-height:86%;
    Campground Selector
 ========================================================= */
 
-.campground-modal{
+.modal-inner.campground-modal{
+  position:relative;
+  display:block;
   width:95%;
   max-width:600px;
-  max-height:80vh;
+  height:auto;
+  max-height:85vh;
   overflow-y:auto;
+  background:white;
+  border-radius:20px;
+  padding:20px;
+  box-sizing:border-box;
 }
 
 .campground-list{
@@ -402,15 +409,17 @@ max-height:86%;
   box-sizing:border-box;
 }
 
-#createCampgroundButton{
+#createCampgroundButton,
+#closeCampgroundButton{
   width:100%;
 }
 
 @media (max-width:600px){
 
-  .campground-modal{
+  .modal-inner.campground-modal{
     width:95%;
-    max-height:85vh;
+    max-height:90vh;
+    padding:16px;
   }
 
   .campground-item{
