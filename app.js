@@ -392,8 +392,14 @@ window.onload = async function(){
     await loadRecords();
     await checkActiveSessionRecovery();
   }catch(error){
+
     console.error(error);
-    alert("起動に失敗しました");
+
+    alert(
+      "【OUTBASE 起動エラー】\n\n" +
+      "message:\n" + (error?.message || "なし") + "\n\n" +
+      "stack:\n" + (error?.stack || "なし")
+    );
   }
 };
 
@@ -414,4 +420,3 @@ window.getRecords = getRecords;
 window.saveRecord = saveRecord;
 window.deleteRecord = deleteRecord;
 window.backToHome = backToHome;
-
