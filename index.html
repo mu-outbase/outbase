@@ -191,7 +191,8 @@
     <input
       type="text"
       id="campSiteNameInput"
-      placeholder="例：Lake Lodge YAMANAKA">
+      placeholder="キャンプ場選択で設定"
+      readonly>
 
     <h2>エリア・サイト</h2>
 
@@ -348,6 +349,72 @@
 
 
 <div
+  id="campgroundModal"
+  class="modal hidden">
+
+  <div
+    class="modal-inner campground-modal"
+    onclick="event.stopPropagation()">
+
+    <button
+      class="modal-close"
+      onclick="closeCampgroundSelector()">
+      ×
+    </button>
+
+    <h1>キャンプ場選択</h1>
+
+    <input
+      type="text"
+      id="campgroundSearchInput"
+      placeholder="キャンプ場を検索"
+      oninput="renderCampgroundSelectorList()">
+
+    <div class="detail-section">
+      <div class="detail-title">最近使ったキャンプ場</div>
+      <div
+        id="recentCampgrounds"
+        class="campground-list">
+        読み込み中...
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">全キャンプ場</div>
+      <div
+        id="campgroundList"
+        class="campground-list">
+        読み込み中...
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-title">新規作成</div>
+
+      <input
+        type="text"
+        id="newCampgroundNameInput"
+        placeholder="新しいキャンプ場名">
+
+      <button
+        id="createCampgroundButton"
+        onclick="createCampgroundFromSelector()">
+        ＋新しいキャンプ場を作成
+      </button>
+    </div>
+
+    <button
+      class="cancelButton"
+      id="closeCampgroundButton"
+      onclick="closeCampgroundSelector()">
+      ホームへ戻る
+    </button>
+
+  </div>
+
+</div>
+
+<div
   id="recoveryModal"
   class="modal hidden">
 
@@ -417,6 +484,8 @@
 <script src="review.js"></script>
 <script src="detail.js"></script>
 <script src="edit.js"></script>
+<script src="campgroundManager.js"></script>
+<script src="campgroundSelector.js"></script>
 <script src="camp.js"></script>
 <script src="recovery.js"></script>
 
