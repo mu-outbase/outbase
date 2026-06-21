@@ -164,6 +164,7 @@ function startWalk(){
     id:createId(),
     type:"walk",
     startTime:new Date().toLocaleString(),
+    startTimestamp:Date.now(),
     endTime:"",
     status:EVENT_STATUS.ACTIVE
   };
@@ -201,8 +202,7 @@ function startWalk(){
   });
 
   timerInterval = setInterval(()=>{
-    seconds++;
-    document.getElementById("timer").innerHTML = formatTime(seconds);
+    updateWalkTimer();
   },1000);
 
   gpsWatcher = setInterval(()=>{
@@ -211,6 +211,19 @@ function startWalk(){
       saveWalkActiveSession("gps");
     });
   },GPS_INTERVAL_MS);
+}
+
+function updateWalkTimer(){
+  if(!currentSession || !currentSession.startTimestamp){
+    return;
+  }
+
+  seconds = Math.floor((Date.now() - currentSession.startTimestamp) / 1000);
+
+  const timer = document.getElementById("timer");
+  if(timer){
+    timer.innerHTML = formatTime(seconds);
+  }
 }
 
 function formatTime(sec){
@@ -440,7 +453,13 @@ function restoreWalkSession(entry){
   }
 
   currentSession.status = EVENT_STATUS.ACTIVE;
-  seconds = payload.seconds || 0;
+
+  if(!currentSession.startTimestamp){
+    const fallbackSeconds = payload.seconds || 0;
+    currentSession.startTimestamp = Date.now() - (fallbackSeconds * 1000);
+  }
+
+  seconds = Math.floor((Date.now() - currentSession.startTimestamp) / 1000);
   photos = Array.isArray(payload.photos) ? payload.photos : [];
   notes = Array.isArray(payload.notes) ? payload.notes : [];
   audioRecords = Array.isArray(payload.audioRecords) ? payload.audioRecords : [];
@@ -466,8 +485,7 @@ function restoreWalkSession(entry){
   renderWalkMedia();
 
   timerInterval = setInterval(()=>{
-    seconds++;
-    document.getElementById("timer").innerHTML = formatTime(seconds);
+    updateWalkTimer();
   },1000);
 
   gpsWatcher = setInterval(()=>{
@@ -490,6 +508,8 @@ function restoreWalkSession(entry){
 
 
 function finishWalk(){
+  updateWalkTimer();
+
   clearInterval(timerInterval);
   stopAutoSave();
 
@@ -504,7 +524,8 @@ function finishWalk(){
     addGpsHistory("end",endGps);
     distanceKm = calcTrackDistance(gpsHistory);
 
-    const walkTime = document.getElementById("timer").innerHTML;
+    updateWalkTimer();
+    const walkTime = formatTime(seconds);
     const avgSpeed = calcAverageSpeed(distanceKm,walkTime);
     const inputTitle = getInputValue("titleInput");
     const inputTags = parseTags(getInputValue("tagInput"));
