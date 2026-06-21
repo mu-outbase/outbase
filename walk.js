@@ -132,7 +132,7 @@ function buildWalkActiveSession(reason){
   };
 }
 
-function saveWalkActiveSession(reason){
+async function saveWalkActiveSession(reason){
   const entry = buildWalkActiveSession(reason);
 
   if(!entry){
