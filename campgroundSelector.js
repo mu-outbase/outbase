@@ -1,15 +1,12 @@
 /* =========================================================
    OUTBASE
    campgroundSelector.js
-   Phase4-A-50A
+   Phase4-A-53D
 ========================================================= */
 
 async function showCampgroundSelector(){
   const modal = document.getElementById("campgroundModal");
-
-  if(!modal){
-    return;
-  }
+  if(!modal) return;
 
   modal.classList.remove("hidden");
   await renderCampgroundSelectorList();
@@ -17,10 +14,7 @@ async function showCampgroundSelector(){
 
 function closeCampgroundSelector(){
   const modal = document.getElementById("campgroundModal");
-
-  if(modal){
-    modal.classList.add("hidden");
-  }
+  if(modal) modal.classList.add("hidden");
 
   if(typeof backToHome === "function"){
     backToHome();
@@ -39,21 +33,17 @@ async function renderCampgroundSelectorList(){
     : await getAllCampgrounds();
 
   const recentCampgrounds = [...allCampgrounds]
-    .sort((a,b)=>
-      String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""))
-    )
+    .sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")))
     .slice(0,5);
 
-  renderCampgroundItems(recentContainer,recentCampgrounds);
-  renderCampgroundItems(listContainer,allCampgrounds);
+  renderCampgroundItems(recentContainer, recentCampgrounds);
+  renderCampgroundItems(listContainer, allCampgrounds);
 }
 
 function renderCampgroundItems(container,list){
-  if(!container){
-    return;
-  }
+  if(!container) return;
 
-  if(!list || list.length === 0){
+  if(!list || list.length===0){
     container.innerHTML = "キャンプ場なし";
     return;
   }
@@ -61,13 +51,15 @@ function renderCampgroundItems(container,list){
   container.innerHTML = list.map(cg => `
     <div class="campground-item"
          onclick="selectCampground('${cg.id}')">
-      ${escapeHtml(cg.name || "名称未設定")}
+      ${cg.name || "名称未設定"}
     </div>
   `).join("");
 }
 
 async function selectCampground(campgroundId){
-  const campground = await getCampground(campgroundId);
+
+  const allCampgrounds = await getAllCampgrounds();
+  const campground = allCampgrounds.find(c=>c.id===campgroundId);
 
   if(!campground){
     alert("キャンプ場が見つかりません");
@@ -78,11 +70,7 @@ async function selectCampground(campgroundId){
     setSelectedCampground(campground);
   }
 
-  const modal = document.getElementById("campgroundModal");
-
-  if(modal){
-    modal.classList.add("hidden");
-  }
+  document.getElementById("campgroundModal")?.classList.add("hidden");
 
   if(typeof continueCampStart === "function"){
     continueCampStart();
@@ -100,19 +88,13 @@ async function createCampgroundFromSelector(){
 
   const campground = await createCampground(name);
 
-  if(input){
-    input.value = "";
-  }
+  if(input) input.value = "";
 
   if(typeof setSelectedCampground === "function"){
     setSelectedCampground(campground);
   }
 
-  const modal = document.getElementById("campgroundModal");
-
-  if(modal){
-    modal.classList.add("hidden");
-  }
+  document.getElementById("campgroundModal")?.classList.add("hidden");
 
   if(typeof continueCampStart === "function"){
     continueCampStart();
