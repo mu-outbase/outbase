@@ -351,3 +351,70 @@ max-width:98%;
 max-height:86%;
 }
 }
+
+
+/* =========================================================
+   Phase4-A
+   Campground Selector
+========================================================= */
+
+.campground-modal{
+  width:95%;
+  max-width:600px;
+  max-height:80vh;
+  overflow-y:auto;
+}
+
+.campground-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:250px;
+  overflow-y:auto;
+  margin-top:10px;
+}
+
+.campground-item{
+  padding:14px;
+  border:1px solid #ddd;
+  border-radius:10px;
+  cursor:pointer;
+  background:#fff;
+  transition:0.15s;
+}
+
+.campground-item:hover{
+  background:#f5f5f5;
+}
+
+.campground-item.selected{
+  border:2px solid #2f80ed;
+}
+
+#campgroundSearchInput,
+#newCampgroundNameInput{
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  margin-bottom:12px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  box-sizing:border-box;
+}
+
+#createCampgroundButton{
+  width:100%;
+}
+
+@media (max-width:600px){
+
+  .campground-modal{
+    width:95%;
+    max-height:85vh;
+  }
+
+  .campground-item{
+    padding:16px;
+  }
+
+}
