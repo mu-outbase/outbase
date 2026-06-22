@@ -15,6 +15,9 @@
     <button onclick="startWalk()">
       散歩開始
     </button>
+    <button onclick="showWalkHistoryPage()">
+      散歩履歴
+    </button>
     <button onclick="startCamp()">
       キャンプ開始
     </button>
@@ -126,6 +129,32 @@
     <button onclick="finishWalk()">
       散歩終了
     </button>
+  </div>
+</div>
+<div id="walkHistoryPage" class="page hidden">
+  <div class="card">
+    <h1>散歩履歴</h1>
+    <input
+      type="text"
+      id="walkHistorySearchInput"
+      placeholder="タイトル・タグ・メモ検索"
+      oninput="renderWalkHistoryList()">
+    <select id="walkHistorySortSelect" onchange="renderWalkHistoryList()">
+      <option value="new">新しい順</option>
+      <option value="old">古い順</option>
+      <option value="distance">距離順</option>
+      <option value="time">時間順</option>
+      <option value="photo">写真枚数順</option>
+    </select>
+    <button class="cancelButton" onclick="backFromWalkHistoryPage()">
+      ホームへ戻る
+    </button>
+  </div>
+  <div class="card">
+    <h2>散歩一覧</h2>
+    <div id="walkHistoryList">
+      散歩履歴なし
+    </div>
   </div>
 </div>
 <div id="campPage" class="page hidden">
@@ -566,4 +595,4 @@
 <script src="gear.js"></script>
 <script src="recovery.js"></script>
 </body>
-  </html>
+      </html>
