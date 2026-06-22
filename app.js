@@ -1,5 +1,5 @@
 const DB_NAME = "outbase_db";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let db;
 let seconds = 0;
@@ -81,6 +81,7 @@ function openDatabase(){
 
     request.onupgradeneeded = e => {
       db = e.target.result;
+
       if(!db.objectStoreNames.contains("records")){
         db.createObjectStore("records",{keyPath:"id"});
       }
@@ -91,6 +92,10 @@ function openDatabase(){
 
       if(!db.objectStoreNames.contains("campgrounds")){
         db.createObjectStore("campgrounds",{keyPath:"id"});
+      }
+
+      if(!db.objectStoreNames.contains("gear_master")){
+        db.createObjectStore("gear_master",{keyPath:"id"});
       }
     };
 
@@ -135,10 +140,17 @@ function getRecords(){
 }
 
 function showPage(pageId){
-  ["homePage","walkPage","campPage","detailPage"].forEach(id=>{
-    document.getElementById(id).classList.add("hidden");
+  ["homePage","walkPage","campPage","detailPage","gearPage"].forEach(id=>{
+    const page = document.getElementById(id);
+    if(page){
+      page.classList.add("hidden");
+    }
   });
-  document.getElementById(pageId).classList.remove("hidden");
+
+  const target = document.getElementById(pageId);
+  if(target){
+    target.classList.remove("hidden");
+  }
 }
 
 function addPhoto(){
@@ -420,3 +432,4 @@ window.getRecords = getRecords;
 window.saveRecord = saveRecord;
 window.deleteRecord = deleteRecord;
 window.backToHome = backToHome;
+window.showPage = showPage;
