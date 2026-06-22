@@ -373,6 +373,21 @@
       ＋ギア追加
     </button>
 
+    <input
+      type="file"
+      id="gearExcelInput"
+      accept=".xlsx,.xls"
+      style="display:none"
+      onchange="handleGearExcelImport(event)">
+
+    <button onclick="document.getElementById('gearExcelInput').click()">
+      Excel取込
+    </button>
+
+    <div id="gearImportInfo">
+      Excel未取込
+    </div>
+
     <button class="cancelButton" onclick="backToHome()">
       ホームへ戻る
     </button>
@@ -581,8 +596,9 @@
 <script src="campgroundManager.js"></script>
 <script src="campgroundSelector.js"></script>
 <script src="camp.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="gear.js"></script>
 <script src="recovery.js"></script>
 
 </body>
-      </html>
+</html>
