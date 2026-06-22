@@ -1,8 +1,8 @@
 /* =========================================================
    OUTBASE
    gear.js
-   Phase6-B-MVP
-   ギア管理MVP
+   Phase6-D
+   ギア管理MVP + Excel取込MVP
 ========================================================= */
 
 const GEAR_STORE = "gear_master";
@@ -126,7 +126,8 @@ async function loadGearToForm(id){
 }
 
 function buildGearFromForm(){
-  const id = getGearInputValue("gearIdInput") || createId();
+  const existingId = getGearInputValue("gearIdInput");
+  const id = existingId || createId();
   const now = new Date().toISOString();
 
   return {
@@ -137,7 +138,7 @@ function buildGearFromForm(){
     purchaseDate:getGearInputValue("gearPurchaseDateInput"),
     price:getGearInputValue("gearPriceInput"),
     memo:getGearInputValue("gearMemoInput"),
-    createdAt:getGearInputValue("gearIdInput") ? "" : now,
+    createdAt:existingId ? "" : now,
     updatedAt:now
   };
 }
@@ -309,6 +310,200 @@ async function deleteGear(id){
   }
 }
 
+function normalizeGearText(value){
+  return String(value ?? "").trim();
+}
+
+function getExcelValue(row,names){
+  for(const name of names){
+    if(row[name] !== undefined && row[name] !== null && String(row[name]).trim() !== ""){
+      return String(row[name]).trim();
+    }
+  }
+  return "";
+}
+
+function makeImportKey(gear){
+  return [
+    normalizeGearText(gear.maker).toLowerCase(),
+    normalizeGearText(gear.name).toLowerCase()
+  ].join("::");
+}
+
+function buildMemoFromExcel(row){
+  const model = getExcelValue(row,["型番","品番","モデル"]);
+  const count = getExcelValue(row,["数量","個数"]);
+  const status = getExcelValue(row,["状態","ステータス"]);
+  const memo = getExcelValue(row,["メモ","備考"]);
+
+  const lines = [];
+
+  if(model) lines.push("型番：" + model);
+  if(count) lines.push("数量：" + count);
+  if(status) lines.push("状態：" + status);
+  if(memo) lines.push(memo);
+
+  return lines.join("\n");
+}
+
+function normalizeImportedGear(row,existingMap){
+  const category = getExcelValue(row,["カテゴリ","カテゴリー","分類"]);
+  const name = getExcelValue(row,["正式名称","名称","ギア名","商品名"]);
+  const maker = getExcelValue(row,["メーカー","ブランド"]);
+  const purchaseDate = getExcelValue(row,["購入日"]);
+  const price = getExcelValue(row,["購入金額","金額","価格"]);
+  const now = new Date().toISOString();
+
+  const gear = {
+    id:createId(),
+    category:category,
+    maker:maker,
+    name:name,
+    purchaseDate:purchaseDate,
+    price:price,
+    memo:buildMemoFromExcel(row),
+    createdAt:now,
+    updatedAt:now
+  };
+
+  const key = makeImportKey(gear);
+
+  if(existingMap.has(key)){
+    const existing = existingMap.get(key);
+
+    gear.id = existing.id;
+    gear.createdAt = existing.createdAt || now;
+
+    if(!gear.category) gear.category = existing.category || "";
+    if(!gear.purchaseDate) gear.purchaseDate = existing.purchaseDate || "";
+    if(!gear.price) gear.price = existing.price || "";
+
+    if(existing.memo && gear.memo){
+      gear.memo = existing.memo + "\n\n--- Excel取込 ---\n" + gear.memo;
+    }else if(existing.memo && !gear.memo){
+      gear.memo = existing.memo;
+    }
+  }
+
+  return gear;
+}
+
+function rowsFromWorkbook(workbook){
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+
+  return XLSX.utils.sheet_to_json(sheet,{
+    defval:"",
+    raw:false
+  });
+}
+
+async function importGearRows(rows){
+  const current = await getAllGears();
+  const existingMap = new Map();
+
+  current.forEach(g=>{
+    existingMap.set(makeImportKey(g),g);
+  });
+
+  let imported = 0;
+  let skipped = 0;
+  let updated = 0;
+  let created = 0;
+
+  for(const row of rows){
+    const gear = normalizeImportedGear(row,existingMap);
+
+    if(!gear.name || !gear.category){
+      skipped++;
+      continue;
+    }
+
+    const existed = existingMap.has(makeImportKey(gear));
+
+    await putGear(gear);
+
+    existingMap.set(makeImportKey(gear),gear);
+
+    imported++;
+
+    if(existed){
+      updated++;
+    }else{
+      created++;
+    }
+  }
+
+  return {
+    imported:imported,
+    skipped:skipped,
+    updated:updated,
+    created:created
+  };
+}
+
+async function handleGearExcelImport(event){
+  const file = event.target.files && event.target.files[0];
+
+  if(!file){
+    return;
+  }
+
+  const info = document.getElementById("gearImportInfo");
+
+  try{
+    if(typeof XLSX === "undefined"){
+      alert("Excel読込ライブラリが読み込まれていません");
+      return;
+    }
+
+    if(info){
+      info.innerHTML = "Excel読込中...";
+    }
+
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer,{type:"array"});
+    const rows = rowsFromWorkbook(workbook);
+
+    if(rows.length === 0){
+      alert("Excelに取込対象データがありません");
+      if(info) info.innerHTML = "取込対象なし";
+      return;
+    }
+
+    const result = await importGearRows(rows);
+
+    if(info){
+      info.innerHTML =
+        "取込：" + result.imported + "件 / " +
+        "新規：" + result.created + "件 / " +
+        "更新：" + result.updated + "件 / " +
+        "スキップ：" + result.skipped + "件";
+    }
+
+    await renderGearList();
+
+    alert(
+      "Excel取込完了\n\n" +
+      "取込：" + result.imported + "件\n" +
+      "新規：" + result.created + "件\n" +
+      "更新：" + result.updated + "件\n" +
+      "スキップ：" + result.skipped + "件"
+    );
+
+  }catch(error){
+    console.error(error);
+
+    if(info){
+      info.innerHTML = "Excel取込エラー";
+    }
+
+    alert("Excel取込に失敗しました");
+  }finally{
+    event.target.value = "";
+  }
+}
+
 window.showGearPage = showGearPage;
 window.showGearForm = showGearForm;
 window.hideGearForm = hideGearForm;
@@ -316,3 +511,4 @@ window.renderGearList = renderGearList;
 window.saveGear = saveGear;
 window.showGearDetail = showGearDetail;
 window.deleteGear = deleteGear;
+window.handleGearExcelImport = handleGearExcelImport;
