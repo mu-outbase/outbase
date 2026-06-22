@@ -132,7 +132,7 @@ function buildWalkActiveSession(reason){
   };
 }
 
-async function saveWalkActiveSession(reason){
+function saveWalkActiveSession(reason){
   const entry = buildWalkActiveSession(reason);
 
   if(!entry){
@@ -287,6 +287,144 @@ function finishWalk(){
     }
   });
 }
+
+
+function showWalkHistoryPage(){
+  [
+    "homePage",
+    "walkPage",
+    "campPage",
+    "detailPage",
+    "gearPage",
+    "campgroundPage",
+    "campRecordPage",
+    "walkHistoryPage"
+  ].forEach(id=>{
+    const page = document.getElementById(id);
+    if(page) page.classList.add("hidden");
+  });
+
+  const page = document.getElementById("walkHistoryPage");
+  if(page) page.classList.remove("hidden");
+
+  renderWalkHistoryList();
+}
+
+function backFromWalkHistoryPage(){
+  const page = document.getElementById("walkHistoryPage");
+  if(page) page.classList.add("hidden");
+
+  if(typeof backToHome === "function"){
+    backToHome();
+  }
+}
+
+function getWalkHistorySearchText(record){
+  const noteText = Array.isArray(record.notes)
+    ? record.notes.map(n=>n?.text || "").join(" ")
+    : "";
+
+  const tags = Array.isArray(record.tags)
+    ? record.tags.join(" ")
+    : "";
+
+  return [
+    record.title || "",
+    tags,
+    noteText,
+    record.walk?.distanceKm || "",
+    record.walk?.time || ""
+  ].join(" ").toLowerCase();
+}
+
+function getWalkHistoryDistanceValue(record){
+  const raw = String(record.walk?.distanceKm || "0").replace("km","");
+  const value = parseFloat(raw);
+  return Number.isNaN(value) ? 0 : value;
+}
+
+function getWalkHistoryTimeValue(record){
+  return timeToSeconds(record.walk?.time || "00:00:00");
+}
+
+function filterWalkHistoryRecords(records){
+  const keyword = (document.getElementById("walkHistorySearchInput")?.value || "")
+    .trim()
+    .toLowerCase();
+
+  const sort = document.getElementById("walkHistorySortSelect")?.value || "new";
+
+  let list = (records || []).filter(record=>{
+    if(getRecordType(record) !== "walk") return false;
+    if(!keyword) return true;
+    return getWalkHistorySearchText(record).includes(keyword);
+  });
+
+  list.sort((a,b)=>{
+    if(sort === "old"){
+      return new Date(a.date || 0) - new Date(b.date || 0);
+    }
+    if(sort === "distance"){
+      return getWalkHistoryDistanceValue(b) - getWalkHistoryDistanceValue(a);
+    }
+    if(sort === "time"){
+      return getWalkHistoryTimeValue(b) - getWalkHistoryTimeValue(a);
+    }
+    if(sort === "photo"){
+      return (b.summary?.photoCount || 0) - (a.summary?.photoCount || 0);
+    }
+    return new Date(b.date || 0) - new Date(a.date || 0);
+  });
+
+  return list;
+}
+
+async function renderWalkHistoryList(){
+  const container = document.getElementById("walkHistoryList");
+  if(!container) return;
+
+  try{
+    const records = filterWalkHistoryRecords(await getRecords());
+
+    if(records.length === 0){
+      container.innerHTML = "散歩履歴なし";
+      return;
+    }
+
+    container.innerHTML = records.map(record=>{
+      const title = getRecordTitle(record);
+      const distance = record.walk?.distanceKm || "0.00km";
+      const time = record.walk?.time || "00:00:00";
+      const avgSpeed = record.walk?.avgSpeed || "0.00km/h";
+      const photoCount = record.summary?.photoCount || 0;
+      const audioCount = record.summary?.audioCount || 0;
+      const noteCount = record.summary?.noteCount || 0;
+      const gpsCount = record.summary?.validGpsPointCount || record.summary?.gpsPointCount || 0;
+
+      return `
+        <div class="record" onclick="showDetail('${escapeHtml(record.id)}')">
+          <div class="record-title">🐾 ${escapeHtml(title)}</div>
+          <div class="record-row">📅 日時<br>${escapeHtml(record.date || "")}</div>
+          <div class="record-row">🚶 散歩時間<br>${escapeHtml(time)}</div>
+          <div class="record-row">📏 距離<br>${escapeHtml(distance)}</div>
+          <div class="record-row">⚡ 平均速度<br>${escapeHtml(avgSpeed)}</div>
+          <div class="record-row">📷 写真<br>${photoCount}枚</div>
+          <div class="record-row">🎤 音声<br>${audioCount}件</div>
+          <div class="record-row">📝 メモ<br>${noteCount}件</div>
+          <div class="record-row">📍 GPS<br>${gpsCount}件</div>
+        </div>
+      `;
+    }).join("");
+
+  }catch(error){
+    console.error(error);
+    container.innerHTML = "散歩履歴読み込みエラー";
+  }
+}
+
+window.showWalkHistoryPage = showWalkHistoryPage;
+window.backFromWalkHistoryPage = backFromWalkHistoryPage;
+window.renderWalkHistoryList = renderWalkHistoryList;
 
 window.startWalk = startWalk;
 window.updateWalkTimer = updateWalkTimer;
