@@ -26,6 +26,10 @@
       キャンプ開始
     </button>
 
+    <button onclick="showGearPage()">
+      ギア管理
+    </button>
+
     <div id="storageInfo">
       保存基盤確認中...
     </div>
@@ -347,6 +351,95 @@
 
 </div>
 
+<div id="gearPage" class="page hidden">
+
+  <div class="card">
+    <h1>ギア管理</h1>
+
+    <input
+      type="text"
+      id="gearSearchInput"
+      placeholder="ギア名・メーカー・カテゴリ検索"
+      oninput="renderGearList()">
+
+    <select id="gearSortSelect" onchange="renderGearList()">
+      <option value="name">名前順</option>
+      <option value="category">カテゴリ順</option>
+      <option value="maker">メーカー順</option>
+      <option value="updatedAt">更新日順</option>
+    </select>
+
+    <button onclick="showGearForm()">
+      ＋ギア追加
+    </button>
+
+    <button class="cancelButton" onclick="backToHome()">
+      ホームへ戻る
+    </button>
+  </div>
+
+  <div id="gearFormCard" class="card hidden">
+    <h2 id="gearFormTitle">ギア追加</h2>
+
+    <input type="hidden" id="gearIdInput">
+
+    <h2>カテゴリ</h2>
+    <input
+      type="text"
+      id="gearCategoryInput"
+      placeholder="例：テント">
+
+    <h2>メーカー</h2>
+    <input
+      type="text"
+      id="gearMakerInput"
+      placeholder="例：Snow Peak">
+
+    <h2>名称</h2>
+    <input
+      type="text"
+      id="gearNameInput"
+      placeholder="例：リビングシェル65周年">
+
+    <h2>購入日</h2>
+    <input
+      type="date"
+      id="gearPurchaseDateInput">
+
+    <h2>購入金額</h2>
+    <input
+      type="number"
+      id="gearPriceInput"
+      placeholder="例：220000">
+
+    <h2>メモ</h2>
+    <textarea
+      id="gearMemoInput"
+      placeholder="色・サイズ・使い心地など"></textarea>
+
+    <button onclick="saveGear()">
+      保存
+    </button>
+
+    <button class="cancelButton" onclick="hideGearForm()">
+      キャンセル
+    </button>
+  </div>
+
+  <div id="gearDetailCard" class="card hidden">
+    <h2>ギア詳細</h2>
+    <div id="gearDetailContent"></div>
+  </div>
+
+  <div class="card">
+    <h2>ギア一覧</h2>
+    <div id="gearList">
+      ギアなし
+    </div>
+  </div>
+
+</div>
+
 
 <div
   id="campgroundModal"
@@ -488,7 +581,8 @@
 <script src="campgroundManager.js"></script>
 <script src="campgroundSelector.js"></script>
 <script src="camp.js"></script>
+<script src="gear.js"></script>
 <script src="recovery.js"></script>
 
 </body>
-</html>
+      </html>
