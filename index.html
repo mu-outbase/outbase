@@ -24,6 +24,9 @@
     <button onclick="showCampgroundPage()">
       キャンプ場管理
     </button>
+    <button onclick="showCampRecordPage()">
+      キャンプ実績管理
+    </button>
     <div id="storageInfo">
       保存基盤確認中...
     </div>
@@ -406,6 +409,47 @@
     </div>
   </div>
 </div>
+<div id="campRecordPage" class="page hidden">
+  <div class="card">
+    <h1>キャンプ実績管理</h1>
+    <input type="text" id="campRecordSearchInput" placeholder="キャンプ場・サイト・メモ検索" oninput="renderCampRecordList()">
+    <select id="campRecordSortSelect" onchange="renderCampRecordList()">
+      <option value="new">新しい順</option>
+      <option value="old">古い順</option>
+      <option value="nights">宿泊数順</option>
+      <option value="campground">キャンプ場順</option>
+    </select>
+    <button onclick="showCampRecordForm()">＋キャンプ実績追加</button>
+    <button class="cancelButton" onclick="backFromCampRecordPage()">ホームへ戻る</button>
+  </div>
+  <div id="campRecordFormCard" class="card hidden">
+    <h2 id="campRecordFormTitle">キャンプ実績追加</h2>
+    <input type="hidden" id="campRecordIdInput">
+    <h2>キャンプ場</h2><select id="campRecordCampgroundInput"></select>
+    <h2>タイトル</h2><input type="text" id="campRecordTitleInput" placeholder="例：赤城山CF 春キャンプ">
+    <h2>開始日</h2><input type="date" id="campRecordStartInput">
+    <h2>終了日</h2><input type="date" id="campRecordEndInput">
+    <h2>泊数</h2><input type="number" id="campRecordNightsInput" placeholder="例：2">
+    <h2>サイト</h2><input type="text" id="campRecordSiteInput" placeholder="例：A-12">
+    <h2>天気</h2><input type="text" id="campRecordWeatherInput" placeholder="例：晴れ">
+    <h2>参加者</h2><input type="text" id="campRecordMembersInput" placeholder="例：むー、リン">
+    <h2>ペット</h2><input type="text" id="campRecordPetsInput" placeholder="例：コタ、アオ">
+    <h2>良かったこと</h2><textarea id="campRecordGoodInput"></textarea>
+    <h2>悪かったこと</h2><textarea id="campRecordBadInput"></textarea>
+    <h2>次回改善</h2><textarea id="campRecordNextInput"></textarea>
+    <h2>メモ</h2><textarea id="campRecordMemoInput"></textarea>
+    <button onclick="saveCampRecordForm()">保存</button>
+    <button class="cancelButton" onclick="hideCampRecordForm()">キャンセル</button>
+  </div>
+  <div id="campRecordDetailCard" class="card hidden">
+    <h2>キャンプ実績詳細</h2>
+    <div id="campRecordDetailContent"></div>
+  </div>
+  <div class="card">
+    <h2>キャンプ実績一覧</h2>
+    <div id="campRecordList">実績なし</div>
+  </div>
+</div>
 <div
   id="campgroundModal"
   class="modal hidden">
@@ -515,6 +559,8 @@
 <script src="campgroundManager.js"></script>
 <script src="campgroundSelector.js"></script>
 <script src="campgroundUI.js"></script>
+<script src="campRecordManager.js"></script>
+<script src="campRecordUI.js"></script>
 <script src="camp.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="gear.js"></script>
