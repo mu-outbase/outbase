@@ -75,6 +75,26 @@ function getRecordTypeLabel(type){
   return "記録";
 }
 
+function timeToSeconds(t){
+  if(!t) return 0;
+
+  const p = String(t).split(":").map(Number);
+
+  return (p[0] || 0) * 3600 +
+         (p[1] || 0) * 60 +
+         (p[2] || 0);
+}
+
+function formatTime(sec){
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+
+  return String(h).padStart(2,"0") + ":" +
+         String(m).padStart(2,"0") + ":" +
+         String(s).padStart(2,"0");
+}
+
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME,DB_VERSION);
