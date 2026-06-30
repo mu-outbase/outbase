@@ -1,5 +1,5 @@
 const DB_NAME = "outbase_db";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 let db;
 let seconds = 0;
@@ -19,6 +19,33 @@ let mapInstance = null;
 
 const GPS_INTERVAL_MS = 10000;
 const GPS_JUMP_LIMIT_KM = 1;
+
+const OUTBASE_STORES = [
+  "records",
+  "activeSessions",
+  "campgrounds",
+  "gear_master",
+  "campRecords",
+  "experiences",
+  "sessions",
+  "assets",
+  "inbox_items",
+  "review_items",
+  "weather_snapshots",
+  "friend_dogs",
+  "friend_encounters",
+  "spots",
+  "spot_visits",
+  "route_points",
+  "trip_projects",
+  "camp_project_items",
+  "setup_logs",
+  "gear_usage",
+  "meal_plans",
+  "shopping_items",
+  "import_queue",
+  "sync_queue"
+];
 
 function createId(){
   return "ob_" + Date.now() + "_" + Math.floor(Math.random()*100000);
@@ -95,6 +122,12 @@ function formatTime(sec){
          String(s).padStart(2,"0");
 }
 
+function createStoreIfMissing(targetDb,storeName){
+  if(!targetDb.objectStoreNames.contains(storeName)){
+    targetDb.createObjectStore(storeName,{keyPath:"id"});
+  }
+}
+
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request = indexedDB.open(DB_NAME,DB_VERSION);
@@ -102,36 +135,21 @@ function openDatabase(){
     request.onupgradeneeded = e => {
       db = e.target.result;
 
-      if(!db.objectStoreNames.contains("records")){
-        db.createObjectStore("records",{keyPath:"id"});
-      }
-
-      if(!db.objectStoreNames.contains("activeSessions")){
-        db.createObjectStore("activeSessions",{keyPath:"id"});
-      }
-
-      if(!db.objectStoreNames.contains("campgrounds")){
-        db.createObjectStore("campgrounds",{keyPath:"id"});
-      }
-
-      if(!db.objectStoreNames.contains("gear_master")){
-        db.createObjectStore("gear_master",{keyPath:"id"});
-      }
-
-      if(!db.objectStoreNames.contains("campRecords")){
-        db.createObjectStore("campRecords",{keyPath:"id"});
-      }
+      OUTBASE_STORES.forEach(storeName=>{
+        createStoreIfMissing(db,storeName);
+      });
     };
 
     request.onsuccess = e => {
       db = e.target.result;
-      document.getElementById("storageInfo").innerHTML = "保存基盤：IndexedDB";
+      document.getElementById("storageInfo").innerHTML =
+        "保存基盤：IndexedDB / DB v" + DB_VERSION;
       resolve(db);
     };
 
     request.onerror = () => {
       document.getElementById("storageInfo").innerHTML = "保存基盤：エラー";
-      reject();
+      reject(request.error || new Error("IndexedDB起動失敗"));
     };
   });
 }
@@ -163,8 +181,51 @@ function getRecords(){
   });
 }
 
+function saveOutbaseStore(storeName,value){
+  return new Promise((resolve,reject)=>{
+    if(!db.objectStoreNames.contains(storeName)){
+      reject(new Error("未定義ストア：" + storeName));
+      return;
+    }
+
+    const tx = db.transaction(storeName,"readwrite");
+    const data = {
+      ...(value || {}),
+      id:value?.id || createId(),
+      updated_at:new Date().toISOString()
+    };
+
+    tx.objectStore(storeName).put(data);
+    tx.oncomplete = ()=>resolve(data);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+
+function getOutbaseStoreAll(storeName){
+  return new Promise((resolve,reject)=>{
+    if(!db.objectStoreNames.contains(storeName)){
+      reject(new Error("未定義ストア：" + storeName));
+      return;
+    }
+
+    const tx = db.transaction(storeName,"readonly");
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 function showPage(pageId){
-  ["homePage","walkPage","campPage","detailPage","gearPage"].forEach(id=>{
+  [
+    "homePage",
+    "walkPage",
+    "walkHistoryPage",
+    "campPage",
+    "detailPage",
+    "gearPage",
+    "campgroundPage",
+    "campRecordPage"
+  ].forEach(id=>{
     const page = document.getElementById(id);
     if(page){
       page.classList.add("hidden");
@@ -186,10 +247,12 @@ function addPhoto(){
 
     reader.onload = e=>{
       const photo = {
+        id:createId(),
         name:file.name,
         type:file.type,
         data:e.target.result,
-        time:new Date().toLocaleString()
+        time:new Date().toLocaleString(),
+        created_at:new Date().toISOString()
       };
 
       photos.push(photo);
@@ -218,8 +281,10 @@ function addNote(){
   }
 
   const note = {
+    id:createId(),
     text:text,
-    time:new Date().toLocaleString()
+    time:new Date().toLocaleString(),
+    created_at:new Date().toISOString()
   };
 
   notes.push(note);
@@ -256,10 +321,13 @@ async function startRecording(){
 
       reader.onload = e=>{
         const audioData = {
+          id:createId(),
           name:"audio_" + Date.now() + ".webm",
           type:"audio/webm",
           data:e.target.result,
-          time:new Date().toLocaleString()
+          time:new Date().toLocaleString(),
+          created_at:new Date().toISOString(),
+          transcript:""
         };
 
         audioRecords.push(audioData);
@@ -297,7 +365,6 @@ function stopRecording(){
     alert("録音停止");
   }
 }
-
 
 async function renderWalkMedia(){
   document.getElementById("photoInfo").innerHTML = "写真 " + photos.length + "枚";
@@ -340,7 +407,6 @@ async function renderWalkMedia(){
     document.getElementById("noteList").appendChild(div);
   });
 }
-
 
 async function loadRecords(){
   const records = await getRecords();
@@ -451,9 +517,12 @@ if(typeof clearSearch === "function"){
   window.clearSearch = clearSearch;
 }
 
+window.OUTBASE_STORES = OUTBASE_STORES;
 window.renderStats = renderStats;
 window.getRecords = getRecords;
 window.saveRecord = saveRecord;
 window.deleteRecord = deleteRecord;
+window.saveOutbaseStore = saveOutbaseStore;
+window.getOutbaseStoreAll = getOutbaseStoreAll;
 window.backToHome = backToHome;
 window.showPage = showPage;
