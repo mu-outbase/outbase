@@ -1,14 +1,14 @@
 /* =========================================================
    OUTBASE homeUI.js
-   UI v189: OUTBASEらしいホーム再設計
+   UI v190: ホーム起動エラー修正 + 互換DOM維持
    - ホームを機能一覧/テスト画面から、今日の判断画面へ戻す
    - app.js / homeDashboard.js / campProject.js 本体は触らない
 ========================================================= */
 (function(){
   "use strict";
 
-  const STYLE_ID = "outbaseHomeUIV189Style";
-  const HOME_LOCK_ID = "outbaseHomeUIV189";
+  const STYLE_ID = "outbaseHomeUIV190Style";
+  const HOME_LOCK_ID = "outbaseHomeUIV190";
   const REMOVE_HOME_PANEL_IDS = [
     "phaseBHomeDashboard",
     "phaseDCampProjectPanel",
@@ -280,6 +280,16 @@
         text-align:center;
         padding:4px 0 0;
       }
+      .ob-compat{
+        position:absolute !important;
+        left:-10000px !important;
+        top:auto !important;
+        width:1px !important;
+        height:1px !important;
+        overflow:hidden !important;
+        opacity:0 !important;
+        pointer-events:none !important;
+      }
       @media(max-width:520px){
         #homePage{padding-left:14px;padding-right:14px;}
         .ob-home-card{padding:16px;border-radius:22px;}
@@ -412,6 +422,17 @@
 
   window.openOutbaseCampPrep = campPrepAction;
 
+  function buildCompatibilityNodes(){
+    return `
+      <div class="ob-compat" aria-hidden="true">
+        <div id="storageInfo"></div>
+        <input type="text" id="searchInput" value="">
+        <div id="stats"></div>
+        <div id="recordList"></div>
+      </div>
+    `;
+  }
+
   function buildHomeHtml(data){
     const project = data.currentCampProject;
     const nextCamp = project?.campgroundName || project?.title || "未設定";
@@ -460,10 +481,10 @@
           ${buildMoreMenu()}
         </section>
 
-        <div class="ob-muted-note">保存基盤：IndexedDB / DB v6</div>
+        ${buildCompatibilityNodes()}
 
         <nav class="ob-bottom-nav">
-          <button class="ob-nav-btn is-active" onclick="renderHomeUIV189 && renderHomeUIV189()"><span class="ob-nav-icon">🏠</span>ホーム</button>
+          <button class="ob-nav-btn is-active" onclick="(renderHomeUIV190 || renderHomeUIV189) && (renderHomeUIV190 || renderHomeUIV189)()"><span class="ob-nav-icon">🏠</span>ホーム</button>
           <button class="ob-nav-btn" onclick="startWalk && startWalk()"><span class="ob-nav-icon">📝</span>記録</button>
           <button class="ob-nav-btn" onclick="openOutbaseCampPrep()"><span class="ob-nav-icon">⛺</span>準備</button>
           <button class="ob-nav-btn" onclick="showAssetInboxPage && showAssetInboxPage()"><span class="ob-nav-icon">📁</span>素材</button>
@@ -561,7 +582,9 @@
     setTimeout(removeLegacyHomePanels,2200);
   }
 
+  window.renderHomeUIV190 = renderHome;
   window.renderHomeUIV189 = renderHome;
+  window.removeLegacyHomePanelsV190 = removeLegacyHomePanels;
   window.removeLegacyHomePanelsV189 = removeLegacyHomePanels;
 
   if(document.readyState === "loading"){
