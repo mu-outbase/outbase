@@ -1,9 +1,9 @@
 /* =========================================================
    OUTBASE assetCapture.js
-   M0 v186: 音声メモ音量強化 + 同時文字起こし
-   - 写真/動画/ファイル/音声/メモ入力
-   - 音声メモはWeb Audioで録音前に音量を持ち上げる
-   - Android Chrome想定で Web Speech API による同時文字起こし
+   M0 v187: 音声メモ音量強化 + 文字起こし安定化
+   - v185の音量強化を維持
+   - Web Speech APIを同一操作内で先に起動し、途中終了時は自動再開
+   - 文字起こし不可時は手動追記で transcript を残す
    - app.js本体は触らない
 ========================================================= */
 (function(){
@@ -27,7 +27,10 @@
   let transcriptInterim = "";
   let transcriptSupported = false;
   let transcriptActive = false;
+  let transcriptRequested = false;
   let transcriptError = "";
+  let transcriptStatus = "文字起こし待機中";
+  let transcriptRestartTimer = null;
 
   function fileToDataUrl(file){
     return new Promise((resolve,reject)=>{
@@ -39,35 +42,17 @@
   }
 
   function getAudioConstraints(){
-    return {
-      audio:{
-        echoCancellation:true,
-        noiseSuppression:true,
-        autoGainControl:true,
-        channelCount:1
-      }
-    };
+    return { audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:1 } };
   }
 
   function getSupportedRecorderOptions(){
-    const candidates = [
-      {mimeType:"audio/webm;codecs=opus"},
-      {mimeType:"audio/webm"},
-      {mimeType:"audio/mp4"}
-    ];
-
-    if(typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function"){
-      return undefined;
-    }
-
+    const candidates = [{mimeType:"audio/webm;codecs=opus"},{mimeType:"audio/webm"},{mimeType:"audio/mp4"}];
+    if(typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return undefined;
     return candidates.find(option=>MediaRecorder.isTypeSupported(option.mimeType));
   }
 
   function makeCompressor(audioContext){
-    if(!audioContext || typeof audioContext.createDynamicsCompressor !== "function"){
-      return null;
-    }
-
+    if(!audioContext || typeof audioContext.createDynamicsCompressor !== "function") return null;
     const compressor = audioContext.createDynamicsCompressor();
     compressor.threshold.value = -18;
     compressor.knee.value = 18;
@@ -79,50 +64,23 @@
 
   function createAmplifiedStream(sourceStream,gainValue){
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-
     if(!AudioContextClass || !sourceStream){
-      return {
-        stream:sourceStream,
-        audioContext:null,
-        gainNode:null,
-        gainValue:1,
-        mode:"raw_stream"
-      };
+      return {stream:sourceStream,audioContext:null,gainNode:null,gainValue:1,mode:"raw_stream"};
     }
-
     try{
       const audioContext = new AudioContextClass();
       const source = audioContext.createMediaStreamSource(sourceStream);
       const gainNode = audioContext.createGain();
       const destination = audioContext.createMediaStreamDestination();
       const compressor = makeCompressor(audioContext);
-
       gainNode.gain.value = gainValue;
       source.connect(gainNode);
-
-      if(compressor){
-        gainNode.connect(compressor);
-        compressor.connect(destination);
-      }else{
-        gainNode.connect(destination);
-      }
-
-      return {
-        stream:destination.stream,
-        audioContext:audioContext,
-        gainNode:gainNode,
-        gainValue:gainValue,
-        mode:"web_audio_gain"
-      };
+      if(compressor){ gainNode.connect(compressor); compressor.connect(destination); }
+      else{ gainNode.connect(destination); }
+      return {stream:destination.stream,audioContext,gainNode,gainValue,mode:"web_audio_gain"};
     }catch(error){
       console.error("音声増幅ストリーム作成失敗",error);
-      return {
-        stream:sourceStream,
-        audioContext:null,
-        gainNode:null,
-        gainValue:1,
-        mode:"raw_stream_fallback"
-      };
+      return {stream:sourceStream,audioContext:null,gainNode:null,gainValue:1,mode:"raw_stream_fallback"};
     }
   }
 
@@ -131,9 +89,7 @@
   }
 
   function cleanTranscript(text){
-    return String(text || "")
-      .replace(/\s+/g," ")
-      .trim();
+    return String(text || "").replace(/\s+/g," ").trim();
   }
 
   function notifyTranscriptUpdate(){
@@ -146,17 +102,46 @@
     transcriptFinal = "";
     transcriptInterim = "";
     transcriptError = "";
+    transcriptStatus = "文字起こし待機中";
     transcriptActive = false;
+    transcriptRequested = false;
+    clearTimeout(transcriptRestartTimer);
     notifyTranscriptUpdate();
   }
 
+  function setTranscriptError(message){
+    transcriptError = message || "";
+    notifyTranscriptUpdate();
+  }
+
+  function shouldAutoRestart(){
+    return transcriptRequested && recorder && recorder.state === "recording" && speechRecognition;
+  }
+
+  function startRecognitionInstance(){
+    if(!speechRecognition) return false;
+    try{
+      speechRecognition.start();
+      return true;
+    }catch(error){
+      transcriptStatus = "文字起こし再開待ち";
+      setTranscriptError("文字起こし開始に失敗。もう一度録音開始を押すか、文字を追加してください。");
+      return false;
+    }
+  }
+
   function startTranscript(){
-    resetTranscript();
+    transcriptFinal = "";
+    transcriptInterim = "";
+    transcriptError = "";
+    transcriptRequested = true;
+    transcriptStatus = "文字起こし準備中";
+
     const RecognitionClass = getSpeechRecognitionClass();
     transcriptSupported = Boolean(RecognitionClass);
-
     if(!RecognitionClass){
-      transcriptError = "このブラウザでは文字起こし未対応";
+      transcriptStatus = "文字起こし未対応";
+      transcriptError = "このブラウザでは自動文字起こしが使えません。必要なら文字を追加してください。";
       notifyTranscriptUpdate();
       return false;
     }
@@ -170,6 +155,7 @@
 
       speechRecognition.onstart = ()=>{
         transcriptActive = true;
+        transcriptStatus = "録音中・文字起こし中";
         transcriptError = "";
         notifyTranscriptUpdate();
       };
@@ -177,40 +163,47 @@
       speechRecognition.onresult = event=>{
         let interim = "";
         let finalText = "";
-
         for(let i=event.resultIndex;i<event.results.length;i++){
           const result = event.results[i];
           const text = result && result[0] ? result[0].transcript : "";
-          if(result.isFinal){
-            finalText += text;
-          }else{
-            interim += text;
-          }
+          if(result.isFinal) finalText += text;
+          else interim += text;
         }
-
-        if(finalText){
-          transcriptFinal = cleanTranscript(transcriptFinal + " " + finalText);
-        }
+        if(finalText) transcriptFinal = cleanTranscript(transcriptFinal + " " + finalText);
         transcriptInterim = cleanTranscript(interim);
+        transcriptStatus = "録音中・文字起こし中";
         notifyTranscriptUpdate();
       };
 
       speechRecognition.onerror = event=>{
-        transcriptError = event?.error ? "文字起こしエラー：" + event.error : "文字起こしエラー";
+        const error = event?.error || "unknown";
+        if(error === "no-speech") transcriptError = "声が検出されていません。もう少し近くで話してください。";
+        else if(error === "not-allowed" || error === "service-not-allowed"){
+          transcriptRequested = false;
+          transcriptError = "文字起こしのマイク許可がありません。Chromeの権限を確認してください。";
+        }else transcriptError = "文字起こしエラー：" + error;
         notifyTranscriptUpdate();
       };
 
       speechRecognition.onend = ()=>{
         transcriptActive = false;
+        if(shouldAutoRestart()){
+          transcriptStatus = "文字起こし再開中";
+          notifyTranscriptUpdate();
+          clearTimeout(transcriptRestartTimer);
+          transcriptRestartTimer = setTimeout(()=>startRecognitionInstance(),500);
+          return;
+        }
+        if(transcriptRequested) transcriptStatus = "文字起こし停止中";
         notifyTranscriptUpdate();
       };
 
-      speechRecognition.start();
-      return true;
+      return startRecognitionInstance();
     }catch(error){
       console.error("文字起こし開始失敗",error);
       speechRecognition = null;
-      transcriptError = "文字起こし開始失敗";
+      transcriptStatus = "文字起こし開始失敗";
+      transcriptError = "文字起こしを開始できません。文字を追加してください。";
       transcriptActive = false;
       notifyTranscriptUpdate();
       return false;
@@ -218,14 +211,22 @@
   }
 
   function stopTranscript(){
+    transcriptRequested = false;
+    clearTimeout(transcriptRestartTimer);
     if(speechRecognition){
-      try{
-        speechRecognition.stop();
-      }catch(error){
-        console.error("文字起こし停止失敗",error);
-      }
+      try{ speechRecognition.stop(); }catch(error){ console.error("文字起こし停止失敗",error); }
     }
     transcriptActive = false;
+    transcriptStatus = "文字起こし停止";
+    notifyTranscriptUpdate();
+  }
+
+  function addManualTranscript(text){
+    const clean = cleanTranscript(text);
+    if(!clean) return;
+    transcriptFinal = cleanTranscript(transcriptFinal + " " + clean);
+    transcriptInterim = "";
+    transcriptStatus = recorder && recorder.state === "recording" ? "録音中・手動文字追加済み" : "手動文字追加済み";
     notifyTranscriptUpdate();
   }
 
@@ -237,62 +238,30 @@
     const files = Array.from(fileList || []);
     const saved = [];
     const context = options?.context || (core.getActiveContext ? core.getActiveContext() : {});
-
     for(const file of files){
       const dataUrl = await fileToDataUrl(file);
       const kind = options?.kind || (core.classifyMime ? core.classifyMime(file.type,file.name) : "file");
-      const asset = await store.saveAssetAndQueue({
-        kind:kind,
-        name:file.name,
-        title:options?.title || file.name,
-        mimeType:file.type || "",
-        sizeBytes:file.size || 0,
-        dataUrl:dataUrl,
-        context:context,
-        memo:options?.memo || ""
-      });
+      const asset = await store.saveAssetAndQueue({kind,name:file.name,title:options?.title || file.name,mimeType:file.type || "",sizeBytes:file.size || 0,dataUrl,context,memo:options?.memo || ""});
       saved.push(asset);
     }
-
     if(typeof window.renderAssetM0Panels === "function") window.renderAssetM0Panels();
     return saved;
   }
 
   async function saveTextMemo(text, options){
     const clean = String(text || "").trim();
-    if(!clean){
-      alert("メモを入力してください");
-      return null;
-    }
-
-    const asset = await store.saveAssetAndQueue({
-      kind:"memo",
-      title:options?.title || "手入力メモ",
-      text:clean,
-      memo:clean,
-      mimeType:"text/plain",
-      context:options?.context || (core.getActiveContext ? core.getActiveContext() : {})
-    });
-
+    if(!clean){ alert("メモを入力してください"); return null; }
+    const asset = await store.saveAssetAndQueue({kind:"memo",title:options?.title || "手入力メモ",text:clean,memo:clean,mimeType:"text/plain",context:options?.context || (core.getActiveContext ? core.getActiveContext() : {})});
     if(typeof window.renderAssetM0Panels === "function") window.renderAssetM0Panels();
     return asset;
   }
 
   function cleanupAudioResources(){
     try{
-      if(currentStream){
-        currentStream.getTracks().forEach(track=>track.stop());
-      }
-      if(recordStream && recordStream !== currentStream){
-        recordStream.getTracks().forEach(track=>track.stop());
-      }
-      if(currentAudioContext && typeof currentAudioContext.close === "function"){
-        currentAudioContext.close();
-      }
-    }catch(error){
-      console.error("音声リソース解放失敗",error);
-    }
-
+      if(currentStream) currentStream.getTracks().forEach(track=>track.stop());
+      if(recordStream && recordStream !== currentStream) recordStream.getTracks().forEach(track=>track.stop());
+      if(currentAudioContext && typeof currentAudioContext.close === "function") currentAudioContext.close();
+    }catch(error){ console.error("音声リソース解放失敗",error); }
     currentStream = null;
     recordStream = null;
     currentAudioContext = null;
@@ -304,7 +273,8 @@
       alert("録音中です");
       return;
     }
-
+    resetTranscript();
+    startTranscript();
     try{
       currentStream = await navigator.mediaDevices.getUserMedia(getAudioConstraints());
       const amplified = createAmplifiedStream(currentStream,DEFAULT_AUDIO_GAIN);
@@ -313,23 +283,18 @@
       currentGainNode = amplified.gainNode;
       currentGainValue = amplified.gainValue;
       chunks = [];
-
       const options = getSupportedRecorderOptions();
       recorder = options ? new MediaRecorder(recordStream,options) : new MediaRecorder(recordStream);
-
-      recorder.ondataavailable = e=>{
-        if(e.data && e.data.size > 0) chunks.push(e.data);
-      };
-
+      recorder.ondataavailable = e=>{ if(e.data && e.data.size > 0) chunks.push(e.data); };
       recorder.onerror = error=>{
         console.error("音声メモ録音エラー",error);
         alert("音声メモの録音中にエラーが出ました");
         stopTranscript();
         cleanupAudioResources();
       };
-
       recorder.start();
-      startTranscript();
+      transcriptStatus = transcriptSupported ? "録音中・文字起こし中" : transcriptStatus;
+      notifyTranscriptUpdate();
       alert("音声メモ開始（音量強化・文字起こし）");
     }catch(error){
       console.error(error);
@@ -344,10 +309,8 @@
       alert("録音中の音声メモはありません");
       return null;
     }
-
     const transcriptAtStop = getTranscriptText();
     stopTranscript();
-
     return new Promise(resolve=>{
       recorder.onstop = async ()=>{
         try{
@@ -356,21 +319,10 @@
           const dataUrl = await fileToDataUrl(blob);
           const transcript = cleanTranscript(transcriptAtStop || getTranscriptText());
           const asset = await store.saveAssetAndQueue({
-            kind:"audio",
-            title:"音声メモ",
-            name:"audio_" + Date.now() + ".webm",
-            mimeType:mimeType,
-            sizeBytes:blob.size || 0,
-            dataUrl:dataUrl,
-            transcript:transcript,
-            text:transcript,
-            audioGain:currentGainValue,
-            audioProcessing:"web_audio_gain_speech_v186",
-            speechRecognitionSupported:transcriptSupported,
-            memo:transcript || "音量強化録音",
-            context:core.getActiveContext ? core.getActiveContext() : {}
+            kind:"audio",title:"音声メモ",name:"audio_" + Date.now() + ".webm",mimeType,sizeBytes:blob.size || 0,
+            dataUrl,transcript,text:transcript,audioGain:currentGainValue,audioProcessing:"web_audio_gain_speech_v187",
+            speechRecognitionSupported:transcriptSupported,memo:transcript || "音量強化録音",context:core.getActiveContext ? core.getActiveContext() : {}
           });
-
           recorder = null;
           chunks = [];
           cleanupAudioResources();
@@ -388,44 +340,21 @@
           resolve(null);
         }
       };
-
       recorder.stop();
     });
   }
 
-  function isRecording(){
-    return Boolean(recorder && recorder.state === "recording");
-  }
+  function isRecording(){ return Boolean(recorder && recorder.state === "recording"); }
 
   function getAudioGainInfo(){
-    return {
-      active:isRecording(),
-      gain:currentGainValue,
-      mode:currentGainNode ? "web_audio_gain" : "raw_stream"
-    };
+    return {active:isRecording(),gain:currentGainValue,mode:currentGainNode ? "web_audio_gain" : "raw_stream"};
   }
 
   function getTranscriptInfo(){
-    return {
-      supported:transcriptSupported,
-      active:transcriptActive,
-      finalText:transcriptFinal,
-      interimText:transcriptInterim,
-      text:getTranscriptText(),
-      error:transcriptError
-    };
+    return {supported:transcriptSupported,active:transcriptActive,finalText:transcriptFinal,interimText:transcriptInterim,text:getTranscriptText(),error:transcriptError,statusMessage:transcriptStatus};
   }
 
-  M0.capture = {
-    importFiles,
-    saveTextMemo,
-    startAudio,
-    stopAudio,
-    isRecording,
-    getAudioGainInfo,
-    getTranscriptInfo
-  };
-
+  M0.capture = {importFiles,saveTextMemo,startAudio,stopAudio,isRecording,getAudioGainInfo,getTranscriptInfo,addManualTranscript};
   window.OUTBASE_ASSET_M0 = M0;
   window.importAssetM0Files = importFiles;
   window.saveAssetM0Memo = saveTextMemo;
@@ -433,4 +362,5 @@
   window.stopAssetM0Audio = stopAudio;
   window.getAssetM0AudioGainInfo = getAudioGainInfo;
   window.getAssetM0TranscriptInfo = getTranscriptInfo;
+  window.addAssetM0ManualTranscript = addManualTranscript;
 })();
