@@ -1,8 +1,9 @@
 /* =========================================================
    OUTBASE assetCapture.js
-   M0 v185: 音声メモ音量強化版
+   M0 v186: 音声メモ音量強化 + 同時文字起こし
    - 写真/動画/ファイル/音声/メモ入力
    - 音声メモはWeb Audioで録音前に音量を持ち上げる
+   - Android Chrome想定で Web Speech API による同時文字起こし
    - app.js本体は触らない
 ========================================================= */
 (function(){
@@ -20,6 +21,13 @@
   let currentAudioContext = null;
   let currentGainNode = null;
   let currentGainValue = DEFAULT_AUDIO_GAIN;
+
+  let speechRecognition = null;
+  let transcriptFinal = "";
+  let transcriptInterim = "";
+  let transcriptSupported = false;
+  let transcriptActive = false;
+  let transcriptError = "";
 
   function fileToDataUrl(file){
     return new Promise((resolve,reject)=>{
@@ -118,6 +126,113 @@
     }
   }
 
+  function getSpeechRecognitionClass(){
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function cleanTranscript(text){
+    return String(text || "")
+      .replace(/\s+/g," ")
+      .trim();
+  }
+
+  function notifyTranscriptUpdate(){
+    if(typeof window.updateAssetM0Transcript === "function"){
+      window.updateAssetM0Transcript(getTranscriptInfo());
+    }
+  }
+
+  function resetTranscript(){
+    transcriptFinal = "";
+    transcriptInterim = "";
+    transcriptError = "";
+    transcriptActive = false;
+    notifyTranscriptUpdate();
+  }
+
+  function startTranscript(){
+    resetTranscript();
+    const RecognitionClass = getSpeechRecognitionClass();
+    transcriptSupported = Boolean(RecognitionClass);
+
+    if(!RecognitionClass){
+      transcriptError = "このブラウザでは文字起こし未対応";
+      notifyTranscriptUpdate();
+      return false;
+    }
+
+    try{
+      speechRecognition = new RecognitionClass();
+      speechRecognition.lang = "ja-JP";
+      speechRecognition.continuous = true;
+      speechRecognition.interimResults = true;
+      speechRecognition.maxAlternatives = 1;
+
+      speechRecognition.onstart = ()=>{
+        transcriptActive = true;
+        transcriptError = "";
+        notifyTranscriptUpdate();
+      };
+
+      speechRecognition.onresult = event=>{
+        let interim = "";
+        let finalText = "";
+
+        for(let i=event.resultIndex;i<event.results.length;i++){
+          const result = event.results[i];
+          const text = result && result[0] ? result[0].transcript : "";
+          if(result.isFinal){
+            finalText += text;
+          }else{
+            interim += text;
+          }
+        }
+
+        if(finalText){
+          transcriptFinal = cleanTranscript(transcriptFinal + " " + finalText);
+        }
+        transcriptInterim = cleanTranscript(interim);
+        notifyTranscriptUpdate();
+      };
+
+      speechRecognition.onerror = event=>{
+        transcriptError = event?.error ? "文字起こしエラー：" + event.error : "文字起こしエラー";
+        notifyTranscriptUpdate();
+      };
+
+      speechRecognition.onend = ()=>{
+        transcriptActive = false;
+        notifyTranscriptUpdate();
+      };
+
+      speechRecognition.start();
+      return true;
+    }catch(error){
+      console.error("文字起こし開始失敗",error);
+      speechRecognition = null;
+      transcriptError = "文字起こし開始失敗";
+      transcriptActive = false;
+      notifyTranscriptUpdate();
+      return false;
+    }
+  }
+
+  function stopTranscript(){
+    if(speechRecognition){
+      try{
+        speechRecognition.stop();
+      }catch(error){
+        console.error("文字起こし停止失敗",error);
+      }
+    }
+    transcriptActive = false;
+    notifyTranscriptUpdate();
+  }
+
+  function getTranscriptText(){
+    return cleanTranscript([transcriptFinal,transcriptInterim].filter(Boolean).join(" "));
+  }
+
   async function importFiles(fileList, options){
     const files = Array.from(fileList || []);
     const saved = [];
@@ -209,13 +324,16 @@
       recorder.onerror = error=>{
         console.error("音声メモ録音エラー",error);
         alert("音声メモの録音中にエラーが出ました");
+        stopTranscript();
         cleanupAudioResources();
       };
 
       recorder.start();
-      alert("音声メモ開始（音量強化）");
+      startTranscript();
+      alert("音声メモ開始（音量強化・文字起こし）");
     }catch(error){
       console.error(error);
+      stopTranscript();
       cleanupAudioResources();
       alert("音声メモを開始できません");
     }
@@ -227,12 +345,16 @@
       return null;
     }
 
+    const transcriptAtStop = getTranscriptText();
+    stopTranscript();
+
     return new Promise(resolve=>{
       recorder.onstop = async ()=>{
         try{
           const mimeType = recorder?.mimeType || "audio/webm";
           const blob = new Blob(chunks,{type:mimeType});
           const dataUrl = await fileToDataUrl(blob);
+          const transcript = cleanTranscript(transcriptAtStop || getTranscriptText());
           const asset = await store.saveAssetAndQueue({
             kind:"audio",
             title:"音声メモ",
@@ -240,10 +362,12 @@
             mimeType:mimeType,
             sizeBytes:blob.size || 0,
             dataUrl:dataUrl,
-            transcript:"",
+            transcript:transcript,
+            text:transcript,
             audioGain:currentGainValue,
-            audioProcessing:"web_audio_gain_v185",
-            memo:"音量強化録音",
+            audioProcessing:"web_audio_gain_speech_v186",
+            speechRecognitionSupported:transcriptSupported,
+            memo:transcript || "音量強化録音",
             context:core.getActiveContext ? core.getActiveContext() : {}
           });
 
@@ -251,13 +375,15 @@
           chunks = [];
           cleanupAudioResources();
           if(typeof window.renderAssetM0Panels === "function") window.renderAssetM0Panels();
-          alert("音声メモ保存（音量強化）");
+          alert(transcript ? "音声メモ保存（文字起こしあり）" : "音声メモ保存（文字起こしなし）");
+          resetTranscript();
           resolve(asset);
         }catch(error){
           console.error("音声メモ保存失敗",error);
           recorder = null;
           chunks = [];
           cleanupAudioResources();
+          resetTranscript();
           alert("音声メモ保存に失敗しました");
           resolve(null);
         }
@@ -279,13 +405,25 @@
     };
   }
 
+  function getTranscriptInfo(){
+    return {
+      supported:transcriptSupported,
+      active:transcriptActive,
+      finalText:transcriptFinal,
+      interimText:transcriptInterim,
+      text:getTranscriptText(),
+      error:transcriptError
+    };
+  }
+
   M0.capture = {
     importFiles,
     saveTextMemo,
     startAudio,
     stopAudio,
     isRecording,
-    getAudioGainInfo
+    getAudioGainInfo,
+    getTranscriptInfo
   };
 
   window.OUTBASE_ASSET_M0 = M0;
@@ -294,4 +432,5 @@
   window.startAssetM0Audio = startAudio;
   window.stopAssetM0Audio = stopAudio;
   window.getAssetM0AudioGainInfo = getAudioGainInfo;
+  window.getAssetM0TranscriptInfo = getTranscriptInfo;
 })();
