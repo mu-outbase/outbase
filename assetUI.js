@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE assetUI.js
-   M0 v183: 記録入力基盤 UI 修正版
+   M0 v184: 記録入力基盤 UI 修正版
    - 保存した写真/取込/音声/メモをその場で見られる
    - ホームは素材合計、散歩/キャンプ中は紐付け素材を表示
    - 音声メモはaudio再生コントロールを表示
@@ -43,6 +43,7 @@
       .asset-m0-memo{white-space:pre-wrap;background:white;border-radius:10px;padding:9px;}
       .asset-m0-meta{font-size:12px;color:#64748b;margin-top:4px;word-break:break-word;}
       .asset-m0-view-btn{margin-top:8px;padding:9px 10px;border-radius:10px;font-size:14px;min-height:40px;background:#475569;color:#fff;}
+      .asset-m0-inbox-btn{width:100%;margin-top:10px;background:#1f6f3a;color:#fff;}
       .asset-m0-hidden{display:none;}
       #${VIEWER_ID}{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:9999;padding:16px;overflow:auto;}
       #${VIEWER_ID}.asset-m0-hidden{display:none;}
@@ -158,6 +159,7 @@
         <button type="button" class="asset-m0-btn" data-asset-action="audio-stop">■ 録音保存</button>
         <button type="button" class="asset-m0-btn" data-asset-action="refresh">更新</button>
       </div>
+      <button type="button" class="asset-m0-btn asset-m0-inbox-btn" onclick="showAssetInboxPage && showAssetInboxPage()">素材一覧・未整理インボックスを見る</button>
       <input class="asset-m0-hidden" type="file" accept="image/*" capture="environment" data-asset-input="camera">
       <input class="asset-m0-hidden" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.xlsx,.xls,.txt,.md" data-asset-input="files">
       <div class="asset-m0-small">撮影・取込・音声メモ・手入力メモは、下の「最近の素材」に表示。音声はその場で再生できます。</div>
