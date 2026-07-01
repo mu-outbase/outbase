@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE lifeOSBase.js
-   UI v208: LifeOS基盤安定化・ホーム旧UI抑制
+   UI v209: LifeOS基盤安定化・ホーム旧UI抑制
    - ホームの旧UIチラつきを抑制
    - home / walk など複数ページ混在を防止
    - app.js 本体は触らない / homeUI.js は読み込まない
@@ -8,16 +8,16 @@
 (function(){
   'use strict';
 
-  const VERSION = 'v208';
-  const ROOT_ID = 'outbaseLifeOSV208';
-  const STYLE_ID = 'outbaseLifeOSV208Style';
-  const SHEET_ID = 'outbaseLifeOSManageV208';
+  const VERSION = 'v209';
+  const ROOT_ID = 'outbaseLifeOSV209';
+  const STYLE_ID = 'outbaseLifeOSV209Style';
+  const SHEET_ID = 'outbaseLifeOSManageV209';
   const PAGES = {
     home: 'homePage',
-    record: 'outbaseRecordPageV208',
-    calendar: 'outbaseCalendarPageV208',
-    project: 'outbaseProjectPageV208',
-    assets: 'outbaseAssetsPageV208'
+    record: 'outbaseRecordPageV209',
+    calendar: 'outbaseCalendarPageV209',
+    project: 'outbaseProjectPageV209',
+    assets: 'outbaseAssetsPageV209'
   };
 
   let isRenderingHome = false;
@@ -39,8 +39,8 @@
     style.id = STYLE_ID;
     style.textContent = `
       :root{--obg:#1f6f3a;--obd:#123d25;--obs:#edf6ee;--obc:#fbfaf5;--obt:#243127;--obm:#6b766c;--obl:#e5ebe4;}
-      #homePage,.life-v208-page{background:linear-gradient(180deg,#f4f8f2 0%,#fbfaf5 100%);padding-bottom:84px;}
-      #${ROOT_ID},.life-v208-inner{display:flex;flex-direction:column;gap:14px;}
+      #homePage,.life-v209-page{background:linear-gradient(180deg,#f4f8f2 0%,#fbfaf5 100%);padding-bottom:84px;}
+      #${ROOT_ID},.life-v209-inner{display:flex;flex-direction:column;gap:14px;}
       .life-card{background:#fff;border:1px solid rgba(31,111,58,.08);border-radius:24px;padding:16px;box-shadow:0 10px 24px rgba(20,81,45,.08);color:var(--obt);}
       .life-hero{background:linear-gradient(135deg,#1f6f3a,#4f8f5b);color:#fff;min-height:132px;position:relative;overflow:hidden;}
       .life-hero:after{content:'';position:absolute;right:22px;top:18px;width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.38);}
@@ -78,7 +78,7 @@
       .life-sheet-card{width:min(680px,100%);background:#fff;border-radius:24px;padding:16px;box-shadow:0 20px 40px rgba(0,0,0,.2);}
       .life-sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;}
       .life-close{border:0;border-radius:14px;background:#b91c1c;color:#fff;padding:9px 12px;font-weight:850;}
-      @media(max-width:520px){#homePage,.life-v208-page{padding-left:14px;padding-right:14px}.life-card{border-radius:22px;padding:15px}.life-title{font-size:22px}.life-grid-4{gap:7px}.life-btn{min-height:68px;font-size:11px;padding:9px 2px}.life-btn span{font-size:21px}}
+      @media(max-width:520px){#homePage,.life-v209-page{padding-left:14px;padding-right:14px}.life-card{border-radius:22px;padding:15px}.life-title{font-size:22px}.life-grid-4{gap:7px}.life-btn{min-height:68px;font-size:11px;padding:9px 2px}.life-btn span{font-size:21px}}
     `;
     document.head.appendChild(style);
   }
@@ -93,12 +93,12 @@
 
   async function getRecordsSafe(){
     try{ if(typeof getRecords === 'function') return await getRecords(); }
-    catch(error){ console.warn('v208 records skip', error); }
+    catch(error){ console.warn('v209 records skip', error); }
     return [];
   }
   async function getStoreSafe(name){
     try{ if(typeof getOutbaseStoreAll === 'function') return await getOutbaseStoreAll(name); }
-    catch(error){ console.warn('v208 store skip', name, error); }
+    catch(error){ console.warn('v209 store skip', name, error); }
     return [];
   }
   function readProjects(){
@@ -135,10 +135,10 @@
   }
   function nav(active){
     const items = [['home','🏠','ホーム'],['record','📝','記録'],['calendar','📅','予定'],['project','🗂️','PJ'],['assets','📁','素材']];
-    return '<nav class="life-nav">' + items.map(item => `<button class="${active === item[0] ? 'is-active' : ''}" onclick="showOutbaseLifePageV208('${item[0]}')"><span>${item[1]}</span>${item[2]}</button>`).join('') + '</nav>';
+    return '<nav class="life-nav">' + items.map(item => `<button class="${active === item[0] ? 'is-active' : ''}" onclick="showOutbaseLifePageV209('${item[0]}')"><span>${item[1]}</span>${item[2]}</button>`).join('') + '</nav>';
   }
   function hero(kicker,title,sub,manage){
-    return `<section class="life-card life-hero"><div class="life-head"><div><div class="life-kicker">${esc(kicker)}</div><div class="life-title">${title}</div><div class="life-sub">${esc(sub)}</div></div>${manage ? '<button class="life-manage" onclick="showOutbaseManageMenuV208()">管理</button>' : ''}</div></section>`;
+    return `<section class="life-card life-hero"><div class="life-head"><div><div class="life-kicker">${esc(kicker)}</div><div class="life-title">${title}</div><div class="life-sub">${esc(sub)}</div></div>${manage ? '<button class="life-manage" onclick="showOutbaseManageMenuV209()">管理</button>' : ''}</div></section>`;
   }
   function btn(text,fn,primary){ return `<button class="${primary ? 'life-primary' : 'life-secondary'}" onclick="${fn}">${text}</button>`; }
   function buildHome(data){
@@ -151,9 +151,9 @@
       <section class="life-card"><div class="life-priority"><strong>🌿 チャッピー：${esc(p[1])}</strong>${esc(p[2])}</div></section>
       <section class="life-card"><div class="life-section-head"><div class="life-section-title">すぐ使う</div><div class="life-note">毎日使うものは提案ではなく常設</div></div><div class="life-grid-4">
         <button class="life-btn" onclick="startWalk && startWalk()"><span>🐕</span>コタ散歩</button>
-        <button class="life-btn" onclick="showOutbaseLifePageV208('record')"><span>📝</span>記録</button>
-        <button class="life-btn" onclick="showOutbaseLifePageV208('calendar')"><span>📅</span>予定</button>
-        <button class="life-btn" onclick="showOutbaseLifePageV208('assets')"><span>📁</span>素材</button>
+        <button class="life-btn" onclick="showOutbaseLifePageV209('record')"><span>📝</span>記録</button>
+        <button class="life-btn" onclick="showOutbaseLifePageV209('calendar')"><span>📅</span>予定</button>
+        <button class="life-btn" onclick="showOutbaseLifePageV209('assets')"><span>📁</span>素材</button>
       </div></section>
       <section class="life-card"><div class="life-section-head"><div class="life-section-title">提案・注意</div><div class="life-note">忘れそう/危険/期限だけ強く出す</div></div><div class="life-grid-3">
         <div class="life-mini"><div class="life-label">未整理</div><div class="life-value">${data.inboxCount}件</div><div class="life-note">多い時だけ整理提案</div></div>
@@ -167,7 +167,7 @@
     if(page) return page;
     page = document.createElement('div');
     page.id = id;
-    page.className = 'page hidden life-v208-page';
+    page.className = 'page hidden life-v209-page';
     const firstScript = document.body.querySelector('script');
     document.body.insertBefore(page, firstScript || null);
     return page;
@@ -176,7 +176,7 @@
   async function renderHome(force){
     if(isRenderingHome) return;
     if(!force && currentRoute !== 'home') return;
-    if(!force && (isVisible('walkPage') || isVisible('outbaseWalkResultPageV208') || isVisible('campPage') || isVisible('detailPage') || isVisible('walkHistoryPage') || isVisible('gearPage') || isVisible('campgroundPage') || isVisible('campRecordPage'))) return;
+    if(!force && (isVisible('walkPage') || (isVisible('outbaseWalkResultPageV209') || isVisible('outbaseWalkResultPageV208')) || isVisible('campPage') || isVisible('detailPage') || isVisible('walkHistoryPage') || isVisible('gearPage') || isVisible('campgroundPage') || isVisible('campRecordPage'))) return;
     isRenderingHome = true;
     addStyle();
     try{
@@ -192,7 +192,7 @@
 
   async function renderRecord(){
     const page = ensurePage(PAGES.record);
-    page.innerHTML = `<div class="life-v208-inner">${hero('RECORD','写真・音声・メモを<br>迷わず残す。','記録入力はここに集約。ホームには増やさない。',false)}
+    page.innerHTML = `<div class="life-v209-inner">${hero('RECORD','写真・音声・メモを<br>迷わず残す。','記録入力はここに集約。ホームには増やさない。',false)}
       <section class="life-card"><div class="life-grid-2">${btn('＋ 記録入力を開く','showAssetCapturePage && showAssetCapturePage()',true)}${btn('コタ散歩を開始','startWalk && startWalk()',false)}</div></section>
       <section class="life-card"><div class="life-list">
         <div class="life-row"><div class="life-row-icon">📷</div><div><div class="life-row-title">撮影・取込</div><div class="life-row-meta">写真/動画/ファイルは通常記録や素材整理で使う。</div></div></div>
@@ -202,7 +202,7 @@
   }
   async function renderCalendar(){
     const page = ensurePage(PAGES.calendar);
-    page.innerHTML = `<div class="life-v208-inner">${hero('CALENDAR','予定から、準備と注意に<br>つなげる。','Googleカレンダー連携前提。今は骨格確認。',false)}
+    page.innerHTML = `<div class="life-v209-inner">${hero('CALENDAR','予定から、準備と注意に<br>つなげる。','Googleカレンダー連携前提。今は骨格確認。',false)}
       <section class="life-card"><div class="life-list">
         <div class="life-row"><div class="life-row-icon">🐕</div><div><div class="life-row-title">毎日：コタ散歩</div><div class="life-row-meta">提案しすぎない。ショートカット常設だけ。</div></div></div>
         <div class="life-row"><div class="life-row-icon">⛺</div><div><div class="life-row-title">近日：次回キャンプ</div><div class="life-row-meta">天気/買い物/ギア/ルートをPJに接続。</div></div></div>
@@ -214,14 +214,14 @@
     const data = await collect();
     const projectName = data.project?.campgroundName || data.project?.title || '次回キャンプ未設定';
     const page = ensurePage(PAGES.project);
-    page.innerHTML = `<div class="life-v208-inner">${hero('PROJECT','予定を、準備・記録・レビューへ。','キャンプから始めて、旅行/通院/車/家にも広げる。',false)}
+    page.innerHTML = `<div class="life-v209-inner">${hero('PROJECT','予定を、準備・記録・レビューへ。','キャンプから始めて、旅行/通院/車/家にも広げる。',false)}
       <section class="life-card"><div class="life-label">現在の主プロジェクト</div><div class="life-value">${esc(projectName)}</div><div class="life-note">キャンプ準備は「キャンプPJ」として扱う。</div><div style="height:10px"></div>${btn('キャンプPJを開く/作る','openOutbaseCampPrep && openOutbaseCampPrep()',true)}</section>
       <section class="life-card"><div class="life-grid-2"><div class="life-mini"><div class="life-label">準備</div><div class="life-value">天気 / ギア / 買い物</div></div><div class="life-mini"><div class="life-label">当日</div><div class="life-value">写真 / 音声 / メモ</div></div><div class="life-mini"><div class="life-label">レビュー</div><div class="life-value">次回改善</div></div><div class="life-mini"><div class="life-label">将来</div><div class="life-value">家・車・通院</div></div></div></section>${nav('project')}</div>`;
   }
   async function renderAssets(){
     const data = await collect();
     const page = ensurePage(PAGES.assets);
-    page.innerHTML = `<div class="life-v208-inner">${hero('ASSETS','素材を確認して、<br>思い出と記録につなげる。','写真・音声・メモ・未整理インボックスをここへ集約。',false)}
+    page.innerHTML = `<div class="life-v209-inner">${hero('ASSETS','素材を確認して、<br>思い出と記録につなげる。','写真・音声・メモ・未整理インボックスをここへ集約。',false)}
       <section class="life-card"><div class="life-grid-2">${btn('素材一覧を開く','showAssetInboxPage && showAssetInboxPage()',true)}${btn('記録入力を開く','showAssetCapturePage && showAssetCapturePage()',false)}</div></section>
       <section class="life-card"><div class="life-mini"><div class="life-label">未整理素材</div><div class="life-value">${data.inboxCount}件</div><div class="life-note">未整理は素材一覧で確認。ホームに長い一覧は出さない。</div></div></section>${nav('assets')}</div>`;
   }
@@ -257,7 +257,7 @@
     sheet.id = SHEET_ID;
     sheet.className = 'life-sheet';
     sheet.onclick = event => { if(event.target === sheet) closeManage(); };
-    sheet.innerHTML = `<div class="life-sheet-card"><div class="life-sheet-head"><strong>管理メニュー</strong><button class="life-close" onclick="closeOutbaseManageMenuV208()">閉じる</button></div><div class="life-list">
+    sheet.innerHTML = `<div class="life-sheet-card"><div class="life-sheet-head"><strong>管理メニュー</strong><button class="life-close" onclick="closeOutbaseManageMenuV209()">閉じる</button></div><div class="life-list">
       <button class="life-secondary" onclick="showGearPage && showGearPage()">ギア管理</button>
       <button class="life-secondary" onclick="showCampgroundPage && showCampgroundPage()">キャンプ場管理</button>
       <button class="life-secondary" onclick="showCampRecordPage && showCampRecordPage()">キャンプ実績</button>
@@ -268,7 +268,7 @@
   function closeManage(){ const sheet = getPage(SHEET_ID); if(sheet) sheet.remove(); }
 
   function patchEntrances(){
-    if(typeof window.showPage === 'function' && !window.showPage.__lifeV208Patched){
+    if(typeof window.showPage === 'function' && !window.showPage.__lifeV209Patched){
       const original = window.showPage;
       window.showPage = function(pageId){
         if(pageId === 'homePage') return showLifePage('home');
@@ -280,28 +280,28 @@
         setReady();
         return result;
       };
-      window.showPage.__lifeV208Patched = true;
+      window.showPage.__lifeV209Patched = true;
     }
-    if(typeof window.backToHome === 'function' && !window.backToHome.__lifeV208Patched){
+    if(typeof window.backToHome === 'function' && !window.backToHome.__lifeV209Patched){
       const originalBack = window.backToHome;
       window.backToHome = function(){
         const result = originalBack.apply(this, arguments);
         setTimeout(()=>showLifePage('home'),80);
         return result;
       };
-      window.backToHome.__lifeV208Patched = true;
+      window.backToHome.__lifeV209Patched = true;
     }
   }
 
   function observeHome(){
     const home = getPage('homePage');
-    if(!home || home.__lifeV208Observed) return;
+    if(!home || home.__lifeV209Observed) return;
     const observer = new MutationObserver(()=>{
       if(isRenderingHome || currentRoute !== 'home') return;
       if(!home.classList.contains('hidden') && !document.getElementById(ROOT_ID)) setTimeout(()=>renderHome(true),20);
     });
     observer.observe(home,{childList:true,subtree:false});
-    home.__lifeV208Observed = true;
+    home.__lifeV209Observed = true;
   }
 
   async function setup(){
@@ -318,7 +318,4 @@
       return;
     }
     if(currentRoute === 'home') await showLifePage('home');
-    setReady();
-  }
-
-  window.showOutbaseLifePa
+   
