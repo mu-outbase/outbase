@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE lifeOSUI.js
-   UI v198: 人生管理OS 骨格反映
+   UI v199: lifeOSUI欠落修正 + 人生管理OS 骨格反映
    - v196/v197 方針を本体UIへ反映する軽量レイヤー
    - homeUI.js / app.js / assetUI.js 本体は触らない
    - 提案 / 常設ショートカット / 通知 / 予定 / PJ / 素材を分離
@@ -8,9 +8,9 @@
 (function(){
   "use strict";
 
-  const VERSION = "v198";
-  const ROOT_ID = "outbaseLifeOSV198";
-  const STYLE_ID = "outbaseLifeOSV198Style";
+  const VERSION = "v199";
+  const ROOT_ID = "outbaseLifeOSV199";
+  const STYLE_ID = "outbaseLifeOSV199Style";
   const MANAGE_ID = "outbaseLifeManageSheet";
   const PAGE_IDS = {
     home:"homePage",
@@ -233,14 +233,14 @@
   async function safeGetRecords(){
     try{
       if(typeof getRecords === "function") return await getRecords();
-    }catch(error){ console.warn("v198 records skip",error); }
+    }catch(error){ console.warn("v199 records skip",error); }
     return [];
   }
 
   async function safeGetStore(storeName){
     try{
       if(typeof getOutbaseStoreAll === "function") return await getOutbaseStoreAll(storeName);
-    }catch(error){ console.warn("v198 store skip",storeName,error); }
+    }catch(error){ console.warn("v199 store skip",storeName,error); }
     return [];
   }
 
@@ -528,4 +528,4 @@
     page.innerHTML = `
       <div class="life-os-page-inner">
         <section class="life-card life-hero">
-          <div class="life-kicker">ASSETS</div
+          <div class="life-kick
