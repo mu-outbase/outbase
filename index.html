@@ -30,6 +30,9 @@
     <button onclick="showCampRecordPage()">
       キャンプ実績管理
     </button>
+    <button onclick="showAssetInboxPage()">
+      素材一覧
+    </button>
     <div id="storageInfo">
       保存基盤確認中...
     </div>
@@ -577,6 +580,31 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="gps.js?v=phase9j3"></script>
 <script src="stateManager.js?v=phase9j3"></script>
+
+<div id="assetInboxPage" class="page hidden">
+  <div class="card">
+    <h1>素材一覧</h1>
+    <div class="detail-value">
+      ホームで撮影・取込・録音・メモ保存した素材を見る場所です。<br>
+      未整理素材はここから確認します。
+    </div>
+    <button onclick="renderAssetInboxPage && renderAssetInboxPage()">更新</button>
+    <button onclick="showPage('homePage')">ホームへ戻る</button>
+  </div>
+  <div class="card">
+    <h2>未整理インボックス</h2>
+    <div id="assetInboxSummary">読込中...</div>
+    <div class="asset-filter-row">
+      <button onclick="setAssetInboxFilter('all')">全部</button>
+      <button onclick="setAssetInboxFilter('unlinked')">未整理</button>
+      <button onclick="setAssetInboxFilter('photo')">写真</button>
+      <button onclick="setAssetInboxFilter('audio')">音声</button>
+      <button onclick="setAssetInboxFilter('memo')">メモ</button>
+    </div>
+    <div id="assetInboxList">素材なし</div>
+  </div>
+</div>
+
 <script src="sessionManager.js?v=phase9j3"></script>
 <script src="autoSave.js?v=phase9j3"></script>
 <script src="search.js?v=phase9j3"></script>
@@ -607,9 +635,10 @@
 <script src="assetCore.js?v=m0v178"></script>
 <script src="assetStore.js?v=m0v178"></script>
 <script src="assetCapture.js?v=m0v178"></script>
-<script src="assetUI.js?v=m0v183"></script>
+<script src="assetUI.js?v=m0v184"></script>
 <script src="assetReview.js?v=m0v178"></script>
-<script src="assetBridge.js?v=m0v183"></script>
+<script src="assetBridge.js?v=m0v184"></script>
+<script src="assetInbox.js?v=m0v184"></script>
 <script src="campProject.js?v=phaseD164"></script>
 </body>
-    </html>
+</html>
