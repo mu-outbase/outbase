@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE lifeOSLite.js
-   UI v200: LifeOS軽量復旧版
+   UI v201: 散歩中・全画面管理ボタン追加
    - v198/v199の途中欠落エラーを避けるため、短い新規ファイルに切替
    - 旧 lifeOSUI.js は読み込まない
    - app.js / homeUI.js / assetUI.js 本体は触らない
@@ -8,15 +8,15 @@
 (function(){
   'use strict';
 
-  const ROOT_ID = 'outbaseLifeOSV200';
-  const STYLE_ID = 'outbaseLifeOSV200Style';
-  const SHEET_ID = 'outbaseLifeOSManageV200';
+  const ROOT_ID = 'outbaseLifeOSV201';
+  const STYLE_ID = 'outbaseLifeOSV201Style';
+  const SHEET_ID = 'outbaseLifeOSManageV201';
   const PAGES = {
     home: 'homePage',
-    record: 'outbaseRecordPageV200',
-    calendar: 'outbaseCalendarPageV200',
-    project: 'outbaseProjectPageV200',
-    assets: 'outbaseAssetsPageV200'
+    record: 'outbaseRecordPageV201',
+    calendar: 'outbaseCalendarPageV201',
+    project: 'outbaseProjectPageV201',
+    assets: 'outbaseAssetsPageV201'
   };
 
   let isRenderingHome = false;
@@ -47,6 +47,8 @@
       .life-title{font-size:24px;font-weight:850;line-height:1.25;}
       .life-sub{font-size:13px;line-height:1.55;opacity:.92;margin-top:8px;max-width:78%;}
       .life-manage{border:1px solid rgba(255,255,255,.38);background:rgba(255,255,255,.18);color:#fff;border-radius:999px;padding:8px 10px;min-height:36px;font-weight:850;white-space:nowrap;}
+      .life-global-manage{position:fixed;right:16px;top:104px;z-index:70;border:1px solid rgba(31,111,58,.18);background:rgba(255,255,255,.96);color:var(--obd);border-radius:999px;padding:8px 14px;min-height:38px;font-size:13px;font-weight:850;box-shadow:0 8px 18px rgba(20,81,45,.14);backdrop-filter:blur(8px);}
+      .life-global-manage.life-hidden{display:none;}
       .life-priority{background:var(--obs);border-left:5px solid var(--obg);border-radius:18px;padding:13px;line-height:1.58;}
       .life-priority strong{display:block;color:var(--obd);font-size:15px;margin-bottom:4px;}
       .life-section-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;}
@@ -76,7 +78,7 @@
       .life-sheet-card{width:min(680px,100%);background:#fff;border-radius:24px;padding:16px;box-shadow:0 20px 40px rgba(0,0,0,.2);}
       .life-sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;}
       .life-close{border:0;border-radius:14px;background:#b91c1c;color:#fff;padding:9px 12px;font-weight:850;}
-      @media(max-width:520px){#homePage,.life-v200-page{padding-left:14px;padding-right:14px}.life-card{border-radius:22px;padding:15px}.life-title{font-size:22px}.life-grid-4{gap:7px}.life-btn{min-height:68px;font-size:11px;padding:9px 2px}.life-btn span{font-size:21px}}
+      @media(max-width:520px){#homePage,.life-v200-page{padding-left:14px;padding-right:14px}.life-card{border-radius:22px;padding:15px}.life-title{font-size:22px}.life-grid-4{gap:7px}.life-btn{min-height:68px;font-size:11px;padding:9px 2px}.life-btn span{font-size:21px}.life-global-manage{top:98px;right:14px;padding:7px 12px;min-height:36px}}
     `;
     document.head.appendChild(style);
   }
@@ -181,6 +183,38 @@
 
   function hideAll(){ document.querySelectorAll('.page').forEach(page => page.classList.add('hidden')); }
   function top(){ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(error){ window.scrollTo(0,0); } }
+
+  function visiblePageId(){
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const visible = pages.find(page => !page.classList.contains('hidden'));
+    return visible ? visible.id : '';
+  }
+
+  function ensureGlobalManageButton(){
+    let button = document.getElementById('outbaseGlobalManageButtonV201');
+    if(button) return button;
+    button = document.createElement('button');
+    button.id = 'outbaseGlobalManageButtonV201';
+    button.type = 'button';
+    button.className = 'life-global-manage life-hidden';
+    button.textContent = '管理';
+    button.onclick = showManage;
+    document.body.appendChild(button);
+    return button;
+  }
+
+  function syncGlobalManageButton(){
+    const button = ensureGlobalManageButton();
+    const pageId = visiblePageId();
+    const shouldShow = pageId && pageId !== 'homePage' && !document.getElementById(SHEET_ID);
+    button.classList.toggle('life-hidden', !shouldShow);
+  }
+
+  function scheduleGlobalManageSync(){
+    setTimeout(syncGlobalManageButton, 40);
+    setTimeout(syncGlobalManageButton, 220);
+  }
+
   function btn(text,fn,primary){ return `<button class="${primary ? 'life-primary' : 'life-secondary'}" onclick="${fn}">${text}</button>`; }
 
   async function renderHome(){
@@ -237,7 +271,12 @@
   async function showPage(key){
     addStyle();
     hideAll();
-    if(key === 'home'){ await renderHome(); top(); return; }
+    if(key === 'home'){
+      await renderHome();
+      top();
+      scheduleGlobalManageSync();
+      return;
+    }
     const id = PAGES[key];
     if(key === 'record') await renderRecord();
     if(key === 'calendar') await renderCalendar();
@@ -246,6 +285,7 @@
     const page = document.getElementById(id);
     if(page) page.classList.remove('hidden');
     top();
+    scheduleGlobalManageSync();
   }
 
   function showManage(){
@@ -263,58 +303,40 @@
       <button class="life-secondary" onclick="showWalkHistoryPage && showWalkHistoryPage()">散歩履歴</button>
     </div></div>`;
     document.body.appendChild(sheet);
+    scheduleGlobalManageSync();
   }
-  function closeManage(){ const sheet = document.getElementById(SHEET_ID); if(sheet) sheet.remove(); }
+  function closeManage(){ const sheet = document.getElementById(SHEET_ID); if(sheet) sheet.remove(); scheduleGlobalManageSync(); }
 
   function patchEntrances(){
-    if(typeof window.showPage === 'function' && !window.showPage.__lifeV200Patched){
+    if(typeof window.showPage === 'function' && !window.showPage.__lifeV201Patched){
       const original = window.showPage;
       window.showPage = function(pageId){
         if(pageId === 'homePage'){ showPage('home'); return; }
-        return original.apply(this, arguments);
+        const result = original.apply(this, arguments);
+        scheduleGlobalManageSync();
+        return result;
       };
-      window.showPage.__lifeV200Patched = true;
+      window.showPage.__lifeV201Patched = true;
     }
-    if(typeof window.backToHome === 'function' && !window.backToHome.__lifeV200Patched){
+    if(typeof window.backToHome === 'function' && !window.backToHome.__lifeV201Patched){
       const originalBack = window.backToHome;
       window.backToHome = function(){
         const result = originalBack.apply(this, arguments);
         setTimeout(()=>showPage('home'),80);
+        scheduleGlobalManageSync();
         return result;
       };
-      window.backToHome.__lifeV200Patched = true;
+      window.backToHome.__lifeV201Patched = true;
+    }
+    if(typeof window.startWalk === 'function' && !window.startWalk.__lifeV201Patched){
+      const originalStartWalk = window.startWalk;
+      window.startWalk = function(){
+        const result = originalStartWalk.apply(this, arguments);
+        scheduleGlobalManageSync();
+        return result;
+      };
+      window.startWalk.__lifeV201Patched = true;
     }
   }
 
-  function observeHome(){
-    const home = document.getElementById('homePage');
-    if(!home || home.__lifeV200Observed) return;
-    const observer = new MutationObserver(()=>{
-      if(isRenderingHome) return;
-      if(!home.classList.contains('hidden') && !document.getElementById(ROOT_ID)) setTimeout(renderHome,120);
-    });
-    observer.observe(home,{childList:true,subtree:false});
-    home.__lifeV200Observed = true;
-  }
-
-  async function setup(){
-    addStyle();
-    Object.values(PAGES).filter(id => id !== 'homePage').forEach(ensurePage);
-    patchEntrances();
-    observeHome();
-    await renderHome();
-  }
-
-  window.showOutbaseLifePageV200 = showPage;
-  window.renderOutbaseLifeHomeV200 = renderHome;
-  window.showOutbaseManageMenuV200 = showManage;
-  window.closeOutbaseManageMenuV200 = closeManage;
-  window.showOutbaseLifePage = showPage;
-  window.renderOutbaseLifeHome = renderHome;
-  window.showOutbaseManageMenu = showManage;
-  window.closeOutbaseManageMenu = closeManage;
-
-  if(document.readyState === 'loading') window.addEventListener('DOMContentLoaded',setup);
-  else setup();
-  window.addEventListener('load',()=>{ setTimeout(setup,300); setTimeout(renderHome,1500); });
-})();
+  function 
