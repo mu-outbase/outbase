@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE assetInbox.js
-   M0 v184: 素材一覧 / 未整理インボックス画面
+   M0 v186: 素材一覧 / 未整理インボックス画面 + 文字起こし表示
    - ホームで撮影・取込・録音・メモ保存した素材を一覧表示
    - 写真/動画プレビュー、音声再生、メモ本文、大きく見る
 ========================================================= */
@@ -49,6 +49,7 @@
       .asset-inbox-video{width:100%;max-height:320px;background:#111827;border-radius:12px;}
       .asset-inbox-audio{width:100%;margin-top:6px;}
       .asset-inbox-memo{white-space:pre-wrap;background:white;border-radius:10px;padding:10px;}
+      .asset-inbox-transcript{white-space:pre-wrap;background:#fff7ed;border-left:4px solid #f97316;border-radius:10px;padding:10px;margin-top:8px;}
       .asset-inbox-open{margin-top:8px;padding:10px;border-radius:10px;background:#475569;color:white;min-height:42px;}
       #${VIEWER_ID}{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:9999;padding:16px;overflow:auto;}
       #${VIEWER_ID}.hidden{display:none;}
@@ -66,6 +67,12 @@
     return asset.createdText || asset.createdAt || "";
   }
 
+  function transcriptHtml(asset){
+    const text = String(asset?.transcript || asset?.text || "").trim();
+    if(!text || asset?.kind !== "audio") return "";
+    return `<div class="asset-inbox-transcript"><strong>文字起こし</strong><br>${safe(text)}</div>`;
+  }
+
   function previewHtml(asset,full){
     const kind = asset?.kind || "file";
     const data = asset?.dataUrl || "";
@@ -77,7 +84,7 @@
       return `<video class="asset-inbox-video" controls src="${data}"></video>`;
     }
     if(kind === "audio" && data){
-      return `<audio class="asset-inbox-audio" controls src="${data}"></audio>`;
+      return `<audio class="asset-inbox-audio" controls src="${data}"></audio>${transcriptHtml(asset)}`;
     }
     if(kind === "memo"){
       return `<div class="asset-inbox-memo">${safe(asset.text || asset.memo || "")}</div>`;
