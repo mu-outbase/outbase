@@ -14,650 +14,7 @@
     setTimeout(window.renderAssetM0Panels,1500);
   }
 
-  function patchFunction(name,flag){<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OUTBASE</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css?v=phase9j3">
-</head>
-<body>
-<header>OUTBASE</header>
-<div id="homePage" class="page">
-  <div class="card">
-    <h1>今日の記録</h1>
-    <button onclick="startWalk()">
-      散歩開始
-    </button>
-    <button onclick="showWalkHistoryPage()">
-      散歩履歴
-    </button>
-    <button onclick="startCamp()">
-      キャンプ開始
-    </button>
-    <button onclick="showGearPage()">
-      ギア管理
-    </button>
-    <button onclick="showCampgroundPage()">
-      キャンプ場管理
-    </button>
-    <button onclick="showCampRecordPage()">
-      キャンプ実績管理
-    </button>
-    <button onclick="showAssetInboxPage()">
-      素材一覧
-    </button>
-    <div id="storageInfo">
-      保存基盤確認中...
-    </div>
-  </div>
-  <div class="card">
-    <h1>記録検索</h1>
-    <input
-      type="text"
-      id="searchInput"
-      placeholder="タイトル・タグ・メモ検索">
-    <button onclick="searchRecords()">
-      検索
-    </button>
-    <button onclick="clearSearch()">
-      検索解除
-    </button>
-  </div>
-  <div class="card">
-    <h1>累計</h1>
-    <div id="stats">
-      集計中...
-    </div>
-  </div>
-  <div class="card">
-    <h1>最近の記録</h1>
-    <div id="recordList">
-      記録なし
-    </div>
-  </div>
-</div>
-<div id="walkPage" class="page hidden">
-  <div class="card">
-    <h1>散歩中</h1>
-    <div id="timer" class="timer">
-      00:00:00
-    </div>
-    <div id="gpsInfo">
-      GPS取得中...
-    </div>
-  </div>
-  <div class="card">
-    <h2>タイトル</h2>
-    <input
-      type="text"
-      id="titleInput"
-      placeholder="例：朝散歩">
-    <h2>タグ</h2>
-    <input
-      type="text"
-      id="tagInput"
-      placeholder="例：コタ,公園,朝">
-  </div>
-  <div class="card">
-    <h2>写真</h2>
-    <input
-      type="file"
-      id="photoInput"
-      accept="image/*"
-      multiple
-      style="display:none"
-      onchange="addPhoto()">
-    <button onclick="document.getElementById('photoInput').click()">
-      写真追加
-    </button>
-    <div id="photoInfo">
-      写真 0枚
-    </div>
-    <div id="photoPreview"></div>
-  </div>
-  <div class="card">
-    <h2>音声</h2>
-    <button onclick="startRecording()">
-      録音開始
-    </button>
-    <button onclick="stopRecording()">
-      録音停止
-    </button>
-    <div id="audioInfo">
-      音声 0件
-    </div>
-    <div id="audioList"></div>
-  </div>
-  <div class="card">
-    <h2>メモ</h2>
-    <textarea
-      id="noteInput"
-      placeholder="メモを入力"></textarea>
-    <button onclick="addNote()">
-      メモ追加
-    </button>
-    <div id="noteInfo">
-      メモ 0件
-    </div>
-    <div id="noteList"></div>
-  </div>
-  <div class="card">
-    <button onclick="finishWalk()">
-      散歩終了
-    </button>
-  </div>
-</div>
-<div id="walkHistoryPage" class="page hidden">
-  <div class="card">
-    <h1>散歩履歴</h1>
-    <input
-      type="text"
-      id="walkHistorySearchInput"
-      placeholder="タイトル・タグ・メモ検索"
-      oninput="renderWalkHistoryList()">
-    <select id="walkHistorySortSelect" onchange="renderWalkHistoryList()">
-      <option value="new">新しい順</option>
-      <option value="old">古い順</option>
-      <option value="distance">距離順</option>
-      <option value="time">時間順</option>
-      <option value="photo">写真枚数順</option>
-    </select>
-    <button class="cancelButton" onclick="backFromWalkHistoryPage()">
-      ホームへ戻る
-    </button>
-  </div>
-  <div class="card">
-    <h2>散歩一覧</h2>
-    <div id="walkHistoryList">
-      散歩履歴なし
-    </div>
-  </div>
-</div>
-<div id="campPage" class="page hidden">
-  <div class="card">
-    <h1>キャンプ中</h1>
-    <div id="campInfo">
-      キャンプ未開始
-    </div>
-  </div>
-  <div class="card">
-    <h2>キャンプ場</h2>
-    <input
-      type="text"
-      id="campSiteNameInput"
-      placeholder="キャンプ場選択で設定"
-      readonly>
-    <h2>エリア・サイト</h2>
-    <input
-      type="text"
-      id="campAreaInput"
-      placeholder="例：ドッグフリーサイトA">
-    <h2>宿泊数</h2>
-    <input
-      type="text"
-      id="campStayInput"
-      placeholder="例：2泊3日">
-    <h2>参加者</h2>
-    <input
-      type="text"
-      id="campMemberInput"
-      placeholder="例：むー、リン">
-    <h2>ペット</h2>
-    <input
-      type="text"
-      id="campPetInput"
-      placeholder="例：コタ、アオ、エラ、ユキ">
-    <h2>天候</h2>
-    <input
-      type="text"
-      id="campWeatherInput"
-      placeholder="例：晴れ 24℃">
-  </div>
-  <div class="card">
-    <h2>写真</h2>
-    <input
-      type="file"
-      id="campPhotoInput"
-      accept="image/*"
-      multiple
-      style="display:none"
-      onchange="addCampPhoto()">
-    <button onclick="document.getElementById('campPhotoInput').click()">
-      写真追加
-    </button>
-    <div id="campPhotoInfo">
-      写真 0枚
-    </div>
-    <div id="campPhotoPreview"></div>
-  </div>
-  <div class="card">
-    <h2>ギア</h2>
-    <input
-      type="text"
-      id="campGearInput"
-      placeholder="例：ランドロックMFS">
-    <button onclick="addCampGear()">
-      ギア追加
-    </button>
-    <div id="campGearList">
-      ギアなし
-    </div>
-  </div>
-  <div class="card">
-    <h2>料理</h2>
-    <input
-      type="text"
-      id="campMealInput"
-      placeholder="例：パエリア">
-    <button onclick="addCampMeal()">
-      料理追加
-    </button>
-    <div id="campMealList">
-      料理なし
-    </div>
-  </div>
-  <div class="card">
-    <h2>メモ</h2>
-    <textarea
-      id="campNoteInput"
-      placeholder="気付き・改善点・レビュー候補"></textarea>
-    <button onclick="addCampNote()">
-      メモ追加
-    </button>
-    <div id="campNoteInfo">
-      メモ 0件
-    </div>
-    <div id="campNoteList">
-      メモなし
-    </div>
-  </div>
-  <div class="card">
-    <button onclick="finishCamp()">
-      キャンプ終了
-    </button>
-    <button
-      class="cancelButton"
-      onclick="cancelCamp()">
-      キャンセル
-    </button>
-  </div>
-</div>
-<div id="detailPage" class="page hidden">
-  <div class="card">
-    <h1>記録詳細</h1>
-    <div id="detailContent"></div>
-    <button onclick="backToHome()">
-      戻る
-    </button>
-  </div>
-</div>
-<div id="gearPage" class="page hidden">
-  <div class="card">
-    <h1>ギア管理</h1>
-    <input
-      type="text"
-      id="gearSearchInput"
-      placeholder="ギア名・メーカー・カテゴリ検索"
-      oninput="renderGearList()">
-    <select id="gearSortSelect" onchange="renderGearList()">
-      <option value="name">名前順</option>
-      <option value="category">カテゴリ順</option>
-      <option value="maker">メーカー順</option>
-      <option value="updatedAt">更新日順</option>
-    </select>
-    <button onclick="showGearForm()">
-      ＋ギア追加
-    </button>
-    <input
-      type="file"
-      id="gearExcelInput"
-      accept=".xlsx,.xls"
-      style="display:none"
-      onchange="handleGearExcelImport(event)">
-    <button onclick="document.getElementById('gearExcelInput').click()">
-      Excel取込
-    </button>
-    <div id="gearImportInfo">
-      Excel未取込
-    </div>
-    <button class="cancelButton" onclick="backToHome()">
-      ホームへ戻る
-    </button>
-  </div>
-  <div id="gearFormCard" class="card hidden">
-    <h2 id="gearFormTitle">ギア追加</h2>
-    <input type="hidden" id="gearIdInput">
-    <h2>カテゴリ</h2>
-    <input
-      type="text"
-      id="gearCategoryInput"
-      placeholder="例：テント">
-    <h2>メーカー</h2>
-    <input
-      type="text"
-      id="gearMakerInput"
-      placeholder="例：Snow Peak">
-    <h2>名称</h2>
-    <input
-      type="text"
-      id="gearNameInput"
-      placeholder="例：リビングシェル65周年">
-    <h2>購入日</h2>
-    <input
-      type="date"
-      id="gearPurchaseDateInput">
-    <h2>購入金額</h2>
-    <input
-      type="number"
-      id="gearPriceInput"
-      placeholder="例：220000">
-    <h2>メモ</h2>
-    <textarea
-      id="gearMemoInput"
-      placeholder="色・サイズ・使い心地など"></textarea>
-    <button onclick="saveGear()">
-      保存
-    </button>
-    <button class="cancelButton" onclick="hideGearForm()">
-      キャンセル
-    </button>
-  </div>
-  <div id="gearDetailCard" class="card hidden">
-    <h2>ギア詳細</h2>
-    <div id="gearDetailContent"></div>
-  </div>
-  <div class="card">
-    <h2>ギア一覧</h2>
-    <div id="gearList">
-      ギアなし
-    </div>
-  </div>
-</div>
-<div id="campgroundPage" class="page hidden">
-  <div class="card">
-    <h1>キャンプ場管理</h1>
-    <input
-      type="text"
-      id="campgroundManageSearchInput"
-      placeholder="キャンプ場名・条件・メモ検索"
-      oninput="renderCampgroundManageList()">
-    <select
-      id="campgroundManageSortSelect"
-      onchange="renderCampgroundManageList()">
-      <option value="name">名前順</option>
-      <option value="visitCount">訪問回数順</option>
-      <option value="lastVisitDate">最終訪問順</option>
-      <option value="updatedAt">更新日順</option>
-    </select>
-    <button onclick="showCampgroundManageForm()">
-      ＋キャンプ場追加
-    </button>
-    <button class="cancelButton" onclick="backFromCampgroundPage()">
-      ホームへ戻る
-    </button>
-  </div>
-  <div id="campgroundManageFormCard" class="card hidden">
-    <h2 id="campgroundManageFormTitle">キャンプ場追加</h2>
-    <input type="hidden" id="campgroundManageIdInput">
-    <h2>名称</h2>
-    <input
-      type="text"
-      id="campgroundManageNameInput"
-      placeholder="例：スノーピーク赤城山CF">
-    <h2>評価</h2>
-    <input type="number" min="0" max="5" id="campgroundRatingRevisitInput" placeholder="再訪 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingDogInput" placeholder="犬 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingViewInput" placeholder="景色 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingFacilityInput" placeholder="設備 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingToiletInput" placeholder="トイレ 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingQuietInput" placeholder="静かさ 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingSiteSizeInput" placeholder="サイト広さ 0〜5">
-    <input type="number" min="0" max="5" id="campgroundRatingAccessInput" placeholder="アクセス 0〜5">
-    <h2>条件</h2>
-    <label><input type="checkbox" id="campgroundConditionDogFriendlyInput"> 犬可</label>
-    <label><input type="checkbox" id="campgroundConditionDogFreeSiteInput"> ドッグフリー</label>
-    <label><input type="checkbox" id="campgroundConditionHotWaterInput"> 温水</label>
-    <label><input type="checkbox" id="campgroundConditionPowerInput"> 電源</label>
-    <label><input type="checkbox" id="campgroundConditionShowerInput"> シャワー</label>
-    <label><input type="checkbox" id="campgroundConditionBathInput"> 風呂</label>
-    <label><input type="checkbox" id="campgroundConditionShopInput"> 売店</label>
-    <label><input type="checkbox" id="campgroundConditionLakeInput"> 湖</label>
-    <label><input type="checkbox" id="campgroundConditionForestInput"> 森林</label>
-    <label><input type="checkbox" id="campgroundConditionHighlandInput"> 高原</label>
-    <h2>良かったこと</h2>
-    <textarea
-      id="campgroundNoteGoodInput"
-      placeholder="例：景色が良い、犬連れに優しい"></textarea>
-    <h2>悪かったこと</h2>
-    <textarea
-      id="campgroundNoteBadInput"
-      placeholder="例：風が強い、炊事場が混む"></textarea>
-    <h2>次回改善</h2>
-    <textarea
-      id="campgroundNoteNextInput"
-      placeholder="例：防寒強化、ランタン追加"></textarea>
-    <button onclick="saveCampgroundManageForm()">
-      保存
-    </button>
-    <button class="cancelButton" onclick="hideCampgroundManageForm()">
-      キャンセル
-    </button>
-  </div>
-  <div id="campgroundManageDetailCard" class="card hidden">
-    <h2>キャンプ場詳細</h2>
-    <div id="campgroundManageDetailContent"></div>
-  </div>
-  <div class="card">
-    <h2>キャンプ場一覧</h2>
-    <div id="campgroundManageList">
-      キャンプ場なし
-    </div>
-  </div>
-</div>
-<div id="campRecordPage" class="page hidden">
-  <div class="card">
-    <h1>キャンプ実績管理</h1>
-    <input type="text" id="campRecordSearchInput" placeholder="キャンプ場・サイト・メモ検索" oninput="renderCampRecordList()">
-    <select id="campRecordSortSelect" onchange="renderCampRecordList()">
-      <option value="new">新しい順</option>
-      <option value="old">古い順</option>
-      <option value="nights">宿泊数順</option>
-      <option value="campground">キャンプ場順</option>
-    </select>
-    <button onclick="showCampRecordForm()">＋キャンプ実績追加</button>
-    <button class="cancelButton" onclick="backFromCampRecordPage()">ホームへ戻る</button>
-  </div>
-  <div id="campRecordFormCard" class="card hidden">
-    <h2 id="campRecordFormTitle">キャンプ実績追加</h2>
-    <input type="hidden" id="campRecordIdInput">
-    <h2>キャンプ場</h2><select id="campRecordCampgroundInput"></select>
-    <h2>タイトル</h2><input type="text" id="campRecordTitleInput" placeholder="例：赤城山CF 春キャンプ">
-    <h2>開始日</h2><input type="date" id="campRecordStartInput">
-    <h2>終了日</h2><input type="date" id="campRecordEndInput">
-    <h2>泊数</h2><input type="number" id="campRecordNightsInput" placeholder="例：2">
-    <h2>サイト</h2><input type="text" id="campRecordSiteInput" placeholder="例：A-12">
-    <h2>天気</h2><input type="text" id="campRecordWeatherInput" placeholder="例：晴れ">
-    <h2>参加者</h2><input type="text" id="campRecordMembersInput" placeholder="例：むー、リン">
-    <h2>ペット</h2><input type="text" id="campRecordPetsInput" placeholder="例：コタ、アオ">
-    <h2>良かったこと</h2><textarea id="campRecordGoodInput"></textarea>
-    <h2>悪かったこと</h2><textarea id="campRecordBadInput"></textarea>
-    <h2>次回改善</h2><textarea id="campRecordNextInput"></textarea>
-    <h2>メモ</h2><textarea id="campRecordMemoInput"></textarea>
-    <button onclick="saveCampRecordForm()">保存</button>
-    <button class="cancelButton" onclick="hideCampRecordForm()">キャンセル</button>
-  </div>
-  <div id="campRecordDetailCard" class="card hidden">
-    <h2>キャンプ実績詳細</h2>
-    <div id="campRecordDetailContent"></div>
-  </div>
-  <div class="card">
-    <h2>キャンプ実績一覧</h2>
-    <div id="campRecordList">実績なし</div>
-  </div>
-</div>
-<div
-  id="campgroundModal"
-  class="modal hidden">
-  <div
-    class="modal-inner campground-modal"
-    onclick="event.stopPropagation()">
-    <button
-      class="modal-close"
-      onclick="closeCampgroundSelector()">
-      ×
-    </button>
-    <h1>キャンプ場選択</h1>
-    <input
-      type="text"
-      id="campgroundSearchInput"
-      placeholder="キャンプ場を検索"
-      oninput="renderCampgroundSelectorList()">
-    <div class="detail-section">
-      <div class="detail-title">最近使ったキャンプ場</div>
-      <div
-        id="recentCampgrounds"
-        class="campground-list">
-        読み込み中...
-      </div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-title">全キャンプ場</div>
-      <div
-        id="campgroundList"
-        class="campground-list">
-        読み込み中...
-      </div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-title">新規作成</div>
-      <input
-        type="text"
-        id="newCampgroundNameInput"
-        placeholder="新しいキャンプ場名">
-      <button
-        id="createCampgroundButton"
-        onclick="createCampgroundFromSelector()">
-        ＋新しいキャンプ場を作成
-      </button>
-    </div>
-    <button
-      class="cancelButton"
-      id="closeCampgroundButton"
-      onclick="closeCampgroundSelector()">
-      ホームへ戻る
-    </button>
-  </div>
-</div>
-<div
-  id="recoveryModal"
-  class="modal hidden">
-  <div class="modal-inner recovery-inner" onclick="event.stopPropagation()">
-    <div class="recovery-card">
-      <h1>未終了の記録があります</h1>
-      <div class="detail-section">
-        <div class="detail-title">種類</div>
-        <div id="recoveryType" class="detail-value">
-          確認中
-        </div>
-      </div>
-      <div class="detail-section">
-        <div class="detail-title">内容</div>
-        <div id="recoveryInfo" class="detail-value">
-          確認中
-        </div>
-      </div>
-      <button onclick="restorePendingSession()">
-        復旧する
-      </button>
-      <button
-        class="deleteButton"
-        onclick="discardPendingSession()">
-        破棄する
-      </button>
-    </div>
-  </div>
-</div>
-<div
-  id="photoModal"
-  class="modal hidden"
-  onclick="closePhoto()">
-  <div class="modal-inner" onclick="event.stopPropagation()">
-    <button
-      class="modal-close"
-      onclick="closePhoto()">
-      ×
-    </button>
-    <img id="modalPhoto">
-  </div>
-</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="gps.js?v=phase9j3"></script>
-<script src="stateManager.js?v=phase9j3"></script>
-
-<div id="assetInboxPage" class="page hidden">
-  <div class="card">
-    <h1>素材一覧</h1>
-    <div class="detail-value">
-      ホームで撮影・取込・録音・メモ保存した素材を見る場所です。<br>
-      未整理素材はここから確認します。
-    </div>
-    <button onclick="renderAssetInboxPage && renderAssetInboxPage()">更新</button>
-    <button onclick="showPage('homePage')">ホームへ戻る</button>
-  </div>
-  <div class="card">
-    <h2>未整理インボックス</h2>
-    <div id="assetInboxSummary">読込中...</div>
-    <div class="asset-filter-row">
-      <button onclick="setAssetInboxFilter('all')">全部</button>
-      <button onclick="setAssetInboxFilter('unlinked')">未整理</button>
-      <button onclick="setAssetInboxFilter('photo')">写真</button>
-      <button onclick="setAssetInboxFilter('audio')">音声</button>
-      <button onclick="setAssetInboxFilter('memo')">メモ</button>
-    </div>
-    <div id="assetInboxList">素材なし</div>
-  </div>
-</div>
-
-<script src="sessionManager.js?v=phase9j3"></script>
-<script src="autoSave.js?v=phase9j3"></script>
-<script src="search.js?v=phase9j3"></script>
-<script src="walk.js?v=phase9j3"></script>
-<script src="app.js?v=phase9j3"></script>
-<script src="homeDashboard.js?v=phaseB156"></script>
-<script src="review.js?v=phase9j3"></script>
-<script src="detail.js?v=phase9j3"></script>
-<script src="detailQuick.js?v=phaseC161"></script>
-<script src="edit.js?v=phase9j3"></script>
-<script src="campgroundManager.js?v=phase9j3"></script>
-<script src="campgroundSelector.js?v=phase9j3"></script>
-<script src="campgroundUI.js?v=phase9j3"></script>
-<script src="campRecordManager.js?v=phase9j3"></script>
-<script src="campRecordUI.js?v=phase9j3"></script>
-<script src="camp.js?v=phase9j3"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="gear.js?v=phase9j3"></script>
-<script src="recovery.js?v=phaseA150"></script>
-<script src="walkQuick.js?v=phaseC159"></script>
-<script src="walkCore.js?v=phaseC2v170"></script>
-<script src="walkEvents.js?v=phaseC2v170"></script>
-<script src="walkUI.js?v=phaseC2v170"></script>
-<script src="walkReview.js?v=phaseC2v170"></script>
-<script src="walkHistory.js?v=phaseC2v170"></script>
-<script src="walkBridge.js?v=phaseC2v170"></script>
-<script src="detailC2.js?v=phaseC2v173"></script>
-<script src="assetCore.js?v=m0v178"></script>
-<script src="assetStore.js?v=m0v178"></script>
-<script src="assetCapture.js?v=m0v178"></script>
-<script src="assetUI.js?v=m0v184"></script>
-<script src="assetReview.js?v=m0v178"></script>
-<script src="assetBridge.js?v=m0v184"></script>
-<script src="assetInbox.js?v=m0v184"></script>
-<script src="campProject.js?v=phaseD164"></script>
-</body>
-  </html>
+  function patchFunction(name,flag){
     if(typeof window[name] !== "function" || window[name][flag]) return;
     const original = window[name];
     window[name] = function(){
@@ -693,4 +50,102 @@
 
   function assetToAudio(asset){
     return {
-      id:asset.id
+      id:asset.id,
+      sourceAssetId:asset.id,
+      name:asset.name || asset.title || "audio.webm",
+      type:asset.mimeType || "audio/webm",
+      data:asset.dataUrl || "",
+      time:asset.createdText || "",
+      created_at:asset.createdAt || "",
+      transcript:asset.transcript || "",
+      title:asset.title || "音声メモ"
+    };
+  }
+
+  function assetToNote(asset){
+    return {
+      id:asset.id,
+      sourceAssetId:asset.id,
+      text:asset.text || asset.memo || asset.title || asset.name || "",
+      time:asset.createdText || "",
+      created_at:asset.createdAt || "",
+      title:asset.title || "メモ"
+    };
+  }
+
+  function mergeAssetsIntoLegacyFields(record,assets,summary){
+    const assetList = Array.isArray(assets) ? assets : [];
+    const assetPhotos = assetList.filter(asset=>asset.kind === "photo" && asset.dataUrl).map(assetToPhoto);
+    const assetAudio = assetList.filter(asset=>asset.kind === "audio" && asset.dataUrl).map(assetToAudio);
+    const assetNotes = assetList.filter(asset=>asset.kind === "memo" || asset.kind === "text_file").map(assetToNote);
+
+    record.photos = uniqueByAssetId([...(record.photos || []),...assetPhotos]);
+    record.audio = uniqueByAssetId([...(record.audio || []),...assetAudio]);
+    record.notes = uniqueByAssetId([...(record.notes || []),...assetNotes]);
+    record.assets = assetList;
+    record.assetSummary = summary || {total:assetList.length};
+
+    record.summary = {
+      ...(record.summary || {}),
+      photoCount:record.photos.length,
+      audioCount:record.audio.length,
+      noteCount:record.notes.length,
+      assetCount:record.assetSummary.total || assetList.length,
+      assetPhotoCount:record.assetSummary.photo || assetPhotos.length,
+      assetVideoCount:record.assetSummary.video || 0,
+      assetAudioCount:record.assetSummary.audio || assetAudio.length,
+      assetMemoCount:record.assetSummary.memo || assetNotes.length
+    };
+
+    return record;
+  }
+
+  function resolveTargetId(record){
+    return record?.session?.id || record?.session_id || record?.id || "";
+  }
+
+  function patchSaveRecord(){
+    if(typeof window.saveRecord !== "function" || window.saveRecord.__assetM0v183Patched) return;
+    const original = window.saveRecord;
+    window.saveRecord = async function(record){
+      if(record && ["walk","camp"].includes(record.recordType)){
+        const M0 = window.OUTBASE_ASSET_M0 || {};
+        const store = M0.store || {};
+        const core = M0.core || {};
+        const targetId = resolveTargetId(record);
+        const assets = store.getAssetsForContext && targetId
+          ? await store.getAssetsForContext(record.recordType,targetId)
+          : [];
+        const summary = core.buildAssetSummary ? core.buildAssetSummary(assets) : {total:assets.length};
+        mergeAssetsIntoLegacyFields(record,assets,summary);
+      }
+      return original.call(this,record);
+    };
+    window.saveRecord.__assetM0v183Patched = true;
+  }
+
+  function patchShowDetail(){
+    if(typeof window.showDetail !== "function" || window.showDetail.__assetM0v183Patched) return;
+    const original = window.showDetail;
+    window.showDetail = async function(id){
+      const result = await original.apply(this,arguments);
+      renderLater();
+      return result;
+    };
+    window.showDetail.__assetM0v183Patched = true;
+  }
+
+  function setup(){
+    patchFunction("startWalk","__assetM0v183Patched");
+    patchFunction("restoreWalkSession","__assetM0v183Patched");
+    patchFunction("continueCampStart","__assetM0v183Patched");
+    patchFunction("restoreCampSession","__assetM0v183Patched");
+    patchFunction("backToHome","__assetM0v183Patched");
+    patchSaveRecord();
+    patchShowDetail();
+    renderLater();
+  }
+
+  window.setupAssetM0 = setup;
+  window.addEventListener("load",()=>setTimeout(setup,1200));
+})();
