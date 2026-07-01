@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE walkResult.js
-   UI v208: 散歩終了後の結果画面
+   UI v209: 散歩終了後の結果画面
    - finishWalk の location.reload を使わず、保存後に結果画面へ遷移
    - 散歩結果の所在を「結果画面 / 散歩履歴 / 詳細」に整理
    - walk.js 本体は触らない
@@ -8,8 +8,8 @@
 (function(){
   'use strict';
 
-  const PAGE_ID = 'outbaseWalkResultPageV208';
-  const STYLE_ID = 'outbaseWalkResultV208Style';
+  const PAGE_ID = 'outbaseWalkResultPageV209';
+  const STYLE_ID = 'outbaseWalkResultV209Style';
   let finishing = false;
 
   function esc(value){
@@ -70,7 +70,7 @@
     try{
       const api = window.OUTBASE_WALK_C2 && window.OUTBASE_WALK_C2.events;
       if(api && typeof api.getCurrentEvents === 'function') return api.getCurrentEvents() || [];
-    }catch(error){ console.warn('v208 quick events skip', error); }
+    }catch(error){ console.warn('v209 quick events skip', error); }
     return [];
   }
 
@@ -104,9 +104,9 @@
         <div class="walk-result-muted">保存日時：${esc(record.date || '')}</div>
       </section>
       <section class="walk-result-card walk-result-actions">
-        <button class="walk-result-primary" onclick="showDetail && showDetail('${esc(record.id)}')">詳細を見る</button>
-        <button class="walk-result-secondary" onclick="showWalkHistoryPage && showWalkHistoryPage()">散歩履歴を開く</button>
-        <button class="walk-result-secondary" onclick="showOutbaseLifePageV208 ? showOutbaseLifePageV208('home') : showPage('homePage')">ホームへ戻る</button>
+        <button class="walk-result-primary" onclick="window.openOutbaseWalkResultDetailV209 && window.openOutbaseWalkResultDetailV209('${esc(record.id)}')">詳細を見る</button>
+        <button class="walk-result-secondary" onclick="window.openOutbaseWalkResultHistoryV209 && window.openOutbaseWalkResultHistoryV209()">散歩履歴を開く</button>
+        <button class="walk-result-secondary" onclick="window.goOutbaseWalkResultHomeV209 && window.goOutbaseWalkResultHomeV209()">ホームへ戻る</button>
       </section>
     `;
   }
@@ -203,11 +203,52 @@
     }
   }
 
+
+  function goHome(){
+    try{
+      if(typeof window.showOutbaseLifePageV209 === 'function'){
+        window.showOutbaseLifePageV209('home');
+        return;
+      }
+      if(typeof window.showOutbaseLifePageV208 === 'function'){
+        window.showOutbaseLifePageV208('home');
+        return;
+      }
+      if(typeof window.showOutbaseLifePageV200 === 'function'){
+        window.showOutbaseLifePageV200('home');
+        return;
+      }
+      if(typeof window.showPage === 'function'){
+        window.showPage('homePage');
+        return;
+      }
+    }catch(error){
+      console.error('v209 result home failed', error);
+    }
+    location.reload();
+  }
+
+  function openDetail(recordId){
+    if(typeof window.showDetail === 'function'){
+      window.showDetail(recordId);
+      return;
+    }
+    alert('詳細画面を開けません');
+  }
+
+  function openHistory(){
+    if(typeof window.showWalkHistoryPage === 'function'){
+      window.showWalkHistoryPage();
+      return;
+    }
+    alert('散歩履歴を開けません');
+  }
+
   function patchFinishWalk(){
-    if(typeof window.finishWalk !== 'function' || window.finishWalk.__walkResultV208Patched) return;
-    window.finishWalkOriginalV208 = window.finishWalk;
+    if(typeof window.finishWalk !== 'function' || window.finishWalk.__walkResultV209Patched) return;
+    window.finishWalkOriginalV209 = window.finishWalk;
     window.finishWalk = finishToResult;
-    window.finishWalk.__walkResultV208Patched = true;
+    window.finishWalk.__walkResultV209Patched = true;
   }
 
   function setup(){
@@ -216,8 +257,11 @@
     patchFinishWalk();
   }
 
-  window.finishOutbaseWalkToResultV208 = finishToResult;
-  window.showOutbaseWalkResultV208 = showResult;
+  window.goOutbaseWalkResultHomeV209 = goHome;
+  window.openOutbaseWalkResultDetailV209 = openDetail;
+  window.openOutbaseWalkResultHistoryV209 = openHistory;
+  window.finishOutbaseWalkToResultV209 = finishToResult;
+  window.showOutbaseWalkResultV209 = showResult;
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
   else setup();
   window.addEventListener('load',()=>setTimeout(setup,300));
