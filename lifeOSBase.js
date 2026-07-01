@@ -1,6 +1,6 @@
 /* =========================================================
    OUTBASE lifeOSBase.js
-   UI v204: 散歩中管理ボタン撤去・LifeOS基盤維持
+   UI v205: LifeOS基盤維持・散歩中UI整理連携
    - v198/v199の途中欠落エラーを避けるため、短い新規ファイルに切替
    - 旧 lifeOSUI.js は読み込まない
    - app.js / homeUI.js / assetUI.js 本体は触らない
