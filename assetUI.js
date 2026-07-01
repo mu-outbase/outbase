@@ -1,10 +1,10 @@
 /* =========================================================
    OUTBASE assetUI.js
-   M0 v186: ホーム整理 + 文字起こし表示
-   - ホームは「＋記録する」折りたたみ中心に整理
-   - 最近の素材は最大3件だけ表示
-   - 音声メモはaudio再生 + 文字起こしを表示
-   - 散歩/キャンプ中は従来通り入力しやすいパネル
+   M0 v187: ホーム再整理 + 音声文字起こしUI強化
+   - ホームから入力部品と最近の素材を撤去して最小表示へ戻す
+   - 「＋記録する」は専用入力画面を開く
+   - 録音中の文字起こし状態・手動追記導線を表示
+   - app.js本体は触らない
 ========================================================= */
 (function(){
   "use strict";
@@ -15,6 +15,7 @@
   const capture = M0.capture || {};
   const STYLE_ID = "assetM0Style";
   const VIEWER_ID = "assetM0Viewer";
+  const CAPTURE_PAGE_ID = "assetCapturePage";
 
   let latestAssetsCache = [];
 
@@ -34,13 +35,10 @@
       .asset-m0-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;}
       .asset-m0-btn{font-size:16px;padding:14px 8px;border-radius:14px;min-height:54px;}
       .asset-m0-main-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0;}
-      .asset-m0-main-btn{font-size:17px;padding:14px 10px;border-radius:14px;min-height:54px;background:#28743a;color:#fff;text-align:center;font-weight:700;}
-      .asset-m0-secondary-btn{font-size:16px;padding:14px 10px;border-radius:14px;min-height:54px;background:#475569;color:#fff;}
+      .asset-m0-primary{font-size:18px;padding:16px 10px;border-radius:14px;min-height:58px;background:#28743a;color:#fff;font-weight:700;width:100%;}
+      .asset-m0-secondary{font-size:16px;padding:13px 10px;border-radius:14px;min-height:52px;background:#475569;color:#fff;width:100%;}
       .asset-m0-summary{font-size:15px;line-height:1.6;margin:8px 0;color:#334155;}
       .asset-m0-small{font-size:12px;color:#64748b;line-height:1.5;margin-top:8px;}
-      .asset-m0-actions{margin-top:8px;}
-      .asset-m0-actions summary{list-style:none;cursor:pointer;}
-      .asset-m0-actions summary::-webkit-details-marker{display:none;}
       .asset-m0-list{display:flex;flex-direction:column;gap:10px;}
       .asset-m0-item{padding:10px;border-radius:12px;background:#f8fafc;line-height:1.5;}
       .asset-m0-title{font-weight:700;margin-bottom:6px;word-break:break-word;}
@@ -50,10 +48,12 @@
       .asset-m0-audio{width:100%;margin-top:6px;}
       .asset-m0-memo{white-space:pre-wrap;background:white;border-radius:10px;padding:9px;}
       .asset-m0-transcript{white-space:pre-wrap;background:#fff7ed;border-left:4px solid #f97316;border-radius:10px;padding:9px;margin-top:8px;}
-      .asset-m0-live{white-space:pre-wrap;background:#ecfdf5;border-left:4px solid #22c55e;border-radius:10px;padding:9px;margin-top:8px;color:#14532d;}
+      .asset-m0-live{white-space:pre-wrap;background:#ecfdf5;border-left:4px solid #22c55e;border-radius:10px;padding:10px;margin-top:10px;color:#14532d;line-height:1.6;}
+      .asset-m0-warning{white-space:pre-wrap;background:#fef2f2;border-left:4px solid #ef4444;border-radius:10px;padding:10px;margin-top:10px;color:#7f1d1d;line-height:1.6;}
       .asset-m0-meta{font-size:12px;color:#64748b;margin-top:4px;word-break:break-word;}
-      .asset-m0-view-btn{margin-top:8px;padding:9px 10px;border-radius:10px;font-size:14px;min-height:40px;background:#475569;color:#fff;}
+      .asset-m0-view-btn{margin-top:8px;padding:9px 10px;border-radius:10px;font-size:14px;min-height:40px;background:#475569;color:#fff;width:100%;}
       .asset-m0-hidden{display:none;}
+      .asset-m0-home-compact{padding-bottom:6px;}
       #${VIEWER_ID}{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:9999;padding:16px;overflow:auto;}
       #${VIEWER_ID}.asset-m0-hidden{display:none;}
       .asset-m0-viewer-card{background:#fff;border-radius:18px;padding:16px;max-width:760px;margin:28px auto;}
@@ -77,17 +77,11 @@
     if(!store.getAllAssets || !store.getInboxItems){
       return {assets:[],inbox:[],allAssets:[]};
     }
-
     const allAssets = await store.getAllAssets();
     const inbox = await store.getInboxItems();
-    let assets = [];
-
-    if(context.targetId && store.getAssetsForContext){
-      assets = await store.getAssetsForContext(context.targetType,context.targetId);
-    }else{
-      assets = allAssets;
-    }
-
+    const assets = context.targetId && store.getAssetsForContext
+      ? await store.getAssetsForContext(context.targetType,context.targetId)
+      : allAssets;
     latestAssetsCache = allAssets;
     return {assets,inbox,allAssets};
   }
@@ -110,27 +104,21 @@
     if(!asset) return "";
     const kind = asset.kind || "file";
     const data = asset.dataUrl || "";
-
     if(kind === "photo" && data){
       return `<div class="asset-m0-preview"><img class="asset-m0-thumb" src="${data}" alt="${safe(assetTitle(asset))}" onclick="openAssetM0Viewer('${safe(asset.id)}')"></div>`;
     }
-
     if(kind === "video" && data){
       return `<div class="asset-m0-preview"><video class="asset-m0-video" controls src="${data}"></video></div>`;
     }
-
     if(kind === "audio" && data){
       return `<div class="asset-m0-preview"><audio class="asset-m0-audio" controls src="${data}"></audio>${transcriptHtml(asset)}</div>`;
     }
-
     if(kind === "memo"){
       return `<div class="asset-m0-preview asset-m0-memo">${safe(asset.text || asset.memo || "")}</div>`;
     }
-
     if(!compact && data){
       return `<div class="asset-m0-preview"><a href="${data}" download="${safe(asset.name || assetTitle(asset))}">ファイルを開く/保存</a></div>`;
     }
-
     return "";
   }
 
@@ -157,10 +145,7 @@
   function buildRecentHtml(assets,limit){
     const list = sortRecent(assets).slice(0,limit || 6);
     if(!list.length) return "素材なし";
-
-    return `<div class="asset-m0-list">` +
-      list.map(asset=>buildAssetItemHtml(asset,true)).join("") +
-      `</div>`;
+    return `<div class="asset-m0-list">` + list.map(asset=>buildAssetItemHtml(asset,true)).join("") + `</div>`;
   }
 
   function buildActionButtonsHtml(){
@@ -172,31 +157,23 @@
         <button type="button" class="asset-m0-btn" data-asset-action="audio-start">🎤 録音開始</button>
         <button type="button" class="asset-m0-btn" data-asset-action="audio-stop">■ 録音保存</button>
         <button type="button" class="asset-m0-btn" data-asset-action="refresh">更新</button>
+        <button type="button" class="asset-m0-btn" data-asset-action="transcript-manual">文字を追加</button>
       </div>
-      <div class="asset-m0-live asset-m0-live-transcript">音声メモ録音中はここに文字起こしを表示</div>
+      <div class="asset-m0-live asset-m0-live-transcript">音声メモ録音中はここに文字起こし状態を表示</div>
+      <div class="asset-m0-small">文字起こしが反応しない場合は「文字を追加」で内容メモを残せます。</div>
     `;
   }
 
   function buildHomePanelHtml(context,assets,inbox,allAssets){
     return `
-      <h2>記録入力</h2>
-      <div class="asset-m0-summary">
-        素材合計 ${allAssets.length || 0}件 / 未整理 ${inbox.length || 0}件<br>
-        ホームは最低限表示。保存済み素材は素材一覧で確認します。
-      </div>
-      <div class="asset-m0-main-row">
-        <button type="button" class="asset-m0-secondary-btn" onclick="showAssetInboxPage && showAssetInboxPage()">素材一覧</button>
-        <button type="button" class="asset-m0-secondary-btn" data-asset-action="refresh">更新</button>
-      </div>
-      <details class="asset-m0-actions">
-        <summary class="asset-m0-main-btn">＋ 記録する</summary>
-        ${buildActionButtonsHtml()}
-      </details>
-      <input class="asset-m0-hidden" type="file" accept="image/*" capture="environment" data-asset-input="camera">
-      <input class="asset-m0-hidden" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.xlsx,.xls,.txt,.md" data-asset-input="files">
-      <div class="detail-section">
-        <div class="detail-title">最近の素材（最大3件）</div>
-        <div class="detail-value">${buildRecentHtml(allAssets,3)}</div>
+      <div class="asset-m0-home-compact">
+        <h2>記録入力</h2>
+        <div class="asset-m0-summary">素材 ${allAssets.length || 0}件 / 未整理 ${inbox.length || 0}件</div>
+        <button type="button" class="asset-m0-primary" onclick="showAssetCapturePage && showAssetCapturePage()">＋ 記録する</button>
+        <div class="asset-m0-main-row">
+          <button type="button" class="asset-m0-secondary" onclick="showAssetInboxPage && showAssetInboxPage()">素材一覧</button>
+          <button type="button" class="asset-m0-secondary" data-asset-action="refresh">更新</button>
+        </div>
       </div>
     `;
   }
@@ -205,24 +182,20 @@
     const summary = core.buildAssetSummary ? core.buildAssetSummary(assets) : {total:assets.length};
     return `
       <h2>記録入力</h2>
-      <div class="detail-value">
-        ${safe(contextLabel(context))}<br>
-        紐付け素材 ${summary.total || 0}件 / 未整理 ${inbox.length || 0}件
-      </div>
-      ${buildActionButtonsHtml()}
+      <div class="detail-value">${safe(contextLabel(context))}<br>紐付け素材 ${summary.total || 0}件 / 未整理 ${inbox.length || 0}件</div>
+      <details>
+        <summary class="asset-m0-primary">＋ 記録する</summary>
+        ${buildActionButtonsHtml()}
+      </details>
       <input class="asset-m0-hidden" type="file" accept="image/*" capture="environment" data-asset-input="camera">
       <input class="asset-m0-hidden" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.xlsx,.xls,.txt,.md" data-asset-input="files">
-      <div class="asset-m0-small">撮影・取込・音声メモ・手入力メモは、この散歩/キャンプに紐付けて保存します。音声は文字起こしも保存します。</div>
-      <div class="detail-section">
-        <div class="detail-title">この記録の素材</div>
-        <div class="detail-value">${buildRecentHtml(assets,6)}</div>
-      </div>
     `;
   }
 
   function buildPanelHtml(context,assets,inbox,allAssets){
-    if(isHomeContext(context)) return buildHomePanelHtml(context,assets,inbox,allAssets);
-    return buildActivePanelHtml(context,assets,inbox,allAssets);
+    return isHomeContext(context)
+      ? buildHomePanelHtml(context,assets,inbox,allAssets)
+      : buildActivePanelHtml(context,assets,inbox,allAssets);
   }
 
   function targetPages(){
@@ -236,7 +209,6 @@
   function insertPanel(page,panel){
     const existing = document.getElementById(panel.id);
     if(existing) existing.remove();
-
     const first = page.querySelector(".card");
     if(first && first.nextSibling) page.insertBefore(panel,first.nextSibling);
     else page.appendChild(panel);
@@ -245,7 +217,6 @@
   async function renderPanel(pageId,panelId){
     const page = document.getElementById(pageId);
     if(!page) return;
-
     const context = core.getActiveContext ? core.getActiveContext() : {targetType:"inbox"};
     const data = await getPanelSummary(context);
     const panel = document.createElement("div");
@@ -259,12 +230,14 @@
   async function afterAssetAction(){
     await renderAll();
     if(typeof window.renderAssetInboxPage === "function") window.renderAssetInboxPage();
+    if(document.getElementById(CAPTURE_PAGE_ID) && !document.getElementById(CAPTURE_PAGE_ID).classList.contains("hidden")){
+      await renderCapturePage();
+    }
   }
 
   function bindPanel(panel,context){
     const camera = panel.querySelector('[data-asset-input="camera"]');
     const files = panel.querySelector('[data-asset-input="files"]');
-
     panel.querySelectorAll("[data-asset-action]").forEach(button=>{
       button.onclick = async ()=>{
         const action = button.getAttribute("data-asset-action");
@@ -282,10 +255,13 @@
           await capture.stopAudio();
           await afterAssetAction();
         }
+        if(action === "transcript-manual" && capture.addManualTranscript){
+          const text = prompt("音声メモの文字起こし/内容メモを入力","");
+          if(text) capture.addManualTranscript(text);
+        }
         if(action === "refresh") afterAssetAction();
       };
     });
-
     if(camera){
       camera.onchange = async e=>{
         if(capture.importFiles) await capture.importFiles(e.target.files,{context,kind:"photo"});
@@ -293,7 +269,6 @@
         await afterAssetAction();
       };
     }
-
     if(files){
       files.onchange = async e=>{
         if(capture.importFiles) await capture.importFiles(e.target.files,{context});
@@ -306,14 +281,11 @@
   function ensureViewer(){
     let viewer = document.getElementById(VIEWER_ID);
     if(viewer) return viewer;
-
     viewer = document.createElement("div");
     viewer.id = VIEWER_ID;
     viewer.className = "asset-m0-hidden";
     document.body.appendChild(viewer);
-    viewer.onclick = event=>{
-      if(event.target === viewer) closeAssetM0Viewer();
-    };
+    viewer.onclick = event=>{ if(event.target === viewer) closeAssetM0Viewer(); };
     return viewer;
   }
 
@@ -330,20 +302,13 @@
   async function openViewer(id){
     addStyle();
     const asset = await findAsset(id);
-    if(!asset){
-      alert("素材が見つかりません");
-      return;
-    }
-
+    if(!asset){ alert("素材が見つかりません"); return; }
     const viewer = ensureViewer();
     viewer.className = "";
     viewer.innerHTML = `
       <div class="asset-m0-viewer-card">
         <div class="asset-m0-viewer-head">
-          <div>
-            <strong>${safe(label(asset.kind))}：${safe(assetTitle(asset))}</strong>
-            <div class="asset-m0-meta">${safe(assetTime(asset))}</div>
-          </div>
+          <div><strong>${safe(label(asset.kind))}：${safe(assetTitle(asset))}</strong><div class="asset-m0-meta">${safe(assetTime(asset))}</div></div>
           <button type="button" class="asset-m0-close" onclick="closeAssetM0Viewer()">閉じる</button>
         </div>
         ${makePreviewHtml(asset,false)}
@@ -355,34 +320,85 @@
 
   function closeViewer(){
     const viewer = document.getElementById(VIEWER_ID);
-    if(viewer){
-      viewer.className = "asset-m0-hidden";
-      viewer.innerHTML = "";
-    }
+    if(viewer){ viewer.className = "asset-m0-hidden"; viewer.innerHTML = ""; }
   }
 
   function updateTranscript(info){
     const data = info || {};
     const text = data.text || data.interimText || data.finalText || "";
-    const status = data.active ? "録音中・文字起こし中" : "音声メモ録音中はここに文字起こしを表示";
-    const error = data.error ? "\n" + data.error : "";
+    let status = data.statusMessage || "音声メモ録音中はここに文字起こし状態を表示";
+    if(data.error) status += "\n" + data.error;
     document.querySelectorAll(".asset-m0-live-transcript").forEach(el=>{
-      el.textContent = text ? (status + "\n" + text + error) : (status + error);
+      el.className = data.error ? "asset-m0-warning asset-m0-live-transcript" : "asset-m0-live asset-m0-live-transcript";
+      el.textContent = text ? (status + "\n" + text) : status;
     });
   }
 
   async function renderAll(){
     addStyle();
-    for(const target of targetPages()){
-      await renderPanel(target.pageId,target.panelId);
-    }
+    for(const target of targetPages()) await renderPanel(target.pageId,target.panelId);
     if(capture.getTranscriptInfo) updateTranscript(capture.getTranscriptInfo());
   }
 
-  M0.ui = {renderAll,renderPanel,updateTranscript};
+  function hideAllPages(){
+    document.querySelectorAll(".page").forEach(page=>page.classList.add("hidden"));
+  }
+
+  function ensureCapturePage(){
+    let page = document.getElementById(CAPTURE_PAGE_ID);
+    if(page) return page;
+    page = document.createElement("div");
+    page.id = CAPTURE_PAGE_ID;
+    page.className = "page hidden";
+    document.body.insertBefore(page,document.body.querySelector("script"));
+    return page;
+  }
+
+  async function renderCapturePage(){
+    addStyle();
+    const page = ensureCapturePage();
+    const context = core.getActiveContext ? core.getActiveContext() : {targetType:"inbox"};
+    const data = await getPanelSummary(context);
+    page.innerHTML = `
+      <div class="card">
+        <h1>記録する</h1>
+        <div class="asset-m0-summary">保存先：${safe(contextLabel(context))}<br>素材 ${data.allAssets.length || 0}件 / 未整理 ${data.inbox.length || 0}件</div>
+        ${buildActionButtonsHtml()}
+        <input class="asset-m0-hidden" type="file" accept="image/*" capture="environment" data-asset-input="camera">
+        <input class="asset-m0-hidden" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.xlsx,.xls,.txt,.md" data-asset-input="files">
+        <button type="button" class="asset-m0-secondary" onclick="backFromAssetCapturePage()">ホームへ戻る</button>
+      </div>
+      <div class="card">
+        <h2>直近の保存</h2>
+        ${buildRecentHtml(data.assets,3)}
+      </div>
+    `;
+    bindPanel(page,context);
+    if(capture.getTranscriptInfo) updateTranscript(capture.getTranscriptInfo());
+  }
+
+  async function showCapturePage(){
+    hideAllPages();
+    const page = ensureCapturePage();
+    page.classList.remove("hidden");
+    await renderCapturePage();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function backFromCapturePage(){
+    const page = document.getElementById(CAPTURE_PAGE_ID);
+    if(page) page.classList.add("hidden");
+    if(typeof backToHome === "function") backToHome();
+    else if(typeof showPage === "function") showPage("homePage");
+  }
+
+  M0.ui = {renderAll,renderPanel,updateTranscript,showCapturePage};
   window.OUTBASE_ASSET_M0 = M0;
   window.renderAssetM0Panels = renderAll;
   window.openAssetM0Viewer = openViewer;
   window.closeAssetM0Viewer = closeViewer;
   window.updateAssetM0Transcript = updateTranscript;
+  window.showAssetCapturePage = showCapturePage;
+  window.renderAssetCapturePage = renderCapturePage;
+  window.backFromAssetCapturePage = backFromCapturePage;
 })();
