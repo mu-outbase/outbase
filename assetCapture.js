@@ -1,7 +1,9 @@
 /* =========================================================
    OUTBASE assetCapture.js
-   M0 v178: 写真/動画/ファイル/音声/メモ入力
-   - FileReader / MediaRecorder を共通assetに変換
+   M0 v185: 音声メモ音量強化版
+   - 写真/動画/ファイル/音声/メモ入力
+   - 音声メモはWeb Audioで録音前に音量を持ち上げる
+   - app.js本体は触らない
 ========================================================= */
 (function(){
   "use strict";
@@ -9,9 +11,15 @@
   const M0 = window.OUTBASE_ASSET_M0 || {};
   const core = M0.core || {};
   const store = M0.store || {};
+  const DEFAULT_AUDIO_GAIN = 3.0;
+
   let recorder = null;
   let chunks = [];
   let currentStream = null;
+  let recordStream = null;
+  let currentAudioContext = null;
+  let currentGainNode = null;
+  let currentGainValue = DEFAULT_AUDIO_GAIN;
 
   function fileToDataUrl(file){
     return new Promise((resolve,reject)=>{
@@ -20,6 +28,94 @@
       reader.onerror = ()=>reject(reader.error || new Error("ファイル読込失敗"));
       reader.readAsDataURL(file);
     });
+  }
+
+  function getAudioConstraints(){
+    return {
+      audio:{
+        echoCancellation:true,
+        noiseSuppression:true,
+        autoGainControl:true,
+        channelCount:1
+      }
+    };
+  }
+
+  function getSupportedRecorderOptions(){
+    const candidates = [
+      {mimeType:"audio/webm;codecs=opus"},
+      {mimeType:"audio/webm"},
+      {mimeType:"audio/mp4"}
+    ];
+
+    if(typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function"){
+      return undefined;
+    }
+
+    return candidates.find(option=>MediaRecorder.isTypeSupported(option.mimeType));
+  }
+
+  function makeCompressor(audioContext){
+    if(!audioContext || typeof audioContext.createDynamicsCompressor !== "function"){
+      return null;
+    }
+
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -18;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+    return compressor;
+  }
+
+  function createAmplifiedStream(sourceStream,gainValue){
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+    if(!AudioContextClass || !sourceStream){
+      return {
+        stream:sourceStream,
+        audioContext:null,
+        gainNode:null,
+        gainValue:1,
+        mode:"raw_stream"
+      };
+    }
+
+    try{
+      const audioContext = new AudioContextClass();
+      const source = audioContext.createMediaStreamSource(sourceStream);
+      const gainNode = audioContext.createGain();
+      const destination = audioContext.createMediaStreamDestination();
+      const compressor = makeCompressor(audioContext);
+
+      gainNode.gain.value = gainValue;
+      source.connect(gainNode);
+
+      if(compressor){
+        gainNode.connect(compressor);
+        compressor.connect(destination);
+      }else{
+        gainNode.connect(destination);
+      }
+
+      return {
+        stream:destination.stream,
+        audioContext:audioContext,
+        gainNode:gainNode,
+        gainValue:gainValue,
+        mode:"web_audio_gain"
+      };
+    }catch(error){
+      console.error("音声増幅ストリーム作成失敗",error);
+      return {
+        stream:sourceStream,
+        audioContext:null,
+        gainNode:null,
+        gainValue:1,
+        mode:"raw_stream_fallback"
+      };
+    }
   }
 
   async function importFiles(fileList, options){
@@ -67,6 +163,27 @@
     return asset;
   }
 
+  function cleanupAudioResources(){
+    try{
+      if(currentStream){
+        currentStream.getTracks().forEach(track=>track.stop());
+      }
+      if(recordStream && recordStream !== currentStream){
+        recordStream.getTracks().forEach(track=>track.stop());
+      }
+      if(currentAudioContext && typeof currentAudioContext.close === "function"){
+        currentAudioContext.close();
+      }
+    }catch(error){
+      console.error("音声リソース解放失敗",error);
+    }
+
+    currentStream = null;
+    recordStream = null;
+    currentAudioContext = null;
+    currentGainNode = null;
+  }
+
   async function startAudio(){
     if(recorder && recorder.state === "recording"){
       alert("録音中です");
@@ -74,16 +191,32 @@
     }
 
     try{
-      currentStream = await navigator.mediaDevices.getUserMedia({audio:true});
+      currentStream = await navigator.mediaDevices.getUserMedia(getAudioConstraints());
+      const amplified = createAmplifiedStream(currentStream,DEFAULT_AUDIO_GAIN);
+      recordStream = amplified.stream;
+      currentAudioContext = amplified.audioContext;
+      currentGainNode = amplified.gainNode;
+      currentGainValue = amplified.gainValue;
       chunks = [];
-      recorder = new MediaRecorder(currentStream);
+
+      const options = getSupportedRecorderOptions();
+      recorder = options ? new MediaRecorder(recordStream,options) : new MediaRecorder(recordStream);
+
       recorder.ondataavailable = e=>{
         if(e.data && e.data.size > 0) chunks.push(e.data);
       };
+
+      recorder.onerror = error=>{
+        console.error("音声メモ録音エラー",error);
+        alert("音声メモの録音中にエラーが出ました");
+        cleanupAudioResources();
+      };
+
       recorder.start();
-      alert("音声メモ開始");
+      alert("音声メモ開始（音量強化）");
     }catch(error){
       console.error(error);
+      cleanupAudioResources();
       alert("音声メモを開始できません");
     }
   }
@@ -96,29 +229,38 @@
 
     return new Promise(resolve=>{
       recorder.onstop = async ()=>{
-        const blob = new Blob(chunks,{type:"audio/webm"});
-        const dataUrl = await fileToDataUrl(blob);
-        const asset = await store.saveAssetAndQueue({
-          kind:"audio",
-          title:"音声メモ",
-          name:"audio_" + Date.now() + ".webm",
-          mimeType:"audio/webm",
-          sizeBytes:blob.size || 0,
-          dataUrl:dataUrl,
-          transcript:"",
-          context:core.getActiveContext ? core.getActiveContext() : {}
-        });
+        try{
+          const mimeType = recorder?.mimeType || "audio/webm";
+          const blob = new Blob(chunks,{type:mimeType});
+          const dataUrl = await fileToDataUrl(blob);
+          const asset = await store.saveAssetAndQueue({
+            kind:"audio",
+            title:"音声メモ",
+            name:"audio_" + Date.now() + ".webm",
+            mimeType:mimeType,
+            sizeBytes:blob.size || 0,
+            dataUrl:dataUrl,
+            transcript:"",
+            audioGain:currentGainValue,
+            audioProcessing:"web_audio_gain_v185",
+            memo:"音量強化録音",
+            context:core.getActiveContext ? core.getActiveContext() : {}
+          });
 
-        if(currentStream){
-          currentStream.getTracks().forEach(track=>track.stop());
-          currentStream = null;
+          recorder = null;
+          chunks = [];
+          cleanupAudioResources();
+          if(typeof window.renderAssetM0Panels === "function") window.renderAssetM0Panels();
+          alert("音声メモ保存（音量強化）");
+          resolve(asset);
+        }catch(error){
+          console.error("音声メモ保存失敗",error);
+          recorder = null;
+          chunks = [];
+          cleanupAudioResources();
+          alert("音声メモ保存に失敗しました");
+          resolve(null);
         }
-
-        recorder = null;
-        chunks = [];
-        if(typeof window.renderAssetM0Panels === "function") window.renderAssetM0Panels();
-        alert("音声メモ保存");
-        resolve(asset);
       };
 
       recorder.stop();
@@ -129,12 +271,21 @@
     return Boolean(recorder && recorder.state === "recording");
   }
 
+  function getAudioGainInfo(){
+    return {
+      active:isRecording(),
+      gain:currentGainValue,
+      mode:currentGainNode ? "web_audio_gain" : "raw_stream"
+    };
+  }
+
   M0.capture = {
     importFiles,
     saveTextMemo,
     startAudio,
     stopAudio,
-    isRecording
+    isRecording,
+    getAudioGainInfo
   };
 
   window.OUTBASE_ASSET_M0 = M0;
@@ -142,4 +293,5 @@
   window.saveAssetM0Memo = saveTextMemo;
   window.startAssetM0Audio = startAudio;
   window.stopAssetM0Audio = stopAudio;
+  window.getAssetM0AudioGainInfo = getAudioGainInfo;
 })();
