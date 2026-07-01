@@ -1,22 +1,23 @@
 /* =========================================================
-   OUTBASE lifeOSLite.js
-   UI v200: LifeOS軽量復旧版
+   OUTBASE lifeOSBase.js
+   UI v204: 散歩中管理ボタン撤去・LifeOS基盤維持
    - v198/v199の途中欠落エラーを避けるため、短い新規ファイルに切替
    - 旧 lifeOSUI.js は読み込まない
    - app.js / homeUI.js / assetUI.js 本体は触らない
+   - 散歩中の管理ボタンは不要と判断し、walkManageOverlay.js は読み込まない
 ========================================================= */
 (function(){
   'use strict';
 
-  const ROOT_ID = 'outbaseLifeOSV202';
-  const STYLE_ID = 'outbaseLifeOSV202Style';
-  const SHEET_ID = 'outbaseLifeOSManageV202';
+  const ROOT_ID = 'outbaseLifeOSV204';
+  const STYLE_ID = 'outbaseLifeOSV204Style';
+  const SHEET_ID = 'outbaseLifeOSManageV204';
   const PAGES = {
     home: 'homePage',
-    record: 'outbaseRecordPageV202',
-    calendar: 'outbaseCalendarPageV202',
-    project: 'outbaseProjectPageV202',
-    assets: 'outbaseAssetsPageV202'
+    record: 'outbaseRecordPageV204',
+    calendar: 'outbaseCalendarPageV204',
+    project: 'outbaseProjectPageV204',
+    assets: 'outbaseAssetsPageV204'
   };
 
   let isRenderingHome = false;
@@ -305,6 +306,10 @@
     await renderHome();
   }
 
+  window.showOutbaseLifePageV204 = showPage;
+  window.renderOutbaseLifeHomeV204 = renderHome;
+  window.showOutbaseManageMenuV204 = showManage;
+  window.closeOutbaseManageMenuV204 = closeManage;
   window.showOutbaseLifePageV202 = showPage;
   window.renderOutbaseLifeHomeV202 = renderHome;
   window.showOutbaseManageMenuV202 = showManage;
