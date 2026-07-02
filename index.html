@@ -6,15 +6,18 @@
 <title>OUTBASE</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css?v=phase9j3">
-<style id="outbaseLifeBootGuard">
-  body:not(.outbase-life-ready) .page{display:none!important;visibility:hidden!important;}
-  body:not(.outbase-life-ready) #outbaseBootScreen{display:flex!important;}
-  body.outbase-life-ready #outbaseBootScreen{display:none!important;}
-  body.outbase-life-ready .page.hidden{display:none!important;visibility:hidden!important;}
-  body.outbase-life-ready #homePage:not(.hidden){display:block!important;visibility:visible!important;}
-  body.outbase-life-ready #homePage > :not(#outbaseLifeOSV215){display:none!important;visibility:hidden!important;}
-  body.outbase-life-ready #homePage > #outbaseLifeOSV215{display:flex!important;visibility:visible!important;}
-  #outbaseBootScreen{display:none;min-height:calc(100vh - 56px);align-items:center;justify-content:center;padding:24px 16px;background:linear-gradient(180deg,#f4f8f2 0%,#fbfaf5 100%);box-sizing:border-box;}
+<style id="outbaseStableBootGuard">
+  body:not(.outbase-stable-ready) .page{display:none!important;visibility:hidden!important;}
+  body:not(.outbase-stable-ready) #outbaseBootScreen{display:flex!important;}
+  body.outbase-stable-ready #outbaseBootScreen{display:none!important;}
+  body.outbase-stable-ready .page.hidden{display:none!important;visibility:hidden!important;}
+  body.outbase-stable-ready #homePage{display:none!important;visibility:hidden!important;}
+  body.outbase-stable-ready #outbaseHomeStablePage:not(.hidden){display:block!important;visibility:visible!important;}
+  body.outbase-walk-switching #walkPage{display:none!important;visibility:hidden!important;}
+  body.outbase-walk-switching #outbaseWalkStablePage{display:none!important;visibility:hidden!important;}
+  body.outbase-walk-switching #outbaseWalkBootScreenStable{display:flex!important;}
+  body:not(.outbase-walk-switching) #outbaseWalkBootScreenStable{display:none!important;}
+  #outbaseBootScreen,#outbaseWalkBootScreenStable{display:none;min-height:calc(100vh - 56px);align-items:center;justify-content:center;padding:24px 16px;background:linear-gradient(180deg,#f4f8f2 0%,#fbfaf5 100%);box-sizing:border-box;}
   .outbase-boot-card{width:min(520px,100%);border-radius:24px;background:#fff;border:1px solid rgba(31,111,58,.12);box-shadow:0 10px 24px rgba(20,81,45,.08);padding:22px;color:#243127;}
   .outbase-boot-title{font-size:24px;font-weight:900;margin-bottom:8px;}
   .outbase-boot-note{font-size:13px;line-height:1.6;color:#6b766c;}
@@ -22,7 +25,8 @@
 </head>
 <body>
 <header>OUTBASE</header>
-<div id="outbaseBootScreen"><div class="outbase-boot-card"><div class="outbase-boot-title">OUTBASE 起動中</div><div class="outbase-boot-note">画面を安定化しています。旧画面を混ぜずに起動します。</div></div></div>
+<div id="outbaseBootScreen"><div class="outbase-boot-card"><div class="outbase-boot-title">OUTBASE 起動中</div><div class="outbase-boot-note">画面制御をStable構成へ統合しています。旧画面を混ぜずに起動します。</div></div></div>
+<div id="outbaseWalkBootScreenStable"><div class="outbase-boot-card"><div class="outbase-boot-title">散歩モード準備中</div><div class="outbase-boot-note">旧散歩画面を出さず、散歩専用UIへ切り替えています。</div></div></div>
 <div id="homePage" class="page">
   <div class="card">
     <h1>今日の記録</h1>
@@ -645,7 +649,5 @@
 <script src="assetBridge.js?v=m0v184"></script>
 <script src="assetInbox.js?v=m0v186"></script>
 <script src="campProject.js?v=phaseD164"></script>
-<script src="outbaseLifeV215.js?v=uiV215"></script>
-<script src="outbaseWalkV215.js?v=uiV215"></script>
-</body>
-</html>
+<script src="outbaseShellStable.js?v=s1stable"></script>
+<script src="outbaseHomeStable.js?v
