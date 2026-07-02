@@ -1,10 +1,9 @@
 {
-  "name": "outbase-mvp-fixed-dev-base",
-  "version": "0.140.0",
+  "name": "outbase",
+  "version": "0.1.0-core01",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "python3 -m http.server 8080",
-    "check": "echo 'manual static check: open /docs/TEST_CHECKLIST_v140.md'"
+    "check": "node --check src/main.js && node --check src/modules/import/import.js && node --check src/modules/prep/prepEngine.js"
   }
 }

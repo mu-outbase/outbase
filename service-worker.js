@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbase-v140-shell';
+const CACHE_NAME = 'outbase-core01-prep-engine-v1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './src/ui/components.js',
   './src/modules/home/home.js',
   './src/modules/prep/prep.js',
+  './src/modules/prep/prepEngine.js',
   './src/modules/import/import.js',
   './src/modules/walk/walk.js',
   './src/modules/review/review.js',
@@ -32,5 +33,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+  event.respondWith(fetch(event.request).then((response) => {
+    const copy = response.clone();
+    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+    return response;
+  }).catch(() => caches.match(event.request)));
 });

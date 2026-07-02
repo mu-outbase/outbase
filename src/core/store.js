@@ -5,6 +5,7 @@ const initialState = {
   version: VERSION,
   currentRoute: 'home',
   nextProject: null,
+  activeCandidate: null,
   importCandidates: [],
   walkSession: null,
   reviewQueue: [],
@@ -16,17 +17,31 @@ const initialState = {
   }
 };
 
+function clone(value) {
+  try {
+    if (typeof structuredClone === 'function') return structuredClone(value);
+  } catch (error) {
+    console.warn('structuredClone failed', error);
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 let state = { ...initialState, ...(loadState() || {}) };
 const listeners = new Set();
 
 export function getState() {
-  return structuredClone ? structuredClone(state) : JSON.parse(JSON.stringify(state));
+  return clone(state);
 }
 
 export function patchState(patch) {
-  state = { ...state, ...patch, updatedAt: new Date().toISOString() };
+  state = { ...state, ...patch, version: VERSION, updatedAt: new Date().toISOString() };
   saveState(state);
   listeners.forEach((listener) => listener(getState()));
+}
+
+export function updateState(updater) {
+  const nextPatch = updater(getState()) || {};
+  patchState(nextPatch);
 }
 
 export function subscribe(listener) {
