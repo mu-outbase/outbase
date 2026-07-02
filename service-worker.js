@@ -1,22 +1,22 @@
-const CACHE_NAME = 'outbase-core01-prep-engine-v1';
+const CACHE_NAME = 'outbase-core01-ux01-v1';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles/app.css',
-  './src/main.js',
-  './src/config/version.js',
-  './src/core/router.js',
-  './src/core/storage.js',
-  './src/core/store.js',
-  './src/domain/schema.js',
-  './src/ui/components.js',
-  './src/modules/home/home.js',
-  './src/modules/prep/prep.js',
-  './src/modules/prep/prepEngine.js',
-  './src/modules/import/import.js',
-  './src/modules/walk/walk.js',
-  './src/modules/review/review.js',
-  './src/modules/pwa/pwa.js'
+  './styles/app-ux01.css',
+  './src_ux01/main.js',
+  './src_ux01/config/version.js',
+  './src_ux01/core/router.js',
+  './src_ux01/core/storage.js',
+  './src_ux01/core/store.js',
+  './src_ux01/domain/schema.js',
+  './src_ux01/ui/components.js',
+  './src_ux01/modules/home/home.js',
+  './src_ux01/modules/prep/prep.js',
+  './src_ux01/modules/prep/prepEngine.js',
+  './src_ux01/modules/import/import.js',
+  './src_ux01/modules/walk/walk.js',
+  './src_ux01/modules/review/review.js',
+  './src_ux01/modules/pwa/pwa.js'
 ];
 
 self.addEventListener('install', (event) => {
