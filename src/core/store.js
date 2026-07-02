@@ -7,6 +7,18 @@ const initialState = {
   nextProject: null,
   activeCandidate: null,
   importCandidates: [],
+  prepContext: {
+    weatherMemo: '',
+    highTemp: '',
+    lowTemp: '',
+    rainRisk: '',
+    windMemo: '',
+    peopleCount: '2',
+    kotaGoing: 'yes',
+    menuMemo: '',
+    pastReflection: '',
+    gearMemo: ''
+  },
   walkSession: null,
   reviewQueue: [],
   notes: {

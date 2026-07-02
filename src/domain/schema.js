@@ -2,7 +2,7 @@ export const schema = {
   project: {
     id: 'project_id',
     purpose: '次のキャンプ準備から帰宅後レビューまでを束ねる親オブジェクト',
-    fields: ['title', 'status', 'reservation', 'weatherWatch', 'prep', 'route', 'records', 'review']
+    fields: ['title', 'status', 'reservation', 'weatherWatch', 'prepContext', 'prep', 'route', 'records', 'review']
   },
   reservation: {
     purpose: '予約スクショ・PDF・予約メール・カレンダー予定から作った次のキャンプ候補',
@@ -19,6 +19,10 @@ export const schema = {
   candidate: {
     purpose: 'OCR・AI・一括取込で作られた未確定候補。むーが承認して確定する。',
     fields: ['candidate_id', 'source', 'confidence', 'payload', 'status']
+  },
+  prepContext: {
+    purpose: 'Core02で追加した準備候補を実用化するための条件。天気、人数、コタ同行、献立、過去反省、ギアメモを保持する。',
+    fields: ['weatherMemo', 'highTemp', 'lowTemp', 'rainRisk', 'windMemo', 'peopleCount', 'kotaGoing', 'menuMemo', 'pastReflection', 'gearMemo']
   }
 };
 
@@ -27,7 +31,8 @@ export const mvpFixedRules = [
   '手入力中心は禁止。自動取得・候補表示・一括取込・承認を基本にする',
   '予約スクショ読取だけではMVPではない。準備・当日・次回改善へつなぐ',
   '現地操作は3秒以内。写真・音声文字起こし・GPS・ワンタップを優先する',
-  'PWA先行。ネイティブアプリ化はPWA限界が見えた後に判断する'
+  'PWA土台は維持。PWA実用確認はCore02〜Core04後のMVP候補段階で行う'
+
 ];
 
 export const prepBase = {
