@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js';
+import { STORAGE_KEY } from '../config/version.js?v=core05-4-ergo-design-20260703';
 
 export function loadState() {
   try {

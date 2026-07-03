@@ -1,7 +1,7 @@
-import { updateState, getState, patchState } from '../../core/store.js?v=core05-3-visual-ux-20260703';
-import { go } from '../../core/router.js?v=core05-3-visual-ux-20260703';
-import { extractReservationCandidate, createProjectFromCandidate, buildPracticalPrep, normalizePrepContext } from '../prep/prepEngine.js?v=core05-3-visual-ux-20260703';
-import { escapeHtml, kv, listItems } from '../../ui/components.js?v=core05-3-visual-ux-20260703';
+import { updateState, getState, patchState } from '../../core/store.js?v=core05-4-ergo-design-20260703';
+import { go } from '../../core/router.js?v=core05-4-ergo-design-20260703';
+import { extractReservationCandidate, createProjectFromCandidate, buildPracticalPrep, normalizePrepContext } from '../prep/prepEngine.js?v=core05-4-ergo-design-20260703';
+import { escapeHtml, toast } from '../../ui/components.js?v=core05-4-ergo-design-20260703';
 
 let selectedFile = null;
 let selectedFileText = '';
@@ -10,46 +10,30 @@ let selectedFileDataUrl = '';
 export function renderImportPanel() {
   const state = getState();
   const candidate = state.activeCandidate;
-  return `<section class="card import-card" id="reservationImportCard">
-    <div class="compact-row top-align"><div><p class="eyebrow">IMPORT</p><h2>予約を入れる</h2></div><span class="mini-badge">screenshot / mail</span></div>
-
-    <div class="import-drop">
-      <input id="reservationFile" class="field file-field" type="file" accept="image/*,.pdf,text/plain" />
-      <div id="reservationPreview" class="preview compact-preview">スクショ / PDF</div>
+  return `<section class="card import-card focus">
+    <p class="eyebrow">IMPORT</p><h2>予約を入れる</h2>
+    <div class="import-grid">
+      <select id="sourceType" class="field">
+        <option value="screenshot">スクショ</option>
+        <option value="pdf">PDF</option>
+        <option value="mail">メール</option>
+        <option value="calendar">カレンダー</option>
+      </select>
+      <input id="reservationFile" class="field" type="file" accept="image/*,.pdf,text/plain" />
+      <div id="reservationPreview" class="import-preview">スクショ / PDF</div>
+      <textarea id="sourceText" class="field textarea" placeholder="予約メールやカレンダー本文を貼る"></textarea>
+      <div class="compact-actions"><button id="runOcr" class="btn">読む</button><button id="createCandidate" class="btn primary">候補を作る</button></div>
+      <button id="approveCandidate" class="btn primary">保存して準備へ</button>
+      <div class="mini-row"><button id="resetFile" class="link-button">ファイル取消</button><button id="clearCandidate" class="link-button danger-text">候補クリア</button></div>
+      <div id="candidateStatus" class="muted">${candidate ? '候補あり' : '未作成'}</div>
+      <div id="candidatePreview">${candidate ? renderCandidate(candidate) : ''}</div>
     </div>
-
-    <textarea id="sourceText" class="field textarea import-text" placeholder="予約メール・カレンダー本文を貼る"></textarea>
-
-    <div class="action-row">
-      <button id="runOcr" class="btn">読む</button>
-      <button id="createCandidate" class="btn primary">候補化</button>
-      <button id="approveCandidate" class="btn primary">保存</button>
-    </div>
-
-    <div class="import-subrow">
-      <select id="sourceType" class="field mini-select"><option value="screenshot">画像</option><option value="pdf">PDF</option><option value="mail">メール</option><option value="calendar">カレンダー</option></select>
-      <button id="resetFile" class="link-button">取消</button>
-      <button id="resetImport" class="link-button danger-text">リセット</button>
-    </div>
-
-    <div id="candidateStatus" class="muted mini-status">${candidate ? '候補あり' : '未取込'}</div>
-    <div id="candidatePreview" class="candidate-preview">${candidate ? renderCandidate(candidate) : ''}</div>
   </section>`;
 }
 
 function renderCandidate(candidate) {
-  const reservation = candidate?.payload?.reservation || {};
-  const prep = candidate?.payload?.prep || {};
-  return `<details class="quiet-details candidate-fold" open>
-    <summary>候補 ${candidate.confidence || 0}%</summary>
-    <div class="candidate-card clean">
-      ${kv('キャンプ場', reservation.campground)}
-      ${kv('日程', reservation.dateText)}
-      ${kv('IN', reservation.checkIn)}
-      ${kv('OUT', reservation.checkOut)}
-      <details><summary>準備候補</summary><h3>買い物</h3>${listItems(prep.shopping)}<h3>持ち物</h3>${listItems(prep.packing)}<h3>コタ</h3>${listItems(prep.kota)}<h3>注意</h3>${listItems(prep.reflection)}</details>
-    </div>
-  </details>`;
+  const r = candidate?.payload?.reservation || {};
+  return `<div class="history-card"><strong>${escapeHtml(r.campground || 'キャンプ場未確定')}</strong><span>${escapeHtml([r.dateText, r.checkIn && `IN ${r.checkIn}`, r.checkOut && `OUT ${r.checkOut}`].filter(Boolean).join(' / ') || '日程未確定')}</span><span class="chip">${candidate.confidence || 0}%</span></div>`;
 }
 
 function bindImportPanel() {
@@ -66,75 +50,65 @@ function bindImportPanel() {
     if (!selectedFile) return;
     if (selectedFile.type.startsWith('image/')) {
       selectedFileDataUrl = await readAsDataUrl(selectedFile);
-      preview.innerHTML = `<img src="${selectedFileDataUrl}" alt="予約スクショプレビュー">`;
-      status.textContent = '画像選択済み';
+      preview.innerHTML = `<img src="${selectedFileDataUrl}" alt="予約スクショ">`;
+      status.textContent = 'スクショを選択。読むか本文貼付けで候補作成。';
     } else if (selectedFile.type === 'text/plain') {
       selectedFileText = await selectedFile.text();
       textArea.value = selectedFileText;
       preview.textContent = selectedFile.name;
-      status.textContent = 'テキスト読込済み';
+      status.textContent = 'テキスト読込済み。候補を作れます。';
     } else {
       preview.textContent = selectedFile.name;
-      status.textContent = 'PDFは本文貼付けか画像読取';
+      status.textContent = 'PDFは本文を貼るか、スクショを読み取ります。';
     }
   });
 
   document.getElementById('resetFile')?.addEventListener('click', () => {
     clearSelectedFile(file, preview);
-    status.textContent = 'ファイル取消';
-  });
-
-  document.getElementById('resetImport')?.addEventListener('click', () => {
-    clearSelectedFile(file, preview);
-    if (textArea) textArea.value = '';
-    patchState({ activeCandidate: null });
-    if (candidatePreview) candidatePreview.innerHTML = '';
-    status.textContent = 'リセット済み';
+    status.textContent = 'ファイルを取り消しました。';
   });
 
   document.getElementById('runOcr')?.addEventListener('click', async () => {
-    if (!selectedFile || !selectedFile.type.startsWith('image/')) {
-      status.textContent = '画像を選択';
-      return;
-    }
-    status.textContent = '読取中…';
+    if (!selectedFile || !selectedFile.type.startsWith('image/')) return toast('画像を選んでください');
+    status.textContent = '読み取り中…';
     try {
       const text = await runImageOcr(selectedFile);
       textArea.value = [textArea.value, text].filter(Boolean).join('\n');
-      status.textContent = '読取完了';
+      status.textContent = '読取完了。候補を作れます。';
+      toast('読み取りました');
     } catch (error) {
       console.warn(error);
-      status.textContent = '読取失敗。本文貼付けで候補化';
+      status.textContent = '読取失敗。本文を貼ってください。';
+      toast('読取に失敗');
     }
   });
 
   document.getElementById('createCandidate')?.addEventListener('click', () => {
     const sourceType = document.getElementById('sourceType')?.value || 'text';
     const rawText = textArea?.value?.trim() || selectedFileText || '';
-    if (!rawText) {
-      status.textContent = selectedFile ? '本文が必要' : '予約情報を入れる';
-      return;
-    }
+    if (!rawText) return toast('本文を入れてください');
     const candidate = extractReservationCandidate(rawText, sourceType, selectedFile?.name || '');
     updateState((state) => ({ activeCandidate: candidate, importCandidates: [...(state.importCandidates || []), candidate] }));
     candidatePreview.innerHTML = renderCandidate(candidate);
-    status.textContent = '候補化完了';
-    candidatePreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    status.textContent = '候補を作りました。';
+    toast('候補を作りました');
   });
 
   document.getElementById('approveCandidate')?.addEventListener('click', () => {
     const candidate = getState().activeCandidate;
-    if (!candidate) {
-      status.textContent = '候補なし';
-      return;
-    }
+    if (!candidate) return toast('候補がありません');
     const project = createProjectFromCandidate(candidate);
     const prepContext = normalizePrepContext(getState().prepContext || {}, project.reservation || {});
     const practicalPrep = buildPracticalPrep(project, prepContext);
-    const nextProject = { ...project, prep: practicalPrep, prepContext };
-    patchState({ nextProject, prepContext, activeCandidate: { ...candidate, status: 'approved' } });
-    status.textContent = '保存しました';
-    setTimeout(() => go('prep'), 450);
+    patchState({ nextProject: { ...project, prep: practicalPrep, prepContext }, prepContext, activeCandidate: { ...candidate, status: 'approved' } });
+    toast('保存しました');
+    setTimeout(() => go('prep'), 500);
+  });
+
+  document.getElementById('clearCandidate')?.addEventListener('click', () => {
+    patchState({ activeCandidate: null });
+    if (candidatePreview) candidatePreview.innerHTML = '';
+    status.textContent = '候補をクリアしました。';
   });
 }
 
@@ -149,12 +123,7 @@ function clearSelectedFile(file, preview) {
 async function runImageOcr(file) {
   const workerSource = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
   if (!window.Tesseract) await loadScript(workerSource);
-  const result = await window.Tesseract.recognize(file, 'jpn+eng', {
-    logger: (message) => {
-      const status = document.getElementById('candidateStatus');
-      if (status && message.status) status.textContent = `OCR ${Math.round((message.progress || 0) * 100)}%`;
-    }
-  });
+  const result = await window.Tesseract.recognize(file, 'jpn+eng');
   return result?.data?.text || '';
 }
 

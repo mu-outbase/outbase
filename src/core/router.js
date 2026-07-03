@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core05-3-visual-ux-20260703';
+import { patchState } from './store.js?v=core05-4-ergo-design-20260703';
 
 const routes = new Map();
 
@@ -13,7 +13,6 @@ export function go(routeName) {
     button.classList.toggle('active', button.dataset.route === routeName);
   });
   renderer?.();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 export function bindNavigation() {

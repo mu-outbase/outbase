@@ -1,11 +1,11 @@
-import { app, card, escapeHtml, listItems } from '../../ui/components.js?v=core05-3-visual-ux-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-3-visual-ux-20260703';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core05-4-ergo-design-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-4-ergo-design-20260703';
 
 let timer = null;
 let speechRecognition = null;
 
 function sessionTypeLabel(type) {
-  return { walk: 'コタ散歩', camp: 'キャンプ当日', life: '日常メモ' }[type] || '記録';
+  return { walk: 'コタ散歩', camp: 'キャンプ', life: 'メモ' }[type] || '記録';
 }
 
 function elapsedText(startedAt, endedAt = null) {
@@ -69,8 +69,9 @@ function updateActiveSession(updater) {
   patchState({ walkSession: updater(session) });
 }
 
-function addRecord(record) {
+function addRecord(record, message = '記録しました') {
   updateActiveSession((session) => ({ ...session, records: [record, ...recordsOf(session)] }));
+  toast(message);
   renderWalk();
 }
 
@@ -106,36 +107,36 @@ function renderStartPanel() {
   const project = getState().nextProject;
   const title = project?.reservation?.campground ? `${project.reservation.campground} 記録` : '今日の記録';
   return card(`<div class="choice-grid">
-      <button class="choice startSession" data-type="walk" data-title="コタ散歩">コタ散歩<span>散歩</span></button>
+      <button class="choice startSession" data-type="walk" data-title="コタ散歩">コタ散歩<span>散歩中</span></button>
       <button class="choice startSession" data-type="camp" data-title="${escapeHtml(title)}">キャンプ<span>設営・料理</span></button>
-      <button class="choice startSession" data-type="life" data-title="日常メモ">日常<span>気づき</span></button>
+      <button class="choice startSession" data-type="life" data-title="日常メモ">メモ<span>気づき</span></button>
     </div>
-    <details class="quiet-details"><summary>タイトル</summary><input id="sessionTitle" class="field" value="${escapeHtml(title)}" placeholder="赤城山1日目" /></details>`);
+    <details class="quiet-details"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="${escapeHtml(title)}" placeholder="赤城山1日目" /></details>`, 'focus');
 }
 
 function renderActiveSession(session) {
   const points = gpsPointsOf(session);
   const records = recordsOf(session);
-  return card(`<p class="eyebrow">記録中</p>
+  return card(`<p class="eyebrow">LIVE</p>
     <h2>${escapeHtml(sessionTypeLabel(session.type))}</h2>
-    <p><strong>${escapeHtml(session.title || '記録中')}</strong></p>
+    <p class="muted"><strong>${escapeHtml(session.title || '記録中')}</strong></p>
     <div class="timer-large" id="walkTimer">${elapsedText(session.startedAt)}</div>
-    <div class="record-status"><span>記録 ${records.length}件</span><span>GPS ${points.length}点 / ${distanceKm(points).toFixed(2)}km</span></div>
-    <textarea id="recordMemo" class="field textarea" rows="4" placeholder="気づきをメモ"></textarea>
-    <button id="addMemo" class="btn primary">メモを残す</button>
+    <div class="record-status"><span>${records.length}件</span><span>${distanceKm(points).toFixed(2)}km</span><span>GPS ${points.length}</span></div>
+    <textarea id="recordMemo" class="field textarea" rows="3" placeholder="今の気づき"></textarea>
+    <button id="addMemo" class="btn primary">残す</button>
     <div class="quick-grid">
       <button id="photoBtn" class="btn">写真</button>
       <button id="addGps" class="btn">GPS</button>
       <button id="quickPoop" class="btn">💩</button>
-      <button id="quickWater" class="btn">💧</button>
+      <button id="quickWater" class="btn">水</button>
     </div>
-    <details class="quiet-details"><summary>ほかの記録</summary>
+    <details class="quiet-details"><summary>設営・撤収・音声</summary>
       <div class="quick-grid">
         <button id="setupStart" class="btn">設営開始</button>
-        <button id="setupEnd" class="btn">完了</button>
+        <button id="setupEnd" class="btn">設営完了</button>
         <button id="teardownStart" class="btn">撤収開始</button>
-        <button id="teardownEnd" class="btn">完了</button>
-        <button id="voiceMemo" class="btn">音声メモ</button>
+        <button id="teardownEnd" class="btn">撤収完了</button>
+        <button id="voiceMemo" class="btn">音声</button>
         <button id="videoBtn" class="btn">動画</button>
       </div>
     </details>
@@ -143,32 +144,30 @@ function renderActiveSession(session) {
     <input id="videoInput" type="file" accept="video/*" hidden />
     <button id="finishWalk" class="btn primary">終了して保存</button>
     <button id="discardWalk" class="btn danger subtle-danger">破棄</button>
-    <h3>今回の記録</h3>${renderRecordList(records)}`);
+    <details class="quiet-details"><summary>今回の記録</summary>${renderRecordList(records)}</details>`, 'live-card');
 }
 
 function renderRecordList(records) {
-  if (!records.length) return '<p class="muted">まだ記録はありません。</p>';
+  if (!records.length) return '<p class="empty-line">まだ記録はありません。</p>';
   return `<ul class="outbase-list">${records.slice(0, 12).map((record) => `<li><strong>${escapeHtml(record.title)}</strong><br><span class="muted">${escapeHtml(formatTime(record.createdAt))}${record.detail ? ` / ${escapeHtml(record.detail)}` : ''}</span>${record.preview ? `<br><img src="${record.preview}" alt="写真メモ" class="memo-image" />` : ''}</li>`).join('')}</ul>`;
 }
 
 function renderHistory(history, selectedId = null) {
   return card(`<h2>履歴</h2>
-    ${history.length ? `<div class="history-list">${history.slice(0, 8).map((item) => {
+    ${history.length ? `<div class="history-list">${history.slice(0, 5).map((item) => {
       const selected = item.session_id === selectedId;
-      return `<article class="history-card ${selected ? 'selected' : ''}"><strong>${escapeHtml(sessionTypeLabel(item.type))}：${escapeHtml(item.title || '記録')}</strong><span>${escapeHtml(formatTime(item.startedAt))} / ${recordsOf(item).length}件 / ${distanceKm(gpsPointsOf(item)).toFixed(2)}km</span><button class="btn small detailSession" data-id="${escapeHtml(item.session_id)}">詳細へ移動</button></article>`;
-    }).join('')}</div>` : '<p class="muted">記録を終了するとここに残ります。</p>'}`);
+      return `<article class="history-card ${selected ? 'selected' : ''}"><strong>${escapeHtml(sessionTypeLabel(item.type))}：${escapeHtml(item.title || '記録')}</strong><span>${escapeHtml(formatTime(item.startedAt))} / ${recordsOf(item).length}件 / ${distanceKm(gpsPointsOf(item)).toFixed(2)}km</span><button class="btn small detailSession" data-id="${escapeHtml(item.session_id)}">見る</button></article>`;
+    }).join('')}</div>` : '<p class="empty-line">終了するとここに残ります。</p>'}`, 'soft');
 }
 
 function renderDetail(session) {
   const reviewItems = buildReviewItems(session);
   return card(`<div id="recordDetail" style="scroll-margin-top:92px"></div>
-    <p class="eyebrow">選択中の履歴</p>
-    <h2>${escapeHtml(session.title || sessionTypeLabel(session.type))}</h2>
-    <div class="kv"><span>種別</span><strong>${escapeHtml(sessionTypeLabel(session.type))}</strong></div>
+    <p class="eyebrow">DETAIL</p><h2>${escapeHtml(session.title || sessionTypeLabel(session.type))}</h2>
     <div class="kv"><span>時間</span><strong>${escapeHtml(elapsedText(session.startedAt, session.endedAt))}</strong></div>
     <div class="kv"><span>距離</span><strong>${distanceKm(gpsPointsOf(session)).toFixed(2)}km</strong></div>
-    <h3>記録一覧</h3>${renderRecordList(recordsOf(session))}
-    <h3>次回へ戻す候補</h3>${listItems(reviewItems, '改善候補はまだありません')}`);
+    <details class="quiet-details"><summary>記録一覧</summary>${renderRecordList(recordsOf(session))}</details>
+    <h3>次回へ戻す</h3>${listItems(reviewItems, 'まだなし')}`, 'focus');
 }
 
 function bindWalk() {
@@ -177,12 +176,12 @@ function bindWalk() {
   document.getElementById('discardWalk')?.addEventListener('click', discardSession);
   document.getElementById('addMemo')?.addEventListener('click', addTextMemo);
   document.getElementById('addGps')?.addEventListener('click', captureGpsPoint);
-  document.getElementById('quickPoop')?.addEventListener('click', () => addRecord(makeRecord('quick', '💩 コタうんち', '散歩/キャンプ中のクイック記録')));
-  document.getElementById('quickWater')?.addEventListener('click', () => addRecord(makeRecord('quick', '💧 水分補給', 'コタ/人の水分補給メモ')));
-  document.getElementById('setupStart')?.addEventListener('click', () => addRecord(makeRecord('timer', '設営開始', '設営タイマー用メモ')));
-  document.getElementById('setupEnd')?.addEventListener('click', () => addRecord(makeRecord('timer', '設営完了', '次回の段取り確認に使う')));
-  document.getElementById('teardownStart')?.addEventListener('click', () => addRecord(makeRecord('timer', '撤収開始', '撤収タイマー用メモ')));
-  document.getElementById('teardownEnd')?.addEventListener('click', () => addRecord(makeRecord('timer', '撤収完了', '雨撤収・収納順の反省に使う')));
+  document.getElementById('quickPoop')?.addEventListener('click', () => addRecord(makeRecord('quick', '💩 コタうんち', 'クイック記録')));
+  document.getElementById('quickWater')?.addEventListener('click', () => addRecord(makeRecord('quick', '水分補給', 'コタ/人の水分補給')));
+  document.getElementById('setupStart')?.addEventListener('click', () => addRecord(makeRecord('timer', '設営開始', '設営タイマー')));
+  document.getElementById('setupEnd')?.addEventListener('click', () => addRecord(makeRecord('timer', '設営完了', '次回の段取り確認')));
+  document.getElementById('teardownStart')?.addEventListener('click', () => addRecord(makeRecord('timer', '撤収開始', '撤収タイマー')));
+  document.getElementById('teardownEnd')?.addEventListener('click', () => addRecord(makeRecord('timer', '撤収完了', '収納順の反省')));
   document.getElementById('photoBtn')?.addEventListener('click', () => document.getElementById('photoInput')?.click());
   document.getElementById('videoBtn')?.addEventListener('click', () => document.getElementById('videoInput')?.click());
   document.getElementById('photoInput')?.addEventListener('change', (event) => handleFileMemo(event, 'photo'));
@@ -198,56 +197,52 @@ function bindWalk() {
 function startSession(type = 'walk', defaultTitle = '') {
   const customTitle = document.getElementById('sessionTitle')?.value?.trim();
   const title = customTitle || defaultTitle || '今日の記録';
-  patchState({
-    walkSession: { session_id: `session_${Date.now()}`, type, title, status: 'active', startedAt: new Date().toISOString(), records: [], gpsPoints: [] },
-    selectedRecordSessionId: null
-  });
+  patchState({ walkSession: { session_id: `session_${Date.now()}`, type, title, status: 'active', startedAt: new Date().toISOString(), records: [], gpsPoints: [] }, selectedRecordSessionId: null });
+  toast('記録開始');
   renderWalk();
 }
 
 function addTextMemo() {
   const textarea = document.getElementById('recordMemo');
   const detail = textarea?.value?.trim();
-  if (!detail) return;
+  if (!detail) return toast('メモを入れてください');
   addRecord(makeRecord('memo', 'メモ', detail));
 }
 
 function captureGpsPoint() {
   if (!navigator.geolocation) {
-    addRecord(makeRecord('gps', 'GPS取得不可', 'この端末では位置情報が使えません'));
+    addRecord(makeRecord('gps', 'GPS取得不可', '位置情報が使えません'));
     return;
   }
   navigator.geolocation.getCurrentPosition((position) => {
     const point = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy, createdAt: new Date().toISOString() };
     updateActiveSession((session) => ({ ...session, gpsPoints: [...gpsPointsOf(session), point], records: [makeRecord('gps', 'GPS', `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`, { point }), ...recordsOf(session)] }));
+    toast('GPSを残しました');
     renderWalk();
-  }, () => addRecord(makeRecord('gps', 'GPS取得失敗', '位置情報の許可を確認')),
-  { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  }, () => addRecord(makeRecord('gps', 'GPS取得失敗', '位置情報の許可を確認')), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
 }
 
 function handleFileMemo(event, type) {
   const file = event.target.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => addRecord(makeRecord(type, type === 'photo' ? '写真メモ' : '動画メモ', file.name, { preview: type === 'photo' ? reader.result : '', fileName: file.name }));
+  reader.onload = () => addRecord(makeRecord(type, type === 'photo' ? '写真' : '動画', file.name, { preview: type === 'photo' ? reader.result : '', fileName: file.name }), type === 'photo' ? '写真を残しました' : '動画を残しました');
   reader.readAsDataURL(file);
 }
 
 function startVoiceMemo() {
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Speech) {
-    addRecord(makeRecord('voice', '音声メモ', '音声認識未対応。あとで文字メモとして扱う'));
+    addRecord(makeRecord('voice', '音声メモ', '音声認識未対応'));
     return;
   }
   speechRecognition = new Speech();
   speechRecognition.lang = 'ja-JP';
   speechRecognition.interimResults = false;
-  speechRecognition.onresult = (event) => {
-    const text = event.results?.[0]?.[0]?.transcript || '';
-    addRecord(makeRecord('voice', '音声メモ', text));
-  };
-  speechRecognition.onerror = () => addRecord(makeRecord('voice', '音声メモ失敗', '音声認識をもう一度試す'));
+  speechRecognition.onresult = (event) => addRecord(makeRecord('voice', '音声', event.results?.[0]?.[0]?.transcript || ''));
+  speechRecognition.onerror = () => addRecord(makeRecord('voice', '音声失敗', 'もう一度試す'));
   speechRecognition.start();
+  toast('話してください');
 }
 
 function finishSession() {
@@ -256,18 +251,15 @@ function finishSession() {
   if (!session || session.status !== 'active') return;
   const ended = { ...session, status: 'done', endedAt: new Date().toISOString() };
   const reviewItems = buildReviewItems(ended);
-  patchState({
-    walkSession: null,
-    recordHistory: [ended, ...(state.recordHistory || [])].slice(0, 50),
-    selectedRecordSessionId: ended.session_id,
-    reviewQueue: [...new Set([...(state.reviewQueue || []), ...reviewItems])]
-  });
+  patchState({ walkSession: null, recordHistory: [ended, ...(state.recordHistory || [])].slice(0, 50), selectedRecordSessionId: ended.session_id, reviewQueue: [...new Set([...(state.reviewQueue || []), ...reviewItems])] });
+  toast('保存しました');
   renderWalk();
   scrollToRecordDetail();
 }
 
 function discardSession() {
   patchState({ walkSession: null });
+  toast('破棄しました');
   renderWalk();
 }
 
