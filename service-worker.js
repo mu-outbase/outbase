@@ -1,23 +1,24 @@
-const CACHE_NAME = 'outbase-core05-mvp-flow-check-v1';
+const CACHE_NAME = 'outbase-core05-1-cache-fix-v1';
+const BUILD_ID = 'core05-1-cache-fix-20260703';
 const APP_SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './styles/app.css',
-  './src/main.js',
-  './src/config/version.js',
-  './src/core/router.js',
-  './src/core/storage.js',
-  './src/core/store.js',
-  './src/domain/schema.js',
-  './src/ui/components.js',
-  './src/modules/home/home.js',
-  './src/modules/prep/prep.js',
-  './src/modules/prep/prepEngine.js',
-  './src/modules/import/import.js',
-  './src/modules/walk/walk.js',
-  './src/modules/review/review.js',
-  './src/modules/pwa/pwa.js'
+  './?v=' + BUILD_ID,
+  './index.html?v=' + BUILD_ID,
+  './manifest.json?v=' + BUILD_ID,
+  './styles/app.css?v=' + BUILD_ID,
+  './src/main.js?v=' + BUILD_ID,
+  './src/config/version.js?v=' + BUILD_ID,
+  './src/core/router.js?v=' + BUILD_ID,
+  './src/core/storage.js?v=' + BUILD_ID,
+  './src/core/store.js?v=' + BUILD_ID,
+  './src/domain/schema.js?v=' + BUILD_ID,
+  './src/ui/components.js?v=' + BUILD_ID,
+  './src/modules/home/home.js?v=' + BUILD_ID,
+  './src/modules/prep/prep.js?v=' + BUILD_ID,
+  './src/modules/prep/prepEngine.js?v=' + BUILD_ID,
+  './src/modules/import/import.js?v=' + BUILD_ID,
+  './src/modules/walk/walk.js?v=' + BUILD_ID,
+  './src/modules/review/review.js?v=' + BUILD_ID,
+  './src/modules/pwa/pwa.js?v=' + BUILD_ID
 ];
 
 self.addEventListener('install', (event) => {
@@ -27,7 +28,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
@@ -35,12 +36,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-store' })
       .then((response) => {
         const clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
+      .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html?v=' + BUILD_ID)))
   );
 });
