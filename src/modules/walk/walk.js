@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core05-8-calendar-interactive-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-8-calendar-interactive-20260703';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core05-9-jorte-calendar-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-9-jorte-calendar-20260703';
 
 let timer = null;
 let speechRecognition = null;

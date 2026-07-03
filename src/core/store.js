@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-8-calendar-interactive-20260703';
-import { VERSION } from '../config/version.js?v=core05-8-calendar-interactive-20260703';
+import { loadState, saveState } from './storage.js?v=core05-9-jorte-calendar-20260703';
+import { VERSION } from '../config/version.js?v=core05-9-jorte-calendar-20260703';
 
 const initialState = {
   version: VERSION,

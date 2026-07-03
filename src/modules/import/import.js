@@ -1,7 +1,7 @@
-import { updateState, getState, patchState } from '../../core/store.js?v=core05-8-calendar-interactive-20260703';
-import { go } from '../../core/router.js?v=core05-8-calendar-interactive-20260703';
-import { extractReservationCandidate, createProjectFromCandidate, buildPracticalPrep, normalizePrepContext } from '../prep/prepEngine.js?v=core05-8-calendar-interactive-20260703';
-import { escapeHtml, toast } from '../../ui/components.js?v=core05-8-calendar-interactive-20260703';
+import { updateState, getState, patchState } from '../../core/store.js?v=core05-9-jorte-calendar-20260703';
+import { go } from '../../core/router.js?v=core05-9-jorte-calendar-20260703';
+import { extractReservationCandidate, createProjectFromCandidate, buildPracticalPrep, normalizePrepContext } from '../prep/prepEngine.js?v=core05-9-jorte-calendar-20260703';
+import { escapeHtml, toast } from '../../ui/components.js?v=core05-9-jorte-calendar-20260703';
 
 let selectedFile = null;
 let selectedFileText = '';
