@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-7-calendar-refined-20260703';
-import { VERSION } from '../config/version.js?v=core05-7-calendar-refined-20260703';
+import { loadState, saveState } from './storage.js?v=core05-8-calendar-interactive-20260703';
+import { VERSION } from '../config/version.js?v=core05-8-calendar-interactive-20260703';
 
 const initialState = {
   version: VERSION,
@@ -27,6 +27,11 @@ const initialState = {
   selectedRecordSessionId: null,
   reviewQueue: [],
   appliedReviewQueue: [],
+  calendarEvents: [],
+  calendarCursor: '',
+  selectedDate: '',
+  notificationPermission: 'unknown',
+  calendarReminderNotified: {},
   mvpBetaCheck: {
     steps: { prep: 'unchecked', line: 'unchecked', record: 'unchecked', review: 'unchecked', want: 'unchecked' },
     memo: '',
@@ -47,6 +52,11 @@ function normalizeLoadedState(loaded) {
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
+  merged.calendarEvents = Array.isArray(loaded?.calendarEvents) ? loaded.calendarEvents : [];
+  merged.calendarCursor = loaded?.calendarCursor || '';
+  merged.selectedDate = loaded?.selectedDate || '';
+  merged.notificationPermission = loaded?.notificationPermission || 'unknown';
+  merged.calendarReminderNotified = loaded?.calendarReminderNotified || {};
   merged.mvpBetaCheck = { ...initialState.mvpBetaCheck, ...(loaded?.mvpBetaCheck || {}), steps: { ...initialState.mvpBetaCheck.steps, ...(loaded?.mvpBetaCheck?.steps || {}) } };
   return merged;
 }

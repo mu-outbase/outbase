@@ -1,26 +1,26 @@
-const CACHE_VERSION = 'core05-7-calendar-refined-20260703';
+const CACHE_VERSION = 'core05-8-calendar-interactive-20260703';
 const CACHE_NAME = `outbase-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
-  './index.html?v=core05-7-calendar-refined-20260703',
-  './manifest.json?v=core05-7-calendar-refined-20260703',
-  './styles/app.css?v=core05-7-calendar-refined-20260703',
-  './src/main.js?v=core05-7-calendar-refined-20260703',
-  './src/config/version.js?v=core05-7-calendar-refined-20260703',
-  './src/core/router.js?v=core05-7-calendar-refined-20260703',
-  './src/core/store.js?v=core05-7-calendar-refined-20260703',
-  './src/core/storage.js?v=core05-7-calendar-refined-20260703',
-  './src/ui/components.js?v=core05-7-calendar-refined-20260703',
-  './src/domain/schema.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/home/home.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/search/search.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/prep/prep.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/prep/prepEngine.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/import/import.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/day/day.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/walk/walk.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/memory/memory.js?v=core05-7-calendar-refined-20260703',
-  './src/modules/pwa/pwa.js?v=core05-7-calendar-refined-20260703'
+  './index.html?v=core05-8-calendar-interactive-20260703',
+  './manifest.json?v=core05-8-calendar-interactive-20260703',
+  './styles/app.css?v=core05-8-calendar-interactive-20260703',
+  './src/main.js?v=core05-8-calendar-interactive-20260703',
+  './src/config/version.js?v=core05-8-calendar-interactive-20260703',
+  './src/core/router.js?v=core05-8-calendar-interactive-20260703',
+  './src/core/store.js?v=core05-8-calendar-interactive-20260703',
+  './src/core/storage.js?v=core05-8-calendar-interactive-20260703',
+  './src/ui/components.js?v=core05-8-calendar-interactive-20260703',
+  './src/domain/schema.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/home/home.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/search/search.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/prep/prep.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/prep/prepEngine.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/import/import.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/day/day.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/walk/walk.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/memory/memory.js?v=core05-8-calendar-interactive-20260703',
+  './src/modules/pwa/pwa.js?v=core05-8-calendar-interactive-20260703'
 ];
 
 self.addEventListener('install', (event) => {
@@ -46,6 +46,6 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => undefined);
         return response;
       })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html?v=core05-7-calendar-refined-20260703')))
+      .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html?v=core05-8-calendar-interactive-20260703')))
   );
 });
