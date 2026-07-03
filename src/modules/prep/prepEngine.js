@@ -4,16 +4,18 @@ const CAMPGROUND_WORDS = /(キャンプ場|キャンプフィールド|オート
 
 export function extractReservationCandidate(rawText = '', sourceType = 'text', fileName = '') {
   const normalized = normalizeText(rawText);
+  const compactForSearch = compactJapaneseSpacing(normalized);
   const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
-  const campground = findCampground(lines, fileName);
-  const dateText = findDateText(normalized);
-  const checkIn = findTimeByLabel(normalized, ['チェックイン', 'IN', '入場', '到着']);
-  const checkOut = findTimeByLabel(normalized, ['チェックアウト', 'OUT', '退場', '退出']);
+  const compactLines = compactForSearch.split('\n').map((line) => line.trim()).filter(Boolean);
+  const campground = findCampground(compactLines.length ? compactLines : lines, fileName);
+  const dateText = findDateText(compactForSearch);
+  const checkIn = findTimeByLabel(compactForSearch, ['チェックイン', 'IN', '入場', '到着']);
+  const checkOut = findTimeByLabel(compactForSearch, ['チェックアウト', 'OUT', '退場', '退出']);
   const address = findAddress(lines);
   const nights = inferNights(dateText);
-  const companions = findCompanions(normalized);
+  const companions = findCompanions(compactForSearch);
   const confidence = calculateConfidence({ campground, dateText, checkIn, checkOut, address });
-  const prep = buildPrepSuggestions({ campground, dateText, nights, checkIn, checkOut, address, sourceText: normalized });
+  const prep = buildPrepSuggestions({ campground, dateText, nights, checkIn, checkOut, address, sourceText: compactForSearch });
   return {
     candidate_id: `candidate_${Date.now()}`,
     source: fileName || sourceType,
@@ -22,7 +24,7 @@ export function extractReservationCandidate(rawText = '', sourceType = 'text', f
     status: 'needs_review',
     payload: {
       title: campground && dateText ? `${campground} ${dateText}` : campground || '次のキャンプ候補',
-      reservation: { campground, dateText, nights, checkIn, checkOut, address, companions, sourceType, sourceText: normalized },
+      reservation: { campground, dateText, nights, checkIn, checkOut, address, companions, sourceType, sourceText: compactForSearch },
       prep
     }
   };
@@ -139,9 +141,10 @@ export function buildPracticalPrep(project = {}, context = {}) {
     reflection: [...(base.reflection || [])]
   };
   const text = `${context.weatherMemo} ${context.rainRisk} ${context.windMemo} ${context.menuMemo} ${context.pastReflection} ${context.gearMemo}`;
-  const high = Number(String(context.highTemp || '').replace(/[^\d.-]/g, ''));
-  const low = Number(String(context.lowTemp || '').replace(/[^\d.-]/g, ''));
-  const people = Math.max(1, Number(context.peopleCount || inferPeopleCount(reservation) || 2));
+  const high = parseOptionalNumber(context.highTemp);
+  const low = parseOptionalNumber(context.lowTemp);
+  const rainPercent = parseOptionalNumber(context.rainRisk);
+  const people = Math.max(1, parseOptionalNumber(context.peopleCount) || Number(inferPeopleCount(reservation)) || 2);
   const nightsNum = parseNights(reservation.nights) || 1;
 
   prep.shopping.unshift(`飲み物・朝食を ${people}人 × ${nightsNum}泊 で確認`);
@@ -150,16 +153,16 @@ export function buildPracticalPrep(project = {}, context = {}) {
   if (context.menuMemo) {
     splitMemo(context.menuMemo).slice(0, 4).forEach((line) => prep.shopping.unshift(`献立食材：${line}`));
   }
-  if (/雨|降水|梅雨|ぬかるみ|濡/.test(text) || Number(context.rainRisk) >= 40) {
+  if (/雨|降水|梅雨|ぬかるみ|濡/.test(text) || (rainPercent !== null && rainPercent >= 40)) {
     prep.packing.unshift('濡れ物用バッグ / 予備タオル / 雨撤収セット');
     prep.reflection.unshift('雨なら乾燥サービス・撤収順を事前確認');
   }
-  if (!Number.isNaN(high) && high >= 28) {
+  if (high !== null && high >= 28) {
     prep.shopping.unshift('氷多め / 冷たい飲み物 / 保冷剤予備');
     prep.packing.unshift('扇風機 / WAVE系 / EcoFlow残量確認');
     prep.kota.unshift('コタ冷却ベスト / 日陰 / 水分補給を優先');
   }
-  if (!Number.isNaN(low) && low <= 8) {
+  if (low !== null && low <= 8) {
     prep.packing.unshift('ストーブ燃料 / 電源 / 寝具の防寒強化');
     prep.kota.unshift('コタ用ブランケット / 底冷え対策');
   }
@@ -190,6 +193,15 @@ function normalizeText(value) {
     .trim();
 }
 
+function compactJapaneseSpacing(value) {
+  let text = normalizeText(value);
+  // OCRで「チェ ック イ ン」「スノー ピー ク」のように分断された日本語を検索用に詰める。
+  for (let i = 0; i < 4; i += 1) {
+    text = text.replace(/([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー])\s+([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー])/gu, '$1$2');
+  }
+  return text;
+}
+
 function findCampground(lines, fileName) {
   const candidateLine = lines.find((line) => CAMPGROUND_WORDS.test(line) && line.length <= 42);
   if (candidateLine) return cleanupLabel(candidateLine);
@@ -213,10 +225,13 @@ function findDateText(text) {
 }
 
 function findTimeByLabel(text, labels) {
-  const label = labels.join('|');
-  const pattern = new RegExp(`(?:${label})[^0-9]{0,12}(\\d{1,2}:\\d{2})`, 'i');
-  const match = text.match(pattern);
-  return match ? match[1] : '';
+  const compact = compactJapaneseSpacing(text).replace(/[：]/g, ':');
+  for (const label of labels) {
+    const compactLabel = compactJapaneseSpacing(label);
+    const direct = compact.match(new RegExp(`${escapeRegExp(compactLabel)}[^0-9０-９]{0,20}([0-2]?[0-9][：:]\s*[0-5][0-9])`, 'i'));
+    if (direct) return normalizeTime(direct[1]);
+  }
+  return '';
 }
 
 function findAddress(lines) {
@@ -289,4 +304,23 @@ function calculateConfidence(values) {
 
 function dedupeSuggestionGroups(groups, limit = 10) {
   return Object.fromEntries(Object.entries(groups).map(([key, items]) => [key, [...new Set(items)].slice(0, limit)]));
+}
+
+function parseOptionalNumber(value) {
+  const text = String(value || '').replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
+  const match = text.match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
+}
+
+function normalizeTime(value) {
+  const text = String(value || '')
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+    .replace('：', ':')
+    .replace(/\s+/g, '');
+  const match = text.match(/([0-2]?[0-9]):([0-5][0-9])/);
+  return match ? `${Number(match[1])}:${match[2]}` : '';
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
