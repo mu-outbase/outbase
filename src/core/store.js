@@ -23,6 +23,7 @@ const initialState = {
   recordHistory: [],
   selectedRecordSessionId: null,
   reviewQueue: [],
+  appliedReviewQueue: [],
   notes: {
     shopping: [],
     packing: [],
@@ -46,6 +47,7 @@ function normalizeLoadedState(loaded) {
   merged.notes = { ...initialState.notes, ...(loaded?.notes || {}) };
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
+  merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
   return merged;
 }
 

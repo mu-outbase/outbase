@@ -103,7 +103,7 @@ export function renderWalk() {
     ? history.find((item) => item.session_id === state.selectedRecordSessionId) || null
     : null;
   app().innerHTML = [
-    card(`<div class="title">キャンプ・散歩・日常記録 Core03.1</div><p class="muted">3秒で残す入口。写真・動画・音声メモ・GPS・タイマーを、あとで次回改善に戻す。詳細ボタンは詳細カードへ自動移動します。</p>`, 'hero'),
+    card(`<div class="title">キャンプ・散歩・日常記録</div><p class="muted">3秒で残す入口。写真・動画・音声メモ・GPS・タイマーを、あとで次回改善に戻す。記録した内容はCore04の改善タブで次回準備へ戻せます。</p>`, 'hero'),
     session ? renderActiveSession(session) : renderStartPanel(),
     renderHistory(history, selected?.session_id),
     selected ? renderDetail(selected) : ''
