@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-13-calendar-entry-redesign-20260704';
-import { getState, patchState } from '../../core/store.js?v=core05-13-calendar-entry-redesign-20260704';
-import { go } from '../../core/router.js?v=core05-13-calendar-entry-redesign-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-14-calendar-tap-recording-20260704';
+import { getState, patchState } from '../../core/store.js?v=core05-14-calendar-tap-recording-20260704';
+import { go } from '../../core/router.js?v=core05-14-calendar-tap-recording-20260704';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -274,20 +274,29 @@ function uniqueCampPlans(state) {
 }
 
 function nextPanel(state, event) {
-  const campPlans = uniqueCampPlans(state).slice(0, 5);
-  if (!event && !campPlans.length) return '';
+  if (!event) return '';
   const meta = TYPE_META[event?.type] || TYPE_META.normal;
   const count = event ? daysUntilISO(event.start) : null;
   const countText = count === null ? '' : count <= 0 ? '今日' : `あと${count}日`;
   const range = event ? (event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`) : '';
   const time = event?.startTime ? ` ${event.startTime}${event.endTime ? `-${event.endTime}` : ''}` : '';
-  return `<section class="jorte-next-strip cardless type-${escapeHtml(event?.type || 'normal')} next-home-panel">
+  return `<section class="jorte-next-strip cardless type-${escapeHtml(event?.type || 'normal')} next-home-panel simple-next-panel">
     <div class="next-panel-head"><p>NEXT</p><span>次にやること</span></div>
-    ${event ? `<div class="next-main-row"><div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div><div class="strip-main"><h2>${escapeHtml(event.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div><button id="goNextTask">${event.type === 'camp' ? (daysUntilISO(event.start) <= 0 ? '当日' : '準備') : '詳細'}</button></div>` : ''}
-    <div class="next-camp-box">
-      <div class="next-camp-title"><strong>キャンプ予定</strong><span>${campPlans.length}</span></div>
-      ${campPlans.length ? `<div class="next-camp-items">${campPlans.map((camp) => `<button class="next-camp-item" data-camp-key="${escapeHtml(occurrenceKey(camp))}"><strong>${escapeHtml(camp.title)}</strong><span>${escapeHtml(camp.start === camp.end ? prettyDate(camp.start) : `${prettyDate(camp.start)}-${prettyDate(camp.end)}`)}${camp.locked ? ' / 次回予定' : ''}</span></button>`).join('')}</div>` : '<p class="empty-line">キャンプ予定はまだありません。</p>'}
-    </div>
+    <div class="next-main-row"><div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div><div class="strip-main"><h2>${escapeHtml(event.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div><button id="goNextTask">${event.type === 'camp' ? (daysUntilISO(event.start) <= 0 ? '当日' : '準備') : '詳細'}</button></div>
+  </section>`;
+}
+
+function activeRecordingPanel(state) {
+  const session = state.walkSession;
+  if (!session || session.status !== 'active') return '';
+  const started = session.startedAt ? new Date(session.startedAt) : null;
+  const startedText = started && !Number.isNaN(started.getTime()) ? started.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '';
+  const count = Array.isArray(session.records) ? session.records.length : 0;
+  const title = session.title || '記録中';
+  const typeLabel = { walk: 'コタ散歩', camp: 'キャンプ記録', life: 'メモ' }[session.type] || '記録';
+  return `<section class="active-recording-panel cardless">
+    <div><p>REC</p><h2>${escapeHtml(title)}</h2><small>${escapeHtml(typeLabel)}${startedText ? ` / ${escapeHtml(startedText)}開始` : ''} / ${count}件</small></div>
+    <button id="goActiveRecord" type="button">記録に戻る</button>
   </section>`;
 }
 
@@ -628,6 +637,7 @@ export function renderHome() {
 
   app().innerHTML = [
     renderCalendar(state, events, cursorDate, selectedDate),
+    activeRecordingPanel(state),
     selectedDatePanel(state, selectedDate, events),
     eventDetailPanel(state, events),
     nextPanel({ ...state, calendarCursor: monthKey(cursorDate) }, upcoming)
@@ -642,12 +652,15 @@ export function renderHome() {
   document.getElementById('saveEvent')?.addEventListener('click', saveEventFromForm);
   document.getElementById('saveEventEdit')?.addEventListener('click', (event) => saveEventEdit(event.currentTarget.dataset.editKey));
   document.getElementById('goNextTask')?.addEventListener('click', () => go(eventRoute(upcoming)));
+  document.getElementById('goActiveRecord')?.addEventListener('click', () => go('walk'));
   document.getElementById('scrollSelectedDetail')?.addEventListener('click', () => focusSelectedDetail(false));
   document.querySelectorAll('[data-date]').forEach((button) => {
     button.addEventListener('click', () => {
       const iso = button.dataset.date;
-      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailKey: '', selectedEventDetailId: '' });
+      const sameDate = getState().selectedDate === iso;
+      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailKey: '', selectedEventDetailId: '' });
       renderHome();
+      if (sameDate) window.setTimeout(() => focusSelectedDetail(true), 50);
     });
   });
   document.querySelectorAll('[data-detail-date]').forEach((el) => el.addEventListener('click', (event) => {

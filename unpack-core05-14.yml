@@ -1,0 +1,49 @@
+name: OUTBASE Core05.14 Calendar Tap Recording unpack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core05_14_CalendarTapRecording.zip'
+      - '.github/workflows/unpack-core05-14.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm zip exists
+        run: |
+          set -e
+          ls -la
+          test -f OUTBASE_MVPB_Core05_14_CalendarTapRecording.zip
+
+      - name: Unzip Core05.14 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core05_14
+          mkdir -p /tmp/outbase_core05_14
+          unzip -o OUTBASE_MVPB_Core05_14_CalendarTapRecording.zip -d /tmp/outbase_core05_14
+          ls -la /tmp/outbase_core05_14
+          cp -R /tmp/outbase_core05_14/. ./
+          rm -f OUTBASE_MVPB_Core05_14_CalendarTapRecording.zip
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core05.14 calendar tap recording"
+            git push
+          fi
