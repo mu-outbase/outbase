@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems } from '../../ui/components.js?v=core05-2-intuitive-ux-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-2-intuitive-ux-20260703';
+import { app, card, escapeHtml, listItems } from '../../ui/components.js?v=core05-3-visual-ux-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-3-visual-ux-20260703';
 
 let timer = null;
 let speechRecognition = null;
@@ -93,7 +93,7 @@ export function renderWalk() {
   const selected = state.selectedRecordSessionId ? history.find((item) => item.session_id === state.selectedRecordSessionId) || null : null;
 
   app().innerHTML = [
-    card(`<div class="title">その場で残す。</div><p class="muted light">散歩、キャンプ当日、日常の気づきを軽く残します。</p>`, 'hero'),
+    `<section class="page-title"><p class="overline">RECORD</p><h2>今残す</h2></section>`,
     session ? renderActiveSession(session) : renderStartPanel(),
     renderHistory(history, selected?.session_id),
     selected ? renderDetail(selected) : ''
@@ -105,13 +105,12 @@ export function renderWalk() {
 function renderStartPanel() {
   const project = getState().nextProject;
   const title = project?.reservation?.campground ? `${project.reservation.campground} 記録` : '今日の記録';
-  return card(`<h2>何を残す？</h2>
-    <div class="choice-grid">
-      <button class="choice startSession" data-type="walk" data-title="コタ散歩">コタ散歩<span>散歩・うんち・暑さ</span></button>
-      <button class="choice startSession" data-type="camp" data-title="${escapeHtml(title)}">キャンプ当日<span>設営・料理・撤収</span></button>
-      <button class="choice startSession" data-type="life" data-title="日常メモ">日常メモ<span>あとで改善へ</span></button>
+  return card(`<div class="choice-grid">
+      <button class="choice startSession" data-type="walk" data-title="コタ散歩">コタ散歩<span>散歩</span></button>
+      <button class="choice startSession" data-type="camp" data-title="${escapeHtml(title)}">キャンプ<span>設営・料理</span></button>
+      <button class="choice startSession" data-type="life" data-title="日常メモ">日常<span>気づき</span></button>
     </div>
-    <details class="quiet-details"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="${escapeHtml(title)}" placeholder="例：赤城山1日目 / コタ夕方散歩" /></details>`);
+    <details class="quiet-details"><summary>タイトル</summary><input id="sessionTitle" class="field" value="${escapeHtml(title)}" placeholder="赤城山1日目" /></details>`);
 }
 
 function renderActiveSession(session) {
@@ -122,8 +121,7 @@ function renderActiveSession(session) {
     <p><strong>${escapeHtml(session.title || '記録中')}</strong></p>
     <div class="timer-large" id="walkTimer">${elapsedText(session.startedAt)}</div>
     <div class="record-status"><span>記録 ${records.length}件</span><span>GPS ${points.length}点 / ${distanceKm(points).toFixed(2)}km</span></div>
-    <label class="label" for="recordMemo">気づき</label>
-    <textarea id="recordMemo" class="field textarea" rows="4" placeholder="例：コタが暑そう。撤収時にタオル不足。料理が多かった。"></textarea>
+    <textarea id="recordMemo" class="field textarea" rows="4" placeholder="気づきをメモ"></textarea>
     <button id="addMemo" class="btn primary">メモを残す</button>
     <div class="quick-grid">
       <button id="photoBtn" class="btn">写真</button>
@@ -134,9 +132,9 @@ function renderActiveSession(session) {
     <details class="quiet-details"><summary>ほかの記録</summary>
       <div class="quick-grid">
         <button id="setupStart" class="btn">設営開始</button>
-        <button id="setupEnd" class="btn">設営完了</button>
+        <button id="setupEnd" class="btn">完了</button>
         <button id="teardownStart" class="btn">撤収開始</button>
-        <button id="teardownEnd" class="btn">撤収完了</button>
+        <button id="teardownEnd" class="btn">完了</button>
         <button id="voiceMemo" class="btn">音声メモ</button>
         <button id="videoBtn" class="btn">動画</button>
       </div>

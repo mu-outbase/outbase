@@ -1,10 +1,14 @@
-import { app, card, kv, listItems, escapeHtml } from '../../ui/components.js?v=core05-2-intuitive-ux-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-2-intuitive-ux-20260703';
-import { renderImportPanel } from '../import/import.js?v=core05-2-intuitive-ux-20260703';
-import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core05-2-intuitive-ux-20260703';
+import { app, card, kv, listItems, escapeHtml } from '../../ui/components.js?v=core05-3-visual-ux-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-3-visual-ux-20260703';
+import { renderImportPanel } from '../import/import.js?v=core05-3-visual-ux-20260703';
+import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core05-3-visual-ux-20260703';
 
-function firstItems(items = [], count = 6) {
+function firstItems(items = [], count = 4) {
   return (items || []).slice(0, count);
+}
+
+function count(items = []) {
+  return (items || []).length;
 }
 
 function countPrep(project) {
@@ -18,7 +22,7 @@ export function renderPrep() {
 
   if (!project) {
     app().innerHTML = [
-      card(`<div class="title">次のキャンプを作る。</div><p class="muted light">予約スクショ、予約メール、PDF、カレンダー文から始めます。</p>`, 'hero'),
+      `<section class="page-title"><p class="overline">PREP</p><h2>予定を入れる</h2></section>`,
       renderImportPanel()
     ].join('');
     window.OUTBASE_IMPORT?.bind?.();
@@ -26,8 +30,7 @@ export function renderPrep() {
   }
 
   app().innerHTML = [
-    card(`<div class="title">準備する。</div><p class="muted light">買い物、持ち物、コタ用品、料理、行き方をここでまとめます。</p>`, 'hero'),
-    renderProjectCard(project),
+    renderProjectHero(project),
     renderMainPrep(project, context),
     renderContextPanel(project, context),
     renderImportAgain()
@@ -36,54 +39,55 @@ export function renderPrep() {
   bindPrepActions(project, context);
 }
 
-function renderProjectCard(project) {
+function renderProjectHero(project) {
   const reservation = project.reservation || {};
-  return card(`<p class="eyebrow">次のキャンプ</p>
-    <h2>${escapeHtml(reservation.campground || project.title || '次のキャンプ')}</h2>
-    <p class="muted">${escapeHtml([reservation.dateText, reservation.checkIn && `IN ${reservation.checkIn}`, reservation.checkOut && `OUT ${reservation.checkOut}`].filter(Boolean).join(' / '))}</p>
-    <div class="one-line-status"><strong>準備候補 ${countPrep(project)}件</strong><span>必要な時だけ整える</span></div>`);
+  const meta = [reservation.dateText, reservation.checkIn && `IN ${reservation.checkIn}`, reservation.checkOut && `OUT ${reservation.checkOut}`].filter(Boolean).join(' / ');
+  return `<section class="camp-mini cardless"><p class="overline">PREP</p><h2>${escapeHtml(reservation.campground || project.title || '次のキャンプ')}</h2><p>${escapeHtml(meta || '日程未確定')}</p><div class="pill-line"><span>${countPrep(project)} items</span><span>LINE ready</span></div></section>`;
+}
+
+function miniList(title, items, empty) {
+  return `<section class="prep-tile"><div class="tile-head"><h3>${escapeHtml(title)}</h3><span>${count(items)}</span></div>${listItems(firstItems(items), empty)}</section>`;
 }
 
 function renderMainPrep(project, context) {
   const prep = project.prep || {};
-  return card(`<h2>今日見る準備</h2>
-    <p class="muted">まずはこのままリンに送れる形にします。細かい条件は下で足せます。</p>
-    <div class="prep-focus">
-      <section><h3>買い物</h3>${listItems(firstItems(prep.shopping), 'まだ候補なし')}</section>
-      <section><h3>持ち物</h3>${listItems(firstItems(prep.packing), 'まだ候補なし')}</section>
-      <section><h3>コタ用品</h3>${listItems(firstItems(prep.kota), 'まだ候補なし')}</section>
-      <section><h3>反省・注意</h3>${listItems(firstItems(prep.reflection), 'まだ候補なし')}</section>
+  return card(`<div class="compact-row top-align"><div><p class="eyebrow">TODAY</p><h2>持っていくもの</h2></div><button id="copyLineList" class="btn primary small-wide">LINEコピー</button></div>
+    <div class="prep-focus visual">
+      ${miniList('買う', prep.shopping, 'なし')}
+      ${miniList('持つ', prep.packing, 'なし')}
+      ${miniList('コタ', prep.kota, 'なし')}
+      ${miniList('注意', prep.reflection, 'なし')}
     </div>
-    <button id="copyLineList" class="btn primary">リンに送るリストをコピー</button>
-    <details class="quiet-details"><summary>コピー内容を見る</summary><textarea id="lineListText" class="field textarea readonly" readonly>${escapeHtml(buildLineList(project, context))}</textarea></details>`);
+    <details class="quiet-details"><summary>リスト全文</summary><textarea id="lineListText" class="field textarea readonly" readonly>${escapeHtml(buildLineList(project, context))}</textarea></details>`, 'focus-card');
 }
 
 function renderContextPanel(project, context) {
-  return card(`<details class="quiet-details">
-    <summary>料理・行き方・天気を足す</summary>
-    <p class="muted">ここは予定作成ではなく、準備を具体化するためのメモ。分かる所だけでOK。</p>
-    <div class="context-grid compact-grid">
-      <div><label class="label" for="weatherMemo">天気</label><textarea id="weatherMemo" class="field textarea compact" placeholder="例：雨予報、最高30℃、風強め">${escapeHtml(context.weatherMemo)}</textarea></div>
-      <div><label class="label" for="menuMemo">料理</label><textarea id="menuMemo" class="field textarea compact" placeholder="例：ピザ、ガーリックシュリンプ、朝ホットドッグ">${escapeHtml(context.menuMemo)}</textarea></div>
-      <div><label class="label" for="routeMemo">行き方・ドライブルート</label><textarea id="routeMemo" class="field textarea compact" placeholder="例：6:30出発、途中コンビニ、休憩多め">${escapeHtml(context.routeMemo)}</textarea></div>
-      <div><label class="label" for="setupMemo">設営・撤収</label><textarea id="setupMemo" class="field textarea compact" placeholder="例：設営時間を測る、雨撤収なら濡れ物先">${escapeHtml(context.setupMemo)}</textarea></div>
+  return card(`<details class="quiet-details visual-drawer">
+    <summary>条件を足す</summary>
+    <div class="visual-input-grid">
+      <label><span>天気</span><textarea id="weatherMemo" class="field textarea compact" placeholder="雨 / 暑い / 風">${escapeHtml(context.weatherMemo)}</textarea></label>
+      <label><span>料理</span><textarea id="menuMemo" class="field textarea compact" placeholder="ピザ / エビ / 朝食">${escapeHtml(context.menuMemo)}</textarea></label>
+      <label><span>行き方</span><textarea id="routeMemo" class="field textarea compact" placeholder="6:30出発 / コンビニ">${escapeHtml(context.routeMemo)}</textarea></label>
+      <label><span>設営撤収</span><textarea id="setupMemo" class="field textarea compact" placeholder="時間を測る / 雨撤収">${escapeHtml(context.setupMemo)}</textarea></label>
+      <label><span>ギア</span><textarea id="gearMemo" class="field textarea compact" placeholder="ヘキサ / EcoFlow / WAVE3">${escapeHtml(context.gearMemo)}</textarea></label>
+      <label><span>反省</span><textarea id="pastReflection" class="field textarea compact" placeholder="タオル不足 / 料理多い">${escapeHtml(context.pastReflection)}</textarea></label>
     </div>
-    <div class="context-grid compact-grid">
-      <div><label class="label" for="highTemp">最高気温</label><input id="highTemp" class="field" inputmode="numeric" value="${escapeHtml(context.highTemp)}" placeholder="30" /></div>
-      <div><label class="label" for="lowTemp">最低気温</label><input id="lowTemp" class="field" inputmode="numeric" value="${escapeHtml(context.lowTemp)}" placeholder="18" /></div>
-      <div><label class="label" for="rainRisk">降水</label><input id="rainRisk" class="field" value="${escapeHtml(context.rainRisk)}" placeholder="40% / 雨" /></div>
-      <div><label class="label" for="windMemo">風</label><input id="windMemo" class="field" value="${escapeHtml(context.windMemo)}" placeholder="風強め" /></div>
-      <div><label class="label" for="peopleCount">人数</label><input id="peopleCount" class="field" inputmode="numeric" value="${escapeHtml(context.peopleCount)}" /></div>
-      <div><label class="label" for="kotaGoing">コタ</label><select id="kotaGoing" class="field"><option value="yes" ${context.kotaGoing !== 'no' ? 'selected' : ''}>同行</option><option value="no" ${context.kotaGoing === 'no' ? 'selected' : ''}>同行なし</option></select></div>
-    </div>
-    <label class="label" for="gearMemo">ギア</label><textarea id="gearMemo" class="field textarea compact" placeholder="例：リビングシェル、ヘキサ、EcoFlow、WAVE3、ドッグカート">${escapeHtml(context.gearMemo)}</textarea>
-    <label class="label" for="pastReflection">前回反省</label><textarea id="pastReflection" class="field textarea compact" placeholder="例：雨撤収が大変、タオル不足、料理多すぎた">${escapeHtml(context.pastReflection)}</textarea>
-    <button id="updatePracticalPrep" class="btn primary">準備を整える</button>
-  </details>`);
+    <details class="quiet-details nested"><summary>細かい条件</summary>
+      <div class="context-grid compact-grid">
+        <input id="highTemp" class="field" inputmode="numeric" value="${escapeHtml(context.highTemp)}" placeholder="最高気温" />
+        <input id="lowTemp" class="field" inputmode="numeric" value="${escapeHtml(context.lowTemp)}" placeholder="最低気温" />
+        <input id="rainRisk" class="field" value="${escapeHtml(context.rainRisk)}" placeholder="降水" />
+        <input id="windMemo" class="field" value="${escapeHtml(context.windMemo)}" placeholder="風" />
+        <input id="peopleCount" class="field" inputmode="numeric" value="${escapeHtml(context.peopleCount)}" placeholder="人数" />
+        <select id="kotaGoing" class="field"><option value="yes" ${context.kotaGoing !== 'no' ? 'selected' : ''}>コタ同行</option><option value="no" ${context.kotaGoing === 'no' ? 'selected' : ''}>コタなし</option></select>
+      </div>
+    </details>
+    <button id="updatePracticalPrep" class="btn primary">整える</button>
+  </details>`, 'quiet-card');
 }
 
 function renderImportAgain() {
-  return card(`<details class="quiet-details"><summary>予約を取り込み直す</summary>${renderImportPanel()}</details>`, 'quiet-card');
+  return card(`<details class="quiet-details"><summary>予約を入れ直す</summary>${renderImportPanel()}</details>`, 'quiet-card');
 }
 
 function bindPrepActions(project, context) {
@@ -106,10 +110,7 @@ function bindPrepActions(project, context) {
       await navigator.clipboard.writeText(text);
       if (area) area.value = `${text}\n\nコピー済み`;
     } catch {
-      if (area) {
-        area.focus();
-        area.select();
-      }
+      if (area) { area.focus(); area.select(); }
     }
   });
 }

@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core05-2-intuitive-ux-20260703';
+import { patchState } from './store.js?v=core05-3-visual-ux-20260703';
 
 const routes = new Map();
 

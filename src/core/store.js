@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-2-intuitive-ux-20260703';
-import { VERSION } from '../config/version.js?v=core05-2-intuitive-ux-20260703';
+import { loadState, saveState } from './storage.js?v=core05-3-visual-ux-20260703';
+import { VERSION } from '../config/version.js?v=core05-3-visual-ux-20260703';
 
 const initialState = {
   version: VERSION,
