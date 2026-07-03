@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core05-4-ergo-design-20260703';
+import { patchState } from './store.js?v=core05-5-time-phase-ux-20260703';
 
 const routes = new Map();
 
@@ -8,9 +8,11 @@ export function registerRoute(name, renderer) {
 
 export function go(routeName) {
   const renderer = routes.get(routeName) || routes.get('home');
-  patchState({ currentRoute: routeName });
+  const resolved = routes.has(routeName) ? routeName : 'home';
+  document.body.dataset.route = resolved;
+  patchState({ currentRoute: resolved });
   document.querySelectorAll('[data-route]').forEach((button) => {
-    button.classList.toggle('active', button.dataset.route === routeName);
+    button.classList.toggle('active', button.dataset.route === resolved);
   });
   renderer?.();
 }

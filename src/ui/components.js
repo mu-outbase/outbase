@@ -24,6 +24,18 @@ export function kv(label, value) {
   return `<div class="kv"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || '未確定')}</strong></div>`;
 }
 
+export function applyRuntimeTheme() {
+  const hour = new Date().getHours();
+  let theme = 'day';
+  let label = 'day';
+  if (hour >= 5 && hour < 10) { theme = 'morning'; label = 'morning'; }
+  else if (hour >= 10 && hour < 16) { theme = 'day'; label = 'day'; }
+  else if (hour >= 16 && hour < 19) { theme = 'evening'; label = 'sunset'; }
+  else { theme = 'night'; label = 'night'; }
+  document.body.dataset.theme = theme;
+  return { theme, label, hour };
+}
+
 export function toast(message = '完了') {
   let el = document.getElementById('outbaseToast');
   if (!el) {

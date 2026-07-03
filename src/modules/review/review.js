@@ -1,6 +1,6 @@
-import { app, card, listItems, escapeHtml, toast } from '../../ui/components.js?v=core05-4-ergo-design-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-4-ergo-design-20260703';
-import { go } from '../../core/router.js?v=core05-4-ergo-design-20260703';
+import { app, card, listItems, escapeHtml, toast } from '../../ui/components.js?v=core05-5-time-phase-ux-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-5-time-phase-ux-20260703';
+import { go } from '../../core/router.js?v=core05-5-time-phase-ux-20260703';
 
 function formatTime(value) {
   if (!value) return '';

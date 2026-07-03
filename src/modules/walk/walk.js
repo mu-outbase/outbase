@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core05-4-ergo-design-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-4-ergo-design-20260703';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core05-5-time-phase-ux-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-5-time-phase-ux-20260703';
 
 let timer = null;
 let speechRecognition = null;

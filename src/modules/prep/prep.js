@@ -1,7 +1,7 @@
-import { app, card, listItems, escapeHtml, toast } from '../../ui/components.js?v=core05-4-ergo-design-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-4-ergo-design-20260703';
-import { renderImportPanel } from '../import/import.js?v=core05-4-ergo-design-20260703';
-import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core05-4-ergo-design-20260703';
+import { app, card, listItems, escapeHtml, toast } from '../../ui/components.js?v=core05-5-time-phase-ux-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-5-time-phase-ux-20260703';
+import { renderImportPanel } from '../import/import.js?v=core05-5-time-phase-ux-20260703';
+import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core05-5-time-phase-ux-20260703';
 
 const FOCUS_META = {
   shopping: { label: '買う', sub: '買い物' },
@@ -10,13 +10,8 @@ const FOCUS_META = {
   kota: { label: 'コタ', sub: '犬用品' }
 };
 
-function firstItems(items = [], count = 6) {
-  return (items || []).slice(0, count);
-}
-
-function countPrep(project) {
-  return project?.prep ? Object.values(project.prep).reduce((sum, items) => sum + (items?.length || 0), 0) : 0;
-}
+function firstItems(items = [], count = 6) { return (items || []).slice(0, count); }
+function countPrep(project) { return project?.prep ? Object.values(project.prep).reduce((sum, items) => sum + (items?.length || 0), 0) : 0; }
 
 function mealItems(project, context) {
   const menu = String(context.menuMemo || '').trim();
@@ -39,20 +34,12 @@ export function renderPrep() {
   const focus = state.prepFocus || 'shopping';
 
   if (!project) {
-    app().innerHTML = [
-      `<section class="page-title"><p class="overline">PREP</p><h2>予定を入れる</h2></section>`,
-      renderImportPanel()
-    ].join('');
+    app().innerHTML = [`<section class="page-title"><p class="overline">前 / BEFORE</p><h2>予定を入れる</h2></section>`, renderImportPanel()].join('');
     window.OUTBASE_IMPORT?.bind?.();
     return;
   }
 
-  app().innerHTML = [
-    renderProjectHero(project),
-    renderFocusPrep(project, context, focus),
-    renderContextPanel(project, context),
-    renderImportAgain()
-  ].join('');
+  app().innerHTML = [renderProjectHero(project), renderFocusPrep(project, context, focus), renderContextPanel(project, context), renderImportAgain()].join('');
   window.OUTBASE_IMPORT?.bind?.();
   bindPrepActions(project, context);
 }
@@ -60,7 +47,7 @@ export function renderPrep() {
 function renderProjectHero(project) {
   const r = project.reservation || {};
   const meta = [r.dateText, r.checkIn && `IN ${r.checkIn}`, r.checkOut && `OUT ${r.checkOut}`].filter(Boolean).join(' / ');
-  return `<section class="mini-hero cardless"><p class="overline">PREP</p><h2>${escapeHtml(r.campground || project.title || '次のキャンプ')}</h2><p>${escapeHtml(meta || '日程未確定')}</p><div class="pill-line"><span>${countPrep(project)} items</span><span>LINE ready</span></div></section>`;
+  return `<section class="mini-hero cardless"><div class="hero-content"><span class="phase-badge">前 / BEFORE</span><h2>${escapeHtml(r.campground || project.title || '次のキャンプ')}</h2><p class="hero-date">${escapeHtml(meta || '日程未確定')}</p><div class="pill-line"><span>${countPrep(project)} items</span><span>LINE ready</span></div></div></section>`;
 }
 
 function renderTabs(project, context, focus) {
@@ -74,17 +61,13 @@ function renderFocusPrep(project, context, focus) {
   const meta = FOCUS_META[focus] || FOCUS_META.shopping;
   const items = focusItems(project, context, focus);
   return card(`${renderTabs(project, context, focus)}
-    <section class="focus-list">
-      <div class="list-head"><strong>${escapeHtml(meta.label)}</strong><span>${items.length}</span></div>
-      ${listItems(firstItems(items), 'なし')}
-    </section>
+    <section class="focus-list"><div class="list-head"><strong>${escapeHtml(meta.label)}</strong><span>${items.length}</span></div>${listItems(firstItems(items), 'なし')}</section>
     <div class="thumb-row"><button id="copyLineList" class="btn primary">LINEコピー</button><button class="btn ghost" id="showFullList">全文</button></div>
     <details class="quiet-details" id="fullListDetails"><summary>リスト全文</summary><textarea id="lineListText" class="field textarea readonly" readonly>${escapeHtml(buildLineList(project, context))}</textarea></details>`, 'focus');
 }
 
 function renderContextPanel(project, context) {
-  return card(`<details class="quiet-details">
-    <summary>条件を足す</summary>
+  return card(`<details class="quiet-details"><summary>条件を足す</summary>
     <div class="quick-input-grid">
       <label><span>天気</span><textarea id="weatherMemo" class="field textarea compact" placeholder="雨 / 暑い / 風">${escapeHtml(context.weatherMemo)}</textarea></label>
       <label><span>料理</span><textarea id="menuMemo" class="field textarea compact" placeholder="ピザ / エビ / 朝食">${escapeHtml(context.menuMemo)}</textarea></label>
@@ -107,16 +90,11 @@ function renderContextPanel(project, context) {
   </details>`, 'soft');
 }
 
-function renderImportAgain() {
-  return card(`<details class="quiet-details"><summary>予約を入れ直す</summary>${renderImportPanel()}</details>`, 'soft');
-}
+function renderImportAgain() { return card(`<details class="quiet-details"><summary>予約を入れ直す</summary>${renderImportPanel()}</details>`, 'soft'); }
 
 function bindPrepActions(project, context) {
   document.querySelectorAll('.prepFocus').forEach((button) => {
-    button.addEventListener('click', () => {
-      patchState({ prepFocus: button.dataset.focus });
-      renderPrep();
-    });
+    button.addEventListener('click', () => { patchState({ prepFocus: button.dataset.focus }); renderPrep(); });
   });
   document.getElementById('showFullList')?.addEventListener('click', () => {
     const details = document.getElementById('fullListDetails');
@@ -139,7 +117,9 @@ function bindPrepActions(project, context) {
     const area = document.getElementById('lineListText');
     try {
       await navigator.clipboard.writeText(text);
-      if (area) area.value = `${text}\n\nコピー済み`;
+      if (area) area.value = `${text}
+
+コピー済み`;
       toast('LINEリストをコピー');
     } catch {
       if (area) { area.focus(); area.select(); }
