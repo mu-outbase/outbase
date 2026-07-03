@@ -151,7 +151,8 @@ export function buildPracticalPrep(project = {}, context = {}) {
   prep.packing.unshift(`着替え・タオルを ${people}人 × ${nightsNum}泊 で確認`);
 
   if (context.menuMemo) {
-    splitMemo(context.menuMemo).slice(0, 4).forEach((line) => prep.shopping.unshift(`献立食材：${line}`));
+    prependItems(prep.shopping, menuShoppingItems(context.menuMemo));
+    splitMemo(context.menuMemo).slice(0, 4).forEach((line) => prep.shopping.unshift(`献立メモ：${line}`));
   }
   if (/雨|降水|梅雨|ぬかるみ|濡/.test(text) || (rainPercent !== null && rainPercent >= 40)) {
     prep.packing.unshift('濡れ物用バッグ / 予備タオル / 雨撤収セット');
@@ -176,12 +177,89 @@ export function buildPracticalPrep(project = {}, context = {}) {
     prep.kota = ['コタ同行なし。ペット用品は不要または留守番側で確認'];
   }
   if (context.pastReflection) {
-    splitMemo(context.pastReflection).slice(0, 5).forEach((line) => prep.reflection.unshift(`前回反省：${line}`));
+    prependItems(prep.reflection, reflectionActionItems(context.pastReflection));
+    splitMemo(context.pastReflection).slice(0, 5).forEach((line) => prep.reflection.unshift(`前回反省メモ：${line}`));
   }
   if (context.gearMemo) {
-    splitMemo(context.gearMemo).slice(0, 5).forEach((line) => prep.packing.unshift(`ギア確認：${line}`));
+    prependItems(prep.packing, gearPackingItems(context.gearMemo));
+    splitMemo(context.gearMemo).slice(0, 5).forEach((line) => prep.packing.unshift(`ギア確認メモ：${line}`));
   }
-  return dedupeSuggestionGroups(prep, 14);
+  return dedupeSuggestionGroups(prep, 18);
+}
+
+function prependItems(target, items = []) {
+  [...items].reverse().forEach((item) => {
+    if (item) target.unshift(item);
+  });
+}
+
+function menuShoppingItems(value) {
+  const text = compactJapaneseSpacing(value);
+  const items = [];
+  if (/ピザ/.test(text)) {
+    items.push('ピザ：チーズ / ピザソース / 具材 / 追いオリーブオイル');
+  }
+  if (/ガーリックシュリンプ|シュリンプ|エビ|海老|ブラックタイガー/.test(text)) {
+    items.push('ガーリックシュリンプ：エビ / にんにく / バター / レモン');
+  }
+  if (/アヒージョ/.test(text)) {
+    items.push('アヒージョ：オリーブオイル / にんにく / 具材 / バケット有無確認');
+  }
+  if (/ホットドッグ|ホットドック/.test(text)) {
+    items.push('ホットドッグ：パン / ソーセージ / ケチャップ / マスタード');
+  }
+  if (/ローストビーフ/.test(text)) {
+    items.push('ローストビーフ：肉 / ソース / レタス系 / パン有無確認');
+  }
+  if (/朝/.test(text)) {
+    items.push('朝食：パン / 卵 / 飲み物を人数分で確認');
+  }
+  return items;
+}
+
+function gearPackingItems(value) {
+  const text = compactJapaneseSpacing(value);
+  const items = [];
+  if (/リビングシェル/.test(text)) {
+    items.push('リビングシェル：幕体 / フレーム / ペグ / 張り綱');
+  }
+  if (/ヘキサ|タープ/.test(text)) {
+    items.push('ヘキサ・タープ：幕体 / ポール / 鍛造ペグ / ガイロープ');
+  }
+  if (/EcoFlow|DELTA|電源/.test(text)) {
+    items.push('EcoFlow：本体 / 充電ケーブル / 残量確認');
+  }
+  if (/WAVE\s*3|WAVE3|ウェーブ/.test(text)) {
+    items.push('WAVE3：本体 / 排気ダクト / ドレン / 予備電源');
+  }
+  if (/ドッグカート|カート/.test(text)) {
+    items.push('ドッグカート：本体 / レインカバー / 保冷対策');
+  }
+  if (/IGT/.test(text)) {
+    items.push('IGT：天板 / 脚 / 必要ユニット / 収納ケース');
+  }
+  return items;
+}
+
+function reflectionActionItems(value) {
+  const text = compactJapaneseSpacing(value);
+  const items = [];
+  if (/雨撤収|雨.*撤収|濡/.test(text)) {
+    items.push('前回反省：雨撤収用に濡れ物バッグと収納順を先に決める');
+  }
+  if (/タオル不足|タオル.*足り/.test(text)) {
+    items.push('前回反省：人用・コタ用の予備タオルを追加');
+  }
+  if (/料理多すぎ|料理.*多|食材.*多/.test(text)) {
+    items.push('前回反省：食材量を2人×1泊基準に絞る');
+  }
+  if (/忘れ物|忘れ/.test(text)) {
+    items.push('前回反省：出発前夜に忘れ物チェックを実施');
+  }
+  if (/撤収時間|時間.*押/.test(text)) {
+    items.push('前回反省：朝の撤収順と先に片付ける物を決める');
+  }
+  return items;
 }
 
 function normalizeText(value) {
@@ -204,10 +282,10 @@ function compactJapaneseSpacing(value) {
 
 function findCampground(lines, fileName) {
   const candidateLine = lines.find((line) => CAMPGROUND_WORDS.test(line) && line.length <= 42);
-  if (candidateLine) return cleanupLabel(candidateLine);
+  if (candidateLine) return cleanupCampground(candidateLine);
   const firstMeaningful = lines.find((line) => line.length >= 3 && line.length <= 36 && !/予約|確認|日程|住所|電話|メール|金額/.test(line));
-  if (firstMeaningful) return cleanupLabel(firstMeaningful);
-  if (fileName) return fileName.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
+  if (firstMeaningful) return cleanupCampground(firstMeaningful);
+  if (fileName) return cleanupCampground(fileName.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
   return '';
 }
 
@@ -289,6 +367,16 @@ function shorten(value, max = 30) {
 function cleanupLabel(value) {
   return String(value || '')
     .replace(/^(施設名|キャンプ場名|会場|場所|タイトル|件名)[:：\s]*/,'')
+    .trim();
+}
+
+function cleanupCampground(value) {
+  return cleanupLabel(value)
+    // OCRの末尾ゴミ「@)」「（J」「(J」などを落とす。キャンプ場名の本体は残す。
+    .replace(/[（(]\s*[@＠A-Za-z0-9]{1,5}\s*[）)]?\s*$/u, '')
+    .replace(/\s*[@＠][A-Za-z0-9]?\s*[）)]?\s*$/u, '')
+    .replace(/\s+[A-Za-z@＠]{1,2}[）)]?\s*$/u, '')
+    .replace(/[（(]\s*$/u, '')
     .trim();
 }
 
