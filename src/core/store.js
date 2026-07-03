@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-10-jorte-refined-20260703';
-import { VERSION } from '../config/version.js?v=core05-10-jorte-refined-20260703';
+import { loadState, saveState } from './storage.js?v=core05-11-jorte-refined-confirm-20260703';
+import { VERSION } from '../config/version.js?v=core05-11-jorte-refined-confirm-20260703';
 
 const initialState = {
   version: VERSION,

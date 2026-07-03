@@ -1,7 +1,7 @@
-import { app, card, listItems, escapeHtml, toast } from '../../ui/components.js?v=core05-10-jorte-refined-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-10-jorte-refined-20260703';
-import { renderImportPanel } from '../import/import.js?v=core05-10-jorte-refined-20260703';
-import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core05-10-jorte-refined-20260703';
+import { app, card, listItems, escapeHtml, toast } from '../../ui/components.js?v=core05-11-jorte-refined-confirm-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-11-jorte-refined-confirm-20260703';
+import { renderImportPanel } from '../import/import.js?v=core05-11-jorte-refined-confirm-20260703';
+import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core05-11-jorte-refined-confirm-20260703';
 
 const FOCUS_META = {
   shopping: { label: '買う', sub: '買い物' },

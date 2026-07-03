@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-10-jorte-refined-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-10-jorte-refined-20260703';
-import { go } from '../../core/router.js?v=core05-10-jorte-refined-20260703';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-11-jorte-refined-confirm-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-11-jorte-refined-confirm-20260703';
+import { go } from '../../core/router.js?v=core05-11-jorte-refined-confirm-20260703';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -328,15 +328,57 @@ function selectedDatePanel(state, selectedDate, events) {
   </section>`;
 }
 
+function findEventById(events, eventId) {
+  return events.find((event) => [event.id, event.baseId, event.originalId].filter(Boolean).includes(eventId));
+}
+
+function eventDetailPanel(state, events) {
+  const eventId = state.selectedEventDetailId;
+  if (!eventId) return '';
+  const event = findEventById(events, eventId);
+  if (!event) return '';
+  const meta = TYPE_META[event.type] || TYPE_META.normal;
+  const range = event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`;
+  const time = timeLabel(event);
+  const recurrence = recurrenceLabel(event);
+  const reminder = reminderLabel(event.reminder);
+  return `<section class="event-detail-panel cardless" id="eventDetailPanel">
+    <div class="event-detail-head type-${escapeHtml(event.type)}">
+      <div><p>登録内容</p><h2>${escapeHtml(event.title)}</h2></div>
+      <button id="closeEventDetail" aria-label="詳細を閉じる">×</button>
+    </div>
+    <div class="event-detail-body">
+      <dl>
+        <div><dt>種類</dt><dd>${escapeHtml(meta.label)}</dd></div>
+        <div><dt>日付</dt><dd>${escapeHtml(range)}</dd></div>
+        <div><dt>時間</dt><dd>${time ? escapeHtml(time) : '指定なし'}</dd></div>
+        <div><dt>通知</dt><dd>${escapeHtml(reminder)}</dd></div>
+        <div><dt>繰り返し</dt><dd>${recurrence ? escapeHtml(recurrence) : 'なし'}</dd></div>
+        <div><dt>状態</dt><dd>${event.done ? '完了' : '未完了'}</dd></div>
+      </dl>
+      ${event.memo ? `<div class="event-detail-memo"><strong>メモ</strong><p>${escapeHtml(event.memo)}</p></div>` : '<p class="empty-line">メモは登録されていません。</p>'}
+      <div class="event-detail-actions">
+        <button class="btn" data-toggle-done="${escapeHtml(event.originalId || event.baseId || event.id)}">${event.done ? '未完了に戻す' : '完了にする'}</button>
+        ${event.locked ? '' : `<button class="btn danger" data-delete-event="${escapeHtml(event.originalId || event.baseId || event.id)}">削除</button>`}
+      </div>
+    </div>
+  </section>`;
+}
+
 function renderSelectedEvent(event) {
   const meta = TYPE_META[event.type] || TYPE_META.normal;
   const range = event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`;
   const time = timeLabel(event);
   const recurrence = recurrenceLabel(event);
-  return `<div class="jorte-detail-event type-${escapeHtml(event.type)} ${event.done ? 'done' : ''}" data-detail-event="${escapeHtml(event.originalId || event.baseId || event.id)}">
-    <button class="done-toggle" data-toggle-done="${escapeHtml(event.originalId || event.baseId || event.id)}">${event.done ? '済' : '□'}</button>
-    <div><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(range)}${time ? ` / ${escapeHtml(time)}` : ''} / ${escapeHtml(meta.label)}${event.reminder !== 'none' ? ` / 通知:${reminderLabel(event.reminder)}` : ''}${recurrence ? ` / ${escapeHtml(recurrence)}` : ''}</small>${event.memo ? `<p>${escapeHtml(event.memo)}</p>` : ''}</div>
-    ${event.locked ? '' : `<button class="delete-event" data-delete-event="${escapeHtml(event.originalId || event.baseId || event.id)}">削除</button>`}
+  const id = event.originalId || event.baseId || event.id;
+  return `<div class="jorte-detail-event type-${escapeHtml(event.type)} ${event.done ? 'done' : ''}">
+    <button class="done-toggle" data-toggle-done="${escapeHtml(id)}" aria-label="完了切替">${event.done ? '済' : '□'}</button>
+    <button class="event-label-button" data-show-event-detail="${escapeHtml(id)}">
+      <strong>${escapeHtml(event.title)}</strong>
+      <small>${escapeHtml(range)}${time ? ` / ${escapeHtml(time)}` : ''} / ${escapeHtml(meta.label)}${event.reminder !== 'none' ? ` / 通知:${reminderLabel(event.reminder)}` : ''}${recurrence ? ` / ${escapeHtml(recurrence)}` : ''}</small>
+      ${event.memo ? `<p>${escapeHtml(event.memo)}</p>` : ''}
+    </button>
+    ${event.locked ? '' : `<button class="delete-event" data-delete-event="${escapeHtml(id)}">削除</button>`}
   </div>`;
 }
 
@@ -387,7 +429,10 @@ function saveEventFromForm() {
 
 function deleteEvent(eventId) {
   const state = getState();
-  patchState({ calendarEvents: (state.calendarEvents || []).filter((event) => event.id !== eventId && event.baseId !== eventId) });
+  const target = (state.calendarEvents || []).find((event) => event.id === eventId || event.baseId === eventId);
+  const title = target?.title || 'この予定';
+  if (!window.confirm(`${title} を削除しますか？`)) return;
+  patchState({ calendarEvents: (state.calendarEvents || []).filter((event) => event.id !== eventId && event.baseId !== eventId), selectedEventDetailId: '' });
   toast('予定を削除しました');
   renderHome();
 }
@@ -463,6 +508,7 @@ export function renderHome() {
   app().innerHTML = [
     renderCalendar(state, events, cursorDate, selectedDate),
     selectedDatePanel(state, selectedDate, events),
+    eventDetailPanel(state, events),
     compactUpcomingStrip(upcoming)
   ].join('');
 
@@ -480,7 +526,7 @@ export function renderHome() {
     button.addEventListener('click', () => {
       const iso = button.dataset.date;
       const sameDate = getState().selectedDate === iso;
-      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate });
+      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailId: '' });
       renderHome();
       window.setTimeout(() => focusSelectedDetail(sameDate), 50);
     });
@@ -488,10 +534,16 @@ export function renderHome() {
   document.querySelectorAll('[data-detail-date]').forEach((el) => el.addEventListener('click', (event) => {
     event.stopPropagation();
     const iso = el.dataset.detailDate;
-    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false });
+    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailId: el.dataset.eventId || '' });
     renderHome();
     window.setTimeout(() => focusSelectedDetail(false), 50);
   }));
+  document.querySelectorAll('[data-show-event-detail]').forEach((button) => button.addEventListener('click', () => {
+    patchState({ selectedEventDetailId: button.dataset.showEventDetail, calendarAddOpen: false });
+    renderHome();
+    window.setTimeout(() => document.getElementById('eventDetailPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }));
+  document.getElementById('closeEventDetail')?.addEventListener('click', () => { patchState({ selectedEventDetailId: '' }); renderHome(); });
   document.querySelectorAll('[data-delete-event]').forEach((button) => button.addEventListener('click', () => deleteEvent(button.dataset.deleteEvent)));
   document.querySelectorAll('[data-toggle-done]').forEach((button) => button.addEventListener('click', () => toggleDone(button.dataset.toggleDone)));
   bindSwipe(document.querySelector('.jorte-calendar-shell'), cursorDate);

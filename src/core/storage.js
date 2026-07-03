@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js?v=core05-10-jorte-refined-20260703';
+import { STORAGE_KEY } from '../config/version.js?v=core05-11-jorte-refined-confirm-20260703';
 
 export function loadState() {
   try {
