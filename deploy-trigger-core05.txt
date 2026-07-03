@@ -1,0 +1,2 @@
+Force GitHub Pages redeploy for OUTBASE Core05
+Expected version: MVPB_CORE05_MVP_FLOW_CHECK
