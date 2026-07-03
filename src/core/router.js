@@ -1,9 +1,9 @@
-import { patchState } from './store.js?v=core05-12-calendar-edit-recurring-20260703';
+import { patchState } from './store.js?v=core05-13-calendar-entry-redesign-20260704';
 
 const routes = new Map();
 
 const ROUTE_LABELS = {
-  home: '予定',
+  home: 'カレンダー',
   search: '探す',
   prep: '準備',
   walk: '記録',

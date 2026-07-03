@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-12-calendar-edit-recurring-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-12-calendar-edit-recurring-20260703';
-import { go } from '../../core/router.js?v=core05-12-calendar-edit-recurring-20260703';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-13-calendar-entry-redesign-20260704';
+import { getState, patchState } from '../../core/store.js?v=core05-13-calendar-entry-redesign-20260704';
+import { go } from '../../core/router.js?v=core05-13-calendar-entry-redesign-20260704';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -233,15 +233,10 @@ function renderCalendar(state, events, cursorDate, selectedDate) {
     </button>`);
   }
   return `<section class="jorte-calendar-shell cardless">
-    <div class="jorte-monthbar">
+    <div class="jorte-monthbar calendar-entry-bar">
       <button id="prevMonth" aria-label="前月">‹</button>
-      <h2>${escapeHtml(monthTitle(cursorDate))}</h2>
+      <h2><span>${escapeHtml(monthTitle(cursorDate))}</span><button id="goTodayMonth" class="today-chip" type="button">今日</button></h2>
       <button id="nextMonth" aria-label="翌月">›</button>
-    </div>
-    <div class="jorte-toolbar">
-      <button id="goTodayMonth">今日</button>
-      <button id="openQuickAdd">新規</button>
-      <button id="requestNotify">通知ON</button>
     </div>
     <div class="jorte-week"><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span></div>
     <div class="jorte-grid">${cells.join('')}</div>
@@ -265,17 +260,34 @@ function recurrenceLabel(event) {
 function timeLabel(event) { return !event.startTime && !event.endTime ? '' : `${event.startTime || ''}${event.endTime ? `-${event.endTime}` : ''}`; }
 function reminderLabel(value) { return REMINDER_META[value] || 'なし'; }
 
-function compactUpcomingStrip(event) {
-  if (!event) return '';
-  const meta = TYPE_META[event.type] || TYPE_META.normal;
-  const count = daysUntilISO(event.start);
+function uniqueCampPlans(state) {
+  const start = new Date();
+  const cursorList = [];
+  for (let i = 0; i < 18; i += 1) cursorList.push(new Date(start.getFullYear(), start.getMonth() + i, 1));
+  const all = cursorList.flatMap((cursor) => getEvents(state, cursor))
+    .filter((event) => event.type === 'camp' && event.end >= toISO(new Date()))
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const unique = [];
+  const seen = new Set();
+  all.forEach((event) => { const key = occurrenceKey(event); if (!seen.has(key)) { seen.add(key); unique.push(event); } });
+  return unique;
+}
+
+function nextPanel(state, event) {
+  const campPlans = uniqueCampPlans(state).slice(0, 5);
+  if (!event && !campPlans.length) return '';
+  const meta = TYPE_META[event?.type] || TYPE_META.normal;
+  const count = event ? daysUntilISO(event.start) : null;
   const countText = count === null ? '' : count <= 0 ? '今日' : `あと${count}日`;
-  const range = event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`;
-  const time = event.startTime ? ` ${event.startTime}${event.endTime ? `-${event.endTime}` : ''}` : '';
-  return `<section class="jorte-next-strip cardless type-${escapeHtml(event.type)}">
-    <div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div>
-    <div class="strip-main"><p>NEXT</p><h2>${escapeHtml(event.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div>
-    <button id="goNextTask">${event.type === 'camp' ? (daysUntilISO(event.start) <= 0 ? '当日' : '準備') : '詳細'}</button>
+  const range = event ? (event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`) : '';
+  const time = event?.startTime ? ` ${event.startTime}${event.endTime ? `-${event.endTime}` : ''}` : '';
+  return `<section class="jorte-next-strip cardless type-${escapeHtml(event?.type || 'normal')} next-home-panel">
+    <div class="next-panel-head"><p>NEXT</p><span>次にやること</span></div>
+    ${event ? `<div class="next-main-row"><div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div><div class="strip-main"><h2>${escapeHtml(event.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div><button id="goNextTask">${event.type === 'camp' ? (daysUntilISO(event.start) <= 0 ? '当日' : '準備') : '詳細'}</button></div>` : ''}
+    <div class="next-camp-box">
+      <div class="next-camp-title"><strong>キャンプ予定</strong><span>${campPlans.length}</span></div>
+      ${campPlans.length ? `<div class="next-camp-items">${campPlans.map((camp) => `<button class="next-camp-item" data-camp-key="${escapeHtml(occurrenceKey(camp))}"><strong>${escapeHtml(camp.title)}</strong><span>${escapeHtml(camp.start === camp.end ? prettyDate(camp.start) : `${prettyDate(camp.start)}-${prettyDate(camp.end)}`)}${camp.locked ? ' / 次回予定' : ''}</span></button>`).join('')}</div>` : '<p class="empty-line">キャンプ予定はまだありません。</p>'}
+    </div>
   </section>`;
 }
 
@@ -292,12 +304,16 @@ function renderRecurrenceOptions(selected) {
 function selectedDatePanel(state, selectedDate, events) {
   const items = eventForDate(events, selectedDate);
   const open = state.calendarAddOpen ? ' open' : '';
-  return `<section class="jorte-detail cardless" id="selectedDateDetail">
-    <button class="memo-bar" id="scrollSelectedDetail">ToDo&amp;メモ <span>${escapeHtml(prettyDate(selectedDate))}</span></button>
+  return `<section class="jorte-detail cardless selected-day-sheet" id="selectedDateDetail">
+    <div class="memo-bar"><span>ToDo&amp;メモ</span><strong>${escapeHtml(prettyDate(selectedDate))}</strong></div>
     <div class="day-detail compact-day-detail">
-      ${items.length ? items.map(renderSelectedEvent).join('') : '<p class="empty-line">日付をもう一度タップすると予定追加を開きます。</p>'}
+      <div class="selected-day-topline">
+        <p>${items.length ? `${items.length}件の予定` : '予定なし'}</p>
+        <button id="openDayAdd" class="day-add-button" type="button">＋予定追加</button>
+      </div>
+      ${items.length ? items.map(renderSelectedEvent).join('') : '<p class="empty-line">日付をタップすると、ここだけ切り替わります。</p>'}
       <details class="jorte-add" id="jorteAddBox"${open}>
-        <summary>＋ この日に予定を追加</summary>
+        <summary>この日に予定を追加する</summary>
         <div class="calendar-form">
           <input id="eventTitle" class="field" value="" placeholder="予定名 例：キャンプ / コタ病院 / 支払い" />
           <div class="form-grid">
@@ -399,11 +415,11 @@ function renderSelectedEvent(event) {
   const key = occurrenceKey(event);
   return `<div class="jorte-detail-event type-${escapeHtml(event.type)} ${event.done ? 'done' : ''}">
     <button class="done-toggle" data-toggle-done="${escapeHtml(event.originalId || event.baseId || event.id)}" aria-label="完了切替">${event.done ? '済' : '□'}</button>
-    <button class="event-label-button" data-show-event-detail="${escapeHtml(key)}">
+    <div class="event-label-button">
       <strong>${escapeHtml(event.title)}</strong>
       <small>${escapeHtml(range)}${time ? ` / ${escapeHtml(time)}` : ''} / ${escapeHtml(meta.label)}${event.reminder !== 'none' ? ` / 通知:${reminderLabel(event.reminder)}` : ''}${recurrence ? ` / ${escapeHtml(recurrence)}` : ''}</small>
       ${event.memo ? `<p>${escapeHtml(event.memo)}</p>` : ''}
-    </button>
+    </div>
     ${event.locked ? '' : `<button class="edit-event" data-show-event-detail="${escapeHtml(key)}">修正</button>`}
   </div>`;
 }
@@ -446,6 +462,7 @@ function saveEventFromForm() {
   const state = getState();
   patchState({ calendarEvents: [...(state.calendarEvents || []), event], selectedDate: form.start, calendarCursor: monthKey(parseISO(form.start) || new Date()), calendarAddOpen: false, selectedEventDetailKey: occurrenceKey(event) });
   toast('予定を追加しました');
+  if (form.reminder !== 'none') requestNotificationPermission();
   renderHome();
 }
 
@@ -496,6 +513,7 @@ function saveEventEdit(eventKey) {
     updateSeries(event.originalId || event.baseId || event.id, { ...form, locked: false, done: event.done, exceptionDates: event.exceptionDates || [] });
     toast('全予定を修正しました');
   }
+  if (form.reminder !== 'none') requestNotificationPermission();
   renderHome();
 }
 
@@ -612,8 +630,7 @@ export function renderHome() {
     renderCalendar(state, events, cursorDate, selectedDate),
     selectedDatePanel(state, selectedDate, events),
     eventDetailPanel(state, events),
-    compactUpcomingStrip(upcoming),
-    campPlansPanel({ ...state, calendarCursor: monthKey(cursorDate) })
+    nextPanel({ ...state, calendarCursor: monthKey(cursorDate) }, upcoming)
   ].join('');
 
   checkDueReminders(false);
@@ -621,8 +638,7 @@ export function renderHome() {
   document.getElementById('prevMonth')?.addEventListener('click', () => navigateMonth(cursorDate, -1));
   document.getElementById('nextMonth')?.addEventListener('click', () => navigateMonth(cursorDate, 1));
   document.getElementById('goTodayMonth')?.addEventListener('click', () => { patchState({ calendarCursor: monthKey(new Date()), selectedDate: toISO(new Date()), calendarAddOpen: false }); renderHome(); });
-  document.getElementById('openQuickAdd')?.addEventListener('click', () => { patchState({ calendarAddOpen: true }); renderHome(); window.setTimeout(() => focusSelectedDetail(true), 50); });
-  document.getElementById('requestNotify')?.addEventListener('click', requestNotificationPermission);
+  document.getElementById('openDayAdd')?.addEventListener('click', () => { patchState({ calendarAddOpen: true }); renderHome(); window.setTimeout(() => focusSelectedDetail(true), 50); });
   document.getElementById('saveEvent')?.addEventListener('click', saveEventFromForm);
   document.getElementById('saveEventEdit')?.addEventListener('click', (event) => saveEventEdit(event.currentTarget.dataset.editKey));
   document.getElementById('goNextTask')?.addEventListener('click', () => go(eventRoute(upcoming)));
@@ -630,18 +646,15 @@ export function renderHome() {
   document.querySelectorAll('[data-date]').forEach((button) => {
     button.addEventListener('click', () => {
       const iso = button.dataset.date;
-      const sameDate = getState().selectedDate === iso;
-      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailKey: '', selectedEventDetailId: '' });
+      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailKey: '', selectedEventDetailId: '' });
       renderHome();
-      window.setTimeout(() => focusSelectedDetail(sameDate), 50);
     });
   });
   document.querySelectorAll('[data-detail-date]').forEach((el) => el.addEventListener('click', (event) => {
     event.stopPropagation();
     const iso = el.dataset.detailDate;
-    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailKey: el.dataset.eventKey || '' });
+    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailKey: '', selectedEventDetailId: '' });
     renderHome();
-    window.setTimeout(() => focusSelectedDetail(false), 50);
   }));
   document.querySelectorAll('[data-show-event-detail]').forEach((button) => button.addEventListener('click', () => {
     patchState({ selectedEventDetailKey: button.dataset.showEventDetail, selectedEventDetailId: '', calendarAddOpen: false });
