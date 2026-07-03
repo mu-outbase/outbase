@@ -1,0 +1,41 @@
+name: OUTBASE Core05.5 Time Phase UX unpack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core05_5_TimePhaseUX.zip'
+      - '.github/workflows/unpack-core05-5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip Core05.5 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core05_5
+          mkdir -p /tmp/outbase_core05_5
+          unzip -o OUTBASE_MVPB_Core05_5_TimePhaseUX.zip -d /tmp/outbase_core05_5
+          cp -R /tmp/outbase_core05_5/OUTBASE_MVPB_CORE05_5_TIME_PHASE_UX/. ./
+          rm -f OUTBASE_MVPB_Core05_5_TimePhaseUX.zip
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core05.5 time phase UX"
+            git push
+          fi
