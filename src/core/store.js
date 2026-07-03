@@ -20,6 +20,8 @@ const initialState = {
     gearMemo: ''
   },
   walkSession: null,
+  recordHistory: [],
+  selectedRecordSessionId: null,
   reviewQueue: [],
   notes: {
     shopping: [],
@@ -38,7 +40,16 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-let state = { ...initialState, ...(loadState() || {}) };
+function normalizeLoadedState(loaded) {
+  const merged = { ...initialState, ...(loaded || {}) };
+  merged.prepContext = { ...initialState.prepContext, ...(loaded?.prepContext || {}) };
+  merged.notes = { ...initialState.notes, ...(loaded?.notes || {}) };
+  merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
+  merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
+  return merged;
+}
+
+let state = normalizeLoadedState(loadState());
 const listeners = new Set();
 
 export function getState() {
@@ -46,7 +57,7 @@ export function getState() {
 }
 
 export function patchState(patch) {
-  state = { ...state, ...patch, version: VERSION, updatedAt: new Date().toISOString() };
+  state = normalizeLoadedState({ ...state, ...patch, version: VERSION, updatedAt: new Date().toISOString() });
   saveState(state);
   listeners.forEach((listener) => listener(getState()));
 }

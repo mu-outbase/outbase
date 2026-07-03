@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbase-core02-2-prep-smart-fix-v1';
+const CACHE_NAME = 'outbase-core03-record-entry-v1';
 const APP_SHELL = [
   './',
   './index.html',
