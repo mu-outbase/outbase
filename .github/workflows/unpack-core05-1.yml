@@ -1,0 +1,50 @@
+name: OUTBASE Core05.1 CacheFix unpack
+
+on:
+  push:
+    paths:
+      - 'OUTBASE_MVPB_Core05_1_CacheFix.zip'
+      - '.github/workflows/unpack-core05-1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip Core05.1 CacheFix package
+        run: |
+          ZIP_FILE="OUTBASE_MVPB_Core05_1_CacheFix.zip"
+          BASE_DIR="OUTBASE_MVPB_CORE05_1_CACHE_FIX"
+
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ZIP file not found: $ZIP_FILE"
+            exit 1
+          fi
+
+          unzip -o "$ZIP_FILE"
+
+          if [ ! -d "$BASE_DIR" ]; then
+            echo "Base directory not found: $BASE_DIR"
+            exit 1
+          fi
+
+          cp -R "$BASE_DIR"/. .
+          rm -rf "$BASE_DIR"
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "mu-outbase"
+          git config user.email "actions@github.com"
+          git add index.html service-worker.js src/main.js src/config/version.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core05.1 cache fix"
+            git push
+          fi
