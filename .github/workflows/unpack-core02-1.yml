@@ -1,0 +1,47 @@
+name: OUTBASE Core02.1 unpack
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'OUTBASE_MVPB_Core02_1_抽出気温修正版.zip'
+      - '.github/workflows/unpack-core02-1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip Core02.1 package
+        run: |
+          set -e
+          ZIP='OUTBASE_MVPB_Core02_1_抽出気温修正版.zip'
+          BASE='OUTBASE_MVPB_CORE02_1_PREP_FIX'
+          if [ ! -f "$ZIP" ]; then
+            echo "ZIP not found: $ZIP"
+            exit 1
+          fi
+          rm -rf _outbase_unpack
+          mkdir _outbase_unpack
+          unzip -o "$ZIP" -d _outbase_unpack
+          cp -R _outbase_unpack/$BASE/. .
+          rm -rf _outbase_unpack
+          rm -f "$ZIP"
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "OUTBASE Core02.1 extract and temperature fix"
+          git push
