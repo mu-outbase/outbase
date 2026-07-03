@@ -1,0 +1,49 @@
+name: OUTBASE Core05.6 Calendar Nav unpack retry
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core05_6_CalendarNav.zip'
+      - '.github/workflows/unpack-core05-6b.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm zip exists
+        run: |
+          set -e
+          ls -la
+          test -f OUTBASE_MVPB_Core05_6_CalendarNav.zip
+
+      - name: Unzip Core05.6 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core05_6_retry
+          mkdir -p /tmp/outbase_core05_6_retry
+          unzip -o OUTBASE_MVPB_Core05_6_CalendarNav.zip -d /tmp/outbase_core05_6_retry
+          ls -la /tmp/outbase_core05_6_retry
+          cp -R /tmp/outbase_core05_6_retry/OUTBASE_MVPB_CORE05_6_CALENDAR_NAV/. ./
+          rm -f OUTBASE_MVPB_Core05_6_CalendarNav.zip
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core05.6 calendar navigation retry"
+            git push
+          fi
