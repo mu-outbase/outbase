@@ -24,6 +24,17 @@ const initialState = {
   selectedRecordSessionId: null,
   reviewQueue: [],
   appliedReviewQueue: [],
+  mvpBetaCheck: {
+    steps: {
+      prep: 'unchecked',
+      line: 'unchecked',
+      record: 'unchecked',
+      review: 'unchecked',
+      want: 'unchecked'
+    },
+    memo: '',
+    updatedAt: null
+  },
   notes: {
     shopping: [],
     packing: [],
@@ -48,6 +59,14 @@ function normalizeLoadedState(loaded) {
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
+  merged.mvpBetaCheck = {
+    ...initialState.mvpBetaCheck,
+    ...(loaded?.mvpBetaCheck || {}),
+    steps: {
+      ...initialState.mvpBetaCheck.steps,
+      ...(loaded?.mvpBetaCheck?.steps || {})
+    }
+  };
   return merged;
 }
 

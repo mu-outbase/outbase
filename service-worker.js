@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbase-core04-review-to-prep-v1';
+const CACHE_NAME = 'outbase-core05-mvp-flow-check-v1';
 const APP_SHELL = [
   './',
   './index.html',
