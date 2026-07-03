@@ -1,6 +1,6 @@
-import { app, card, listItems, escapeHtml, kv } from '../../ui/components.js';
-import { getState, patchState } from '../../core/store.js';
-import { go } from '../../core/router.js';
+import { app, card, listItems, escapeHtml, kv } from '../../ui/components.js?v=core05-2-intuitive-ux-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-2-intuitive-ux-20260703';
+import { go } from '../../core/router.js?v=core05-2-intuitive-ux-20260703';
 
 function formatTime(value) {
   if (!value) return '';
@@ -37,6 +37,7 @@ function categoryLabel(text = '') {
   if (/暑|熱|冷却|WAVE|扇風機/.test(text)) return '暑さ';
   if (/不足|忘れ|足りない|足りな|タオル/.test(text)) return '不足・忘れ物';
   if (/料理|多すぎ|余り|食材/.test(text)) return '料理量';
+  if (/設営|撤収|タイマー|時間/.test(text)) return '設営・撤収';
   if (/コタ|犬|ドッグ|足拭き|うんち/.test(text)) return 'コタ';
   return '改善';
 }
@@ -44,7 +45,6 @@ function categoryLabel(text = '') {
 function expandReviewItem(raw = '') {
   const text = normalizeText(raw);
   const prep = { shopping: [], packing: [], kota: [], reflection: [] };
-
   if (/不足|忘れ|足りない|足りな/.test(text)) {
     prep.packing.push('不足・忘れ物チェックを出発前に確認');
     prep.reflection.push('記録反映：不足・忘れ物を次回準備へ戻す');
@@ -66,15 +66,15 @@ function expandReviewItem(raw = '') {
     prep.shopping.push('食材量を人数×泊数基準に絞る');
     prep.reflection.push('記録反映：料理量・食材量を次回調整');
   }
+  if (/設営|撤収|タイマー|時間/.test(text)) {
+    prep.packing.push('設営・撤収タイマーで時間を残す');
+    prep.reflection.push('記録反映：設営・撤収時間を次回段取りへ戻す');
+  }
   if (/コタ|犬|ドッグ|足拭き|うんち/.test(text)) {
     prep.kota.push('コタ用品 / 水 / うんち袋 / 足拭きを玄関側にまとめる');
     prep.reflection.push('記録反映：コタ用品と散歩導線を次回確認');
   }
-
-  if (!prep.shopping.length && !prep.packing.length && !prep.kota.length && !prep.reflection.length) {
-    prep.reflection.push(`記録反映：${text || raw}`);
-  }
-
+  if (!prep.shopping.length && !prep.packing.length && !prep.kota.length && !prep.reflection.length) prep.reflection.push(`記録反映：${text || raw}`);
   return prep;
 }
 
@@ -82,38 +82,42 @@ function combinedAddition(items = []) {
   return items.reduce((acc, item) => mergePrep(acc, expandReviewItem(item)), { shopping: [], packing: [], kota: [], reflection: [] });
 }
 
-function queueCard(item, index) {
-  const addition = expandReviewItem(item);
-  return `<div class="candidate-card" style="margin:10px 0">
-    <div class="section-heading"><strong>${escapeHtml(categoryLabel(item))}</strong><span>未反映</span></div>
-    <p><strong>${escapeHtml(item)}</strong></p>
-    <details open><summary>次回準備へ戻す内容</summary>
-      <div class="prep-columns">
-        <div><h4>買い物</h4>${listItems(addition.shopping, '追加なし')}</div>
-        <div><h4>持ち物</h4>${listItems(addition.packing, '追加なし')}</div>
-        <div><h4>コタ用品</h4>${listItems(addition.kota, '追加なし')}</div>
-        <div><h4>反省・注意</h4>${listItems(addition.reflection, '追加なし')}</div>
-      </div>
-    </details>
-    <button class="btn primary applyReviewItem" data-index="${index}">この改善を準備へ反映</button>
-  </div>`;
+function queueList(queue = []) {
+  return `<ul class="outbase-list">${queue.map((item, index) => `<li><strong>${escapeHtml(categoryLabel(item))}</strong><br><span class="muted">${escapeHtml(item)}</span><button class="btn small applyReviewItem" data-index="${index}">これだけ戻す</button></li>`).join('')}</ul>`;
 }
 
-function renderProjectBridge(project, queue) {
+function renderBridge(project, queue, applied) {
   if (!project) {
-    return card(`<h2>次のキャンプ未作成</h2><p class="muted">改善候補は保持できます。次のキャンプカード作成後に、準備へ戻します。</p><button class="btn primary" id="goPrepFromReview">準備エンジンへ</button>`);
+    return card(`<h2>次のキャンプを先に作る</h2><p class="muted">改善候補は保持できます。準備で次のキャンプカードを作ると反映できます。</p><button class="btn primary" id="goPrepFromReview">準備へ</button>`);
   }
+  return card(`<p class="eyebrow">次に戻す</p>
+    <h2>${escapeHtml(project.reservation?.campground || project.title || '次のキャンプ')}</h2>
+    <p class="muted">改善キュー ${queue.length}件 / 反映済み ${applied.length}件</p>
+    <button class="btn primary" id="applyAllReviews" ${queue.length ? '' : 'disabled'}>改善をまとめて準備へ戻す</button>
+    <button class="btn" id="goPrepFromReview">準備で見る</button>
+    <p class="muted">元の記録は履歴に残したまま、買い物・持ち物・コタ用品・反省に足します。</p>`);
+}
+
+function renderQueue(queue = []) {
+  return card(`<h2>改善候補</h2>
+    ${queue.length ? `<p class="muted">全部考えず、必要ならまとめて戻すだけ。</p>${queueList(queue)}` : '<p class="muted">今は戻す改善はありません。</p>'}`);
+}
+
+function renderCurrentPrep(project) {
+  if (!project) return '';
   const prep = project.prep || {};
-  return card(`<h2>次回準備への戻し先</h2>
-    <p><strong>${escapeHtml(project.title || '次のキャンプ')}</strong></p>
-    ${kv('改善キュー', `${queue.length}件`)}
-    ${kv('現在の反省・注意', `${(prep.reflection || []).length}件`)}
-    <div class="grid"><button class="btn primary" id="applyAllReviews" ${queue.length ? '' : 'disabled'}>改善候補をまとめて準備へ反映</button><button class="btn" id="goPrepFromReview">準備で確認</button></div>
-    <p class="muted">反映すると、買い物・持ち物・コタ用品・反省に追加されます。元の記録は履歴に残します。</p>`);
+  return card(`<details class="quiet-details"><summary>現在の次回準備を見る</summary>
+    <div class="prep-focus">
+      <section><h3>買い物</h3>${listItems(prep.shopping)}</section>
+      <section><h3>持ち物</h3>${listItems(prep.packing)}</section>
+      <section><h3>コタ用品</h3>${listItems(prep.kota)}</section>
+      <section><h3>反省・注意</h3>${listItems(prep.reflection)}</section>
+    </div>
+  </details>`);
 }
 
 function renderAppliedLog(log = []) {
-  return card(`<h2>反映済みログ</h2>${log.length ? `<ul class="outbase-list">${log.slice(0, 12).map((item) => `<li><strong>${escapeHtml(formatTime(item.appliedAt))}</strong><br><span class="muted">${escapeHtml(item.text || '')}</span></li>`).join('')}</ul>` : '<p class="muted">まだ準備へ反映した改善はありません。</p>'}`);
+  return card(`<details class="quiet-details"><summary>反映済みログ</summary>${log.length ? `<ul class="outbase-list">${log.slice(0, 12).map((item) => `<li><strong>${escapeHtml(formatTime(item.appliedAt))}</strong><br><span class="muted">${escapeHtml(item.text || '')}</span></li>`).join('')}</ul>` : '<p class="muted">まだ準備へ反映した改善はありません。</p>'}</details>`);
 }
 
 export function renderReview() {
@@ -123,12 +127,12 @@ export function renderReview() {
   const queue = state.reviewQueue || [];
   const applied = state.appliedReviewQueue || [];
   app().innerHTML = [
-    card(`<div class="title">改善タブ Core04</div><p class="muted">記録で出た暑さ・タオル不足・雨撤収・コタ用品の改善候補を、次の買い物・持ち物・反省へ戻す。</p>`, 'hero'),
-    renderProjectBridge(project, queue),
-    card(`<h2>記録から来た改善キュー</h2>${queue.length ? queue.map(queueCard).join('') : '<p class="muted">まだ未反映の改善候補はありません。記録を終了するとここに入ります。</p>'}`),
-    project ? card(`<h2>現在の次回準備</h2><div class="prep-columns"><div><h3>買い物</h3>${listItems(project.prep?.shopping)}</div><div><h3>持ち物</h3>${listItems(project.prep?.packing)}</div><div><h3>コタ用品</h3>${listItems(project.prep?.kota)}</div><div><h3>反省・注意</h3>${listItems(project.prep?.reflection)}</div></div>`) : '',
+    card(`<div class="title">次回へ戻す。</div><p class="muted light">記録で出た暑さ、雨撤収、忘れ物、料理量、コタ用品を次の準備に戻します。</p>`, 'hero'),
+    renderBridge(project, queue, applied),
+    renderQueue(queue),
+    renderCurrentPrep(project),
     renderAppliedLog(applied),
-    card(`<h2>最近の記録</h2>${history.length ? `<ul class="outbase-list">${history.slice(0, 8).map((item) => `<li><strong>${escapeHtml(sessionTypeLabel(item.type))}</strong> ${escapeHtml(item.title || '')}<br><span class="muted">${escapeHtml(formatTime(item.startedAt))} / 記録 ${(item.records || []).length}件</span></li>`).join('')}</ul>` : '<p class="muted">記録を終了するとここにも表示されます。</p>'}`)
+    card(`<h2>最近の記録</h2>${history.length ? `<ul class="outbase-list">${history.slice(0, 3).map((item) => `<li><strong>${escapeHtml(sessionTypeLabel(item.type))}</strong> ${escapeHtml(item.title || '')}<br><span class="muted">${escapeHtml(formatTime(item.startedAt))} / 記録 ${(item.records || []).length}件</span></li>`).join('')}</ul>` : '<p class="muted">記録を終了するとここにも表示されます。</p>'}`)
   ].filter(Boolean).join('');
   bindReviewActions();
 }
@@ -136,9 +140,7 @@ export function renderReview() {
 function bindReviewActions() {
   document.getElementById('goPrepFromReview')?.addEventListener('click', () => go('prep'));
   document.getElementById('applyAllReviews')?.addEventListener('click', () => applyReviewItems());
-  document.querySelectorAll('.applyReviewItem').forEach((button) => {
-    button.addEventListener('click', () => applyReviewItems(Number(button.dataset.index)));
-  });
+  document.querySelectorAll('.applyReviewItem').forEach((button) => button.addEventListener('click', () => applyReviewItems(Number(button.dataset.index))));
 }
 
 function applyReviewItems(index = null) {
@@ -146,25 +148,16 @@ function applyReviewItems(index = null) {
   const project = state.nextProject;
   const queue = state.reviewQueue || [];
   if (!project || !queue.length) return;
-
   const selected = index === null ? queue : queue.filter((_, i) => i === index);
   if (!selected.length) return;
-
   const addition = combinedAddition(selected);
   const nextPrep = mergePrep(project.prep || {}, addition);
   const existingReflection = state.prepContext?.pastReflection || '';
   const reviewText = selected.map((item) => `・${item}`).join('\n');
-  const nextContext = {
-    ...(state.prepContext || {}),
-    pastReflection: unique([existingReflection, reviewText].filter(Boolean).join('\n').split('\n')).join('\n')
-  };
+  const nextContext = { ...(state.prepContext || {}), pastReflection: unique([existingReflection, reviewText].filter(Boolean).join('\n').split('\n')).join('\n') };
   const nextProject = { ...project, prep: nextPrep, prepContext: nextContext, updatedAt: new Date().toISOString(), reviewAppliedAt: new Date().toISOString() };
   const remaining = index === null ? [] : queue.filter((_, i) => i !== index);
-  const appliedLog = [
-    ...selected.map((text) => ({ text, appliedAt: new Date().toISOString() })),
-    ...(state.appliedReviewQueue || [])
-  ].slice(0, 50);
-
+  const appliedLog = [...selected.map((text) => ({ text, appliedAt: new Date().toISOString() })), ...(state.appliedReviewQueue || [])].slice(0, 50);
   patchState({ nextProject, prepContext: nextContext, reviewQueue: remaining, appliedReviewQueue: appliedLog });
   renderReview();
   window.setTimeout(() => document.getElementById('goPrepFromReview')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);

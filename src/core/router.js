@@ -1,4 +1,4 @@
-import { patchState } from './store.js';
+import { patchState } from './store.js?v=core05-2-intuitive-ux-20260703';
 
 const routes = new Map();
 
@@ -13,6 +13,7 @@ export function go(routeName) {
     button.classList.toggle('active', button.dataset.route === routeName);
   });
   renderer?.();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 export function bindNavigation() {

@@ -1,4 +1,4 @@
-import { prepBase } from '../../domain/schema.js';
+import { prepBase } from '../../domain/schema.js?v=core05-2-intuitive-ux-20260703';
 
 const CAMPGROUND_WORDS = /(キャンプ場|キャンプフィールド|オートキャンプ|Camp|CAMP|camp|ロッジ|Lodge|LODGE|グランピング|RV|スノーピーク|Snow Peak|ほったらかし|ふもとっぱら|那須|赤城|鹿沼|白河|山中湖)/;
 
@@ -45,14 +45,13 @@ export function createProjectFromCandidate(candidate) {
 }
 
 export function buildLineList(project, context = {}) {
-  const title = project?.title || '次のキャンプ';
+  const title = project?.reservation?.campground || project?.title || '次の予定';
   const reservation = project?.reservation || {};
   const prep = project?.prep || {};
-  const sections = [
+  const lines = [
     '【OUTBASE 準備リスト】',
     '■ 次の予定',
-    title,
-    reservation.dateText ? `日程：${reservation.dateText}` : '',
+    [title, reservation.dateText].filter(Boolean).join(' / '),
     reservation.checkIn ? `チェックイン：${reservation.checkIn}` : '',
     reservation.checkOut ? `チェックアウト：${reservation.checkOut}` : '',
     contextSummary(context),
@@ -66,21 +65,10 @@ export function buildLineList(project, context = {}) {
     '■ コタ用品',
     ...(prep.kota || []).map((item) => `・${item}`),
     '',
-    '■ 前回反省・注意',
+    '■ 反省・注意',
     ...(prep.reflection || []).map((item) => `・${item}`)
   ];
-  return sections.filter((line) => line !== '').join('\n');
-}
-
-function contextSummary(context = {}) {
-  const lines = [];
-  if (context.weatherMemo) lines.push(`天気：${context.weatherMemo}`);
-  if (context.highTemp || context.lowTemp) lines.push(`気温：最高${context.highTemp || '-'}℃ / 最低${context.lowTemp || '-'}℃`);
-  if (context.rainRisk) lines.push(`降水：${context.rainRisk}`);
-  if (context.peopleCount) lines.push(`人数：${context.peopleCount}人`);
-  if (context.kotaGoing) lines.push(`コタ：${context.kotaGoing === 'yes' ? '同行' : '同行なし'}`);
-  if (context.menuMemo) lines.push(`献立：${shorten(context.menuMemo, 30)}`);
-  return lines.length ? ['','■ 条件', ...lines].join('\n') : '';
+  return lines.filter((line) => line !== '').join('\n');
 }
 
 export function buildPrepSuggestions(reservation = {}) {
@@ -107,7 +95,7 @@ export function buildPrepSuggestions(reservation = {}) {
     suggestions.kota.unshift('コタの防寒 / ブランケット');
   }
   if (/2泊|二泊|3泊|三泊|連泊/.test(text) || Number(reservation.nights) >= 2) {
-    suggestions.shopping.unshift('2泊分の朝食・飲み物を分けて確認');
+    suggestions.shopping.unshift('泊数分の朝食・飲み物を分けて確認');
     suggestions.packing.unshift('着替え・タオルを泊数分で確認');
   }
   if (/ドッグ|犬|ペット|コタ|dog|Dog/i.test(text)) {
@@ -126,6 +114,9 @@ export function normalizePrepContext(context = {}, reservation = {}) {
     peopleCount: String(context.peopleCount || inferPeopleCount(reservation) || '2'),
     kotaGoing: context.kotaGoing === 'no' ? 'no' : 'yes',
     menuMemo: String(context.menuMemo || '').trim(),
+    routeMemo: String(context.routeMemo || '').trim(),
+    setupMemo: String(context.setupMemo || '').trim(),
+    campgroundSearchMemo: String(context.campgroundSearchMemo || '').trim(),
     pastReflection: String(context.pastReflection || '').trim(),
     gearMemo: String(context.gearMemo || '').trim()
   };
@@ -140,7 +131,7 @@ export function buildPracticalPrep(project = {}, context = {}) {
     kota: [...(base.kota || [])],
     reflection: [...(base.reflection || [])]
   };
-  const text = `${context.weatherMemo} ${context.rainRisk} ${context.windMemo} ${context.menuMemo} ${context.pastReflection} ${context.gearMemo}`;
+  const text = `${context.weatherMemo} ${context.rainRisk} ${context.windMemo} ${context.menuMemo} ${context.routeMemo} ${context.setupMemo} ${context.pastReflection} ${context.gearMemo}`;
   const high = parseOptionalNumber(context.highTemp);
   const low = parseOptionalNumber(context.lowTemp);
   const rainPercent = parseOptionalNumber(context.rainRisk);
@@ -152,7 +143,18 @@ export function buildPracticalPrep(project = {}, context = {}) {
 
   if (context.menuMemo) {
     prependItems(prep.shopping, menuShoppingItems(context.menuMemo));
-    splitMemo(context.menuMemo).slice(0, 4).forEach((line) => prep.shopping.unshift(`献立メモ：${line}`));
+    splitMemo(context.menuMemo).slice(0, 4).forEach((line) => prep.shopping.unshift(`献立：${line}`));
+  }
+  if (context.routeMemo) {
+    prep.reflection.unshift(`行き方：${context.routeMemo}`);
+    prep.packing.unshift('出発時間 / 経由地 / 休憩ポイントを確認');
+  }
+  if (context.setupMemo) {
+    prep.reflection.unshift(`設営・撤収：${context.setupMemo}`);
+    prep.packing.unshift('設営・撤収タイマーで時間を残す');
+  }
+  if (context.campgroundSearchMemo) {
+    prep.reflection.unshift(`キャンプ場探し条件：${context.campgroundSearchMemo}`);
   }
   if (/雨|降水|梅雨|ぬかるみ|濡/.test(text) || (rainPercent !== null && rainPercent >= 40)) {
     prep.packing.unshift('濡れ物用バッグ / 予備タオル / 雨撤収セット');
@@ -178,237 +180,173 @@ export function buildPracticalPrep(project = {}, context = {}) {
   }
   if (context.pastReflection) {
     prependItems(prep.reflection, reflectionActionItems(context.pastReflection));
-    splitMemo(context.pastReflection).slice(0, 5).forEach((line) => prep.reflection.unshift(`前回反省メモ：${line}`));
+    splitMemo(context.pastReflection).slice(0, 5).forEach((line) => prep.reflection.unshift(`前回反省：${line}`));
   }
   if (context.gearMemo) {
     prependItems(prep.packing, gearPackingItems(context.gearMemo));
-    splitMemo(context.gearMemo).slice(0, 5).forEach((line) => prep.packing.unshift(`ギア確認メモ：${line}`));
+    splitMemo(context.gearMemo).slice(0, 5).forEach((line) => prep.packing.unshift(`ギア確認：${line}`));
   }
   return dedupeSuggestionGroups(prep, 18);
 }
 
-function prependItems(target, items = []) {
-  [...items].reverse().forEach((item) => {
-    if (item) target.unshift(item);
-  });
+function contextSummary(context = {}) {
+  const lines = [];
+  if (context.weatherMemo) lines.push(`天気：${context.weatherMemo}`);
+  if (context.highTemp || context.lowTemp) lines.push(`気温：最高${context.highTemp || '-'}℃ / 最低${context.lowTemp || '-'}℃`);
+  if (context.rainRisk) lines.push(`降水：${context.rainRisk}`);
+  if (context.peopleCount) lines.push(`人数：${context.peopleCount}人`);
+  if (context.kotaGoing) lines.push(`コタ：${context.kotaGoing === 'yes' ? '同行' : '同行なし'}`);
+  if (context.menuMemo) lines.push(`料理：${shorten(context.menuMemo, 36)}`);
+  if (context.routeMemo) lines.push(`行き方：${shorten(context.routeMemo, 36)}`);
+  if (context.setupMemo) lines.push(`設営撤収：${shorten(context.setupMemo, 36)}`);
+  return lines.length ? ['', '■ 条件', ...lines].join('\n') : '';
 }
 
 function menuShoppingItems(value) {
   const text = compactJapaneseSpacing(value);
   const items = [];
-  if (/ピザ/.test(text)) {
-    items.push('ピザ：チーズ / ピザソース / 具材 / 追いオリーブオイル');
-  }
-  if (/ガーリックシュリンプ|シュリンプ|エビ|海老|ブラックタイガー/.test(text)) {
-    items.push('ガーリックシュリンプ：エビ / にんにく / バター / レモン');
-  }
-  if (/アヒージョ/.test(text)) {
-    items.push('アヒージョ：オリーブオイル / にんにく / 具材 / バケット有無確認');
-  }
-  if (/ホットドッグ|ホットドック/.test(text)) {
-    items.push('ホットドッグ：パン / ソーセージ / ケチャップ / マスタード');
-  }
-  if (/ローストビーフ/.test(text)) {
-    items.push('ローストビーフ：肉 / ソース / レタス系 / パン有無確認');
-  }
-  if (/朝/.test(text)) {
-    items.push('朝食：パン / 卵 / 飲み物を人数分で確認');
-  }
+  if (/ピザ/.test(text)) items.push('ピザ：チーズ / ピザソース / 具材 / 追いオリーブオイル');
+  if (/ガーリックシュリンプ|シュリンプ|エビ|海老|ブラックタイガー/.test(text)) items.push('ガーリックシュリンプ：エビ / にんにく / バター / レモン');
+  if (/アヒージョ/.test(text)) items.push('アヒージョ：オリーブオイル / にんにく / 具材 / バケット有無確認');
+  if (/ホットドッグ|ホットドック/.test(text)) items.push('ホットドッグ：パン / ソーセージ / ケチャップ / マスタード');
+  if (/ローストビーフ/.test(text)) items.push('ローストビーフ：肉 / ソース / レタス系 / パン有無確認');
+  if (/朝/.test(text)) items.push('朝食：パン / 卵 / 飲み物を人数分で確認');
   return items;
 }
 
 function gearPackingItems(value) {
   const text = compactJapaneseSpacing(value);
   const items = [];
-  if (/リビングシェル/.test(text)) {
-    items.push('リビングシェル：幕体 / フレーム / ペグ / 張り綱');
-  }
-  if (/ヘキサ|タープ/.test(text)) {
-    items.push('ヘキサ・タープ：幕体 / ポール / 鍛造ペグ / ガイロープ');
-  }
-  if (/EcoFlow|DELTA|電源/.test(text)) {
-    items.push('EcoFlow：本体 / 充電ケーブル / 残量確認');
-  }
-  if (/WAVE\s*3|WAVE3|ウェーブ/.test(text)) {
-    items.push('WAVE3：本体 / 排気ダクト / ドレン / 予備電源');
-  }
-  if (/ドッグカート|カート/.test(text)) {
-    items.push('ドッグカート：本体 / レインカバー / 保冷対策');
-  }
-  if (/IGT/.test(text)) {
-    items.push('IGT：天板 / 脚 / 必要ユニット / 収納ケース');
-  }
+  if (/リビングシェル/.test(text)) items.push('リビングシェル：幕体 / フレーム / ペグ / 張り綱');
+  if (/ヘキサ|タープ/.test(text)) items.push('ヘキサ・タープ：幕体 / ポール / 鍛造ペグ / ガイロープ');
+  if (/EcoFlow/.test(text)) items.push('EcoFlow：本体 / 充電ケーブル / 残量確認');
+  if (/WAVE3|WAVE/.test(text)) items.push('WAVE3：本体 / 排気ダクト / ドレン / 予備電源');
+  if (/ドッグカート|AirBuggy/.test(text)) items.push('ドッグカート：本体 / レインカバー / 保冷対策');
   return items;
 }
 
 function reflectionActionItems(value) {
   const text = compactJapaneseSpacing(value);
   const items = [];
-  if (/雨撤収|雨.*撤収|濡/.test(text)) {
-    items.push('前回反省：雨撤収用に濡れ物バッグと収納順を先に決める');
-  }
-  if (/タオル不足|タオル.*足り/.test(text)) {
-    items.push('前回反省：人用・コタ用の予備タオルを追加');
-  }
-  if (/料理多すぎ|料理.*多|食材.*多/.test(text)) {
-    items.push('前回反省：食材量を2人×1泊基準に絞る');
-  }
-  if (/忘れ物|忘れ/.test(text)) {
-    items.push('前回反省：出発前夜に忘れ物チェックを実施');
-  }
-  if (/撤収時間|時間.*押/.test(text)) {
-    items.push('前回反省：朝の撤収順と先に片付ける物を決める');
-  }
+  if (/雨|撤収|濡/.test(text)) items.push('雨撤収用に濡れ物バッグと収納順を先に決める');
+  if (/タオル|不足/.test(text)) items.push('人用・コタ用の予備タオルを追加');
+  if (/料理|多すぎ|余り/.test(text)) items.push('食材量を2人×1泊基準に絞る');
+  if (/忘れ/.test(text)) items.push('前回の忘れ物を確認');
   return items;
 }
 
-function normalizeText(value) {
-  return String(value || '')
-    .replace(/\r/g, '\n')
-    .replace(/[‐‑–—−]/g, '-')
-    .replace(/[　\t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+function prependItems(target, items = []) {
+  [...items].reverse().forEach((item) => { if (item) target.unshift(item); });
 }
 
-function compactJapaneseSpacing(value) {
-  let text = normalizeText(value);
-  // OCRで「チェ ック イ ン」「スノー ピー ク」のように分断された日本語を検索用に詰める。
-  for (let i = 0; i < 4; i += 1) {
-    text = text.replace(/([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー])\s+([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー])/gu, '$1$2');
-  }
-  return text;
+function splitMemo(value = '') {
+  return String(value).split(/[\n、,・/]+/).map((line) => line.trim()).filter(Boolean);
 }
 
-function findCampground(lines, fileName) {
-  const candidateLine = lines.find((line) => CAMPGROUND_WORDS.test(line) && line.length <= 42);
-  if (candidateLine) return cleanupCampground(candidateLine);
-  const firstMeaningful = lines.find((line) => line.length >= 3 && line.length <= 36 && !/予約|確認|日程|住所|電話|メール|金額/.test(line));
-  if (firstMeaningful) return cleanupCampground(firstMeaningful);
-  if (fileName) return cleanupCampground(fileName.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
-  return '';
-}
-
-function findDateText(text) {
-  const patterns = [
-    /(20\d{2}[\/年.-]\s*\d{1,2}[\/月.-]\s*\d{1,2}日?\s*(?:[~〜-]\s*(?:20\d{2}[\/年.-]\s*)?\d{1,2}[\/月.-]?\s*\d{1,2}日?)?)/,
-    /(\d{1,2}[\/月.-]\s*\d{1,2}日?\s*(?:[~〜-]\s*\d{1,2}[\/月.-]?\s*\d{1,2}日?)?)/,
-    /(\d{1,2}\s*月\s*\d{1,2}\s*日\s*(?:[~〜-]\s*\d{1,2}\s*月?\s*\d{1,2}\s*日)?)/
-  ];
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) return match[1].replace(/\s+/g, ' ');
-  }
-  return '';
-}
-
-function findTimeByLabel(text, labels) {
-  const compact = compactJapaneseSpacing(text).replace(/[：]/g, ':');
-  for (const label of labels) {
-    const compactLabel = compactJapaneseSpacing(label);
-    const direct = compact.match(new RegExp(`${escapeRegExp(compactLabel)}[^0-9０-９]{0,20}([0-2]?[0-9][：:]\s*[0-5][0-9])`, 'i'));
-    if (direct) return normalizeTime(direct[1]);
-  }
-  return '';
-}
-
-function findAddress(lines) {
-  const line = lines.find((item) => /(東京都|北海道|(?:京都|大阪)府|.{2,3}県|市|町|村)/.test(item) && /(丁目|番地|[0-9０-９])/.test(item));
-  return line ? cleanupLabel(line) : '';
-}
-
-function findCompanions(text) {
-  if (/リン|琳|妻|嫁|友人|友達|夫婦/.test(text)) {
-    const items = [];
-    if (/リン|琳|妻|嫁/.test(text)) items.push('リン');
-    if (/友人|友達/.test(text)) items.push('友人');
-    if (/夫婦/.test(text)) items.push('夫婦');
-    return [...new Set(items)];
-  }
-  return [];
-}
-
-function inferNights(dateText) {
-  if (!dateText) return '';
-  if (/2泊|二泊/.test(dateText)) return '2泊';
-  if (/3泊|三泊/.test(dateText)) return '3泊';
-  const nums = dateText.match(/\d{1,2}/g) || [];
-  if (nums.length >= 4) {
-    const startDay = Number(nums[nums.length - 3]);
-    const endDay = Number(nums[nums.length - 1]);
-    if (endDay > startDay) return `${endDay - startDay}泊`;
-  }
-  return '';
+function parseOptionalNumber(value) {
+  const match = String(value || '').match(/-?\d+(\.\d+)?/);
+  return match ? Number(match[0]) : null;
 }
 
 function parseNights(value) {
   const match = String(value || '').match(/\d+/);
-  return match ? Number(match[0]) : 0;
-}
-
-function inferPeopleCount(reservation = {}) {
-  const companions = reservation.companions || [];
-  if (companions.includes('友人')) return '4';
-  return '2';
-}
-
-function splitMemo(value) {
-  return String(value || '')
-    .split(/[\n、,]/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-function shorten(value, max = 30) {
-  const text = String(value || '').replace(/\s+/g, ' ').trim();
-  return text.length > max ? `${text.slice(0, max)}…` : text;
-}
-
-function cleanupLabel(value) {
-  return String(value || '')
-    .replace(/^(施設名|キャンプ場名|会場|場所|タイトル|件名)[:：\s]*/,'')
-    .trim();
-}
-
-function cleanupCampground(value) {
-  return cleanupLabel(value)
-    // OCRの末尾ゴミ「@)」「（J」「(J」などを落とす。キャンプ場名の本体は残す。
-    .replace(/[（(]\s*[@＠A-Za-z0-9]{1,5}\s*[）)]?\s*$/u, '')
-    .replace(/\s*[@＠][A-Za-z0-9]?\s*[）)]?\s*$/u, '')
-    .replace(/\s+[A-Za-z@＠]{1,2}[）)]?\s*$/u, '')
-    .replace(/[（(]\s*$/u, '')
-    .trim();
-}
-
-function calculateConfidence(values) {
-  let score = 30;
-  if (values.campground) score += 25;
-  if (values.dateText) score += 25;
-  if (values.checkIn) score += 8;
-  if (values.checkOut) score += 7;
-  if (values.address) score += 5;
-  return Math.min(score, 95);
-}
-
-function dedupeSuggestionGroups(groups, limit = 10) {
-  return Object.fromEntries(Object.entries(groups).map(([key, items]) => [key, [...new Set(items)].slice(0, limit)]));
-}
-
-function parseOptionalNumber(value) {
-  const text = String(value || '').replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
-  const match = text.match(/-?\d+(?:\.\d+)?/);
   return match ? Number(match[0]) : null;
 }
 
-function normalizeTime(value) {
-  const text = String(value || '')
-    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-    .replace('：', ':')
-    .replace(/\s+/g, '');
-  const match = text.match(/([0-2]?[0-9]):([0-5][0-9])/);
-  return match ? `${Number(match[1])}:${match[2]}` : '';
+function inferPeopleCount(reservation = {}) {
+  const text = `${reservation.companions || ''} ${reservation.sourceText || ''}`;
+  if (/友人|夫婦|4人|四人/.test(text)) return '4';
+  if (/リン|妻|夫婦|2人|二人/.test(text)) return '2';
+  return '';
 }
 
-function escapeRegExp(value) {
-  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function findCampground(lines = [], fileName = '') {
+  const hit = lines.find((line) => CAMPGROUND_WORDS.test(line));
+  if (hit) return sanitizeCampground(hit);
+  if (fileName && CAMPGROUND_WORDS.test(fileName)) return sanitizeCampground(fileName.replace(/\.[a-z0-9]+$/i, ''));
+  return '未確定';
+}
+
+function sanitizeCampground(value = '') {
+  return compactJapaneseSpacing(value).replace(/(予約|確認|詳細|利用|日程|チェック.*)$/g, '').trim().slice(0, 48) || '未確定';
+}
+
+function findDateText(text = '') {
+  const patterns = [
+    /20\d{2}[\/.-]\d{1,2}[\/.-]\d{1,2}\s*[-〜~－]\s*(?:20\d{2}[\/.-])?\d{1,2}[\/.-]\d{1,2}/,
+    /20\d{2}年\d{1,2}月\d{1,2}日\s*[-〜~－]\s*(?:20\d{2}年)?\d{1,2}月\d{1,2}日/,
+    /20\d{2}[\/.-]\d{1,2}[\/.-]\d{1,2}/
+  ];
+  const hit = patterns.map((pattern) => text.match(pattern)?.[0]).find(Boolean);
+  return hit ? hit.replace(/[.]/g, '/') : '未確定';
+}
+
+function findTimeByLabel(text = '', labels = []) {
+  for (const label of labels) {
+    const regex = new RegExp(`${label}[^0-9]{0,12}(\\d{1,2}:\\d{2})`, 'i');
+    const hit = text.match(regex);
+    if (hit) return hit[1];
+  }
+  return '未確定';
+}
+
+function findAddress(lines = []) {
+  return lines.find((line) => /(県|都|府|道).+(市|町|村|区)/.test(line)) || '未確定';
+}
+
+function inferNights(dateText = '') {
+  if (!dateText || dateText === '未確定') return '未確定';
+  const dates = dateText.match(/20\d{2}[\/.-]\d{1,2}[\/.-]\d{1,2}|\d{1,2}[\/.-]\d{1,2}/g) || [];
+  if (dates.length < 2) return '未確定';
+  try {
+    const start = parseDate(dates[0]);
+    const end = parseDate(dates[1], start.getFullYear());
+    const diff = Math.round((end - start) / 86400000);
+    return diff > 0 ? `${diff}泊` : '未確定';
+  } catch {
+    return '未確定';
+  }
+}
+
+function parseDate(value, fallbackYear = new Date().getFullYear()) {
+  const parts = String(value).split(/[\/.-]/).map(Number);
+  if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
+  return new Date(fallbackYear, parts[0] - 1, parts[1]);
+}
+
+function findCompanions(text = '') {
+  const items = [];
+  if (/リン|妻|嫁/.test(text)) items.push('リン');
+  if (/コタ|犬|ペット/.test(text)) items.push('コタ');
+  if (/友人|友達/.test(text)) items.push('友人');
+  return items.join(' / ');
+}
+
+function calculateConfidence(values = {}) {
+  let score = 25;
+  if (values.campground && values.campground !== '未確定') score += 30;
+  if (values.dateText && values.dateText !== '未確定') score += 25;
+  if (values.checkIn && values.checkIn !== '未確定') score += 10;
+  if (values.checkOut && values.checkOut !== '未確定') score += 10;
+  return Math.min(95, score);
+}
+
+function dedupeSuggestionGroups(groups = {}, limit = 14) {
+  return Object.fromEntries(Object.entries(groups).map(([key, items]) => [key, [...new Set((items || []).filter(Boolean))].slice(0, limit)]));
+}
+
+function normalizeText(value = '') {
+  return String(value).replace(/\r/g, '\n').replace(/[ \t]+/g, ' ').trim();
+}
+
+function compactJapaneseSpacing(value = '') {
+  return String(value)
+    .replace(/([ァ-ヶー一-龠ぁ-ん])\s+([ァ-ヶー一-龠ぁ-ん])/g, '$1$2')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function shorten(value = '', length = 30) {
+  const text = String(value).trim();
+  return text.length > length ? `${text.slice(0, length)}…` : text;
 }
