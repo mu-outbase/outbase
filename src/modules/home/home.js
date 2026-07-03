@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-11-jorte-refined-confirm-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-11-jorte-refined-confirm-20260703';
-import { go } from '../../core/router.js?v=core05-11-jorte-refined-confirm-20260703';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-12-calendar-edit-recurring-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-12-calendar-edit-recurring-20260703';
+import { go } from '../../core/router.js?v=core05-12-calendar-edit-recurring-20260703';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -22,6 +22,10 @@ const TYPE_META = {
   car: { label: '車検・車', short: '車', route: 'home' },
   work: { label: '仕事', short: '仕事', route: 'home' },
   todo: { label: 'ToDo', short: 'ToDo', route: 'home' },
+  pet: { label: 'ペット', short: 'ペット', route: 'home' },
+  family: { label: '家族', short: '家族', route: 'home' },
+  payment: { label: '支払い', short: '支払', route: 'home' },
+  event: { label: 'イベント', short: '催し', route: 'home' },
   other: { label: 'その他', short: '他', route: 'home' }
 };
 
@@ -29,8 +33,19 @@ const RECURRENCE_META = {
   none: '繰り返しなし',
   weekly: '毎週',
   monthly: '毎月',
+  custom_months: '数ヶ月おき',
   yearly: '毎年',
   custom_years: '数年おき'
+};
+
+const REMINDER_META = {
+  none: 'なし',
+  same_day: '当日',
+  day_before: '前日',
+  three_days_before: '3日前',
+  week_before: '1週間前',
+  two_weeks_before: '2週間前',
+  month_before: '1ヶ月前'
 };
 
 function pad(num) { return String(num).padStart(2, '0'); }
@@ -51,25 +66,17 @@ function clampEnd(start, end) { return end && end >= start ? end : start; }
 function inRange(iso, start, end) { return iso >= start && iso <= (end || start); }
 function dayDiff(start, end) { const s = parseISO(start); const e = parseISO(end); return s && e ? Math.max(0, Math.round((e - s) / 86400000)) : 0; }
 function addMonthsClamp(date, months) {
-  const y = date.getFullYear();
-  const m = date.getMonth() + months;
-  const target = new Date(y, m, 1);
+  const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
   const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
   target.setDate(Math.min(date.getDate(), last));
   return target;
 }
-
-function shortHoliday(value) {
-  return String(value).replace('の日', '').replace('記念', '').slice(0, 4);
-}
-
-function projectName(project) {
-  return project?.reservation?.campground || project?.title || '次のキャンプ';
-}
+function shortHoliday(value) { return String(value).replace('の日', '').replace('記念', '').slice(0, 4); }
+function projectName(project) { return project?.reservation?.campground || project?.title || '次のキャンプ'; }
 
 function parseProjectRange(project) {
   const text = project?.reservation?.dateText || project?.title || '';
-  const re = /(20\d{2})[\/.\-]\s*(\d{1,2})[\/.\-]\s*(\d{1,2})(?:\s*[\-〜~～]\s*(?:(20\d{2})[\/.\-])?(?:(\d{1,2})[\/.\-])?(\d{1,2}))?/;
+  const re = /(20\d{2})[/.\-]\s*(\d{1,2})[/.\-]\s*(\d{1,2})(?:\s*[\-〜~～]\s*(?:(20\d{2})[/.\-])?(?:(\d{1,2})[/.\-])?(\d{1,2}))?/;
   const m = String(text).match(re);
   if (!m) return null;
   const sy = Number(m[1]);
@@ -79,8 +86,7 @@ function parseProjectRange(project) {
   const em = Number(m[5] || sm);
   const ed = Number(m[6] || sd);
   const start = `${sy}-${pad(sm)}-${pad(sd)}`;
-  const end = `${ey}-${pad(em)}-${pad(ed)}`;
-  return { start, end: clampEnd(start, end) };
+  return { start, end: clampEnd(start, `${ey}-${pad(em)}-${pad(ed)}`) };
 }
 
 function derivedProjectEvent(project) {
@@ -97,10 +103,12 @@ function derivedProjectEvent(project) {
     endTime: '',
     reminder: 'day_before',
     recurrence: 'none',
+    recurrenceIntervalMonths: 2,
     recurrenceIntervalYears: 2,
     route: 'prep',
     locked: true,
-    source: 'nextProject'
+    source: 'nextProject',
+    memo: '次のキャンプ予定'
   };
 }
 
@@ -109,27 +117,34 @@ function normalizeEvent(event) {
   const start = String(event.start).slice(0, 10);
   const end = clampEnd(start, String(event.end || start).slice(0, 10));
   const recurrence = normalizeRecurrence(event.recurrence || (event.yearly ? 'yearly' : 'none'));
+  const id = event.id || event.baseId || `event_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   return {
-    id: event.id || `event_${Date.now()}`,
-    baseId: event.baseId || event.id || `event_${Date.now()}`,
+    id,
+    baseId: event.baseId || id,
     title: String(event.title || '予定').trim() || '予定',
     type: normalizeType(event.type),
     start,
     end,
     startTime: String(event.startTime || ''),
     endTime: String(event.endTime || ''),
-    reminder: event.reminder || 'none',
+    reminder: event.reminder && REMINDER_META[event.reminder] ? event.reminder : 'none',
     recurrence,
+    recurrenceIntervalMonths: Math.max(2, Math.min(24, Number(event.recurrenceIntervalMonths || 2))),
     recurrenceIntervalYears: Math.max(2, Math.min(20, Number(event.recurrenceIntervalYears || 2))),
     yearly: recurrence === 'yearly' || Boolean(event.yearly),
     locked: Boolean(event.locked),
     done: Boolean(event.done),
     memo: String(event.memo || ''),
-    route: event.route || TYPE_META[normalizeType(event.type)]?.route || 'home'
+    route: event.route || TYPE_META[normalizeType(event.type)]?.route || 'home',
+    exceptionDates: Array.isArray(event.exceptionDates) ? event.exceptionDates : [],
+    createdAt: event.createdAt || new Date().toISOString(),
+    updatedAt: event.updatedAt || event.createdAt || null
   };
 }
 
-function expandRecurringEvent(event, cursorDate) {
+function occurrenceKey(event) { return `${event.originalId || event.baseId || event.id}@${event.start}`; }
+
+function expandRecurringEvent(event, cursorDate, windowPaddingDays = 45) {
   const normalized = normalizeEvent(event);
   if (!normalized) return [];
   if (normalized.recurrence === 'none') return [normalized];
@@ -137,26 +152,28 @@ function expandRecurringEvent(event, cursorDate) {
   const baseStart = parseISO(normalized.start);
   if (!baseStart) return [normalized];
   const duration = dayDiff(normalized.start, normalized.end);
-  const windowStart = addDays(firstOfMonth(cursorDate), -45);
-  const windowEnd = addDays(new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 2, 1), 45);
+  const windowStart = addDays(firstOfMonth(cursorDate), -windowPaddingDays);
+  const windowEnd = addDays(new Date(cursorDate.getFullYear(), cursorDate.getMonth() + 2, 1), windowPaddingDays);
   const results = [];
 
   function pushOccurrence(startDate) {
     const occurrenceStart = toISO(startDate);
+    if (normalized.exceptionDates.includes(occurrenceStart)) return;
     const occurrenceEnd = toISO(addDays(startDate, duration));
     if (occurrenceEnd < toISO(windowStart) || occurrenceStart > toISO(windowEnd)) return;
-    results.push({ ...normalized, id: `${normalized.baseId}_${occurrenceStart}`, originalId: normalized.baseId, start: occurrenceStart, end: occurrenceEnd, occurrence: true });
+    results.push({ ...normalized, id: `${normalized.baseId}_${occurrenceStart}`, originalId: normalized.baseId, occurrenceDate: occurrenceStart, start: occurrenceStart, end: occurrenceEnd, occurrence: true });
   }
 
   if (normalized.recurrence === 'weekly') {
     let d = new Date(baseStart);
     while (d < windowStart) d = addDays(d, 7);
-    for (let i = 0; i < 24 && d <= windowEnd; i += 1) { pushOccurrence(d); d = addDays(d, 7); }
+    for (let i = 0; i < 80 && d <= windowEnd; i += 1) { pushOccurrence(d); d = addDays(d, 7); }
     return results.length ? results : [normalized];
   }
 
-  if (normalized.recurrence === 'monthly') {
-    for (let i = -24; i <= 48; i += 1) pushOccurrence(addMonthsClamp(baseStart, i));
+  if (normalized.recurrence === 'monthly' || normalized.recurrence === 'custom_months') {
+    const step = normalized.recurrence === 'custom_months' ? normalized.recurrenceIntervalMonths : 1;
+    for (let i = -48; i <= 72; i += step) pushOccurrence(addMonthsClamp(baseStart, i));
     return results.length ? results : [normalized];
   }
 
@@ -169,28 +186,24 @@ function expandRecurringEvent(event, cursorDate) {
   return results.length ? results : [normalized];
 }
 
-function getEvents(state, cursorDate) {
+function baseEvents(state) {
   const userEvents = Array.isArray(state.calendarEvents) ? state.calendarEvents.map(normalizeEvent).filter(Boolean) : [];
   const projectEvent = derivedProjectEvent(state.nextProject);
-  const baseEvents = projectEvent ? [projectEvent, ...userEvents.filter((event) => event.id !== 'nextProject')] : userEvents;
-  return baseEvents.flatMap((event) => expandRecurringEvent(event, cursorDate));
+  return projectEvent ? [projectEvent, ...userEvents.filter((event) => event.id !== 'nextProject')] : userEvents;
 }
-
+function getEvents(state, cursorDate) { return baseEvents(state).flatMap((event) => expandRecurringEvent(event, cursorDate)); }
 function upcomingEvents(events) {
   const today = toISO(new Date());
-  return events.filter((event) => event.end >= today).sort((a, b) => `${a.start}${a.startTime || ''}`.localeCompare(`${b.start}${b.startTime || ''}`)).slice(0, 6);
+  return events.filter((event) => event.end >= today).sort((a, b) => `${a.start}${a.startTime || ''}`.localeCompare(`${b.start}${b.startTime || ''}`)).slice(0, 8);
 }
-
-function eventForDate(events, iso) {
-  return events.filter((event) => inRange(iso, event.start, event.end)).sort((a, b) => `${a.start}${a.startTime || ''}`.localeCompare(`${b.start}${b.startTime || ''}`));
-}
+function eventForDate(events, iso) { return events.filter((event) => inRange(iso, event.start, event.end)).sort((a, b) => `${a.start}${a.startTime || ''}`.localeCompare(`${b.start}${b.startTime || ''}`)); }
 
 function eventLine(event, iso) {
   const meta = TYPE_META[event.type] || TYPE_META.normal;
   const rangeClass = event.start === event.end ? 'single' : iso === event.start ? 'range-start' : iso === event.end ? 'range-end' : 'range-mid';
   const showText = rangeClass === 'range-start' || rangeClass === 'single';
   const label = showText ? `${event.startTime ? `${event.startTime} ` : ''}${event.title || meta.short}` : ' ';
-  return `<span class="jorte-event type-${escapeHtml(event.type)} ${rangeClass} ${event.done ? 'done' : ''}" data-detail-date="${escapeHtml(iso)}" data-event-id="${escapeHtml(event.originalId || event.baseId || event.id)}">${escapeHtml(label)}</span>`;
+  return `<span class="jorte-event type-${escapeHtml(event.type)} ${rangeClass} ${event.done ? 'done' : ''}" data-detail-date="${escapeHtml(iso)}" data-event-key="${escapeHtml(occurrenceKey(event))}">${escapeHtml(label)}</span>`;
 }
 
 function renderCalendar(state, events, cursorDate, selectedDate) {
@@ -242,12 +255,15 @@ function daysUntilISO(iso) {
   const a = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   return Math.round((date.getTime() - a) / 86400000);
 }
-
-function eventRoute(event) {
-  if (!event) return 'home';
-  if (event.type === 'camp') return daysUntilISO(event.start) <= 0 ? 'day' : 'prep';
-  return 'home';
+function eventRoute(event) { if (!event) return 'home'; return event.type === 'camp' ? (daysUntilISO(event.start) <= 0 ? 'day' : 'prep') : 'home'; }
+function recurrenceLabel(event) {
+  if (!event.recurrence || event.recurrence === 'none') return '';
+  if (event.recurrence === 'custom_months') return `${event.recurrenceIntervalMonths || 2}ヶ月ごと`;
+  if (event.recurrence === 'custom_years') return `${event.recurrenceIntervalYears || 2}年ごと`;
+  return RECURRENCE_META[event.recurrence] || '';
 }
+function timeLabel(event) { return !event.startTime && !event.endTime ? '' : `${event.startTime || ''}${event.endTime ? `-${event.endTime}` : ''}`; }
+function reminderLabel(value) { return REMINDER_META[value] || 'なし'; }
 
 function compactUpcomingStrip(event) {
   if (!event) return '';
@@ -263,15 +279,14 @@ function compactUpcomingStrip(event) {
   </section>`;
 }
 
-function recurrenceLabel(event) {
-  if (!event.recurrence || event.recurrence === 'none') return '';
-  if (event.recurrence === 'custom_years') return `${event.recurrenceIntervalYears || 2}年ごと`;
-  return RECURRENCE_META[event.recurrence] || '';
+function renderTypeOptions(selected) {
+  return Object.entries(TYPE_META).map(([key, meta]) => `<option value="${key}" ${selected === key ? 'selected' : ''}>${escapeHtml(meta.label)}</option>`).join('');
 }
-
-function timeLabel(event) {
-  if (!event.startTime && !event.endTime) return '';
-  return `${event.startTime || ''}${event.endTime ? `-${event.endTime}` : ''}`;
+function renderReminderOptions(selected) {
+  return Object.entries(REMINDER_META).map(([key, label]) => `<option value="${key}" ${selected === key ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
+}
+function renderRecurrenceOptions(selected) {
+  return Object.entries(RECURRENCE_META).map(([key, label]) => `<option value="${key}" ${selected === key ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
 }
 
 function selectedDatePanel(state, selectedDate, events) {
@@ -279,28 +294,15 @@ function selectedDatePanel(state, selectedDate, events) {
   const open = state.calendarAddOpen ? ' open' : '';
   return `<section class="jorte-detail cardless" id="selectedDateDetail">
     <button class="memo-bar" id="scrollSelectedDetail">ToDo&amp;メモ <span>${escapeHtml(prettyDate(selectedDate))}</span></button>
-    <div class="day-detail">
+    <div class="day-detail compact-day-detail">
       ${items.length ? items.map(renderSelectedEvent).join('') : '<p class="empty-line">日付をもう一度タップすると予定追加を開きます。</p>'}
       <details class="jorte-add" id="jorteAddBox"${open}>
         <summary>＋ この日に予定を追加</summary>
         <div class="calendar-form">
-          <input id="eventTitle" class="field" value="" placeholder="予定名 例：リン誕生日 / 車検 / 美容室" />
+          <input id="eventTitle" class="field" value="" placeholder="予定名 例：キャンプ / コタ病院 / 支払い" />
           <div class="form-grid">
-            <select id="eventType" class="field">
-              <option value="normal">普通の予定</option>
-              <option value="camp">キャンプ</option>
-              <option value="birthday">誕生日</option>
-              <option value="car">車検・車</option>
-              <option value="work">仕事</option>
-              <option value="todo">ToDo</option>
-              <option value="other">その他</option>
-            </select>
-            <select id="eventReminder" class="field">
-              <option value="none">通知なし</option>
-              <option value="same_day">当日通知</option>
-              <option value="day_before">前日通知</option>
-              <option value="week_before">1週間前通知</option>
-            </select>
+            <select id="eventType" class="field">${renderTypeOptions('normal')}</select>
+            <select id="eventReminder" class="field">${renderReminderOptions('none')}</select>
           </div>
           <div class="form-grid">
             <label><span>開始日</span><input id="eventStart" class="field" type="date" value="${escapeHtml(selectedDate)}" /></label>
@@ -311,16 +313,10 @@ function selectedDatePanel(state, selectedDate, events) {
             <label><span>終了時間 任意</span><input id="eventEndTime" class="field" type="time" /></label>
           </div>
           <div class="form-grid recurrence-grid">
-            <label><span>繰り返し</span><select id="eventRecurrence" class="field">
-              <option value="none">繰り返しなし</option>
-              <option value="weekly">毎週</option>
-              <option value="monthly">毎月</option>
-              <option value="yearly">毎年</option>
-              <option value="custom_years">数年おき</option>
-            </select></label>
-            <label><span>数年おき</span><input id="eventRecurrenceYears" class="field" type="number" min="2" max="20" value="2" /></label>
+            <label><span>繰り返し</span><select id="eventRecurrence" class="field">${renderRecurrenceOptions('none')}</select></label>
+            <label><span>数ヶ月/数年おき</span><input id="eventRecurrenceInterval" class="field" type="number" min="2" max="24" value="2" /></label>
           </div>
-          <textarea id="eventMemo" class="field textarea compact" placeholder="メモ 例：10:00 ディーラー / プレゼント準備"></textarea>
+          <textarea id="eventMemo" class="field textarea compact" placeholder="メモ 例：10:00 / プレゼント準備 / 振込期限"></textarea>
           <button id="saveEvent" class="btn primary">登録する</button>
         </div>
       </details>
@@ -328,14 +324,16 @@ function selectedDatePanel(state, selectedDate, events) {
   </section>`;
 }
 
-function findEventById(events, eventId) {
-  return events.find((event) => [event.id, event.baseId, event.originalId].filter(Boolean).includes(eventId));
+function findEventByKey(events, key) { return events.find((event) => occurrenceKey(event) === key || event.id === key || event.baseId === key || event.originalId === key); }
+function findBaseEvent(state, event) {
+  const id = event?.originalId || event?.baseId || event?.id;
+  return (state.calendarEvents || []).find((item) => item.id === id || item.baseId === id) || null;
 }
 
 function eventDetailPanel(state, events) {
-  const eventId = state.selectedEventDetailId;
-  if (!eventId) return '';
-  const event = findEventById(events, eventId);
+  const key = state.selectedEventDetailKey || state.selectedEventDetailId;
+  if (!key) return '';
+  const event = findEventByKey(events, key);
   if (!event) return '';
   const meta = TYPE_META[event.type] || TYPE_META.normal;
   const range = event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`;
@@ -357,12 +355,40 @@ function eventDetailPanel(state, events) {
         <div><dt>状態</dt><dd>${event.done ? '完了' : '未完了'}</dd></div>
       </dl>
       ${event.memo ? `<div class="event-detail-memo"><strong>メモ</strong><p>${escapeHtml(event.memo)}</p></div>` : '<p class="empty-line">メモは登録されていません。</p>'}
+      ${event.locked ? '' : renderEditBox(event)}
       <div class="event-detail-actions">
         <button class="btn" data-toggle-done="${escapeHtml(event.originalId || event.baseId || event.id)}">${event.done ? '未完了に戻す' : '完了にする'}</button>
-        ${event.locked ? '' : `<button class="btn danger" data-delete-event="${escapeHtml(event.originalId || event.baseId || event.id)}">削除</button>`}
+        ${event.locked ? '' : renderDeleteButtons(event)}
       </div>
     </div>
   </section>`;
+}
+
+function renderDeleteButtons(event) {
+  const key = occurrenceKey(event);
+  if (event.occurrence && event.recurrence !== 'none') {
+    return `<div class="split-actions"><button class="btn danger subtle-danger" data-delete-one="${escapeHtml(key)}">この回だけ削除</button><button class="btn danger" data-delete-series="${escapeHtml(event.originalId || event.baseId || event.id)}">全予定削除</button></div>`;
+  }
+  return `<button class="btn danger" data-delete-series="${escapeHtml(event.originalId || event.baseId || event.id)}">削除</button>`;
+}
+
+function renderEditBox(event) {
+  const scopeOptions = event.occurrence && event.recurrence !== 'none'
+    ? `<label><span>修正範囲</span><select id="editScope" class="field"><option value="single">この回だけ修正</option><option value="series">全予定を修正</option></select></label>`
+    : `<input id="editScope" type="hidden" value="series" />`;
+  return `<details class="event-edit-box" open>
+    <summary>修正する</summary>
+    <div class="calendar-form edit-form">
+      ${scopeOptions}
+      <input id="editTitle" class="field" value="${escapeHtml(event.title)}" placeholder="予定名" />
+      <div class="form-grid"><select id="editType" class="field">${renderTypeOptions(event.type)}</select><select id="editReminder" class="field">${renderReminderOptions(event.reminder)}</select></div>
+      <div class="form-grid"><label><span>開始日</span><input id="editStart" class="field" type="date" value="${escapeHtml(event.start)}" /></label><label><span>終了日</span><input id="editEnd" class="field" type="date" value="${escapeHtml(event.end)}" /></label></div>
+      <div class="form-grid"><label><span>開始時間 任意</span><input id="editStartTime" class="field" type="time" value="${escapeHtml(event.startTime)}" /></label><label><span>終了時間 任意</span><input id="editEndTime" class="field" type="time" value="${escapeHtml(event.endTime)}" /></label></div>
+      <div class="form-grid recurrence-grid"><label><span>繰り返し</span><select id="editRecurrence" class="field">${renderRecurrenceOptions(event.recurrence)}</select></label><label><span>数ヶ月/数年おき</span><input id="editRecurrenceInterval" class="field" type="number" min="2" max="24" value="${escapeHtml(event.recurrence === 'custom_years' ? event.recurrenceIntervalYears : event.recurrenceIntervalMonths)}" /></label></div>
+      <textarea id="editMemo" class="field textarea compact" placeholder="メモ">${escapeHtml(event.memo)}</textarea>
+      <button id="saveEventEdit" class="btn primary" data-edit-key="${escapeHtml(occurrenceKey(event))}">修正を保存</button>
+    </div>
+  </details>`;
 }
 
 function renderSelectedEvent(event) {
@@ -370,20 +396,40 @@ function renderSelectedEvent(event) {
   const range = event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`;
   const time = timeLabel(event);
   const recurrence = recurrenceLabel(event);
-  const id = event.originalId || event.baseId || event.id;
+  const key = occurrenceKey(event);
   return `<div class="jorte-detail-event type-${escapeHtml(event.type)} ${event.done ? 'done' : ''}">
-    <button class="done-toggle" data-toggle-done="${escapeHtml(id)}" aria-label="完了切替">${event.done ? '済' : '□'}</button>
-    <button class="event-label-button" data-show-event-detail="${escapeHtml(id)}">
+    <button class="done-toggle" data-toggle-done="${escapeHtml(event.originalId || event.baseId || event.id)}" aria-label="完了切替">${event.done ? '済' : '□'}</button>
+    <button class="event-label-button" data-show-event-detail="${escapeHtml(key)}">
       <strong>${escapeHtml(event.title)}</strong>
       <small>${escapeHtml(range)}${time ? ` / ${escapeHtml(time)}` : ''} / ${escapeHtml(meta.label)}${event.reminder !== 'none' ? ` / 通知:${reminderLabel(event.reminder)}` : ''}${recurrence ? ` / ${escapeHtml(recurrence)}` : ''}</small>
       ${event.memo ? `<p>${escapeHtml(event.memo)}</p>` : ''}
     </button>
-    ${event.locked ? '' : `<button class="delete-event" data-delete-event="${escapeHtml(id)}">削除</button>`}
+    ${event.locked ? '' : `<button class="edit-event" data-show-event-detail="${escapeHtml(key)}">修正</button>`}
   </div>`;
 }
 
-function reminderLabel(value) {
-  return { same_day: '当日', day_before: '前日', week_before: '1週間前', none: 'なし' }[value] || 'なし';
+function readEventForm(prefix, fallback = {}) {
+  const title = document.getElementById(`${prefix}Title`)?.value?.trim() || '';
+  const type = document.getElementById(`${prefix}Type`)?.value || fallback.type || 'normal';
+  const start = document.getElementById(`${prefix}Start`)?.value || fallback.start || '';
+  const rawEnd = document.getElementById(`${prefix}End`)?.value || start;
+  const recurrenceRaw = document.getElementById(`${prefix}Recurrence`)?.value || fallback.recurrence || 'none';
+  const interval = Math.max(2, Math.min(24, Number(document.getElementById(`${prefix}RecurrenceInterval`)?.value || 2)));
+  const recurrence = normalizeRecurrence(type === 'birthday' && recurrenceRaw === 'none' ? 'yearly' : recurrenceRaw);
+  return {
+    title: title || TYPE_META[type]?.label || '予定',
+    type: normalizeType(type),
+    start,
+    end: clampEnd(start, rawEnd),
+    startTime: document.getElementById(`${prefix}StartTime`)?.value || '',
+    endTime: document.getElementById(`${prefix}EndTime`)?.value || '',
+    reminder: document.getElementById(`${prefix}Reminder`)?.value || 'none',
+    recurrence,
+    recurrenceIntervalMonths: interval,
+    recurrenceIntervalYears: Math.max(2, Math.min(20, interval)),
+    yearly: recurrence === 'yearly',
+    memo: document.getElementById(`${prefix}Memo`)?.value?.trim() || ''
+  };
 }
 
 function navigateMonth(cursorDate, diff) {
@@ -393,47 +439,90 @@ function navigateMonth(cursorDate, diff) {
 }
 
 function saveEventFromForm() {
-  const title = document.getElementById('eventTitle')?.value?.trim();
-  const type = document.getElementById('eventType')?.value || 'normal';
-  const start = document.getElementById('eventStart')?.value;
-  const rawEnd = document.getElementById('eventEnd')?.value || start;
-  const startTime = document.getElementById('eventStartTime')?.value || '';
-  const endTime = document.getElementById('eventEndTime')?.value || '';
-  const reminder = document.getElementById('eventReminder')?.value || 'none';
-  const recurrenceRaw = document.getElementById('eventRecurrence')?.value || 'none';
-  const recurrence = normalizeRecurrence(type === 'birthday' && recurrenceRaw === 'none' ? 'yearly' : recurrenceRaw);
-  const recurrenceIntervalYears = Math.max(2, Math.min(20, Number(document.getElementById('eventRecurrenceYears')?.value || 2)));
-  const memo = document.getElementById('eventMemo')?.value?.trim() || '';
-  if (!start) return toast('日付が未選択です');
-  const end = clampEnd(start, rawEnd);
-  const event = {
-    id: `event_${Date.now()}`,
-    title: title || TYPE_META[type]?.label || '予定',
-    type: normalizeType(type),
-    start,
-    end,
-    startTime,
-    endTime,
-    reminder,
-    recurrence,
-    recurrenceIntervalYears,
-    yearly: recurrence === 'yearly',
-    memo,
-    createdAt: new Date().toISOString()
-  };
+  const form = readEventForm('event');
+  if (!form.start) return toast('日付が未選択です');
+  const event = { id: `event_${Date.now()}`, baseId: '', ...form, createdAt: new Date().toISOString(), exceptionDates: [] };
+  event.baseId = event.id;
   const state = getState();
-  patchState({ calendarEvents: [...(state.calendarEvents || []), event], selectedDate: start, calendarCursor: monthKey(parseISO(start) || new Date()), calendarAddOpen: false });
+  patchState({ calendarEvents: [...(state.calendarEvents || []), event], selectedDate: form.start, calendarCursor: monthKey(parseISO(form.start) || new Date()), calendarAddOpen: false, selectedEventDetailKey: occurrenceKey(event) });
   toast('予定を追加しました');
   renderHome();
 }
 
-function deleteEvent(eventId) {
+function updateSeries(baseId, form) {
+  const state = getState();
+  patchState({
+    calendarEvents: (state.calendarEvents || []).map((event) => {
+      if (event.id !== baseId && event.baseId !== baseId) return event;
+      return { ...event, ...form, id: event.id || baseId, baseId: event.baseId || event.id || baseId, updatedAt: new Date().toISOString() };
+    }),
+    selectedDate: form.start,
+    calendarCursor: monthKey(parseISO(form.start) || new Date()),
+    selectedEventDetailKey: ''
+  });
+}
+
+function updateSingleOccurrence(event, form) {
+  const state = getState();
+  const base = findBaseEvent(state, event);
+  if (!base) return updateSeries(event.baseId || event.id, form);
+  const occurrenceDate = event.occurrenceDate || event.start;
+  const oneOff = { ...form, id: `event_${Date.now()}`, baseId: `event_${Date.now()}_single`, recurrence: 'none', yearly: false, createdAt: new Date().toISOString(), exceptionDates: [] };
+  oneOff.baseId = oneOff.id;
+  patchState({
+    calendarEvents: [
+      ...(state.calendarEvents || []).map((item) => item.id === base.id || item.baseId === base.baseId ? { ...item, exceptionDates: [...new Set([...(item.exceptionDates || []), occurrenceDate])] } : item),
+      oneOff
+    ],
+    selectedDate: form.start,
+    calendarCursor: monthKey(parseISO(form.start) || new Date()),
+    selectedEventDetailKey: occurrenceKey(oneOff)
+  });
+}
+
+function saveEventEdit(eventKey) {
+  const state = getState();
+  const cursor = parseISO(state.calendarCursor) || new Date();
+  const events = getEvents(state, cursor);
+  const event = findEventByKey(events, eventKey);
+  if (!event || event.locked) return;
+  const form = readEventForm('edit', event);
+  if (!form.start) return toast('日付が未選択です');
+  const scope = document.getElementById('editScope')?.value || 'series';
+  if (scope === 'single' && event.occurrence && event.recurrence !== 'none') {
+    updateSingleOccurrence(event, { ...event, ...form, locked: false, done: event.done });
+    toast('この回だけ修正しました');
+  } else {
+    updateSeries(event.originalId || event.baseId || event.id, { ...form, locked: false, done: event.done, exceptionDates: event.exceptionDates || [] });
+    toast('全予定を修正しました');
+  }
+  renderHome();
+}
+
+function deleteSeries(eventId) {
   const state = getState();
   const target = (state.calendarEvents || []).find((event) => event.id === eventId || event.baseId === eventId);
   const title = target?.title || 'この予定';
   if (!window.confirm(`${title} を削除しますか？`)) return;
-  patchState({ calendarEvents: (state.calendarEvents || []).filter((event) => event.id !== eventId && event.baseId !== eventId), selectedEventDetailId: '' });
+  patchState({ calendarEvents: (state.calendarEvents || []).filter((event) => event.id !== eventId && event.baseId !== eventId), selectedEventDetailKey: '', selectedEventDetailId: '' });
   toast('予定を削除しました');
+  renderHome();
+}
+
+function deleteOneOccurrence(eventKey) {
+  const state = getState();
+  const cursor = parseISO(state.calendarCursor) || new Date();
+  const event = findEventByKey(getEvents(state, cursor), eventKey);
+  if (!event) return;
+  if (!window.confirm(`${event.title} のこの回だけ削除しますか？`)) return;
+  const baseId = event.originalId || event.baseId || event.id;
+  const occurrenceDate = event.occurrenceDate || event.start;
+  patchState({
+    calendarEvents: (state.calendarEvents || []).map((item) => item.id === baseId || item.baseId === baseId ? { ...item, exceptionDates: [...new Set([...(item.exceptionDates || []), occurrenceDate])] } : item),
+    selectedEventDetailKey: '',
+    selectedEventDetailId: ''
+  });
+  toast('この回だけ削除しました');
   renderHome();
 }
 
@@ -454,20 +543,18 @@ async function requestNotificationPermission() {
 function reminderDueDate(event) {
   const start = parseISO(event.start);
   if (!start || !event.reminder || event.reminder === 'none') return null;
-  if (event.reminder === 'week_before') return toISO(addDays(start, -7));
-  if (event.reminder === 'day_before') return toISO(addDays(start, -1));
-  return event.start;
+  const offsets = { month_before: -30, two_weeks_before: -14, week_before: -7, three_days_before: -3, day_before: -1, same_day: 0 };
+  return toISO(addDays(start, offsets[event.reminder] ?? 0));
 }
 
 function checkDueReminders(force = false) {
   const state = getState();
-  const cursor = parseISO(state.calendarCursor) || new Date();
-  const events = getEvents(state, cursor);
+  const events = getEvents(state, new Date());
   const today = toISO(new Date());
   const notified = state.calendarReminderNotified || {};
   const due = events.filter((event) => reminderDueDate(event) === today);
   due.forEach((event) => {
-    const key = `${event.id}_${event.start}_${today}`;
+    const key = `${occurrenceKey(event)}_${event.reminder}_${today}`;
     if (!force && notified[key]) return;
     notified[key] = true;
     toast(`予定通知：${event.title}`);
@@ -496,6 +583,22 @@ function focusSelectedDetail(openAdd = false) {
   document.getElementById('selectedDateDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function campPlansPanel(state) {
+  const start = new Date();
+  const cursorList = [];
+  for (let i = 0; i < 18; i += 1) cursorList.push(new Date(start.getFullYear(), start.getMonth() + i, 1));
+  const all = cursorList.flatMap((cursor) => getEvents(state, cursor))
+    .filter((event) => event.type === 'camp' && event.end >= toISO(new Date()))
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const unique = [];
+  const seen = new Set();
+  all.forEach((event) => { const key = occurrenceKey(event); if (!seen.has(key)) { seen.add(key); unique.push(event); } });
+  return `<section class="camp-plan-list cardless" id="campPlanList">
+    <div class="camp-plan-head"><p>HOME</p><h2>キャンプ予定</h2><span>${unique.length}</span></div>
+    ${unique.length ? `<div class="camp-plan-items">${unique.map((event) => `<button class="camp-plan-item" data-camp-key="${escapeHtml(occurrenceKey(event))}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`)}${event.locked ? ' / 次回予定' : ''}</span></button>`).join('')}</div>` : '<p class="empty-line">キャンプ予定はまだありません。</p>'}
+  </section>`;
+}
+
 export function renderHome() {
   const state = getState();
   const projectEvent = derivedProjectEvent(state.nextProject);
@@ -509,7 +612,8 @@ export function renderHome() {
     renderCalendar(state, events, cursorDate, selectedDate),
     selectedDatePanel(state, selectedDate, events),
     eventDetailPanel(state, events),
-    compactUpcomingStrip(upcoming)
+    compactUpcomingStrip(upcoming),
+    campPlansPanel({ ...state, calendarCursor: monthKey(cursorDate) })
   ].join('');
 
   checkDueReminders(false);
@@ -517,16 +621,17 @@ export function renderHome() {
   document.getElementById('prevMonth')?.addEventListener('click', () => navigateMonth(cursorDate, -1));
   document.getElementById('nextMonth')?.addEventListener('click', () => navigateMonth(cursorDate, 1));
   document.getElementById('goTodayMonth')?.addEventListener('click', () => { patchState({ calendarCursor: monthKey(new Date()), selectedDate: toISO(new Date()), calendarAddOpen: false }); renderHome(); });
-  document.getElementById('openQuickAdd')?.addEventListener('click', () => { patchState({ calendarAddOpen: true }); renderHome(); });
+  document.getElementById('openQuickAdd')?.addEventListener('click', () => { patchState({ calendarAddOpen: true }); renderHome(); window.setTimeout(() => focusSelectedDetail(true), 50); });
   document.getElementById('requestNotify')?.addEventListener('click', requestNotificationPermission);
   document.getElementById('saveEvent')?.addEventListener('click', saveEventFromForm);
+  document.getElementById('saveEventEdit')?.addEventListener('click', (event) => saveEventEdit(event.currentTarget.dataset.editKey));
   document.getElementById('goNextTask')?.addEventListener('click', () => go(eventRoute(upcoming)));
   document.getElementById('scrollSelectedDetail')?.addEventListener('click', () => focusSelectedDetail(false));
   document.querySelectorAll('[data-date]').forEach((button) => {
     button.addEventListener('click', () => {
       const iso = button.dataset.date;
       const sameDate = getState().selectedDate === iso;
-      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailId: '' });
+      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailKey: '', selectedEventDetailId: '' });
       renderHome();
       window.setTimeout(() => focusSelectedDetail(sameDate), 50);
     });
@@ -534,17 +639,23 @@ export function renderHome() {
   document.querySelectorAll('[data-detail-date]').forEach((el) => el.addEventListener('click', (event) => {
     event.stopPropagation();
     const iso = el.dataset.detailDate;
-    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailId: el.dataset.eventId || '' });
+    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: false, selectedEventDetailKey: el.dataset.eventKey || '' });
     renderHome();
     window.setTimeout(() => focusSelectedDetail(false), 50);
   }));
   document.querySelectorAll('[data-show-event-detail]').forEach((button) => button.addEventListener('click', () => {
-    patchState({ selectedEventDetailId: button.dataset.showEventDetail, calendarAddOpen: false });
+    patchState({ selectedEventDetailKey: button.dataset.showEventDetail, selectedEventDetailId: '', calendarAddOpen: false });
     renderHome();
     window.setTimeout(() => document.getElementById('eventDetailPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }));
-  document.getElementById('closeEventDetail')?.addEventListener('click', () => { patchState({ selectedEventDetailId: '' }); renderHome(); });
-  document.querySelectorAll('[data-delete-event]').forEach((button) => button.addEventListener('click', () => deleteEvent(button.dataset.deleteEvent)));
+  document.querySelectorAll('[data-camp-key]').forEach((button) => button.addEventListener('click', () => {
+    patchState({ selectedEventDetailKey: button.dataset.campKey, selectedEventDetailId: '', calendarAddOpen: false });
+    renderHome();
+    window.setTimeout(() => document.getElementById('eventDetailPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }));
+  document.getElementById('closeEventDetail')?.addEventListener('click', () => { patchState({ selectedEventDetailKey: '', selectedEventDetailId: '' }); renderHome(); });
+  document.querySelectorAll('[data-delete-series]').forEach((button) => button.addEventListener('click', () => deleteSeries(button.dataset.deleteSeries)));
+  document.querySelectorAll('[data-delete-one]').forEach((button) => button.addEventListener('click', () => deleteOneOccurrence(button.dataset.deleteOne)));
   document.querySelectorAll('[data-toggle-done]').forEach((button) => button.addEventListener('click', () => toggleDone(button.dataset.toggleDone)));
   bindSwipe(document.querySelector('.jorte-calendar-shell'), cursorDate);
 }

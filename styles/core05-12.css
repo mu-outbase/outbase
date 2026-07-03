@@ -1,0 +1,69 @@
+/* Core05.12 calendar edit + recurring scope refinements */
+.app-header h1#appTitle{font-size:21px;letter-spacing:-.04em}
+body[data-route="search"] .app-kicker,
+body[data-route="prep"] .app-kicker,
+body[data-route="walk"] .app-kicker,
+body[data-route="day"] .app-kicker,
+body[data-route="memory"] .app-kicker{color:var(--brass)}
+
+.jorte-calendar-shell{margin-bottom:0}
+.jorte-day{min-height:66px}
+.jorte-event.type-pet{background:#d9e8c8;color:#355a31}
+.jorte-event.type-family{background:#f0d5b7;color:#77502c}
+.jorte-event.type-payment{background:#d8d0ec;color:#514071}
+.jorte-event.type-event{background:#cfe6ed;color:#2d6170}
+
+#selectedDateDetail{scroll-margin-top:74px;margin-top:-2px}
+.memo-bar{height:38px;font-size:14px;padding:0 14px}
+.day-detail.compact-day-detail{min-height:92px;padding:8px 10px 12px}
+.jorte-detail-event{grid-template-columns:32px 1fr 48px;padding:7px 0;gap:7px}
+.jorte-detail-event strong{font-size:14px;line-height:1.2}
+.jorte-detail-event small{font-size:10.5px;line-height:1.3}
+.jorte-detail-event p{font-size:11px;line-height:1.35;-webkit-line-clamp:1}
+.done-toggle{width:28px;height:28px}
+.edit-event{border:0;border-radius:999px;background:#efe7d8;color:var(--ink);font-size:11px;font-weight:1000;padding:6px 8px;min-height:30px}
+
+.event-detail-panel{scroll-margin-top:78px}
+.event-detail-head{padding:13px 14px}
+.event-detail-head h2{font-size:19px;line-height:1.18}
+.event-detail-body{padding:12px}
+.event-detail-body dl{gap:7px;margin-bottom:10px}
+.event-detail-body dl div{padding:8px;border-radius:12px}
+.event-detail-body dd{font-size:13px}
+.event-detail-memo{padding:10px}
+.event-detail-memo p{font-size:13px;line-height:1.45}
+.event-edit-box{margin-top:10px;border:1px solid rgba(34,32,24,.10);border-radius:16px;background:rgba(255,255,255,.45);padding:10px}
+.event-edit-box summary{list-style:none;cursor:pointer;font-size:14px;font-weight:1000;color:var(--ink)}
+.event-edit-box summary::-webkit-details-marker{display:none}
+.event-edit-box .calendar-form{margin-top:10px}
+.event-detail-actions{grid-template-columns:1fr 1fr;align-items:stretch}
+.split-actions{display:grid;grid-template-columns:1fr;gap:8px}
+.subtle-danger{background:#f4e0d8!important;color:#9d4336!important;border:1px solid #e8c3b8!important}
+
+.form-grid.recurrence-grid{grid-template-columns:1.2fr .8fr}
+.calendar-form .field{font-size:14px}
+.calendar-form .textarea.compact{min-height:62px}
+
+.camp-plan-list{margin:0 0 4px;border:1px solid rgba(34,32,24,.10);border-radius:24px;background:rgba(255,250,241,.84);box-shadow:0 12px 28px rgba(54,44,31,.08);padding:12px}
+.camp-plan-head{display:grid;grid-template-columns:1fr auto;gap:4px;align-items:end;margin-bottom:10px}
+.camp-plan-head p{grid-column:1 / -1;margin:0;color:var(--brass);font-size:10px;font-weight:1000;letter-spacing:.16em}
+.camp-plan-head h2{margin:0;font-size:20px;line-height:1.1;color:var(--ink)}
+.camp-plan-head span{min-width:34px;height:34px;border-radius:13px;background:var(--smoke);color:#fffaf1;display:flex;align-items:center;justify-content:center;font-weight:1000}
+.camp-plan-items{display:flex;flex-direction:column;gap:8px}
+.camp-plan-item{width:100%;border:1px solid rgba(34,32,24,.08);border-radius:16px;background:rgba(255,255,255,.56);padding:10px 12px;text-align:left;color:var(--ink)}
+.camp-plan-item strong{display:block;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.camp-plan-item span{display:block;margin-top:3px;color:var(--muted);font-size:12px;font-weight:850}
+
+@media(max-width:620px){
+  .app-shell{padding-top:6px}
+  .jorte-day{min-height:62px}
+  .memo-bar{height:36px}
+  .day-detail.compact-day-detail{min-height:86px;padding:7px 9px 10px}
+  .event-detail-actions{grid-template-columns:1fr}
+  .form-grid.recurrence-grid{grid-template-columns:1fr}
+}
+@media(max-width:380px){
+  .jorte-day{min-height:58px}
+  .jorte-detail-event{grid-template-columns:30px 1fr 44px}
+  .event-label-button strong{font-size:13px}
+}
