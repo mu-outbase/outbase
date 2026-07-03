@@ -4,28 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>OUTBASE</title>
-  <meta name="theme-color" content="#f5f0e6" />
-  <link rel="manifest" href="manifest.json?v=core05-5-time-phase-ux-20260703" />
-  <link rel="stylesheet" href="styles/app.css?v=core05-5-time-phase-ux-20260703" />
+  <meta name="theme-color" content="#f7f2e8" />
+  <link rel="manifest" href="manifest.json?v=core05-6-calendar-nav-20260703" />
+  <link rel="stylesheet" href="styles/app.css?v=core05-6-calendar-nav-20260703" />
 </head>
 <body>
   <header class="app-header">
     <div>
       <div class="app-kicker">OUTBASE</div>
-      <h1>Camp Flow</h1>
+      <h1>Camp Calendar</h1>
     </div>
     <div id="appStatus" class="status-pill">day</div>
   </header>
 
   <main id="app" class="app-shell" aria-live="polite"></main>
 
-  <nav class="bottom-nav" aria-label="OUTBASE main navigation">
-    <button data-route="home"><strong>次</strong><small>ホーム</small></button>
-    <button data-route="prep"><strong>前</strong><small>準備</small></button>
-    <button data-route="walk"><strong>今</strong><small>記録</small></button>
-    <button data-route="review"><strong>後</strong><small>次回</small></button>
+  <nav class="bottom-nav" aria-label="OUTBASE navigation">
+    <button data-route="home"><strong>予定</strong><small>Calendar</small></button>
+    <button data-route="search"><strong>探す</strong><small>Find</small></button>
+    <button data-route="prep"><strong>準備</strong><small>Pack</small></button>
+    <button data-route="day"><strong>当日</strong><small>Day</small></button>
+    <button data-route="memory"><strong>思い出</strong><small>Memory</small></button>
   </nav>
+  <button class="record-fab" data-route="walk" aria-label="記録を開く">＋<span>記録</span></button>
 
-  <script type="module" src="src/main.js?v=core05-5-time-phase-ux-20260703"></script>
+  <script type="module" src="src/main.js?v=core05-6-calendar-nav-20260703"></script>
 </body>
 </html>

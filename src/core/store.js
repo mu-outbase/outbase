@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-5-time-phase-ux-20260703';
-import { VERSION } from '../config/version.js?v=core05-5-time-phase-ux-20260703';
+import { loadState, saveState } from './storage.js?v=core05-6-calendar-nav-20260703';
+import { VERSION } from '../config/version.js?v=core05-6-calendar-nav-20260703';
 
 const initialState = {
   version: VERSION,

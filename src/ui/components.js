@@ -30,7 +30,7 @@ export function applyRuntimeTheme() {
   let label = 'day';
   if (hour >= 5 && hour < 10) { theme = 'morning'; label = 'morning'; }
   else if (hour >= 10 && hour < 16) { theme = 'day'; label = 'day'; }
-  else if (hour >= 16 && hour < 19) { theme = 'evening'; label = 'sunset'; }
+  else if (hour >= 16 && hour < 19) { theme = 'sunset'; label = 'sunset'; }
   else { theme = 'night'; label = 'night'; }
   document.body.dataset.theme = theme;
   return { theme, label, hour };
