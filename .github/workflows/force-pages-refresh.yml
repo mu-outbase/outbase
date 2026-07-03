@@ -1,0 +1,28 @@
+name: OUTBASE Force Pages Refresh
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/force-pages-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Touch pages refresh file
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > OUTBASE_PAGES_REFRESH.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OUTBASE_PAGES_REFRESH.txt
+          git commit -m "Force GitHub Pages refresh for OUTBASE Core05.7" || echo "No changes"
+          git push
