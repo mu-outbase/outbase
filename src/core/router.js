@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core05-9-jorte-calendar-20260703';
+import { patchState } from './store.js?v=core05-10-jorte-refined-20260703';
 
 const routes = new Map();
 

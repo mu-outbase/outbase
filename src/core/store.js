@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-9-jorte-calendar-20260703';
-import { VERSION } from '../config/version.js?v=core05-9-jorte-calendar-20260703';
+import { loadState, saveState } from './storage.js?v=core05-10-jorte-refined-20260703';
+import { VERSION } from '../config/version.js?v=core05-10-jorte-refined-20260703';
 
 const initialState = {
   version: VERSION,
@@ -30,6 +30,7 @@ const initialState = {
   calendarEvents: [],
   calendarCursor: '',
   selectedDate: '',
+  calendarAddOpen: false,
   notificationPermission: 'unknown',
   calendarReminderNotified: {},
   mvpBetaCheck: {
@@ -55,6 +56,7 @@ function normalizeLoadedState(loaded) {
   merged.calendarEvents = Array.isArray(loaded?.calendarEvents) ? loaded.calendarEvents : [];
   merged.calendarCursor = loaded?.calendarCursor || '';
   merged.selectedDate = loaded?.selectedDate || '';
+  merged.calendarAddOpen = Boolean(loaded?.calendarAddOpen);
   merged.notificationPermission = loaded?.notificationPermission || 'unknown';
   merged.calendarReminderNotified = loaded?.calendarReminderNotified || {};
   merged.mvpBetaCheck = { ...initialState.mvpBetaCheck, ...(loaded?.mvpBetaCheck || {}), steps: { ...initialState.mvpBetaCheck.steps, ...(loaded?.mvpBetaCheck?.steps || {}) } };

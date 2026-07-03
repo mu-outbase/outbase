@@ -1,6 +1,6 @@
-import { app, card, escapeHtml, toast } from '../../ui/components.js?v=core05-9-jorte-calendar-20260703';
-import { getState, patchState } from '../../core/store.js?v=core05-9-jorte-calendar-20260703';
-import { go } from '../../core/router.js?v=core05-9-jorte-calendar-20260703';
+import { app, card, escapeHtml, toast } from '../../ui/components.js?v=core05-10-jorte-refined-20260703';
+import { getState, patchState } from '../../core/store.js?v=core05-10-jorte-refined-20260703';
+import { go } from '../../core/router.js?v=core05-10-jorte-refined-20260703';
 
 function projectName(project) {
   return project?.reservation?.campground || project?.title || '今日のキャンプ';
