@@ -1,6 +1,6 @@
-import { app, card, escapeHtml } from '../../ui/components.js?v=core05-6-calendar-nav-20260703';
-import { getState } from '../../core/store.js?v=core05-6-calendar-nav-20260703';
-import { go } from '../../core/router.js?v=core05-6-calendar-nav-20260703';
+import { app, card, escapeHtml } from '../../ui/components.js?v=core05-7-calendar-refined-20260703';
+import { getState } from '../../core/store.js?v=core05-7-calendar-refined-20260703';
+import { go } from '../../core/router.js?v=core05-7-calendar-refined-20260703';
 
 function formatDateTime(value) {
   if (!value) return '';
@@ -59,7 +59,7 @@ function renderCalendar(project) {
       <span>${d.getDate()}</span>${isCamp ? '<strong>camp</strong>' : isToday ? '<strong>today</strong>' : ''}
     </button>`);
   }
-  return card(`<div class="section-head"><div><p class="eyebrow">CALENDAR</p><h2>${escapeHtml(monthTitle(target))}</h2></div><button class="mini-action" id="goPrepFromCalendar">準備</button></div>
+  return card(`<div class="calendar-head"><div><p class="eyebrow">CALENDAR</p><h2>${escapeHtml(monthTitle(target))}</h2></div><button class="mini-action" id="addPlanFromCalendar">予定追加</button></div>
     <div class="week-row"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
     <div class="calendar-grid">${cells.join('')}</div>`, 'calendar-card');
 }
@@ -71,15 +71,54 @@ function nextTask(state) {
   const date = parseProjectDate(project);
   const d = daysUntil(date);
   if (active) return { title: '記録中', text: '今の記録に戻れます。', button: '記録に戻る', route: 'walk' };
-  if (!project) return { title: '予定を作る', text: '予約スクショやメールから始めます。', button: '予定を入れる', route: 'prep' };
-  if (d !== null && d <= 0) return { title: '今日は当日', text: '出発・設営・記録をここから。', button: '当日を開く', route: 'day' };
+  if (!project) return { title: '次の予定を入れる', text: '予約スクショ・メールから作成。', button: '予定を入れる', route: 'prep' };
+  if (d !== null && d <= 0) return { title: '今日は当日', text: '出発・設営・撤収をここから。', button: '当日を開く', route: 'day' };
   if (queue.length) return { title: '次回へ戻す', text: `${queue.length}件の改善があります。`, button: '思い出を見る', route: 'memory' };
-  if (d !== null && d <= 7) return { title: '最終準備', text: '買い物、コタ用品、料理を確認。', button: '準備を開く', route: 'prep' };
-  return { title: '次の予定', text: '準備を少しずつ整えます。', button: '準備を開く', route: 'prep' };
+  if (d !== null && d <= 7) return { title: '最終準備', text: '買い物・コタ用品・料理を確認。', button: '準備を開く', route: 'prep' };
+  return { title: '次の予定', text: '今日やることだけ整えます。', button: '準備を開く', route: 'prep' };
 }
 
-function phaseCard(route, label, sub, active = false) {
-  return `<button class="phase-card ${active ? 'active' : ''}" data-jump="${escapeHtml(route)}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(sub)}</span></button>`;
+function taskItems(project, d, queueCount) {
+  if (!project) return [
+    { label: '予約を入れる', route: 'prep' },
+    { label: '犬可で探す', route: 'search' },
+    { label: '前回を見る', route: 'memory' }
+  ];
+  if (d !== null && d <= 0) return [
+    { label: '出発を確認', route: 'day' },
+    { label: '設営タイマー', route: 'day' },
+    { label: '今すぐ記録', route: 'walk' }
+  ];
+  if (queueCount) return [
+    { label: '改善を戻す', route: 'memory' },
+    { label: '買い物を更新', route: 'prep' },
+    { label: 'コタ用品確認', route: 'prep' }
+  ];
+  return [
+    { label: '料理を決める', route: 'prep' },
+    { label: '買い物を確認', route: 'prep' },
+    { label: 'コタ用品確認', route: 'prep' }
+  ];
+}
+
+function compactEventCard(project, task, d) {
+  const title = project ? projectName(project) : '予定を入れる';
+  const dateText = project ? projectDateText(project) || '日程未確定' : '予約スクショ・メールから';
+  const date = parseProjectDate(project);
+  const monthDay = date ? `${date.getMonth() + 1}/${date.getDate()}` : '--/--';
+  const count = d === null ? '未定' : d <= 0 ? '今日' : `あと${d}日`;
+  return `<section class="event-card cardless">
+    <div class="event-date"><strong>${escapeHtml(monthDay)}</strong><span>camp</span></div>
+    <div class="event-main"><p class="eyebrow">NEXT CAMP</p><h2>${escapeHtml(title)}</h2><p>${escapeHtml(dateText)}</p></div>
+    <div class="event-side"><strong>${escapeHtml(count)}</strong></div>
+    <button class="event-button" id="goNextTask">${escapeHtml(task.button)}</button>
+  </section>`;
+}
+
+function todayActions(task, project, d, queueCount) {
+  const items = taskItems(project, d, queueCount);
+  return card(`<div class="today-head"><span>今日</span><div><strong>${escapeHtml(task.title)}</strong><p>${escapeHtml(task.text)}</p></div></div>
+    <div class="today-actions">${items.map((item) => `<button data-jump="${escapeHtml(item.route)}">${escapeHtml(item.label)}</button>`).join('')}</div>`, 'today-card');
 }
 
 export function renderHome() {
@@ -89,28 +128,15 @@ export function renderHome() {
   const date = parseProjectDate(project);
   const d = daysUntil(date);
   const queue = state.reviewQueue || [];
-  const recent = (state.recordHistory || [])[0];
 
   app().innerHTML = [
     renderCalendar(project),
-    `<section class="next-card cardless">
-      <div><p class="eyebrow">NEXT</p><h2>${escapeHtml(project ? projectName(project) : '予定を入れる')}</h2><p>${escapeHtml(project ? projectDateText(project) || '日程未確定' : '予約スクショ・メールから')}</p></div>
-      <div class="countdown"><strong>${d === null ? '-' : d <= 0 ? '今日' : `${d}日`}</strong><span>${d === null ? '未定' : d <= 0 ? '当日' : 'あと'}</span></div>
-      <button class="primary-cta" id="goNextTask">${escapeHtml(task.button)}</button>
-    </section>`,
-    card(`<div class="todo-line"><span>今日</span><strong>${escapeHtml(task.title)}</strong><em>${escapeHtml(task.text)}</em></div>`, 'today-card'),
-    `<section class="phase-map six">
-      ${phaseCard('home', '予定', 'カレンダー', task.route === 'home')}
-      ${phaseCard('search', '探す', '犬可・温水', task.route === 'search')}
-      ${phaseCard('prep', '準備', `${project ? countPrep(project) : 0}件`, task.route === 'prep')}
-      ${phaseCard('day', '当日', '出発・設営', task.route === 'day')}
-      ${phaseCard('walk', '記録', recent ? formatDateTime(recent.startedAt) : '3秒', task.route === 'walk')}
-      ${phaseCard('memory', '思い出', queue.length ? `${queue.length}件` : '振り返り', task.route === 'memory')}
-    </section>`
+    compactEventCard(project, task, d),
+    todayActions(task, project, d, queue.length)
   ].join('');
 
   document.getElementById('goNextTask')?.addEventListener('click', () => go(task.route));
-  document.getElementById('goPrepFromCalendar')?.addEventListener('click', () => go('prep'));
+  document.getElementById('addPlanFromCalendar')?.addEventListener('click', () => go('prep'));
   document.querySelectorAll('[data-jump],[data-route]').forEach((button) => {
     button.addEventListener('click', () => go(button.dataset.jump || button.dataset.route));
   });

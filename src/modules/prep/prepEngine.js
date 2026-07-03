@@ -1,4 +1,4 @@
-import { prepBase } from '../../domain/schema.js?v=core05-6-calendar-nav-20260703';
+import { prepBase } from '../../domain/schema.js?v=core05-7-calendar-refined-20260703';
 
 const CAMPGROUND_WORDS = /(キャンプ場|キャンプフィールド|オートキャンプ|Camp|CAMP|camp|ロッジ|Lodge|LODGE|グランピング|RV|スノーピーク|Snow Peak|ほったらかし|ふもとっぱら|那須|赤城|鹿沼|白河|山中湖)/;
 

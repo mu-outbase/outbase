@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js?v=core05-6-calendar-nav-20260703';
+import { STORAGE_KEY } from '../config/version.js?v=core05-7-calendar-refined-20260703';
 
 export function loadState() {
   try {
