@@ -1,15 +1,15 @@
-const BUILD_ID = 'core07-prep-hub-20260705';
+const BUILD_ID = 'core07-1-weather-decision-20260705';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core07-prep-hub-20260705';
-import { getState, subscribe } from './core/store.js?v=core07-prep-hub-20260705';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core07-prep-hub-20260705';
-import { renderHome } from './modules/home/home.js?v=core07-prep-hub-20260705';
-import { renderSearch } from './modules/search/search.js?v=core07-prep-hub-20260705';
-import { renderPrep } from './modules/prep/prep.js?v=core07-prep-hub-20260705';
-import { renderDay } from './modules/day/day.js?v=core07-prep-hub-20260705';
-import { renderWalk } from './modules/walk/walk.js?v=core07-prep-hub-20260705';
-import { renderMemory } from './modules/memory/memory.js?v=core07-prep-hub-20260705';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core07-prep-hub-20260705';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core07-1-weather-decision-20260705';
+import { getState, subscribe } from './core/store.js?v=core07-1-weather-decision-20260705';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core07-1-weather-decision-20260705';
+import { renderHome } from './modules/home/home.js?v=core07-1-weather-decision-20260705';
+import { renderSearch } from './modules/search/search.js?v=core07-1-weather-decision-20260705';
+import { renderPrep } from './modules/prep/prep.js?v=core07-1-weather-decision-20260705';
+import { renderDay } from './modules/day/day.js?v=core07-1-weather-decision-20260705';
+import { renderWalk } from './modules/walk/walk.js?v=core07-1-weather-decision-20260705';
+import { renderMemory } from './modules/memory/memory.js?v=core07-1-weather-decision-20260705';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core07-1-weather-decision-20260705';
 
 
 document.body.dataset.build = BUILD_ID;

@@ -1,0 +1,14 @@
+OUTBASE Core07.1 反映手順
+
+1. GitHubの outbase リポジトリ main に以下ZIPをアップロード
+   OUTBASE_Core07_1_WEATHER_DECISION_FIXED_完成版.zip
+
+2. .github/workflows/unpack-core07.yml のZIP名を以下にする
+   OUTBASE_Core07_1_WEATHER_DECISION_FIXED_完成版.zip
+
+3. Actionsで Unpack Core07 ZIP を実行
+
+4. 展開後、Pagesのdeployが緑になるまで確認
+
+5. 確認URL
+   https://mu-outbase.github.io/outbase/?v=core071fixed

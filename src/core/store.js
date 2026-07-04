@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core07-prep-hub-20260705';
-import { VERSION } from '../config/version.js?v=core07-prep-hub-20260705';
+import { loadState, saveState } from './storage.js?v=core07-1-weather-decision-20260705';
+import { VERSION } from '../config/version.js?v=core07-1-weather-decision-20260705';
 
 const initialState = {
   version: VERSION,
@@ -10,10 +10,19 @@ const initialState = {
   importCandidates: [],
   prepContext: {
     weatherMemo: '',
+    weatherHourlyMemo: '',
     highTemp: '',
     lowTemp: '',
     rainRisk: '',
     windMemo: '',
+    humidityMemo: '',
+    thunderMemo: '',
+    siteAltitude: '',
+    dryServiceMemo: '',
+    cancelFreeUntil: '',
+    cancelFeeStart: '',
+    cancelDecisionStatus: '保留',
+    weatherDecisionMemo: '',
     peopleCount: '2',
     kotaGoing: 'yes',
     menuMemo: '',
@@ -22,6 +31,7 @@ const initialState = {
     campgroundSearchMemo: '',
     pastReflection: '',
     gearMemo: '',
+    gearLedgerMemo: '',
     fixedDishMemo: '',
     extraNeedMemo: '',
     availableFoodMemo: '',

@@ -265,3 +265,110 @@
   .image-info-card{grid-template-columns:1fr;}
   .image-placeholder{height:74px;}
 }
+
+/* Core07.1 Weather Decision / 詳細天気ありきの判断UI */
+.weather-decision-card{
+  border-color:rgba(185,139,78,.34)!important;
+  background:linear-gradient(180deg,#fff8ec,#fffaf1)!important;
+}
+.weather-score-row{
+  display:grid;
+  grid-template-columns:82px 1fr;
+  gap:10px;
+  align-items:stretch;
+  margin:8px 0 10px;
+}
+.weather-score-row div{
+  border-radius:18px;
+  border:1px solid rgba(185,139,78,.28);
+  background:#2b2518;
+  color:#fffaf1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:68px;
+}
+.weather-score-row span{
+  font-size:10px;
+  font-weight:1000;
+  opacity:.86;
+}
+.weather-score-row strong{
+  font-size:28px;
+  line-height:1;
+}
+.weather-score-row p{
+  margin:0;
+  border:1px solid var(--ob-line);
+  background:rgba(255,250,241,.88);
+  border-radius:18px;
+  padding:11px 12px;
+  font-size:13px;
+  font-weight:1000;
+  line-height:1.45;
+  display:flex;
+  align-items:center;
+}
+.weather-risk-list span{
+  background:#fff0d6;
+}
+.decision-button-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  margin:10px 0;
+}
+.cancelDecisionBtn{
+  border:1px solid var(--ob-line);
+  border-radius:999px;
+  background:#f8f1e6;
+  color:var(--ob-ink);
+  min-height:38px;
+  font-family:inherit;
+  font-size:12px;
+  font-weight:1000;
+}
+.cancelDecisionBtn.active{
+  background:#242117;
+  color:#fffaf1;
+  border-color:#242117;
+}
+.prep-next-action-card{
+  background:#f3f6ed!important;
+  border-color:rgba(111,128,99,.32)!important;
+}
+.next-action-list{
+  margin:8px 0 0;
+  padding-left:22px;
+  display:grid;
+  gap:7px;
+}
+.next-action-list li{
+  font-size:14px;
+  font-weight:1000;
+  line-height:1.35;
+}
+.weather-detail-grid{
+  display:grid;
+  gap:8px;
+}
+.weather-detail-grid div,
+.gear-ledger-box{
+  border:1px solid var(--ob-line);
+  border-radius:16px;
+  background:rgba(255,250,241,.74);
+  padding:9px 10px;
+}
+.weather-detail-grid strong{
+  display:block;
+  margin-bottom:6px;
+  font-size:13px;
+}
+.gear-ledger-box .empty-line{
+  margin-bottom:8px;
+}
+@media(max-width:380px){
+  .weather-score-row{grid-template-columns:1fr;}
+  .decision-button-row{grid-template-columns:1fr;}
+}
