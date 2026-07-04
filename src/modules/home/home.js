@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-15-next-camp-plans-20260704';
-import { getState, patchState } from '../../core/store.js?v=core05-15-next-camp-plans-20260704';
-import { go } from '../../core/router.js?v=core05-15-next-camp-plans-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-16-camp-plan-unified-20260704';
+import { getState, patchState } from '../../core/store.js?v=core05-16-camp-plan-unified-20260704';
+import { go } from '../../core/router.js?v=core05-16-camp-plan-unified-20260704';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -106,7 +106,8 @@ function derivedProjectEvent(project) {
     recurrenceIntervalMonths: 2,
     recurrenceIntervalYears: 2,
     route: 'prep',
-    locked: true,
+    locked: false,
+    done: Boolean(project?.done),
     source: 'nextProject',
     memo: '次のキャンプ予定'
   };
@@ -275,24 +276,17 @@ function uniqueCampPlans(state) {
 
 function nextPanel(state, event) {
   const campPlans = uniqueCampPlans(state);
-  const display = campPlans[0] || event;
-  if (!display && !campPlans.length) return '';
-  const meta = TYPE_META[display?.type] || TYPE_META.normal;
-  const count = display ? daysUntilISO(display.start) : null;
-  const countText = count === null ? '' : count <= 0 ? '今日' : `あと${count}日`;
-  const range = display ? (display.start === display.end ? prettyDate(display.start) : `${prettyDate(display.start)}-${prettyDate(display.end)}`) : '';
-  const time = display?.startTime ? ` ${display.startTime}${display.endTime ? `-${display.endTime}` : ''}` : '';
-  const campList = campPlans.map((plan, index) => {
+  if (!campPlans.length) return '';
+  const campList = campPlans.map((plan) => {
     const planRange = plan.start === plan.end ? prettyDate(plan.start) : `${prettyDate(plan.start)}-${prettyDate(plan.end)}`;
     const planCount = daysUntilISO(plan.start);
     const planCountText = planCount === null ? '' : planCount <= 0 ? '今日' : `あと${planCount}日`;
     const planTime = plan.startTime ? ` / ${plan.startTime}${plan.endTime ? `-${plan.endTime}` : ''}` : '';
-    return `<button class="next-camp-item ${index === 0 ? 'current' : ''}" data-camp-key="${escapeHtml(occurrenceKey(plan))}" type="button"><strong>${escapeHtml(plan.title)}</strong><span>${escapeHtml(planRange)} / キャンプ${escapeHtml(planTime)}${planCountText ? ` / ${escapeHtml(planCountText)}` : ''}</span></button>`;
+    return `<button class="next-camp-item unified-camp-item" data-camp-key="${escapeHtml(occurrenceKey(plan))}" type="button"><strong>${escapeHtml(plan.title)}</strong><span>${escapeHtml(planRange)} / キャンプ${escapeHtml(planTime)}${planCountText ? ` / ${escapeHtml(planCountText)}` : ''}</span></button>`;
   }).join('');
-  return `<section class="jorte-next-strip cardless type-${escapeHtml(display?.type || 'normal')} next-home-panel next-camp-plans-panel">
-    <div class="next-panel-head"><p>NEXT</p><span>${campPlans.length ? `キャンプ予定 ${campPlans.length}件` : '次にやること'}</span></div>
-    ${display ? `<div class="next-main-row"><div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div><div class="strip-main"><h2>${escapeHtml(display.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div><button id="goNextTask">${display.type === 'camp' ? (daysUntilISO(display.start) <= 0 ? '当日' : '準備') : '詳細'}</button></div>` : ''}
-    ${campPlans.length ? `<div class="next-camp-box all-camp-plans"><div class="next-camp-title"><strong>キャンプ予定</strong><span>${campPlans.length}</span></div><div class="next-camp-items">${campList}</div></div>` : ''}
+  return `<section class="jorte-next-strip cardless next-home-panel next-camp-plans-panel unified-camp-plans-panel">
+    <div class="next-panel-head"><p>NEXT</p><span>キャンプ予定 ${campPlans.length}件</span></div>
+    <div class="next-camp-box all-camp-plans unified"><div class="next-camp-items">${campList}</div></div>
   </section>`;
 }
 
@@ -485,7 +479,39 @@ function saveEventFromForm() {
   renderHome();
 }
 
+function projectDateText(start, end) {
+  const s = String(start || '').replaceAll('-', '/');
+  const e = String(end || start || '').replaceAll('-', '/');
+  return s === e ? s : `${s}〜${e}`;
+}
+
+function updateNextProjectFromForm(form) {
+  const state = getState();
+  const current = state.nextProject || {};
+  const reservation = {
+    ...(current.reservation || {}),
+    campground: form.title || current.reservation?.campground || current.title || 'キャンプ予定',
+    dateText: projectDateText(form.start, form.end),
+    checkIn: form.startTime || current.reservation?.checkIn || '',
+    checkOut: form.endTime || current.reservation?.checkOut || ''
+  };
+  patchState({
+    nextProject: {
+      ...current,
+      title: reservation.campground,
+      reservation,
+      done: Boolean(form.done),
+      updatedAt: new Date().toISOString()
+    },
+    selectedDate: form.start,
+    calendarCursor: monthKey(parseISO(form.start) || new Date()),
+    selectedEventDetailKey: `nextProject@${form.start}`,
+    selectedEventDetailId: ''
+  });
+}
+
 function updateSeries(baseId, form) {
+  if (baseId === 'nextProject') return updateNextProjectFromForm(form);
   const state = getState();
   patchState({
     calendarEvents: (state.calendarEvents || []).map((event) => {
@@ -538,6 +564,14 @@ function saveEventEdit(eventKey) {
 
 function deleteSeries(eventId) {
   const state = getState();
+  if (eventId === 'nextProject') {
+    const title = state.nextProject?.reservation?.campground || state.nextProject?.title || 'このキャンプ予定';
+    if (!window.confirm(`${title} を削除しますか？`)) return;
+    patchState({ nextProject: null, selectedEventDetailKey: '', selectedEventDetailId: '' });
+    toast('キャンプ予定を削除しました');
+    renderHome();
+    return;
+  }
   const target = (state.calendarEvents || []).find((event) => event.id === eventId || event.baseId === eventId);
   const title = target?.title || 'この予定';
   if (!window.confirm(`${title} を削除しますか？`)) return;
@@ -565,6 +599,11 @@ function deleteOneOccurrence(eventKey) {
 
 function toggleDone(eventId) {
   const state = getState();
+  if (eventId === 'nextProject' && state.nextProject) {
+    patchState({ nextProject: { ...state.nextProject, done: !state.nextProject.done } });
+    renderHome();
+    return;
+  }
   patchState({ calendarEvents: (state.calendarEvents || []).map((event) => event.id === eventId || event.baseId === eventId ? { ...event, done: !event.done } : event) });
   renderHome();
 }
@@ -632,7 +671,7 @@ function campPlansPanel(state) {
   all.forEach((event) => { const key = occurrenceKey(event); if (!seen.has(key)) { seen.add(key); unique.push(event); } });
   return `<section class="camp-plan-list cardless" id="campPlanList">
     <div class="camp-plan-head"><p>HOME</p><h2>キャンプ予定</h2><span>${unique.length}</span></div>
-    ${unique.length ? `<div class="camp-plan-items">${unique.map((event) => `<button class="camp-plan-item" data-camp-key="${escapeHtml(occurrenceKey(event))}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`)}${event.locked ? ' / 次回予定' : ''}</span></button>`).join('')}</div>` : '<p class="empty-line">キャンプ予定はまだありません。</p>'}
+    ${unique.length ? `<div class="camp-plan-items">${unique.map((event) => `<button class="camp-plan-item" data-camp-key="${escapeHtml(occurrenceKey(event))}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`)}</span></button>`).join('')}</div>` : '<p class="empty-line">キャンプ予定はまだありません。</p>'}
   </section>`;
 }
 

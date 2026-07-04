@@ -1,4 +1,4 @@
-export const VERSION = 'MVPB_CORE05_15_NEXT_CAMP_PLANS';
+export const VERSION = 'MVPB_CORE05_16_CAMP_PLAN_UNIFIED';
 export const ALPHA1_STATUS = 'FROZEN_REFERENCE_ONLY';
 export const STORAGE_KEY = 'outbase_core02_state';
-export const CORE_LABEL = 'MVPβ Core 05.15 / NEXT camp plans unified';
+export const CORE_LABEL = 'MVPβ Core 05.16 / Camp plan source unified';
