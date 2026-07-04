@@ -1,10 +1,11 @@
-import { loadState, saveState } from './storage.js?v=core06-09-premium-interaction-ux-20260704';
-import { VERSION } from '../config/version.js?v=core06-09-premium-interaction-ux-20260704';
+import { loadState, saveState } from './storage.js?v=core07-prep-hub-20260705';
+import { VERSION } from '../config/version.js?v=core07-prep-hub-20260705';
 
 const initialState = {
   version: VERSION,
   currentRoute: 'home',
   nextProject: null,
+  selectedPrepProjectId: '',
   activeCandidate: null,
   importCandidates: [],
   prepContext: {
@@ -20,13 +21,19 @@ const initialState = {
     setupMemo: '',
     campgroundSearchMemo: '',
     pastReflection: '',
-    gearMemo: ''
+    gearMemo: '',
+    fixedDishMemo: '',
+    extraNeedMemo: '',
+    availableFoodMemo: '',
+    missingFoodMemo: '',
+    localChangeMemo: '',
+    mealModes: []
   },
   walkSession: null,
   recordHistory: [],
   selectedRecordSessionId: null,
   recoverySession: null,
-  prepFeature: 'shoppingDetail',
+  prepFeature: 'summary',
   reviewQueue: [],
   appliedReviewQueue: [],
   calendarEvents: [],
@@ -51,11 +58,13 @@ function clone(value) {
 function normalizeLoadedState(loaded) {
   const merged = { ...initialState, ...(loaded || {}) };
   merged.prepContext = { ...initialState.prepContext, ...(loaded?.prepContext || {}) };
+  merged.prepContext.mealModes = Array.isArray(loaded?.prepContext?.mealModes) ? loaded.prepContext.mealModes : [];
+  merged.selectedPrepProjectId = loaded?.selectedPrepProjectId || '';
   merged.notes = { ...initialState.notes, ...(loaded?.notes || {}) };
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.recoverySession = loaded?.recoverySession || null;
-  merged.prepFeature = loaded?.prepFeature || 'shoppingDetail';
+  merged.prepFeature = loaded?.prepFeature || 'summary';
   merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
   merged.calendarEvents = Array.isArray(loaded?.calendarEvents) ? loaded.calendarEvents : [];
   merged.calendarCursor = loaded?.calendarCursor || '';

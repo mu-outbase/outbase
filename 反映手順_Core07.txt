@@ -1,0 +1,20 @@
+Core07 手動反映手順
+
+1. GitHubの mu-outbase/outbase を開く
+2. 下記ファイルをZIP内の同名ファイルで置き換える
+   - index.html
+   - src/main.js
+   - src/core/store.js
+   - src/modules/prep/prep.js
+   - src/modules/prep/prepEngine.js
+3. 下記ファイルを新規追加する
+   - styles/core07.css
+4. コミットメッセージ例
+   Core07 prep hub
+5. 反映後、スマホで確認するポイント
+   - 準備タブが5枚要約UIになっている
+   - 下までスクロールできる
+   - 下バーと最後のカードが重ならない
+   - 料理提案条件が複数選択できる
+   - 買物/料理/出発の3つのコピーができる
+   - 詳細が折りたたみで開く
