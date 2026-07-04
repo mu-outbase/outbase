@@ -51,4 +51,4 @@ jobs:
           else
             git commit -m "Apply OUTBASE Core06.04 record field UX"
             git push
-         
+          fi
