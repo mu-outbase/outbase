@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-04-record-field-ux-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-04-record-field-ux-20260704';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-05-all-pages-visual-unify-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-05-all-pages-visual-unify-20260704';
 
 let timer = null;
 let speechRecognition = null;

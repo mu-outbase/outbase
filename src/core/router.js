@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core06-04-record-field-ux-20260704';
+import { patchState } from './store.js?v=core06-05-all-pages-visual-unify-20260704';
 
 const routes = new Map();
 
