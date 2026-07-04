@@ -1,7 +1,7 @@
-import { updateState, getState, patchState } from '../../core/store.js?v=core06-08-human-centered-ux-20260704';
-import { go } from '../../core/router.js?v=core06-08-human-centered-ux-20260704';
-import { extractReservationCandidate, createProjectFromCandidate, buildPracticalPrep, normalizePrepContext } from '../prep/prepEngine.js?v=core06-08-human-centered-ux-20260704';
-import { escapeHtml, toast } from '../../ui/components.js?v=core06-08-human-centered-ux-20260704';
+import { updateState, getState, patchState } from '../../core/store.js?v=core06-09-premium-interaction-ux-20260704';
+import { go } from '../../core/router.js?v=core06-09-premium-interaction-ux-20260704';
+import { extractReservationCandidate, createProjectFromCandidate, buildPracticalPrep, normalizePrepContext } from '../prep/prepEngine.js?v=core06-09-premium-interaction-ux-20260704';
+import { escapeHtml, toast } from '../../ui/components.js?v=core06-09-premium-interaction-ux-20260704';
 
 let selectedFile = null;
 let selectedFileText = '';

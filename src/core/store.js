@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core06-08-human-centered-ux-20260704';
-import { VERSION } from '../config/version.js?v=core06-08-human-centered-ux-20260704';
+import { loadState, saveState } from './storage.js?v=core06-09-premium-interaction-ux-20260704';
+import { VERSION } from '../config/version.js?v=core06-09-premium-interaction-ux-20260704';
 
 const initialState = {
   version: VERSION,
@@ -25,6 +25,8 @@ const initialState = {
   walkSession: null,
   recordHistory: [],
   selectedRecordSessionId: null,
+  recoverySession: null,
+  prepFeature: 'shoppingDetail',
   reviewQueue: [],
   appliedReviewQueue: [],
   calendarEvents: [],
@@ -52,6 +54,8 @@ function normalizeLoadedState(loaded) {
   merged.notes = { ...initialState.notes, ...(loaded?.notes || {}) };
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
+  merged.recoverySession = loaded?.recoverySession || null;
+  merged.prepFeature = loaded?.prepFeature || 'shoppingDetail';
   merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
   merged.calendarEvents = Array.isArray(loaded?.calendarEvents) ? loaded.calendarEvents : [];
   merged.calendarCursor = loaded?.calendarCursor || '';

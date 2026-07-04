@@ -1,0 +1,54 @@
+name: OUTBASE Core06.09 Premium Interaction UX unpack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core06_09_PremiumInteractionUX.zip'
+      - '.github/workflows/unpack-core06-09.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm zip exists
+        run: |
+          set -e
+          ls -la
+          test -f OUTBASE_MVPB_Core06_09_PremiumInteractionUX.zip
+
+      - name: Unzip Core06.09 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core06_09
+          mkdir -p /tmp/outbase_core06_09
+          unzip -o OUTBASE_MVPB_Core06_09_PremiumInteractionUX.zip -d /tmp/outbase_core06_09
+          ls -la /tmp/outbase_core06_09
+          if [ -d /tmp/outbase_core06_09/OUTBASE_MVPB_Core06_09_PremiumInteractionUX ]; then
+            cp -R /tmp/outbase_core06_09/OUTBASE_MVPB_Core06_09_PremiumInteractionUX/. ./
+          else
+            cp -R /tmp/outbase_core06_09/. ./
+          fi
+          rm -f OUTBASE_MVPB_Core06_09_PremiumInteractionUX.zip
+          rm -rf OUTBASE_MVPB_Core06_02_RecordModeMapConfirm OUTBASE_MVPB_Core06_03_RecordUXPolish OUTBASE_MVPB_Core06_04_RecordFieldUX OUTBASE_MVPB_Core06_05_AllPagesVisualUnify OUTBASE_MVPB_Core06_06_MobileShellPolish OUTBASE_MVPB_Core06_07_UsabilityFix OUTBASE_MVPB_Core06_08_HumanCenteredUX
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core06.09 premium interaction UX"
+            git push
+          fi

@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js?v=core06-08-human-centered-ux-20260704';
+import { STORAGE_KEY } from '../config/version.js?v=core06-09-premium-interaction-ux-20260704';
 
 export function loadState() {
   try {

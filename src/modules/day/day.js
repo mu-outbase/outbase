@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-08-human-centered-ux-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-08-human-centered-ux-20260704';
-import { go } from '../../core/router.js?v=core06-08-human-centered-ux-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-09-premium-interaction-ux-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-09-premium-interaction-ux-20260704';
+import { go } from '../../core/router.js?v=core06-09-premium-interaction-ux-20260704';
 
 function projectName(project) { return project?.reservation?.campground || project?.title || '今日のキャンプ'; }
 function context(state, project) { return { ...(state.prepContext || {}), ...(project?.prepContext || {}) }; }

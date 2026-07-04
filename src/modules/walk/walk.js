@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-08-human-centered-ux-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-08-human-centered-ux-20260704';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-09-premium-interaction-ux-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-09-premium-interaction-ux-20260704';
 
 let timer = null;
 let speechRecognition = null;
@@ -36,6 +36,11 @@ function isWalkMode(type) { return ['homeWalk', 'campWalk', 'walk'].includes(nor
 function activeSession() {
   const session = getState().walkSession;
   return session?.status === 'active' ? session : null;
+}
+function isWalkRoute() { return getState().currentRoute === 'walk'; }
+function hasRecoverableSession() {
+  const recovery = getState().recoverySession;
+  return recovery?.session && (!recovery.expiresAt || new Date(recovery.expiresAt).getTime() > Date.now());
 }
 
 function elapsedText(startedAt, endedAt = null) {
@@ -147,13 +152,18 @@ export function renderWalk() {
   }
   bindWalk();
   startTimer();
+  if (selected) hydrateRenderedMap(selected, selected.type === 'camp' ? 'campWalk' : 'homeWalk');
+  else if (session) hydrateRenderedMap(session, currentMode(session));
   syncGpsWatch(session);
 }
 
 function renderStartPanel() {
-  const project = getState().nextProject;
+  const state = getState();
+  const project = state.nextProject;
   const campName = project?.reservation?.campground || project?.campground || '';
+  const recovery = hasRecoverableSession() ? state.recoverySession : null;
   return card(`<section class="record-home-shell simple-record-home">
+    ${recovery ? renderRecoveryBanner(recovery) : ''}
     <div class="record-home-status">
       <strong>何をする？</strong><span>選んだらすぐ記録開始。終了は右上か下の保存。</span>
     </div>
@@ -168,6 +178,12 @@ function renderStartPanel() {
     <p class="record-help-line">キャンプ中は「キャンプ滞在」を親にして、場内散歩・設営・料理・撤収へ切替。</p>
     <details class="quiet-details record-title-edit"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="" placeholder="例：朝の自宅散歩 / 赤城山1日目" /></details>
   </section>`, 'record-field-card record-start-field');
+}
+
+
+function renderRecoveryBanner(recovery) {
+  const session = recovery.session || {};
+  return `<div class="record-recovery-banner"><div><strong>直前の記録を復旧できます</strong><span>${escapeHtml(session.title || modeLabel(session.type))}</span></div><button id="restoreSession" class="mini-ghost">復旧</button><button id="dismissRecovery" class="link-button">消す</button></div>`;
 }
 
 function launchButton(type, label, sub, title) {
@@ -257,11 +273,12 @@ function renderModeSurface(session, mode, points) {
 function renderStableWalkMap(session, mode, points) {
   const latest = points[points.length - 1];
   const label = mode === 'homeWalk' ? '自宅散歩マップ' : '場内散歩マップ';
-  const zoomText = latest ? '現在地とルート' : '現在地未取得';
+  const zoomText = latest ? '実地図＋ルート' : '現在地未取得';
   return `<section class="stable-map-card compact-map ${points.length ? 'ready' : 'empty'}">
     <div class="stable-map-head"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(zoomText)}</span></div>
-    <div class="stable-map-canvas">
-      ${renderRouteSvg(points)}
+    <div class="stable-map-canvas premium-map-shell">
+      <div id="walkLeafletMap" class="leaflet-walk-map" aria-label="散歩地図"></div>
+      <div class="map-fallback-layer">${renderRouteSvg(points)}</div>
       <div class="map-overlay-info">
         <span>${latest ? `${latest.lat.toFixed(5)}, ${latest.lng.toFixed(5)}` : '現在地ボタンで取得'}</span>
         <strong>${distanceKm(points).toFixed(2)}km</strong>
@@ -299,6 +316,28 @@ function renderRouteSvg(points) {
     <circle cx="${firstX.toFixed(1)}" cy="${firstY.toFixed(1)}" r="2.4" fill="rgba(120,96,68,.85)" />
     <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4.2" fill="rgba(36,75,50,.95)" />
   </svg>`;
+}
+
+
+function hydrateRenderedMap(session, mode) {
+  const el = document.getElementById('walkLeafletMap');
+  if (!el || !window.L) return;
+  const points = modePointsOf(session, mode).length ? modePointsOf(session, mode) : walkPointsOf(session);
+  const latest = points[points.length - 1];
+  if (!latest) return;
+  try {
+    if (el._leaflet_id) return;
+    const map = window.L.map(el, { zoomControl: false, attributionControl: false, dragging: true, tap: true }).setView([latest.lat, latest.lng], mode === 'campWalk' ? 18 : 17);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: true }).addTo(map);
+    const latlngs = points.map((p) => [p.lat, p.lng]);
+    if (latlngs.length > 1) window.L.polyline(latlngs, { color: '#405638', weight: 5, opacity: .9 }).addTo(map);
+    window.L.circleMarker([latest.lat, latest.lng], { radius: 8, color: '#fffaf1', weight: 3, fillColor: '#405638', fillOpacity: 1 }).addTo(map);
+    if (latlngs.length > 1) map.fitBounds(latlngs, { padding: [26, 26], maxZoom: mode === 'campWalk' ? 18 : 17 });
+    setTimeout(() => map.invalidateSize(), 120);
+    el.closest('.stable-map-canvas')?.classList.add('leaflet-ready');
+  } catch (error) {
+    console.warn('OUTBASE map hydrate failed', error);
+  }
 }
 
 function renderWalkActions(mode) {
@@ -438,6 +477,8 @@ function bindWalk() {
   document.querySelectorAll('.detailSession').forEach((button) => button.addEventListener('click', () => { patchState({ selectedRecordSessionId: button.dataset.id }); renderWalk(); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
   document.getElementById('backToHistory')?.addEventListener('click', () => { patchState({ selectedRecordSessionId: null }); renderWalk(); });
   document.getElementById('deleteHistory')?.addEventListener('click', (event) => deleteHistorySession(event.currentTarget.dataset.id));
+  document.getElementById('restoreSession')?.addEventListener('click', restoreRecoverySession);
+  document.getElementById('dismissRecovery')?.addEventListener('click', () => { patchState({ recoverySession: null }); renderWalk(); });
   document.getElementById('finishWalk')?.addEventListener('click', finishSession);
   document.getElementById('finishSessionTop')?.addEventListener('click', finishSession);
   document.getElementById('discardWalk')?.addEventListener('click', discardSession);
@@ -622,7 +663,7 @@ function captureGpsPoint(manual = true) {
     const point = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy, createdAt: nowISO() };
     addGpsPointToSession(point, manual);
     toast(manual ? '現在地を残しました' : '現在地を確認しました');
-    renderWalk();
+    if (isWalkRoute()) renderWalk();
   }, () => addRecord(makeRecord('gps', 'GPS取得失敗', '位置情報の許可を確認')), { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 });
 }
 
@@ -639,7 +680,7 @@ function syncGpsWatch(session) {
     const point = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy, createdAt: nowISO() };
     addGpsPointToSession(point, false);
     const now = Date.now();
-    if (now - lastMapRenderAt > 5000) { lastMapRenderAt = now; renderWalk(); }
+    if (isWalkRoute() && now - lastMapRenderAt > 12000) { lastMapRenderAt = now; renderWalk(); }
   }, () => undefined, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
 }
 
@@ -697,7 +738,8 @@ function saveCurrentSessionToHistory(session, select = true) {
   const closed = closeChild(session, true);
   const ended = { ...closed, status: 'done', endedAt: nowISO() };
   const reviewItems = buildReviewItems(ended);
-  patchState({ walkSession: null, recordHistory: [ended, ...(state.recordHistory || [])].slice(0, 80), selectedRecordSessionId: select ? ended.session_id : null, reviewQueue: [...new Set([...(state.reviewQueue || []), ...reviewItems])] });
+  const recoverySession = { action: 'finish', session: { ...closed, status: 'active', endedAt: null }, savedHistoryId: ended.session_id, expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString() };
+  patchState({ walkSession: null, recoverySession, recordHistory: [ended, ...(state.recordHistory || [])].slice(0, 80), selectedRecordSessionId: select ? ended.session_id : null, reviewQueue: [...new Set([...(state.reviewQueue || []), ...reviewItems])] });
   return ended;
 }
 
@@ -719,6 +761,18 @@ function discardSession() {
   stopGpsWatch();
   patchState({ walkSession: null });
   toast('破棄しました');
+  renderWalk();
+}
+
+
+function restoreRecoverySession() {
+  const state = getState();
+  const recovery = state.recoverySession;
+  if (!recovery?.session) return;
+  const session = { ...recovery.session, status: 'active', endedAt: null };
+  const history = recovery.savedHistoryId ? (state.recordHistory || []).filter((item) => item.session_id !== recovery.savedHistoryId) : (state.recordHistory || []);
+  patchState({ walkSession: session, recordHistory: history, selectedRecordSessionId: null, recoverySession: null });
+  toast('記録を復旧しました');
   renderWalk();
 }
 
