@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core06-03-record-ux-polish-20260704';
-import { VERSION } from '../config/version.js?v=core06-03-record-ux-polish-20260704';
+import { loadState, saveState } from './storage.js?v=core06-04-record-field-ux-20260704';
+import { VERSION } from '../config/version.js?v=core06-04-record-field-ux-20260704';
 
 const initialState = {
   version: VERSION,

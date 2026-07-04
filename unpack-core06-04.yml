@@ -1,0 +1,54 @@
+name: OUTBASE Core06.04 Record Field UX unpack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core06_04_RecordFieldUX.zip'
+      - '.github/workflows/unpack-core06-04.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm zip exists
+        run: |
+          set -e
+          ls -la
+          test -f OUTBASE_MVPB_Core06_04_RecordFieldUX.zip
+
+      - name: Unzip Core06.04 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core06_04
+          mkdir -p /tmp/outbase_core06_04
+          unzip -o OUTBASE_MVPB_Core06_04_RecordFieldUX.zip -d /tmp/outbase_core06_04
+          ls -la /tmp/outbase_core06_04
+          if [ -d /tmp/outbase_core06_04/OUTBASE_MVPB_Core06_04_RecordFieldUX ]; then
+            cp -R /tmp/outbase_core06_04/OUTBASE_MVPB_Core06_04_RecordFieldUX/. ./
+          else
+            cp -R /tmp/outbase_core06_04/. ./
+          fi
+          rm -f OUTBASE_MVPB_Core06_04_RecordFieldUX.zip
+          rm -rf OUTBASE_MVPB_Core06_02_RecordModeMapConfirm OUTBASE_MVPB_Core06_03_RecordUXPolish
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core06.04 record field UX"
+            git push
+          fi

@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js?v=core06-03-record-ux-polish-20260704';
+import { STORAGE_KEY } from '../config/version.js?v=core06-04-record-field-ux-20260704';
 
 export function loadState() {
   try {

@@ -1,15 +1,15 @@
-const BUILD_ID = 'core06-03-record-ux-polish-20260704';
+const BUILD_ID = 'core06-04-record-field-ux-20260704';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-03-record-ux-polish-20260704';
-import { getState, subscribe } from './core/store.js?v=core06-03-record-ux-polish-20260704';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-03-record-ux-polish-20260704';
-import { renderHome } from './modules/home/home.js?v=core06-03-record-ux-polish-20260704';
-import { renderSearch } from './modules/search/search.js?v=core06-03-record-ux-polish-20260704';
-import { renderPrep } from './modules/prep/prep.js?v=core06-03-record-ux-polish-20260704';
-import { renderDay } from './modules/day/day.js?v=core06-03-record-ux-polish-20260704';
-import { renderWalk } from './modules/walk/walk.js?v=core06-03-record-ux-polish-20260704';
-import { renderMemory } from './modules/memory/memory.js?v=core06-03-record-ux-polish-20260704';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-03-record-ux-polish-20260704';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-04-record-field-ux-20260704';
+import { getState, subscribe } from './core/store.js?v=core06-04-record-field-ux-20260704';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-04-record-field-ux-20260704';
+import { renderHome } from './modules/home/home.js?v=core06-04-record-field-ux-20260704';
+import { renderSearch } from './modules/search/search.js?v=core06-04-record-field-ux-20260704';
+import { renderPrep } from './modules/prep/prep.js?v=core06-04-record-field-ux-20260704';
+import { renderDay } from './modules/day/day.js?v=core06-04-record-field-ux-20260704';
+import { renderWalk } from './modules/walk/walk.js?v=core06-04-record-field-ux-20260704';
+import { renderMemory } from './modules/memory/memory.js?v=core06-04-record-field-ux-20260704';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-04-record-field-ux-20260704';
 
 document.body.dataset.build = BUILD_ID;
 
@@ -25,22 +25,32 @@ function refreshRuntimeTheme() {
 
 function modeLabel(type) {
   return {
-    walk: 'コタ散歩',
-    camp: 'キャンプ',
+    homeWalk: '自宅散歩',
+    campWalk: 'キャンプ場散歩',
+    walk: '自宅散歩',
+    camp: 'キャンプ滞在',
     life: 'メモ',
+    memo: 'メモ',
     setup: '設営',
     cook: '料理',
     teardown: '撤収'
   }[type] || '記録';
 }
 
+function normalizedActiveMode(session) {
+  if (session?.activeChild?.type) return session.activeChild.type;
+  if (session?.type === 'walk') return 'homeWalk';
+  if (session?.type === 'life') return 'memo';
+  return session?.type || 'memo';
+}
+
 function activeRecordingLabel(state = getState()) {
   const session = state.walkSession;
   if (!session || session.status !== 'active') return null;
   const parent = session.parentTitle || session.title || modeLabel(session.type);
-  const child = session.activeChild?.type ? modeLabel(session.activeChild.type) : modeLabel(session.type);
+  const child = modeLabel(normalizedActiveMode(session));
   const count = Array.isArray(session.records) ? session.records.length : 0;
-  if (session.type === 'camp') return `記録中：${parent} ＞ ${child} / ${count}件`;
+  if (session.type === 'camp') return `記録中：親 ${parent} ＞ 今 ${child} / ${count}件`;
   const place = session.locationLabel ? ` / ${session.locationLabel}` : '';
   return `記録中：${child}${place} / ${count}件`;
 }

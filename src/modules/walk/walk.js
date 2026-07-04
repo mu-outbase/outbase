@@ -1,29 +1,42 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-03-record-ux-polish-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-03-record-ux-polish-20260704';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-04-record-field-ux-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-04-record-field-ux-20260704';
 
 let timer = null;
 let speechRecognition = null;
 let geoWatchId = null;
-let geoWatchSessionId = null;
+let geoWatchKey = null;
 let resolvingPlace = false;
+let lastMapRenderAt = 0;
 
 const MODE_META = {
-  camp: { label: 'キャンプ', sub: '滞在全体', emoji: '🏕', parent: true },
-  walk: { label: 'コタ散歩', sub: 'GPS・地図・水・うんち', emoji: '🐾' },
-  setup: { label: '設営', sub: '開始・完了・時間', emoji: '⛺' },
-  cook: { label: '料理', sub: '写真・量・反省', emoji: '🍳' },
-  teardown: { label: '撤収', sub: '開始・完了・濡れ物', emoji: '📦' },
-  life: { label: 'メモ', sub: '気づきだけ残す', emoji: '✎' }
+  homeWalk: { label: '自宅散歩', short: '自宅', sub: '日常の散歩ログ', emoji: '🐾', map: true },
+  campWalk: { label: 'キャンプ場散歩', short: '場内散歩', sub: '場内確認・レビュー素材', emoji: '🧭', map: true },
+  camp: { label: 'キャンプ滞在', short: 'キャンプ', sub: '親記録', emoji: '🏕', parent: true },
+  setup: { label: '設営', short: '設営', sub: '開始・完了・段取り', emoji: '⛺' },
+  cook: { label: '料理', short: '料理', sub: '写真・量・次回メモ', emoji: '🍳' },
+  teardown: { label: '撤収', short: '撤収', sub: '収納・濡れ物・忘れ物', emoji: '📦' },
+  memo: { label: 'メモ', short: 'メモ', sub: '気づきだけ残す', emoji: '✎' },
+  life: { label: 'メモ', short: 'メモ', sub: '気づきだけ残す', emoji: '✎' }
 };
 
-function modeLabel(type) { return MODE_META[type]?.label || '記録'; }
-function modeSub(type) { return MODE_META[type]?.sub || '記録'; }
+function normalizeMode(type, asCampChild = false) {
+  if (type === 'walk') return asCampChild ? 'campWalk' : 'homeWalk';
+  if (type === 'life') return 'memo';
+  return type || 'memo';
+}
+function modeMeta(type) { return MODE_META[normalizeMode(type)] || MODE_META.memo; }
+function modeLabel(type) { return modeMeta(type).label; }
+function modeShort(type) { return modeMeta(type).short; }
 function nowISO() { return new Date().toISOString(); }
 function recordsOf(session) { return Array.isArray(session?.records) ? session.records : []; }
 function gpsPointsOf(session) { return Array.isArray(session?.gpsPoints) ? session.gpsPoints : []; }
 function childSegmentsOf(session) { return Array.isArray(session?.childSegments) ? session.childSegments : []; }
-function currentMode(session) { return session?.activeChild?.type || session?.type || 'life'; }
-function hasActiveWalk(session) { return session?.status === 'active' && (session.type === 'walk' || session.activeChild?.type === 'walk'); }
+function currentMode(session) { return normalizeMode(session?.activeChild?.type || session?.type || 'memo', Boolean(session?.activeChild)); }
+function isWalkMode(type) { return ['homeWalk', 'campWalk', 'walk'].includes(normalizeMode(type, type === 'campWalk')); }
+function activeSession() {
+  const session = getState().walkSession;
+  return session?.status === 'active' ? session : null;
+}
 
 function elapsedText(startedAt, endedAt = null) {
   if (!startedAt) return '00:00:00';
@@ -35,15 +48,14 @@ function elapsedText(startedAt, endedAt = null) {
   return `${h}:${m}:${s}`;
 }
 
-function formatTime(value) {
+function formatTime(value, withYear = false) {
   if (!value) return '';
-  try { return new Date(value).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-  catch { return value; }
-}
-
-function activeSession() {
-  const session = getState().walkSession;
-  return session?.status === 'active' ? session : null;
+  try {
+    const options = withYear
+      ? { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+      : { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(value).toLocaleString('ja-JP', options);
+  } catch { return value; }
 }
 
 function distanceKm(points = []) {
@@ -64,10 +76,37 @@ function haversine(a, b) {
   return 2 * r * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+function pointMode(point, session) {
+  const asChild = Boolean(point.childId || session?.type === 'camp');
+  return normalizeMode(point.mode || session?.type, asChild);
+}
+
+function walkPointsOf(session, mode = null) {
+  const points = gpsPointsOf(session);
+  if (!mode) return points.filter((p) => isWalkMode(pointMode(p, session)));
+  const normalized = normalizeMode(mode, session?.type === 'camp');
+  return points.filter((p) => pointMode(p, session) === normalized);
+}
+
+function modePointsOf(session, mode = currentMode(session)) {
+  const normalized = normalizeMode(mode, session?.type === 'camp');
+  if (!isWalkMode(normalized)) return [];
+  return walkPointsOf(session, normalized);
+}
+
 function makeRecord(type, title, detail = '', extra = {}) {
   const session = activeSession();
   const mode = currentMode(session);
-  return { record_id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, type, mode, title, detail, createdAt: nowISO(), ...extra };
+  return {
+    record_id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    type,
+    mode,
+    childId: session?.activeChild?.child_id || '',
+    title,
+    detail,
+    createdAt: nowISO(),
+    ...extra
+  };
 }
 
 function updateActiveSession(updater) {
@@ -86,12 +125,12 @@ function addRecord(record, message = '記録しました') {
 function buildReviewItems(session) {
   const text = recordsOf(session).map((record) => `${record.title} ${record.detail}`).join(' ');
   const items = [];
-  if (/忘れ|不足|足りない|足りな/.test(text)) items.push('記録から反省：不足・忘れ物を次回準備へ戻す');
-  if (/雨|濡|撤収/.test(text)) items.push('記録から反省：雨撤収と濡れ物対策を次回確認');
-  if (/暑|熱|冷却|WAVE|扇風機/.test(text)) items.push('記録から反省：暑さ対策と電源残量を次回確認');
-  if (/料理|多すぎ|余り|食材/.test(text)) items.push('記録から反省：料理量・食材量を次回調整');
-  if (/コタ|犬|ドッグ|足拭き|うんち|散歩/.test(text)) items.push('記録から反省：コタ用品と散歩導線を次回確認');
-  if (/設営|撤収|タイマー|時間/.test(text)) items.push('記録から反省：設営・撤収時間を次回段取りへ戻す');
+  if (/忘れ|不足|足りない|足りな/.test(text)) items.push('不足・忘れ物を次回準備に戻す');
+  if (/雨|濡|撤収/.test(text)) items.push('雨撤収と濡れ物対策を次回確認');
+  if (/暑|熱|冷却|WAVE|扇風機/.test(text)) items.push('暑さ対策と電源残量を次回確認');
+  if (/料理|多すぎ|余り|食材|量/.test(text)) items.push('料理量・食材量を次回調整');
+  if (/コタ|犬|ドッグ|散歩|足/.test(text)) items.push('コタの散歩導線と足元環境を次回確認');
+  if (/設営|撤収|タイマー|時間|段取り/.test(text)) items.push('設営・撤収時間を次回段取りへ反映');
   return [...new Set(items)];
 }
 
@@ -101,11 +140,11 @@ export function renderWalk() {
   const history = state.recordHistory || [];
   const selected = state.selectedRecordSessionId ? history.find((item) => item.session_id === state.selectedRecordSessionId) || null : null;
 
-  app().innerHTML = [
-    session ? renderActiveSession(session) : renderStartPanel(),
-    selected ? renderDetail(selected) : '',
-    renderHistory(history, selected?.session_id)
-  ].filter(Boolean).join('');
+  if (selected) {
+    app().innerHTML = `${renderDetail(selected)}${renderHistory(history, selected.session_id, true)}`;
+  } else {
+    app().innerHTML = `${session ? renderActiveSession(session) : renderStartPanel()}${renderHistory(history)}`;
+  }
   bindWalk();
   startTimer();
   syncGpsWatch(session);
@@ -113,47 +152,52 @@ export function renderWalk() {
 
 function renderStartPanel() {
   const project = getState().nextProject;
-  const campTitle = project?.reservation?.campground ? `${project.reservation.campground} 記録` : 'キャンプ記録';
-  return card(`<div class="record-panel-head compact">
-      <div><p>開始</p><h2>記録モード</h2></div>
-      <span>必要な項目だけ表示</span>
+  const campName = project?.reservation?.campground || project?.campground || '';
+  return card(`<section class="record-home-shell">
+    <div class="record-home-status">
+      <strong>記録</strong><span>散歩・キャンプ・メモを混ぜずに残す</span>
     </div>
-    <div class="record-mode-grid compact">
-      ${modeButton('walk', 'コタ散歩', 'GPS・地図・水・うんち', 'コタ散歩')}
-      ${modeButton('camp', 'キャンプ', '親記録としてまとめる', escapeHtml(campTitle))}
-      ${modeButton('life', 'メモ', '日常・気づき', '今日のメモ')}
+    <div class="record-launch-grid">
+      ${launchButton('homeWalk', '自宅散歩', '近所ルート・時間・距離', '自宅散歩')}
+      ${launchButton('camp', 'キャンプ滞在', '親記録を開始', campName ? `${campName} 記録` : 'キャンプ記録')}
+      ${launchButton('campWalk', 'キャンプ場散歩', '場内確認をすぐ開始', campName ? `${campName} 場内散歩` : 'キャンプ場散歩')}
+      ${launchButton('memo', 'メモ', '気づきだけ残す', '今日のメモ')}
     </div>
-    <details class="quiet-details record-title-edit"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="" placeholder="例：朝のコタ散歩 / 赤城山1日目" /></details>`, 'record-start-card record-start-compact');
+    <details class="quiet-details record-title-edit"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="" placeholder="例：朝の自宅散歩 / 赤城山1日目" /></details>
+  </section>`, 'record-field-card record-start-field');
 }
 
-function modeButton(type, label, sub, title) {
-  return `<button class="record-mode startSession" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
-    <span>${MODE_META[type]?.emoji || '●'}</span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(sub)}</small>
+function launchButton(type, label, sub, title) {
+  const meta = modeMeta(type);
+  return `<button class="record-launch startSession" data-type="${escapeHtml(type)}" data-title="${escapeHtml(title)}">
+    <span>${meta.emoji}</span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(sub)}</small>
   </button>`;
 }
 
 function renderActiveSession(session) {
   const mode = currentMode(session);
-  const points = gpsPointsOf(session);
-  const records = recordsOf(session);
+  const modePoints = modePointsOf(session, mode);
+  const allRecords = recordsOf(session);
   const parentTitle = session.parentTitle || session.title || modeLabel(session.type);
   const activeTitle = session.activeChild?.title || modeLabel(mode);
-  return card(`<div class="record-live-head">
-      <p>記録中</p>
-      <h2>${session.type === 'camp' ? `${escapeHtml(parentTitle)} ＞ ${escapeHtml(activeTitle)}` : escapeHtml(activeTitle)}</h2>
-      <span>${escapeHtml(session.locationLabel || (mode === 'walk' ? 'GPS確認中' : modeSub(mode)))}</span>
+  return card(`<section class="record-active-shell">
+    <div class="record-live-summary">
+      <div class="live-mark"><span></span>LIVE</div>
+      <div class="live-title">
+        <strong>${session.type === 'camp' ? escapeHtml(parentTitle) : escapeHtml(activeTitle)}</strong>
+        <small>${session.type === 'camp' ? `今：${escapeHtml(activeTitle)}` : escapeHtml(session.locationLabel || modeMeta(mode).sub)}</small>
+      </div>
+      <button class="mini-ghost" id="finishSessionTop">保存終了</button>
     </div>
     ${renderRecordingStack(session)}
-    <div class="timer-large record-timer" id="walkTimer">${elapsedText(session.activeChild?.startedAt || session.startedAt)}</div>
-    <div class="record-status refined"><span>${records.length}件</span><span>${distanceKm(points).toFixed(2)}km</span><span>GPS ${points.length}</span></div>
-    ${session.type === 'camp' ? renderCampContext(session) : ''}
-    ${mode === 'walk' ? renderLiveMap(points, session.locationLabel) : ''}
-    ${renderModeMemo(mode)}
-    ${renderQuickActions(mode)}
+    ${renderMetricStrip(session, mode, modePoints)}
+    ${renderModeSwitch(session)}
+    ${renderModeSurface(session, mode, modePoints)}
     ${renderModeControls(session)}
     <input id="photoInput" type="file" accept="image/*" hidden />
     <input id="videoInput" type="file" accept="video/*" hidden />
-    <details class="quiet-details"><summary>今回の記録</summary>${renderRecordList(records)}</details>`, 'live-card record-live-card');
+    <details class="quiet-details"><summary>今回の記録 ${allRecords.length}件</summary>${renderRecordList(allRecords)}</details>
+  </section>`, 'record-field-card record-active-card');
 }
 
 function renderRecordingStack(session) {
@@ -161,219 +205,356 @@ function renderRecordingStack(session) {
   const parentTitle = session.parentTitle || session.title || modeLabel(session.type);
   const activeTitle = session.activeChild?.title || modeLabel(mode);
   if (session.type === 'camp') {
-    return `<section class="record-stack-card">
-      <div class="stack-row parent"><span>親</span><strong>${escapeHtml(parentTitle)}</strong><small>キャンプは継続中</small></div>
-      <div class="stack-row current"><span>今</span><strong>${escapeHtml(activeTitle)}</strong><small>${session.activeChild ? '子記録が動作中' : '親記録だけ動作中'}</small></div>
+    return `<section class="record-stack-card field-stack">
+      <div><span>親</span><strong>${escapeHtml(parentTitle)}</strong><small>キャンプ継続中</small></div>
+      <div><span>今</span><strong>${escapeHtml(activeTitle)}</strong><small>${session.activeChild ? `${escapeHtml(modeMeta(mode).sub)}` : '滞在全体'}</small></div>
     </section>`;
   }
-  return `<section class="record-stack-card single">
-    <div class="stack-row current"><span>今</span><strong>${escapeHtml(modeLabel(mode))}</strong><small>${escapeHtml(session.locationLabel || modeSub(mode))}</small></div>
+  return `<section class="record-stack-card field-stack single">
+    <div><span>今</span><strong>${escapeHtml(modeLabel(mode))}</strong><small>${escapeHtml(session.locationLabel || modeMeta(mode).sub)}</small></div>
   </section>`;
 }
 
-function renderCampContext(session) {
-  const child = session.activeChild;
-  if (child) return '';
-  return `<section class="record-child-launch"><p>キャンプ中に残すこと</p><div class="record-chip-grid">
-    ${childButton('walk')}${childButton('setup')}${childButton('cook')}${childButton('teardown')}${childButton('life')}
-  </div></section>`;
+function renderMetricStrip(session, mode, points) {
+  const activeStart = session.activeChild?.startedAt || session.startedAt;
+  const recordCount = recordsOf(session).filter((record) => !session.activeChild || record.childId === session.activeChild.child_id || record.mode === mode).length;
+  const distance = isWalkMode(mode) ? `${distanceKm(points).toFixed(2)}km` : `${recordCount}件`;
+  const third = isWalkMode(mode) ? `GPS ${points.length}` : modeMeta(mode).sub;
+  return `<section class="record-metrics">
+    <div><span>時間</span><strong id="walkTimer">${elapsedText(activeStart)}</strong></div>
+    <div><span>${isWalkMode(mode) ? '距離' : '記録'}</span><strong>${escapeHtml(distance)}</strong></div>
+    <div><span>状態</span><strong>${escapeHtml(session.paused ? '一時停止' : third)}</strong></div>
+  </section>`;
 }
 
-function childButton(type) {
-  return `<button class="startChildMode" data-type="${escapeHtml(type)}"><span>${MODE_META[type]?.emoji || '●'}</span>${escapeHtml(modeLabel(type))}</button>`;
+function renderModeSwitch(session) {
+  const mode = currentMode(session);
+  const buttons = session.type === 'camp'
+    ? ['camp', 'campWalk', 'setup', 'cook', 'teardown', 'memo']
+    : ['homeWalk', 'camp', 'memo'];
+  return `<nav class="record-mode-switch" aria-label="記録モード切替">
+    ${buttons.map((type) => {
+      const active = mode === type || (!session.activeChild && session.type === type);
+      const actionClass = session.type === 'camp' ? 'switchCampMode' : 'switchStandaloneMode';
+      return `<button class="${actionClass} ${active ? 'active' : ''}" data-type="${escapeHtml(type)}"><span>${modeMeta(type).emoji}</span>${escapeHtml(modeShort(type))}</button>`;
+    }).join('')}
+  </nav>`;
 }
 
-function renderLiveMap(points, locationLabel = '') {
+function renderModeSurface(session, mode, points) {
+  if (isWalkMode(mode)) return `${renderStableWalkMap(session, mode, points)}${renderWalkActions(mode)}`;
+  if (mode === 'camp') return renderCampActions(session);
+  if (mode === 'setup') return renderSetupActions();
+  if (mode === 'cook') return renderCookActions();
+  if (mode === 'teardown') return renderTeardownActions();
+  return renderMemoActions();
+}
+
+function renderStableWalkMap(session, mode, points) {
   const latest = points[points.length - 1];
-  const mapFrame = latest ? `<iframe title="コタ散歩リアルタイム地図" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.openstreetmap.org/export/embed.html?bbox=${latest.lng - 0.004}%2C${latest.lat - 0.003}%2C${latest.lng + 0.004}%2C${latest.lat + 0.003}&layer=mapnik&marker=${latest.lat}%2C${latest.lng}"></iframe>` : '';
-  return `<section class="live-map-card">
-    <div class="live-map-head"><strong>コタ散歩マップ</strong><span>${escapeHtml(locationLabel || 'GPS取得後に表示')}</span></div>
-    <div class="live-map-body ${latest ? 'ready' : 'empty'}">${mapFrame || '<p>GPSを取得すると現在地と散歩の軌跡を表示します。</p>'}${renderRouteSketch(points)}</div>
-    <div class="live-map-actions"><button id="addGps" class="btn">現在地を更新</button>${latest ? `<a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${latest.lat},${latest.lng}" target="_blank" rel="noopener">Googleマップ</a>` : ''}</div>
+  const label = mode === 'homeWalk' ? '自宅散歩ルート' : '場内散歩ルート';
+  const zoomText = mode === 'homeWalk' ? '近所が見える距離感' : 'キャンプ場内が見える距離感';
+  const mapsLink = latest ? `https://www.google.com/maps/search/?api=1&query=${latest.lat},${latest.lng}` : '';
+  return `<section class="stable-map-card ${points.length ? 'ready' : 'empty'}">
+    <div class="stable-map-head"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(zoomText)}</span></div>
+    <div class="stable-map-canvas">
+      ${renderRouteSvg(points)}
+      <div class="map-overlay-info">
+        <span>${latest ? `${latest.lat.toFixed(5)}, ${latest.lng.toFixed(5)}` : 'GPS待機中'}</span>
+        <strong>${distanceKm(points).toFixed(2)}km</strong>
+      </div>
+    </div>
+    <div class="stable-map-actions">
+      <button id="addGps" class="btn primary slim">現在地</button>
+      ${mapsLink ? `<a class="btn slim" href="${mapsLink}" target="_blank" rel="noopener">地図で開く</a>` : '<button class="btn slim" disabled>地図で開く</button>'}
+      <button id="pauseWalk" class="btn slim">${session.paused ? '再開' : '一時停止'}</button>
+    </div>
   </section>`;
 }
 
-function renderRouteSketch(points) {
-  if (points.length < 2) return '';
-  const latest = points.slice(-40);
+function renderRouteSvg(points) {
+  if (!points.length) {
+    return `<div class="empty-map-message"><strong>現在地を取得中</strong><span>散歩開始後、近距離ルートをここに固定表示します。</span></div>`;
+  }
+  const latest = points.slice(-80);
   const lats = latest.map((p) => p.lat);
   const lngs = latest.map((p) => p.lng);
   const minLat = Math.min(...lats), maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const w = Math.max(maxLng - minLng, 0.00001);
-  const h = Math.max(maxLat - minLat, 0.00001);
-  let lastX = 50;
-  let lastY = 50;
-  const path = latest.map((p, index) => {
+  const w = Math.max(maxLng - minLng, 0.00018);
+  const h = Math.max(maxLat - minLat, 0.00018);
+  const coords = latest.map((p) => {
     const x = 10 + ((p.lng - minLng) / w) * 80;
     const y = 90 - ((p.lat - minLat) / h) * 80;
-    lastX = x;
-    lastY = y;
-    return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
-  return `<svg class="route-sketch" viewBox="0 0 100 100" aria-label="散歩軌跡"><path d="${path}"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3"/></svg>`;
+  const last = latest[latest.length - 1];
+  const lastX = 10 + ((last.lng - minLng) / w) * 80;
+  const lastY = 90 - ((last.lat - minLat) / h) * 80;
+  const first = latest[0];
+  const firstX = 10 + ((first.lng - minLng) / w) * 80;
+  const firstY = 90 - ((first.lat - minLat) / h) * 80;
+  return `<svg class="route-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="散歩ルート">
+    <defs><pattern id="fieldGrid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(62,49,35,.09)" stroke-width=".6"/></pattern></defs>
+    <rect width="100" height="100" fill="url(#fieldGrid)" />
+    ${latest.length > 1 ? `<polyline points="${coords}" fill="none" stroke="rgba(64,86,56,.85)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />` : ''}
+    <circle cx="${firstX.toFixed(1)}" cy="${firstY.toFixed(1)}" r="2.4" fill="rgba(120,96,68,.85)" />
+    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4.2" fill="rgba(36,75,50,.95)" />
+  </svg>`;
 }
 
-function renderModeMemo(mode) {
-  const placeholder = {
-    walk: '散歩中の気づき。道、暑さ、水、うんち、コタの様子など',
-    camp: 'キャンプ全体のメモ。天気、設営、気づきなど',
-    setup: '設営の手順、時間、困ったこと',
-    cook: '料理の量、味、次回変えたいこと',
-    teardown: '撤収順、濡れ物、乾燥、忘れ物',
-    life: '今の気づき'
-  }[mode] || '今の気づき';
-  return `<textarea id="recordMemo" class="field textarea record-memo" rows="3" placeholder="${escapeHtml(placeholder)}"></textarea>
-    <button id="addMemo" class="btn primary record-main-action">残す</button>`;
+function renderWalkActions(mode) {
+  if (mode === 'campWalk') {
+    return `<section class="record-action-panel"><div class="action-title"><strong>よく使う</strong><span>場内確認用</span></div>
+      <div class="action-grid five">
+        ${actionButton('photoBtn', '写真', '残す')}
+        ${actionButton('memoFocus', 'メモ', '入力')}
+        ${actionButton('facilityMemo', '設備', 'トイレ等')}
+        ${actionButton('viewMemo', '景色', '場所')}
+        ${actionButton('riskMemo', '注意', '危険箇所')}
+      </div>${renderMemoInput('サイト周辺、設備、景色、危険箇所など')}
+    </section>`;
+  }
+  return `<section class="record-action-panel"><div class="action-title"><strong>よく使う</strong><span>自宅散歩用</span></div>
+    <div class="action-grid four">
+      ${actionButton('photoBtn', '写真', '残す')}
+      ${actionButton('memoFocus', 'メモ', '入力')}
+      ${actionButton('routeMemo', 'ルート', '気づき')}
+      ${actionButton('conditionMemo', '様子', '体調')}
+    </div>${renderMemoInput('散歩ルート、コタの様子、気になったこと')}
+  </section>`;
 }
 
-function renderQuickActions(mode) {
-  if (mode === 'walk') {
-    return `<div class="quick-grid mode-grid walk-actions">
-      <button id="photoBtn" class="btn">写真</button>
-      <button id="quickPoop" class="btn">💩</button>
-      <button id="quickWater" class="btn">水</button>
-      <button id="quickBreak" class="btn">休憩</button>
-    </div>`;
-  }
-  if (mode === 'setup') {
-    return `<div class="quick-grid mode-grid"><button id="setupStart" class="btn">設営開始</button><button id="setupEnd" class="btn">設営完了</button><button id="photoBtn" class="btn">写真</button><button id="voiceMemo" class="btn">音声</button></div>`;
-  }
-  if (mode === 'cook') {
-    return `<div class="quick-grid mode-grid"><button id="cookPhoto" class="btn">料理写真</button><button id="mealAmount" class="btn">量メモ</button><button id="photoBtn" class="btn">写真</button><button id="voiceMemo" class="btn">音声</button></div>`;
-  }
-  if (mode === 'teardown') {
-    return `<div class="quick-grid mode-grid"><button id="teardownStart" class="btn">撤収開始</button><button id="teardownEnd" class="btn">撤収完了</button><button id="wetItem" class="btn">濡れ物</button><button id="photoBtn" class="btn">写真</button></div>`;
-  }
-  if (mode === 'camp') {
-    return `<div class="quick-grid mode-grid"><button id="photoBtn" class="btn">写真</button><button id="voiceMemo" class="btn">音声</button><button id="weatherMemo" class="btn">天気</button><button id="addGps" class="btn">場所</button></div>`;
-  }
-  return `<div class="quick-grid mode-grid"><button id="photoBtn" class="btn">写真</button><button id="voiceMemo" class="btn">音声</button></div>`;
+function renderCampActions(session) {
+  return `<section class="record-action-panel camp-panel"><div class="action-title"><strong>キャンプ中に残す</strong><span>親記録の中にまとめる</span></div>
+    <div class="action-grid five">
+      ${childAction('campWalk')}${childAction('setup')}${childAction('cook')}${childAction('teardown')}${childAction('memo')}
+    </div>${renderMemoInput('キャンプ全体の気づき、天気、サイト感など')}
+  </section>`;
+}
+function childAction(type) { return `<button class="startChildMode action-btn" data-type="${escapeHtml(type)}"><strong>${escapeHtml(modeShort(type))}</strong><span>${escapeHtml(modeMeta(type).sub)}</span></button>`; }
+function renderSetupActions() {
+  return `<section class="record-action-panel"><div class="action-title"><strong>設営</strong><span>時間と段取り</span></div><div class="action-grid four">
+    ${actionButton('setupStart', '開始', '設営')}${actionButton('setupEnd', '完了', '設営')}${actionButton('photoBtn', '写真', '配置')}${actionButton('setupIssue', '注意', '次回')}
+    </div>${renderMemoInput('設営で詰まったこと、配置、次回直すこと')}</section>`;
+}
+function renderCookActions() {
+  return `<section class="record-action-panel"><div class="action-title"><strong>料理</strong><span>写真・量・次回</span></div><div class="action-grid four">
+    ${actionButton('photoBtn', '写真', '料理')}${actionButton('mealAmount', '量', '多/少')}${actionButton('tasteMemo', '味', '感想')}${actionButton('nextMealMemo', '次回', '改善')}
+    </div>${renderMemoInput('料理の量、味、余り、次回の変更点')}</section>`;
+}
+function renderTeardownActions() {
+  return `<section class="record-action-panel"><div class="action-title"><strong>撤収</strong><span>収納・濡れ物・忘れ物</span></div><div class="action-grid four">
+    ${actionButton('teardownStart', '開始', '撤収')}${actionButton('teardownEnd', '完了', '撤収')}${actionButton('wetItem', '濡れ物', '乾燥')}${actionButton('packingMemo', '収納', '順番')}
+    </div>${renderMemoInput('撤収で時間がかかったこと、濡れ物、収納順')}</section>`;
+}
+function renderMemoActions() {
+  return `<section class="record-action-panel"><div class="action-title"><strong>メモ</strong><span>軽く残す</span></div><div class="action-grid three">
+    ${actionButton('photoBtn', '写真', '残す')}${actionButton('voiceMemo', '音声', '話す')}${actionButton('memoFocus', 'メモ', '入力')}
+    </div>${renderMemoInput('気づいたことをそのまま残す')}</section>`;
+}
+function actionButton(id, label, sub) { return `<button id="${escapeHtml(id)}" class="action-btn" type="button"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(sub)}</span></button>`; }
+function renderMemoInput(placeholder) {
+  return `<div class="memo-capture"><textarea id="recordMemo" class="field textarea" rows="3" placeholder="${escapeHtml(placeholder)}"></textarea><button id="addMemo" class="btn primary">メモを残す</button></div>`;
 }
 
 function renderModeControls(session) {
-  const child = session.activeChild;
-  if (child) {
-    return `<div class="record-end-grid"><button id="finishChild" class="btn primary">${escapeHtml(modeLabel(child.type))}を終了</button><button id="discardChild" class="btn danger subtle-danger">この子記録を破棄</button></div>`;
+  if (session.type === 'camp' && session.activeChild) {
+    return `<section class="record-controls"><button id="finishChild" class="btn primary">${escapeHtml(modeShort(session.activeChild.type))}を保存して戻る</button><button id="discardChild" class="btn danger subtle-danger">子記録を破棄</button><button id="finishWalk" class="btn">キャンプを保存終了</button><button id="discardWalk" class="btn danger subtle-danger">キャンプを破棄</button></section>`;
   }
-  return `<div class="record-end-grid"><button id="finishWalk" class="btn primary">終了して保存</button><button id="discardWalk" class="btn danger subtle-danger">破棄</button></div>`;
+  return `<section class="record-controls"><button id="finishWalk" class="btn primary">保存して終了</button><button id="discardWalk" class="btn danger subtle-danger">破棄</button></section>`;
 }
 
-function renderRecordList(records) {
-  if (!records.length) return '<p class="empty-line">まだ記録はありません。</p>';
-  return `<ul class="outbase-list record-list">${records.slice(0, 20).map((record) => `<li><strong>${escapeHtml(record.title)}</strong><br><span class="muted">${escapeHtml(modeLabel(record.mode))} / ${escapeHtml(formatTime(record.createdAt))}${record.detail ? ` / ${escapeHtml(record.detail)}` : ''}</span>${record.preview ? `<br><img src="${record.preview}" alt="写真メモ" class="memo-image" />` : ''}</li>`).join('')}</ul>`;
-}
-
-function renderHistory(history, selectedId = null) {
-  return card(`<div class="record-panel-head history-head compact">
-      <div><p>履歴</p><h2>最近の記録</h2></div>
-      <span>${history.length}件</span>
+function renderHistory(history, selectedId = null, compactAfterDetail = false) {
+  const filter = getState().recordHistoryFilter || 'all';
+  const filtered = filterHistory(history, filter);
+  return card(`<section class="record-history-shell ${compactAfterDetail ? 'compact' : ''}">
+    <div class="history-head"><strong>${compactAfterDetail ? '他の履歴' : '履歴'}</strong><span>${history.length}件</span></div>
+    <div class="history-filter">
+      ${historyFilterButton('today', '今日', filter)}${historyFilterButton('walk', '散歩', filter)}${historyFilterButton('camp', 'キャンプ', filter)}${historyFilterButton('all', 'すべて', filter)}
     </div>
-    ${history.length ? `<div class="history-list compact-history">${history.slice(0, 8).map((item) => {
-      const selected = item.session_id === selectedId;
-      const childCount = childSegmentsOf(item).length;
-      const distance = distanceKm(gpsPointsOf(item));
-      return `<button class="history-card history-card-button ${selected ? 'selected' : ''} detailSession" data-id="${escapeHtml(item.session_id)}">
-        <span class="history-mode-pill">${escapeHtml(modeLabel(item.type))}</span>
-        <strong>${escapeHtml(item.title || '記録')}</strong>
-        <small>${escapeHtml(formatTime(item.startedAt))} ・ ${recordsOf(item).length}件 ・ ${distance.toFixed(2)}km${childCount ? ` ・ 子${childCount}件` : ''}</small>
-      </button>`;
-    }).join('')}</div>` : '<p class="empty-line">終了するとここに残ります。</p>'}`, 'soft record-history-card compact');
+    ${filtered.length ? `<div class="history-list field-history-list">${filtered.slice(0, compactAfterDetail ? 4 : 12).map((item) => renderHistoryCard(item, selectedId)).join('')}</div>` : '<p class="empty-line">まだ履歴はありません。</p>'}
+  </section>`, 'record-field-card history-field-card');
+}
+function historyFilterButton(type, label, active) { return `<button class="historyFilter ${active === type ? 'active' : ''}" data-filter="${escapeHtml(type)}">${escapeHtml(label)}</button>`; }
+function filterHistory(history, filter) {
+  const today = new Date().toDateString();
+  if (filter === 'today') return history.filter((item) => item.startedAt && new Date(item.startedAt).toDateString() === today);
+  if (filter === 'walk') return history.filter((item) => walkPointsOf(item).length || ['homeWalk', 'campWalk', 'walk'].includes(normalizeMode(item.type)) || childSegmentsOf(item).some((c) => isWalkMode(c.type)));
+  if (filter === 'camp') return history.filter((item) => item.type === 'camp' || childSegmentsOf(item).length);
+  return history;
+}
+function renderHistoryCard(item, selectedId) {
+  const label = historyTitle(item);
+  const points = walkPointsOf(item);
+  const childCount = childSegmentsOf(item).length;
+  const selected = selectedId === item.session_id;
+  return `<article class="history-row ${selected ? 'selected' : ''}">
+    <div class="history-row-main"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(formatTime(item.startedAt))}</span></div>
+    <div class="history-row-meta"><span>${escapeHtml(elapsedText(item.startedAt, item.endedAt))}</span><span>${distanceKm(points).toFixed(2)}km</span><span>${recordsOf(item).length}件</span>${childCount ? `<span>子${childCount}</span>` : ''}</div>
+    <button class="btn small detailSession" data-id="${escapeHtml(item.session_id)}">詳細</button>
+  </article>`;
+}
+function historyTitle(item) {
+  if (item.type === 'camp') return item.parentTitle || item.title || 'キャンプ滞在';
+  return item.title || modeLabel(item.type);
 }
 
 function renderDetail(session) {
-  const reviewItems = buildReviewItems(session);
-  const points = gpsPointsOf(session);
-  return card(`<div id="recordDetail" style="scroll-margin-top:92px"></div>
-    <div class="record-panel-head detail-head compact">
-      <div><p>詳細</p><h2>${escapeHtml(session.title || modeLabel(session.type))}</h2></div>
-      <span>${escapeHtml(modeLabel(session.type))}</span>
-    </div>
-    <div class="detail-metrics">
-      <div><span>時間</span><strong>${escapeHtml(elapsedText(session.startedAt, session.endedAt))}</strong></div>
-      <div><span>距離</span><strong>${distanceKm(points).toFixed(2)}km</strong></div>
-      <div><span>記録</span><strong>${recordsOf(session).length}件</strong></div>
-    </div>
-    ${points.length ? renderDetailMap(points) : ''}
-    ${childSegmentsOf(session).length ? `<section class="detail-section"><h3>子記録</h3>${listItems(childSegmentsOf(session).map((child) => `${modeLabel(child.type)} ${elapsedText(child.startedAt, child.endedAt)}`))}</section>` : ''}
-    <details class="quiet-details detail-records" open><summary>記録一覧</summary>${renderRecordList(recordsOf(session))}</details>
-    <section class="detail-section"><h3>次回へ戻す</h3>${listItems(reviewItems, 'まだなし')}</section>`, 'focus record-detail-card compact');
+  const points = walkPointsOf(session);
+  const reviews = buildReviewItems(session);
+  const photos = recordsOf(session).filter((record) => record.preview);
+  return card(`<section id="recordDetail" class="record-detail-screen">
+    <button id="backToHistory" class="back-link">← 履歴へ戻る</button>
+    <div class="detail-title-block"><span>履歴詳細</span><h2>${escapeHtml(historyTitle(session))}</h2><p>${escapeHtml(formatTime(session.startedAt, true))}</p></div>
+    <div class="detail-metrics"><div><span>時間</span><strong>${escapeHtml(elapsedText(session.startedAt, session.endedAt))}</strong></div><div><span>距離</span><strong>${distanceKm(points).toFixed(2)}km</strong></div><div><span>記録</span><strong>${recordsOf(session).length}件</strong></div></div>
+    ${childSegmentsOf(session).length ? renderChildTimeline(session) : ''}
+    ${points.length ? renderStableWalkMap(session, session.type === 'camp' ? 'campWalk' : 'homeWalk', points) : ''}
+    ${photos.length ? `<section class="detail-section"><h3>写真</h3><div class="photo-strip">${photos.slice(0, 8).map((record) => `<img src="${record.preview}" alt="${escapeHtml(record.title)}" />`).join('')}</div></section>` : ''}
+    <section class="detail-section"><h3>記録一覧</h3>${renderRecordList(recordsOf(session), true)}</section>
+    ${points.length ? `<section class="detail-section"><h3>GPSログ</h3>${renderGpsLog(points)}</section>` : ''}
+    <section class="detail-section"><h3>次回へ戻す</h3>${listItems(reviews, 'まだなし')}</section>
+    <section class="detail-danger"><button id="deleteHistory" class="btn danger subtle-danger" data-id="${escapeHtml(session.session_id)}">この履歴を削除</button></section>
+  </section>`, 'record-field-card detail-field-card');
 }
-
-function renderDetailMap(points) {
-  const latest = points[points.length - 1];
-  if (!latest) return '';
-  return `<section class="detail-map-mini">
-    <strong>移動ログ</strong><span>${points.length}点</span>
-    ${renderRouteSketch(points)}
-  </section>`;
+function renderChildTimeline(session) {
+  return `<section class="child-timeline"><h3>キャンプ内の記録</h3>${childSegmentsOf(session).map((child) => `<div><span>${escapeHtml(modeShort(child.type))}</span><strong>${escapeHtml(elapsedText(child.startedAt, child.endedAt))}</strong><small>${escapeHtml(formatTime(child.startedAt))}</small></div>`).join('')}</section>`;
+}
+function renderRecordList(records, full = false) {
+  if (!records.length) return '<p class="empty-line">まだ記録はありません。</p>';
+  const list = full ? records : records.slice(0, 16);
+  return `<ul class="record-log-list">${list.map((record) => `<li><span>${escapeHtml(modeShort(record.mode))}</span><div><strong>${escapeHtml(record.title)}</strong><small>${escapeHtml(formatTime(record.createdAt))}${record.detail ? ` / ${escapeHtml(record.detail)}` : ''}</small>${record.preview ? `<img src="${record.preview}" alt="写真メモ" class="memo-image" />` : ''}</div></li>`).join('')}</ul>`;
+}
+function renderGpsLog(points) {
+  return `<div class="gps-log-list">${points.slice(-8).reverse().map((point) => `<div><strong>${escapeHtml(formatTime(point.createdAt))}</strong><span>${point.lat.toFixed(5)}, ${point.lng.toFixed(5)} / ±${Math.round(point.accuracy || 0)}m</span></div>`).join('')}</div>`;
 }
 
 function bindWalk() {
   document.querySelectorAll('.startSession').forEach((button) => button.addEventListener('click', () => startSession(button.dataset.type, button.dataset.title)));
   document.querySelectorAll('.startChildMode').forEach((button) => button.addEventListener('click', () => startChildMode(button.dataset.type)));
+  document.querySelectorAll('.switchCampMode').forEach((button) => button.addEventListener('click', () => switchCampMode(button.dataset.type)));
+  document.querySelectorAll('.switchStandaloneMode').forEach((button) => button.addEventListener('click', () => switchStandaloneMode(button.dataset.type)));
+  document.querySelectorAll('.historyFilter').forEach((button) => button.addEventListener('click', () => { patchState({ recordHistoryFilter: button.dataset.filter }); renderWalk(); }));
+  document.querySelectorAll('.detailSession').forEach((button) => button.addEventListener('click', () => { patchState({ selectedRecordSessionId: button.dataset.id }); renderWalk(); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
+  document.getElementById('backToHistory')?.addEventListener('click', () => { patchState({ selectedRecordSessionId: null }); renderWalk(); });
+  document.getElementById('deleteHistory')?.addEventListener('click', (event) => deleteHistorySession(event.currentTarget.dataset.id));
   document.getElementById('finishWalk')?.addEventListener('click', finishSession);
+  document.getElementById('finishSessionTop')?.addEventListener('click', finishSession);
   document.getElementById('discardWalk')?.addEventListener('click', discardSession);
   document.getElementById('finishChild')?.addEventListener('click', finishChildMode);
   document.getElementById('discardChild')?.addEventListener('click', discardChildMode);
   document.getElementById('addMemo')?.addEventListener('click', addTextMemo);
+  document.getElementById('memoFocus')?.addEventListener('click', () => document.getElementById('recordMemo')?.focus());
   document.getElementById('addGps')?.addEventListener('click', () => captureGpsPoint(true));
-  document.getElementById('quickPoop')?.addEventListener('click', () => addRecord(makeRecord('quick', '💩 コタうんち', 'クイック記録')));
-  document.getElementById('quickWater')?.addEventListener('click', () => addRecord(makeRecord('quick', '水分補給', 'コタ/人の水分補給')));
-  document.getElementById('quickBreak')?.addEventListener('click', () => addRecord(makeRecord('quick', '休憩', 'コタ散歩の休憩')));
-  document.getElementById('setupStart')?.addEventListener('click', () => addRecord(makeRecord('timer', '設営開始', '設営タイマー')));
-  document.getElementById('setupEnd')?.addEventListener('click', () => addRecord(makeRecord('timer', '設営完了', '次回の段取り確認')));
-  document.getElementById('teardownStart')?.addEventListener('click', () => addRecord(makeRecord('timer', '撤収開始', '撤収タイマー')));
-  document.getElementById('teardownEnd')?.addEventListener('click', () => addRecord(makeRecord('timer', '撤収完了', '収納順の反省')));
-  document.getElementById('wetItem')?.addEventListener('click', () => addRecord(makeRecord('memo', '濡れ物', '乾燥・収納確認')));
-  document.getElementById('weatherMemo')?.addEventListener('click', () => addRecord(makeRecord('memo', '天気メモ', '体感・風・雨')));
-  document.getElementById('mealAmount')?.addEventListener('click', () => addRecord(makeRecord('memo', '料理量メモ', '多い/少ない/ちょうどいい')));
-  document.getElementById('cookPhoto')?.addEventListener('click', () => document.getElementById('photoInput')?.click());
+  document.getElementById('pauseWalk')?.addEventListener('click', togglePauseWalk);
   document.getElementById('photoBtn')?.addEventListener('click', () => document.getElementById('photoInput')?.click());
   document.getElementById('videoBtn')?.addEventListener('click', () => document.getElementById('videoInput')?.click());
   document.getElementById('photoInput')?.addEventListener('change', (event) => handleFileMemo(event, 'photo'));
   document.getElementById('videoInput')?.addEventListener('change', (event) => handleFileMemo(event, 'video'));
   document.getElementById('voiceMemo')?.addEventListener('click', startVoiceMemo);
-  document.querySelectorAll('.detailSession').forEach((button) => button.addEventListener('click', () => {
-    patchState({ selectedRecordSessionId: button.dataset.id });
-    renderWalk();
-    scrollToRecordDetail();
-  }));
+  bindQuickRecord('facilityMemo', '設備メモ', 'トイレ・炊事場・売店・ゴミ捨て場など');
+  bindQuickRecord('viewMemo', '景色メモ', '景色が良い場所・写真候補');
+  bindQuickRecord('riskMemo', '注意メモ', '危険箇所・足元・音・混雑');
+  bindQuickRecord('routeMemo', 'ルートメモ', '歩きやすさ・道幅・信号・暗さ');
+  bindQuickRecord('conditionMemo', '様子メモ', 'コタの歩き方・疲れ・暑さ寒さ');
+  bindQuickRecord('setupStart', '設営開始', '設営時間を計測');
+  bindQuickRecord('setupEnd', '設営完了', '設営完了と次回段取り');
+  bindQuickRecord('setupIssue', '設営注意', '詰まったこと・改善点');
+  bindQuickRecord('mealAmount', '料理量メモ', '多い/少ない/ちょうどいい');
+  bindQuickRecord('tasteMemo', '味メモ', '味付け・火加減・次回調整');
+  bindQuickRecord('nextMealMemo', '次回料理メモ', '次回また作る/変更する');
+  bindQuickRecord('teardownStart', '撤収開始', '撤収時間を計測');
+  bindQuickRecord('teardownEnd', '撤収完了', '撤収完了と反省');
+  bindQuickRecord('wetItem', '濡れ物メモ', '乾燥・収納確認');
+  bindQuickRecord('packingMemo', '収納メモ', '積載・収納順・忘れ物');
 }
+function bindQuickRecord(id, title, detail) { document.getElementById(id)?.addEventListener('click', () => addRecord(makeRecord('quick', title, detail))); }
 
-function startSession(type = 'walk', defaultTitle = '') {
+function startSession(type = 'homeWalk', defaultTitle = '') {
   const customTitle = document.getElementById('sessionTitle')?.value?.trim();
+  const mode = normalizeMode(type, false);
   const project = getState().nextProject;
-  const title = customTitle || (type === 'camp' ? (project?.reservation?.campground ? `${project.reservation.campground} 記録` : 'キャンプ記録') : defaultTitle) || modeLabel(type);
+  const campName = project?.reservation?.campground || project?.campground || '';
+  const title = customTitle || defaultTitle || (mode === 'camp' ? (campName ? `${campName} 記録` : 'キャンプ記録') : modeLabel(mode));
+  if (mode === 'campWalk') return startCampWithChild('campWalk', title);
   const session = {
     session_id: `session_${Date.now()}`,
-    type,
+    type: mode,
     title,
-    parentTitle: type === 'camp' ? title : '',
+    parentTitle: mode === 'camp' ? title : '',
     status: 'active',
     startedAt: nowISO(),
     records: [],
     gpsPoints: [],
     childSegments: [],
-    locationLabel: type === 'walk' ? 'GPS確認中' : ''
+    locationLabel: mode === 'homeWalk' ? '現在地確認中' : ''
   };
   patchState({ walkSession: session, selectedRecordSessionId: null });
-  toast(`${modeLabel(type)}を開始`);
+  toast(`${modeLabel(mode)}を開始`);
   renderWalk();
-  if (type === 'walk') window.setTimeout(() => captureGpsPoint(false), 500);
+  if (isWalkMode(mode)) window.setTimeout(() => captureGpsPoint(false), 500);
+}
+
+function startCampWithChild(childType = 'campWalk', title = '') {
+  const project = getState().nextProject;
+  const campName = project?.reservation?.campground || project?.campground || '';
+  const parentTitle = campName ? `${campName} 記録` : 'キャンプ記録';
+  const child = { child_id: `child_${Date.now()}`, type: childType, title: modeLabel(childType), startedAt: nowISO() };
+  const session = {
+    session_id: `session_${Date.now()}`,
+    type: 'camp',
+    title: parentTitle,
+    parentTitle,
+    status: 'active',
+    startedAt: nowISO(),
+    activeChild: child,
+    records: [],
+    gpsPoints: [],
+    childSegments: [],
+    locationLabel: '現在地確認中'
+  };
+  patchState({ walkSession: session, selectedRecordSessionId: null });
+  toast(`${modeLabel(childType)}を開始`);
+  renderWalk();
+  if (isWalkMode(childType)) window.setTimeout(() => captureGpsPoint(false), 500);
+}
+
+function switchCampMode(type) {
+  const session = activeSession();
+  if (!session || session.type !== 'camp') return;
+  if (type === 'camp') {
+    if (session.activeChild && !window.confirm(`${modeLabel(session.activeChild.type)}を保存して、キャンプ滞在に戻りますか？`)) return;
+    patchState({ walkSession: closeChild(session, true) });
+    renderWalk();
+    return;
+  }
+  startChildMode(type);
+}
+
+function switchStandaloneMode(type) {
+  const session = activeSession();
+  if (!session || session.type === 'camp') return;
+  const target = normalizeMode(type, false);
+  const current = currentMode(session);
+  if (target === current) return;
+  if (!window.confirm(`${modeLabel(current)}を保存して、${modeLabel(target)}へ移動しますか？`)) return;
+  saveCurrentSessionToHistory(session, false);
+  if (target === 'camp') startSession('camp');
+  else startSession(target);
 }
 
 function startChildMode(type) {
-  const state = getState();
-  const session = state.walkSession;
+  const session = activeSession();
   if (!session || session.status !== 'active' || session.type !== 'camp') return;
-  if (session.activeChild && !window.confirm(`${modeLabel(session.activeChild.type)}を終了して、${modeLabel(type)}を開始しますか？`)) return;
-  const next = closeChild(session, false);
-  const activeChild = { child_id: `child_${Date.now()}`, type, title: modeLabel(type), startedAt: nowISO() };
-  patchState({ walkSession: { ...next, activeChild, records: [makeRecord('mode', `${modeLabel(type)}開始`, 'キャンプ内の子記録'), ...recordsOf(next)] } });
-  toast(`${modeLabel(type)}を開始`);
+  const mode = normalizeMode(type, true);
+  if (session.activeChild?.type === mode) return;
+  if (session.activeChild && !window.confirm(`${modeLabel(session.activeChild.type)}を保存して、${modeLabel(mode)}を開始しますか？`)) return;
+  const closed = closeChild(session, true);
+  const activeChild = { child_id: `child_${Date.now()}`, type: mode, title: modeLabel(mode), startedAt: nowISO() };
+  patchState({ walkSession: { ...closed, activeChild, records: [makeRecord('mode', `${modeLabel(mode)}開始`, 'キャンプ内の子記録'), ...recordsOf(closed)] } });
+  toast(`${modeLabel(mode)}を開始`);
   renderWalk();
-  if (type === 'walk') window.setTimeout(() => captureGpsPoint(false), 500);
+  if (isWalkMode(mode)) window.setTimeout(() => captureGpsPoint(false), 500);
 }
 
 function closeChild(session, save = true) {
@@ -389,14 +570,14 @@ function finishChildMode() {
   const childType = session.activeChild.type;
   const next = closeChild(session, true);
   patchState({ walkSession: { ...next, records: [makeRecord('mode', `${modeLabel(childType)}終了`, '子記録を保存'), ...recordsOf(next)] } });
-  toast(`${modeLabel(childType)}を終了`);
+  toast(`${modeLabel(childType)}を保存`);
   renderWalk();
 }
 
 function discardChildMode() {
   const session = activeSession();
   if (!session?.activeChild) return;
-  if (!window.confirm(`${modeLabel(session.activeChild.type)}の子記録を破棄しますか？`)) return;
+  if (!window.confirm(`${modeLabel(session.activeChild.type)}を破棄しますか？\nこの操作は元に戻せません。`)) return;
   patchState({ walkSession: { ...session, activeChild: null } });
   toast('子記録を破棄しました');
   renderWalk();
@@ -407,16 +588,19 @@ function addTextMemo() {
   const detail = textarea?.value?.trim();
   if (!detail) return toast('メモを入れてください');
   const mode = currentMode(activeSession());
-  addRecord(makeRecord('memo', `${modeLabel(mode)}メモ`, detail));
+  addRecord(makeRecord('memo', `${modeShort(mode)}メモ`, detail));
+  if (textarea) textarea.value = '';
 }
 
 function addGpsPointToSession(point, manual = false) {
   updateActiveSession((session) => {
     const points = gpsPointsOf(session);
     const previous = points[points.length - 1];
-    if (!manual && previous && haversine(previous, point) < 0.01) return session;
-    const records = manual ? [makeRecord('gps', 'GPS', `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`, { point }), ...recordsOf(session)] : recordsOf(session);
-    return { ...session, gpsPoints: [...points, point].slice(-500), records };
+    if (!manual && previous && haversine(previous, point) < 0.007) return session;
+    const mode = currentMode(session);
+    const taggedPoint = { ...point, mode, childId: session.activeChild?.child_id || '' };
+    const records = manual ? [makeRecord('gps', '現在地', `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`, { point: taggedPoint }), ...recordsOf(session)] : recordsOf(session);
+    return { ...session, gpsPoints: [...points, taggedPoint].slice(-600), records };
   });
   maybeResolvePlace(point);
 }
@@ -429,31 +613,40 @@ function captureGpsPoint(manual = true) {
   navigator.geolocation.getCurrentPosition((position) => {
     const point = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy, createdAt: nowISO() };
     addGpsPointToSession(point, manual);
-    toast(manual ? 'GPSを残しました' : '現在地を確認しました');
+    toast(manual ? '現在地を残しました' : '現在地を確認しました');
     renderWalk();
-  }, () => addRecord(makeRecord('gps', 'GPS取得失敗', '位置情報の許可を確認')), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  }, () => addRecord(makeRecord('gps', 'GPS取得失敗', '位置情報の許可を確認')), { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 });
 }
 
 function syncGpsWatch(session) {
-  if (!hasActiveWalk(session)) {
-    stopGpsWatch();
-    return;
-  }
-  if (!navigator.geolocation || geoWatchSessionId === session.session_id) return;
+  const mode = currentMode(session);
+  const shouldWatch = session?.status === 'active' && isWalkMode(mode) && !session.paused;
+  if (!shouldWatch) { stopGpsWatch(); return; }
+  if (!navigator.geolocation) return;
+  const key = `${session.session_id}:${session.activeChild?.child_id || 'root'}:${mode}`;
+  if (geoWatchKey === key) return;
   stopGpsWatch();
-  geoWatchSessionId = session.session_id;
+  geoWatchKey = key;
   geoWatchId = navigator.geolocation.watchPosition((position) => {
     const point = { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy, createdAt: nowISO() };
     addGpsPointToSession(point, false);
-    const current = activeSession();
-    if (current?.session_id === geoWatchSessionId) renderWalk();
-  }, () => undefined, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
+    const now = Date.now();
+    if (now - lastMapRenderAt > 5000) { lastMapRenderAt = now; renderWalk(); }
+  }, () => undefined, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
 }
 
 function stopGpsWatch() {
   if (geoWatchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(geoWatchId);
   geoWatchId = null;
-  geoWatchSessionId = null;
+  geoWatchKey = null;
+}
+
+function togglePauseWalk() {
+  const session = activeSession();
+  if (!session) return;
+  patchState({ walkSession: { ...session, paused: !session.paused } });
+  toast(session.paused ? '散歩を再開' : '一時停止');
+  renderWalk();
 }
 
 async function maybeResolvePlace(point) {
@@ -468,9 +661,7 @@ async function maybeResolvePlace(point) {
     updateActiveSession((current) => ({ ...current, locationLabel: `${label}付近` }));
   } catch {
     updateActiveSession((current) => ({ ...current, locationLabel: '現在地付近' }));
-  } finally {
-    resolvingPlace = false;
-  }
+  } finally { resolvingPlace = false; }
 }
 
 function handleFileMemo(event, type) {
@@ -483,10 +674,7 @@ function handleFileMemo(event, type) {
 
 function startVoiceMemo() {
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Speech) {
-    addRecord(makeRecord('voice', '音声メモ', '音声認識未対応'));
-    return;
-  }
+  if (!Speech) { addRecord(makeRecord('voice', '音声メモ', '音声認識未対応')); return; }
   speechRecognition = new Speech();
   speechRecognition.lang = 'ja-JP';
   speechRecognition.interimResults = false;
@@ -496,18 +684,24 @@ function startVoiceMemo() {
   toast('話してください');
 }
 
-function finishSession() {
+function saveCurrentSessionToHistory(session, select = true) {
   const state = getState();
-  const session = state.walkSession;
-  if (!session || session.status !== 'active') return;
   const closed = closeChild(session, true);
   const ended = { ...closed, status: 'done', endedAt: nowISO() };
   const reviewItems = buildReviewItems(ended);
+  patchState({ walkSession: null, recordHistory: [ended, ...(state.recordHistory || [])].slice(0, 80), selectedRecordSessionId: select ? ended.session_id : null, reviewQueue: [...new Set([...(state.reviewQueue || []), ...reviewItems])] });
+  return ended;
+}
+
+function finishSession() {
+  const session = activeSession();
+  if (!session) return;
   stopGpsWatch();
-  patchState({ walkSession: null, recordHistory: [ended, ...(state.recordHistory || [])].slice(0, 50), selectedRecordSessionId: ended.session_id, reviewQueue: [...new Set([...(state.reviewQueue || []), ...reviewItems])] });
+  const ended = saveCurrentSessionToHistory(session, true);
   toast('保存しました');
   renderWalk();
-  scrollToRecordDetail();
+  window.setTimeout(() => document.getElementById('recordDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  return ended;
 }
 
 function discardSession() {
@@ -520,6 +714,16 @@ function discardSession() {
   renderWalk();
 }
 
+function deleteHistorySession(sessionId) {
+  const state = getState();
+  const target = (state.recordHistory || []).find((item) => item.session_id === sessionId);
+  if (!target) return;
+  if (!window.confirm(`${historyTitle(target)} を削除しますか？\nこの操作は元に戻せません。`)) return;
+  patchState({ recordHistory: (state.recordHistory || []).filter((item) => item.session_id !== sessionId), selectedRecordSessionId: null });
+  toast('履歴を削除しました');
+  renderWalk();
+}
+
 function startTimer() {
   if (timer) window.clearInterval(timer);
   timer = window.setInterval(() => {
@@ -527,8 +731,4 @@ function startTimer() {
     const el = document.getElementById('walkTimer');
     if (session && el) el.textContent = elapsedText(session.activeChild?.startedAt || session.startedAt);
   }, 1000);
-}
-
-function scrollToRecordDetail() {
-  window.setTimeout(() => document.getElementById('recordDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
