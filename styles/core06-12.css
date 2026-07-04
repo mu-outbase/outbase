@@ -1,0 +1,110 @@
+/* Core06.12 Scroll Restore / 下バー固定でも最後までスクロール可能にする最終補強 */
+:root{
+  --ob-nav-h:64px;
+  --ob-nav-bottom:6px;
+  --ob-scroll-spacer:108px;
+}
+html{
+  height:auto!important;
+  min-height:100%!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:auto!important;
+}
+body{
+  height:auto!important;
+  min-height:100dvh!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+  padding-bottom:0!important;
+  overscroll-behavior-y:auto!important;
+  touch-action:pan-y!important;
+}
+html body[data-route] #app.app-shell,
+html body #app.app-shell,
+html body[data-route="home"] #app.app-shell,
+html body[data-route="search"] #app.app-shell,
+html body[data-route="prep"] #app.app-shell,
+html body[data-route="day"] #app.app-shell,
+html body[data-route="walk"] #app.app-shell,
+html body[data-route="memory"] #app.app-shell{
+  overflow:visible!important;
+  height:auto!important;
+  max-height:none!important;
+  min-height:calc(100dvh - 58px)!important;
+  padding-top:8px!important;
+  padding-bottom:0!important;
+  justify-content:flex-start!important;
+}
+#app.app-shell::after{
+  content:"";
+  display:block;
+  flex:0 0 var(--ob-scroll-spacer);
+  width:100%;
+  height:var(--ob-scroll-spacer);
+  min-height:var(--ob-scroll-spacer);
+  pointer-events:none;
+}
+/* ページごとに、下バーとの距離を「見えるけど空きすぎない」範囲へ固定 */
+body[data-route="home"]{--ob-scroll-spacer:116px;}
+body[data-route="search"]{--ob-scroll-spacer:104px;}
+body[data-route="prep"]{--ob-scroll-spacer:112px;}
+body[data-route="day"]{--ob-scroll-spacer:114px;}
+body[data-route="walk"]{--ob-scroll-spacer:104px;}
+body[data-route="memory"]{--ob-scroll-spacer:112px;}
+body[data-recording="active"]:not([data-route="walk"]){--ob-scroll-spacer:158px;}
+.bottom-nav{
+  bottom:max(var(--ob-nav-bottom),env(safe-area-inset-bottom))!important;
+  z-index:70!important;
+}
+.active-recording-indicator.compact-live-pill{
+  bottom:calc(var(--ob-nav-h) + max(var(--ob-nav-bottom),env(safe-area-inset-bottom)) + 8px)!important;
+  z-index:66!important;
+}
+body[data-route="walk"] .active-recording-indicator.compact-live-pill{display:none!important;}
+/* 下端の操作部がナビに潜らないよう、最後のカード直後にも余白を作る */
+.premium-page::after,
+.route-page::after,
+.record-active-shell::after,
+.record-home-shell::after{
+  content:"";
+  display:block;
+  height:4px;
+  flex:0 0 4px;
+}
+/* 06.11の全余白ゼロ化で詰まり過ぎた場所だけ戻す */
+.selected-day-sheet,
+.next-home-panel,
+.focus-card,
+.feature-hub-card,
+.premium-card:last-child,
+.card:last-child{
+  margin-bottom:0!important;
+}
+@supports(height:100dvh){
+  body{min-height:100dvh!important;}
+}
+@media(max-width:520px){
+  :root{--ob-nav-h:64px;--ob-nav-bottom:6px;--ob-scroll-spacer:112px;}
+  html body[data-route] #app.app-shell,
+  html body #app.app-shell{
+    padding-left:8px!important;
+    padding-right:8px!important;
+    padding-bottom:0!important;
+  }
+  body[data-route="home"]{--ob-scroll-spacer:118px;}
+  body[data-route="search"]{--ob-scroll-spacer:106px;}
+  body[data-route="prep"]{--ob-scroll-spacer:112px;}
+  body[data-route="day"]{--ob-scroll-spacer:114px;}
+  body[data-route="walk"]{--ob-scroll-spacer:104px;}
+  body[data-route="memory"]{--ob-scroll-spacer:112px;}
+  body[data-recording="active"]:not([data-route="walk"]){--ob-scroll-spacer:160px;}
+}
+@media(max-width:380px){
+  body[data-route="home"]{--ob-scroll-spacer:110px;}
+  body[data-route="search"]{--ob-scroll-spacer:100px;}
+  body[data-route="prep"]{--ob-scroll-spacer:106px;}
+  body[data-route="day"]{--ob-scroll-spacer:108px;}
+  body[data-route="walk"]{--ob-scroll-spacer:100px;}
+  body[data-route="memory"]{--ob-scroll-spacer:106px;}
+}

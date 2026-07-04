@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core06-11-bottom-spacing-final-20260704';
+import { patchState } from './store.js?v=core06-12-scroll-restore-20260704';
 
 const routes = new Map();
 const ROUTE_LABELS = { home: '予定', search: '探す', prep: '準備', walk: '記録', day: '当日', memory: '思い出', review: '思い出' };
