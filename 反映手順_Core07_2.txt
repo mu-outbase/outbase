@@ -1,0 +1,4 @@
+1. OUTBASE_Core07_2_PREP_DASHBOARD_完成版.zip を GitHub main にアップロード
+2. .github/workflows/unpack-core07-2.yml を作成
+3. Actions で Unpack Core07.2 ZIP を実行
+4. Pages 反映後、準備タブの最上段が「詳細天気・判断」、下が4ボタンになっていることを確認
