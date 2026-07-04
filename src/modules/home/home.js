@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-02-record-mode-map-confirm-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-02-record-mode-map-confirm-20260704';
-import { go } from '../../core/router.js?v=core06-02-record-mode-map-confirm-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-03-record-ux-polish-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-03-record-ux-polish-20260704';
+import { go } from '../../core/router.js?v=core06-03-record-ux-polish-20260704';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',

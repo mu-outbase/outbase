@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-02-record-mode-map-confirm-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-02-record-mode-map-confirm-20260704';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-03-record-ux-polish-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-03-record-ux-polish-20260704';
 
 let timer = null;
 let speechRecognition = null;
@@ -103,8 +103,8 @@ export function renderWalk() {
 
   app().innerHTML = [
     session ? renderActiveSession(session) : renderStartPanel(),
-    renderHistory(history, selected?.session_id),
-    selected ? renderDetail(selected) : ''
+    selected ? renderDetail(selected) : '',
+    renderHistory(history, selected?.session_id)
   ].filter(Boolean).join('');
   bindWalk();
   startTimer();
@@ -114,15 +114,16 @@ export function renderWalk() {
 function renderStartPanel() {
   const project = getState().nextProject;
   const campTitle = project?.reservation?.campground ? `${project.reservation.campground} 記録` : 'キャンプ記録';
-  return [
-    `<section class="record-hero"><p>何を記録する？</p><h2>今の出来事を残す</h2><span>モードごとに必要な項目だけ出します</span></section>`,
-    card(`<div class="record-mode-grid">
+  return card(`<div class="record-panel-head compact">
+      <div><p>開始</p><h2>記録モード</h2></div>
+      <span>必要な項目だけ表示</span>
+    </div>
+    <div class="record-mode-grid compact">
       ${modeButton('walk', 'コタ散歩', 'GPS・地図・水・うんち', 'コタ散歩')}
-      ${modeButton('camp', 'キャンプ', '滞在全体の親記録', escapeHtml(campTitle))}
+      ${modeButton('camp', 'キャンプ', '親記録としてまとめる', escapeHtml(campTitle))}
       ${modeButton('life', 'メモ', '日常・気づき', '今日のメモ')}
     </div>
-    <details class="quiet-details record-title-edit"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="" placeholder="例：朝のコタ散歩 / 赤城山1日目" /></details>`, 'record-start-card')
-  ].join('');
+    <details class="quiet-details record-title-edit"><summary>タイトルを変える</summary><input id="sessionTitle" class="field" value="" placeholder="例：朝のコタ散歩 / 赤城山1日目" /></details>`, 'record-start-card record-start-compact');
 }
 
 function modeButton(type, label, sub, title) {
@@ -142,6 +143,7 @@ function renderActiveSession(session) {
       <h2>${session.type === 'camp' ? `${escapeHtml(parentTitle)} ＞ ${escapeHtml(activeTitle)}` : escapeHtml(activeTitle)}</h2>
       <span>${escapeHtml(session.locationLabel || (mode === 'walk' ? 'GPS確認中' : modeSub(mode)))}</span>
     </div>
+    ${renderRecordingStack(session)}
     <div class="timer-large record-timer" id="walkTimer">${elapsedText(session.activeChild?.startedAt || session.startedAt)}</div>
     <div class="record-status refined"><span>${records.length}件</span><span>${distanceKm(points).toFixed(2)}km</span><span>GPS ${points.length}</span></div>
     ${session.type === 'camp' ? renderCampContext(session) : ''}
@@ -154,11 +156,24 @@ function renderActiveSession(session) {
     <details class="quiet-details"><summary>今回の記録</summary>${renderRecordList(records)}</details>`, 'live-card record-live-card');
 }
 
+function renderRecordingStack(session) {
+  const mode = currentMode(session);
+  const parentTitle = session.parentTitle || session.title || modeLabel(session.type);
+  const activeTitle = session.activeChild?.title || modeLabel(mode);
+  if (session.type === 'camp') {
+    return `<section class="record-stack-card">
+      <div class="stack-row parent"><span>親</span><strong>${escapeHtml(parentTitle)}</strong><small>キャンプは継続中</small></div>
+      <div class="stack-row current"><span>今</span><strong>${escapeHtml(activeTitle)}</strong><small>${session.activeChild ? '子記録が動作中' : '親記録だけ動作中'}</small></div>
+    </section>`;
+  }
+  return `<section class="record-stack-card single">
+    <div class="stack-row current"><span>今</span><strong>${escapeHtml(modeLabel(mode))}</strong><small>${escapeHtml(session.locationLabel || modeSub(mode))}</small></div>
+  </section>`;
+}
+
 function renderCampContext(session) {
   const child = session.activeChild;
-  if (child) {
-    return `<section class="record-parent-strip"><strong>親：キャンプ記録中</strong><span>今：${escapeHtml(modeLabel(child.type))}</span></section>`;
-  }
+  if (child) return '';
   return `<section class="record-child-launch"><p>キャンプ中に残すこと</p><div class="record-chip-grid">
     ${childButton('walk')}${childButton('setup')}${childButton('cook')}${childButton('teardown')}${childButton('life')}
   </div></section>`;
@@ -250,23 +265,48 @@ function renderRecordList(records) {
 }
 
 function renderHistory(history, selectedId = null) {
-  return card(`<h2>履歴</h2>
-    ${history.length ? `<div class="history-list">${history.slice(0, 5).map((item) => {
+  return card(`<div class="record-panel-head history-head compact">
+      <div><p>履歴</p><h2>最近の記録</h2></div>
+      <span>${history.length}件</span>
+    </div>
+    ${history.length ? `<div class="history-list compact-history">${history.slice(0, 8).map((item) => {
       const selected = item.session_id === selectedId;
-      const childText = childSegmentsOf(item).length ? ` / 子記録${childSegmentsOf(item).length}件` : '';
-      return `<article class="history-card ${selected ? 'selected' : ''}"><strong>${escapeHtml(modeLabel(item.type))}：${escapeHtml(item.title || '記録')}</strong><span>${escapeHtml(formatTime(item.startedAt))} / ${recordsOf(item).length}件 / ${distanceKm(gpsPointsOf(item)).toFixed(2)}km${childText}</span><button class="btn small detailSession" data-id="${escapeHtml(item.session_id)}">見る</button></article>`;
-    }).join('')}</div>` : '<p class="empty-line">終了するとここに残ります。</p>'}`, 'soft record-history-card');
+      const childCount = childSegmentsOf(item).length;
+      const distance = distanceKm(gpsPointsOf(item));
+      return `<button class="history-card history-card-button ${selected ? 'selected' : ''} detailSession" data-id="${escapeHtml(item.session_id)}">
+        <span class="history-mode-pill">${escapeHtml(modeLabel(item.type))}</span>
+        <strong>${escapeHtml(item.title || '記録')}</strong>
+        <small>${escapeHtml(formatTime(item.startedAt))} ・ ${recordsOf(item).length}件 ・ ${distance.toFixed(2)}km${childCount ? ` ・ 子${childCount}件` : ''}</small>
+      </button>`;
+    }).join('')}</div>` : '<p class="empty-line">終了するとここに残ります。</p>'}`, 'soft record-history-card compact');
 }
 
 function renderDetail(session) {
   const reviewItems = buildReviewItems(session);
+  const points = gpsPointsOf(session);
   return card(`<div id="recordDetail" style="scroll-margin-top:92px"></div>
-    <p class="eyebrow">詳細</p><h2>${escapeHtml(session.title || modeLabel(session.type))}</h2>
-    <div class="kv"><span>時間</span><strong>${escapeHtml(elapsedText(session.startedAt, session.endedAt))}</strong></div>
-    <div class="kv"><span>距離</span><strong>${distanceKm(gpsPointsOf(session)).toFixed(2)}km</strong></div>
-    ${childSegmentsOf(session).length ? `<h3>子記録</h3>${listItems(childSegmentsOf(session).map((child) => `${modeLabel(child.type)} ${elapsedText(child.startedAt, child.endedAt)}`))}` : ''}
-    <details class="quiet-details"><summary>記録一覧</summary>${renderRecordList(recordsOf(session))}</details>
-    <h3>次回へ戻す</h3>${listItems(reviewItems, 'まだなし')}`, 'focus');
+    <div class="record-panel-head detail-head compact">
+      <div><p>詳細</p><h2>${escapeHtml(session.title || modeLabel(session.type))}</h2></div>
+      <span>${escapeHtml(modeLabel(session.type))}</span>
+    </div>
+    <div class="detail-metrics">
+      <div><span>時間</span><strong>${escapeHtml(elapsedText(session.startedAt, session.endedAt))}</strong></div>
+      <div><span>距離</span><strong>${distanceKm(points).toFixed(2)}km</strong></div>
+      <div><span>記録</span><strong>${recordsOf(session).length}件</strong></div>
+    </div>
+    ${points.length ? renderDetailMap(points) : ''}
+    ${childSegmentsOf(session).length ? `<section class="detail-section"><h3>子記録</h3>${listItems(childSegmentsOf(session).map((child) => `${modeLabel(child.type)} ${elapsedText(child.startedAt, child.endedAt)}`))}</section>` : ''}
+    <details class="quiet-details detail-records" open><summary>記録一覧</summary>${renderRecordList(recordsOf(session))}</details>
+    <section class="detail-section"><h3>次回へ戻す</h3>${listItems(reviewItems, 'まだなし')}</section>`, 'focus record-detail-card compact');
+}
+
+function renderDetailMap(points) {
+  const latest = points[points.length - 1];
+  if (!latest) return '';
+  return `<section class="detail-map-mini">
+    <strong>移動ログ</strong><span>${points.length}点</span>
+    ${renderRouteSketch(points)}
+  </section>`;
 }
 
 function bindWalk() {
@@ -490,5 +530,5 @@ function startTimer() {
 }
 
 function scrollToRecordDetail() {
-  window.setTimeout(() => document.getElementById('recordDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  window.setTimeout(() => document.getElementById('recordDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }

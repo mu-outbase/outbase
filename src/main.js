@@ -1,15 +1,15 @@
-const BUILD_ID = 'core06-02-record-mode-map-confirm-20260704';
+const BUILD_ID = 'core06-03-record-ux-polish-20260704';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-02-record-mode-map-confirm-20260704';
-import { getState, subscribe } from './core/store.js?v=core06-02-record-mode-map-confirm-20260704';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-02-record-mode-map-confirm-20260704';
-import { renderHome } from './modules/home/home.js?v=core06-02-record-mode-map-confirm-20260704';
-import { renderSearch } from './modules/search/search.js?v=core06-02-record-mode-map-confirm-20260704';
-import { renderPrep } from './modules/prep/prep.js?v=core06-02-record-mode-map-confirm-20260704';
-import { renderDay } from './modules/day/day.js?v=core06-02-record-mode-map-confirm-20260704';
-import { renderWalk } from './modules/walk/walk.js?v=core06-02-record-mode-map-confirm-20260704';
-import { renderMemory } from './modules/memory/memory.js?v=core06-02-record-mode-map-confirm-20260704';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-02-record-mode-map-confirm-20260704';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-03-record-ux-polish-20260704';
+import { getState, subscribe } from './core/store.js?v=core06-03-record-ux-polish-20260704';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-03-record-ux-polish-20260704';
+import { renderHome } from './modules/home/home.js?v=core06-03-record-ux-polish-20260704';
+import { renderSearch } from './modules/search/search.js?v=core06-03-record-ux-polish-20260704';
+import { renderPrep } from './modules/prep/prep.js?v=core06-03-record-ux-polish-20260704';
+import { renderDay } from './modules/day/day.js?v=core06-03-record-ux-polish-20260704';
+import { renderWalk } from './modules/walk/walk.js?v=core06-03-record-ux-polish-20260704';
+import { renderMemory } from './modules/memory/memory.js?v=core06-03-record-ux-polish-20260704';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-03-record-ux-polish-20260704';
 
 document.body.dataset.build = BUILD_ID;
 

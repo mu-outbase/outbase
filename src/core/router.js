@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core06-02-record-mode-map-confirm-20260704';
+import { patchState } from './store.js?v=core06-03-record-ux-polish-20260704';
 
 const routes = new Map();
 
