@@ -1,27 +1,28 @@
-const CACHE_VERSION = 'core05-16-camp-plan-unified-20260704';
+const CACHE_VERSION = 'core06-01-record-pages-theme-20260704';
 const CACHE_NAME = `outbase-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
-  './index.html?v=core05-16-camp-plan-unified-20260704',
-  './manifest.json?v=core05-16-camp-plan-unified-20260704',
-  './styles/app.css?v=core05-16-camp-plan-unified-20260704',
-  './styles/core05-16.css?v=core05-16-camp-plan-unified-20260704',
-  './src/main.js?v=core05-16-camp-plan-unified-20260704',
-  './src/config/version.js?v=core05-16-camp-plan-unified-20260704',
-  './src/core/router.js?v=core05-16-camp-plan-unified-20260704',
-  './src/core/store.js?v=core05-16-camp-plan-unified-20260704',
-  './src/core/storage.js?v=core05-16-camp-plan-unified-20260704',
-  './src/ui/components.js?v=core05-16-camp-plan-unified-20260704',
-  './src/domain/schema.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/home/home.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/search/search.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/prep/prep.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/prep/prepEngine.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/import/import.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/day/day.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/walk/walk.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/memory/memory.js?v=core05-16-camp-plan-unified-20260704',
-  './src/modules/pwa/pwa.js?v=core05-16-camp-plan-unified-20260704'
+  './index.html?v=core06-01-record-pages-theme-20260704',
+  './manifest.json?v=core06-01-record-pages-theme-20260704',
+  './styles/app.css?v=core06-01-record-pages-theme-20260704',
+  './styles/core05-16.css?v=core06-01-record-pages-theme-20260704',
+  './styles/core06-01.css?v=core06-01-record-pages-theme-20260704',
+  './src/main.js?v=core06-01-record-pages-theme-20260704',
+  './src/config/version.js?v=core06-01-record-pages-theme-20260704',
+  './src/core/router.js?v=core06-01-record-pages-theme-20260704',
+  './src/core/store.js?v=core06-01-record-pages-theme-20260704',
+  './src/core/storage.js?v=core06-01-record-pages-theme-20260704',
+  './src/ui/components.js?v=core06-01-record-pages-theme-20260704',
+  './src/domain/schema.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/home/home.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/search/search.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/prep/prep.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/prep/prepEngine.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/import/import.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/day/day.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/walk/walk.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/memory/memory.js?v=core06-01-record-pages-theme-20260704',
+  './src/modules/pwa/pwa.js?v=core06-01-record-pages-theme-20260704'
 ];
 
 self.addEventListener('install', (event) => {
@@ -47,6 +48,6 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => undefined);
         return response;
       })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html?v=core05-16-camp-plan-unified-20260704')))
+      .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html?v=core06-01-record-pages-theme-20260704')))
   );
 });

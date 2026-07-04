@@ -1,0 +1,81 @@
+/* Core06.01 record/pages visual alignment + runtime theme */
+:root{
+  --runtime-bg:#f4efe4;
+  --runtime-bg2:#eee5d5;
+  --runtime-card:rgba(255,250,241,.86);
+  --runtime-card-strong:rgba(255,253,247,.92);
+  --runtime-line:rgba(34,32,24,.10);
+  --runtime-shadow:0 14px 34px rgba(54,44,31,.10);
+  --runtime-accent:var(--sage,#6f8063);
+  --runtime-accent2:var(--brass,#b98b4e);
+  --runtime-ink:var(--ink,#222018);
+  --runtime-muted:var(--muted,#776d5e);
+}
+body[data-theme="morning"]{
+  --runtime-bg:#f5ead7;
+  --runtime-bg2:#efe1ca;
+  --runtime-card:rgba(255,248,235,.88);
+  --runtime-accent:#a77a41;
+  --runtime-accent2:#d3a15e;
+  --runtime-shadow:0 16px 36px rgba(123,82,35,.13);
+}
+body[data-theme="day"]{
+  --runtime-bg:#f4efe4;
+  --runtime-bg2:#eee5d5;
+  --runtime-card:rgba(255,250,241,.86);
+  --runtime-accent:#6f8063;
+  --runtime-accent2:#b98b4e;
+}
+body[data-theme="evening"]{
+  --runtime-bg:#efe1d2;
+  --runtime-bg2:#e4d2bf;
+  --runtime-card:rgba(255,245,234,.88);
+  --runtime-accent:#a76548;
+  --runtime-accent2:#c58a53;
+  --runtime-shadow:0 16px 36px rgba(121,69,42,.15);
+}
+body[data-theme="night"]{
+  --runtime-bg:#e6dfd3;
+  --runtime-bg2:#d8d1c7;
+  --runtime-card:rgba(246,240,230,.90);
+  --runtime-accent:#5f6f74;
+  --runtime-accent2:#9c8461;
+  --runtime-ink:#211f1a;
+  --runtime-muted:#6f685c;
+  --runtime-shadow:0 18px 42px rgba(24,23,21,.16);
+}
+body{
+  background:
+    radial-gradient(circle at 14% -8%, color-mix(in srgb,var(--runtime-accent2) 22%, transparent), transparent 34%),
+    radial-gradient(circle at 88% 0%, color-mix(in srgb,var(--runtime-accent) 18%, transparent), transparent 32%),
+    linear-gradient(180deg,var(--runtime-bg),var(--runtime-bg2))!important;
+  transition:background .45s ease,color .45s ease;
+}
+body:before{opacity:.32!important}
+.app-header{background:color-mix(in srgb,var(--runtime-bg) 86%, transparent)!important;border-bottom-color:var(--runtime-line)!important}.app-kicker{color:var(--runtime-accent2)!important}.status-pill{background:var(--runtime-card-strong)!important;color:var(--runtime-accent)!important;border-color:color-mix(in srgb,var(--runtime-accent) 28%, transparent)!important}
+body[data-theme="morning"] .status-pill::after{content:" 準備";font-size:10px;color:var(--runtime-muted)}
+body[data-theme="evening"] .status-pill::after{content:" 設営";font-size:10px;color:var(--runtime-muted)}
+body[data-theme="night"] .status-pill::after{content:" 焚火";font-size:10px;color:var(--runtime-muted)}
+body[data-route]:not([data-route="home"]) .app-shell{padding:10px 10px 18px;gap:12px;max-width:720px}
+body[data-route]:not([data-route="home"]) .card,
+body[data-route]:not([data-route="home"]) .import-card,
+body[data-route]:not([data-route="home"]) .history-card,
+body[data-route]:not([data-route="home"]) .quiet-details,
+body[data-route]:not([data-route="home"]) .soft,
+body[data-route]:not([data-route="home"]) .focus{
+  background:var(--runtime-card)!important;
+  border:1px solid var(--runtime-line)!important;
+  border-radius:24px!important;
+  box-shadow:var(--runtime-shadow)!important;
+  backdrop-filter:blur(18px);
+}
+.page-title,.page-hero,.mini-hero{border:1px solid var(--runtime-line)!important;border-radius:24px!important;background:linear-gradient(135deg,color-mix(in srgb,var(--runtime-card) 86%,#fff 14%),color-mix(in srgb,var(--runtime-card) 78%,var(--runtime-accent) 22%))!important;box-shadow:var(--runtime-shadow)!important;padding:18px!important;color:var(--runtime-ink)!important;overflow:hidden}.page-title .overline,.page-hero .eyebrow,.mini-hero .phase-badge,.eyebrow,.overline{color:var(--runtime-accent2)!important}.page-title h2,.page-hero h2,.mini-hero h2{font-size:26px!important;letter-spacing:-.055em;color:var(--runtime-ink)!important}.page-title p,.page-hero p,.mini-hero p{color:var(--runtime-muted)!important}.pill-line span{background:rgba(255,255,255,.46)!important;border-color:var(--runtime-line)!important;color:var(--runtime-muted)!important}
+/* 探す/準備/当日/思い出のカードをHOME寄りに統一 */
+.search-field span,.quick-input-grid label span,.form-grid label span{color:var(--runtime-muted)!important;font-weight:1000}.field{background:rgba(255,255,255,.62)!important;border-color:var(--runtime-line)!important;border-radius:16px!important;color:var(--runtime-ink)!important}.textarea{line-height:1.55}.btn,.primary-cta,.btn.primary{border-radius:18px!important}.primary-cta,.btn.primary{background:linear-gradient(135deg,var(--runtime-ink),color-mix(in srgb,var(--runtime-accent) 72%,#111 28%))!important;color:#fffaf1!important}.btn:not(.primary):not(.danger){background:rgba(255,255,255,.56)!important;border-color:var(--runtime-line)!important;color:var(--runtime-ink)!important}.bento-list button,.big-tabs button,.day-step,.choice,.memory-summary div,.outbase-list li{background:rgba(255,255,255,.52)!important;border-color:var(--runtime-line)!important;border-radius:18px!important;color:var(--runtime-ink)!important}.big-tabs button.active{background:var(--runtime-ink)!important;color:#fffaf1!important}.list-head span,.memory-summary span{background:var(--runtime-ink)!important;color:#fffaf1!important}
+/* 記録モード：HOMEの質感に合わせる */
+body[data-route="walk"] .page-title{background:linear-gradient(135deg,color-mix(in srgb,var(--runtime-card) 82%,#fff 18%),color-mix(in srgb,var(--record,#5b9a74) 26%,var(--runtime-card) 74%))!important}.choice-grid{gap:10px}.choice{min-height:88px;text-align:left;padding:16px!important;display:flex;flex-direction:column;justify-content:space-between}.choice strong,.choice{font-weight:1000}.choice span{display:block;margin-top:8px;color:var(--runtime-muted);font-size:12px;font-weight:900}.live-card{border:1px solid color-mix(in srgb,var(--record,#5b9a74) 30%, transparent)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--runtime-card) 82%,#fff 18%),color-mix(in srgb,var(--record,#5b9a74) 12%,var(--runtime-card) 88%))!important}.timer-large{font-size:46px!important;line-height:1;letter-spacing:-.06em;font-weight:1000;color:var(--runtime-ink);background:rgba(255,255,255,.52);border:1px solid var(--runtime-line);border-radius:22px;padding:14px;text-align:center;margin:10px 0}.record-status{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.record-status span{display:flex;align-items:center;justify-content:center;min-height:42px;border-radius:14px;background:rgba(255,255,255,.56);border:1px solid var(--runtime-line);font-size:12px;font-weight:1000;color:var(--runtime-muted)}.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.quick-grid .btn{min-height:50px}.memo-image{width:100%;max-height:220px;object-fit:cover;border-radius:16px;margin-top:8px}.history-card.selected{outline:3px solid color-mix(in srgb,var(--runtime-accent) 34%, transparent);background:color-mix(in srgb,var(--runtime-card) 82%,var(--runtime-accent) 18%)!important}.btn.small{min-height:38px;font-size:12px;border-radius:14px!important}.subtle-danger,.btn.danger{background:#f4e0d8!important;color:#9d4336!important;border:1px solid #e8c3b8!important}
+/* 記録中表示も時間帯に馴染ませる */
+.active-recording-panel{border-color:color-mix(in srgb,var(--record,#5b9a74) 30%, transparent)!important;background:linear-gradient(135deg,color-mix(in srgb,var(--record,#5b9a74) 18%,transparent),var(--runtime-card))!important}.active-recording-panel p{color:var(--record,#5b9a74)!important}.active-recording-panel button,.active-recording-indicator strong{background:color-mix(in srgb,var(--record,#5b9a74) 82%,#222 18%)!important}.active-recording-indicator{background:var(--runtime-card-strong)!important;border-color:color-mix(in srgb,var(--record,#5b9a74) 30%, transparent)!important;color:var(--runtime-ink)!important}
+/* 下バーも時間帯テーマに乗せる */
+.bottom-nav{background:color-mix(in srgb,var(--runtime-card) 92%,transparent)!important;border-color:var(--runtime-line)!important;box-shadow:0 16px 36px rgba(34,32,24,.16)!important}.bottom-nav button{color:var(--runtime-ink)!important}.bottom-nav button small{color:var(--runtime-muted)!important}.bottom-nav button.active{background:color-mix(in srgb,var(--runtime-ink) 9%,transparent)!important}.bottom-nav .record-tab{background:linear-gradient(135deg,color-mix(in srgb,var(--record,#5b9a74) 88%,#222 12%),var(--runtime-accent2))!important;color:#fffaf1!important}.bottom-nav .record-tab small{color:rgba(255,250,241,.84)!important}
+@media(max-width:620px){body[data-route]:not([data-route="home"]) .app-shell{padding:8px 8px 16px}.page-title h2,.page-hero h2,.mini-hero h2{font-size:24px!important}.timer-large{font-size:40px!important}.quick-grid{grid-template-columns:1fr 1fr}.record-status{grid-template-columns:1fr 1fr 1fr}.search-grid,.quick-input-grid,.bento-list,.choice-grid{grid-template-columns:1fr!important}.day-step{grid-template-columns:76px 1fr!important}}

@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core05-16-camp-plan-unified-20260704';
+import { patchState } from './store.js?v=core06-01-record-pages-theme-20260704';
 
 const routes = new Map();
 

@@ -1,18 +1,26 @@
-const BUILD_ID = 'core05-16-camp-plan-unified-20260704';
+const BUILD_ID = 'core06-01-record-pages-theme-20260704';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core05-16-camp-plan-unified-20260704';
-import { getState, subscribe } from './core/store.js?v=core05-16-camp-plan-unified-20260704';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core05-16-camp-plan-unified-20260704';
-import { renderHome } from './modules/home/home.js?v=core05-16-camp-plan-unified-20260704';
-import { renderSearch } from './modules/search/search.js?v=core05-16-camp-plan-unified-20260704';
-import { renderPrep } from './modules/prep/prep.js?v=core05-16-camp-plan-unified-20260704';
-import { renderDay } from './modules/day/day.js?v=core05-16-camp-plan-unified-20260704';
-import { renderWalk } from './modules/walk/walk.js?v=core05-16-camp-plan-unified-20260704';
-import { renderMemory } from './modules/memory/memory.js?v=core05-16-camp-plan-unified-20260704';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core05-16-camp-plan-unified-20260704';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-01-record-pages-theme-20260704';
+import { getState, subscribe } from './core/store.js?v=core06-01-record-pages-theme-20260704';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-01-record-pages-theme-20260704';
+import { renderHome } from './modules/home/home.js?v=core06-01-record-pages-theme-20260704';
+import { renderSearch } from './modules/search/search.js?v=core06-01-record-pages-theme-20260704';
+import { renderPrep } from './modules/prep/prep.js?v=core06-01-record-pages-theme-20260704';
+import { renderDay } from './modules/day/day.js?v=core06-01-record-pages-theme-20260704';
+import { renderWalk } from './modules/walk/walk.js?v=core06-01-record-pages-theme-20260704';
+import { renderMemory } from './modules/memory/memory.js?v=core06-01-record-pages-theme-20260704';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-01-record-pages-theme-20260704';
 
-const runtime = applyRuntimeTheme();
 document.body.dataset.build = BUILD_ID;
+
+function refreshRuntimeTheme() {
+  const runtime = applyRuntimeTheme();
+  setAppStatus(runtime.label);
+  document.body.dataset.runtimeLabel = runtime.label;
+  return runtime;
+}
+
+const runtime = refreshRuntimeTheme();
 
 function activeRecordingLabel(state = getState()) {
   const session = state.walkSession;
@@ -55,5 +63,5 @@ go('home');
 updateActiveRecordingIndicator();
 subscribe(updateActiveRecordingIndicator);
 
-registerServiceWorker().then(() => setAppStatus(runtime.label));
-window.setInterval(() => setAppStatus(applyRuntimeTheme().label), 10 * 60 * 1000);
+registerServiceWorker().then(() => refreshRuntimeTheme());
+window.setInterval(refreshRuntimeTheme, 60 * 1000);
