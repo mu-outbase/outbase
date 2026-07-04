@@ -1,15 +1,15 @@
-const BUILD_ID = 'core06-10-global-ui-reset-20260704';
+const BUILD_ID = 'core06-11-bottom-spacing-final-20260704';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-10-global-ui-reset-20260704';
-import { getState, subscribe } from './core/store.js?v=core06-10-global-ui-reset-20260704';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-10-global-ui-reset-20260704';
-import { renderHome } from './modules/home/home.js?v=core06-10-global-ui-reset-20260704';
-import { renderSearch } from './modules/search/search.js?v=core06-10-global-ui-reset-20260704';
-import { renderPrep } from './modules/prep/prep.js?v=core06-10-global-ui-reset-20260704';
-import { renderDay } from './modules/day/day.js?v=core06-10-global-ui-reset-20260704';
-import { renderWalk } from './modules/walk/walk.js?v=core06-10-global-ui-reset-20260704';
-import { renderMemory } from './modules/memory/memory.js?v=core06-10-global-ui-reset-20260704';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-10-global-ui-reset-20260704';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-11-bottom-spacing-final-20260704';
+import { getState, subscribe } from './core/store.js?v=core06-11-bottom-spacing-final-20260704';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-11-bottom-spacing-final-20260704';
+import { renderHome } from './modules/home/home.js?v=core06-11-bottom-spacing-final-20260704';
+import { renderSearch } from './modules/search/search.js?v=core06-11-bottom-spacing-final-20260704';
+import { renderPrep } from './modules/prep/prep.js?v=core06-11-bottom-spacing-final-20260704';
+import { renderDay } from './modules/day/day.js?v=core06-11-bottom-spacing-final-20260704';
+import { renderWalk } from './modules/walk/walk.js?v=core06-11-bottom-spacing-final-20260704';
+import { renderMemory } from './modules/memory/memory.js?v=core06-11-bottom-spacing-final-20260704';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-11-bottom-spacing-final-20260704';
 
 
 document.body.dataset.build = BUILD_ID;
@@ -59,7 +59,7 @@ function updateActiveRecordingIndicator(state = getState()) {
     if (small) small.textContent = label ? '記録中' : '記録';
   }
   let bar = document.getElementById('activeRecordingIndicator');
-  if (!label) { bar?.remove(); return; }
+  if (!label) { bar?.remove(); requestAnimationFrame(syncBottomSpace); return; }
   if (!bar) {
     bar = document.createElement('button');
     bar.id = 'activeRecordingIndicator';
@@ -70,7 +70,26 @@ function updateActiveRecordingIndicator(state = getState()) {
     bar.addEventListener('click', () => go('walk'));
   }
   bar.innerHTML = `<strong>記録中</strong><span>${label}</span><em>タップで戻る</em>`;
+  requestAnimationFrame(syncBottomSpace);
 }
+
+
+function syncBottomSpace() {
+  const nav = document.querySelector('.bottom-nav');
+  const active = document.getElementById('activeRecordingIndicator');
+  const navRect = nav?.getBoundingClientRect?.();
+  const navHeight = Math.ceil(navRect?.height || 64);
+  const navBottom = Math.max(6, Math.ceil(window.innerHeight - (navRect?.bottom || (window.innerHeight - 6))));
+  const activeVisible = active && getState().currentRoute !== 'walk' && getComputedStyle(active).display !== 'none';
+  const activeHeight = activeVisible ? Math.ceil(active.getBoundingClientRect().height + 8) : 0;
+  const gap = window.matchMedia('(max-width:520px)').matches ? 12 : 14;
+  const reserve = Math.max(72, navHeight + navBottom + activeHeight + gap);
+  document.documentElement.style.setProperty('--ob-bottom-reserve', `${reserve}px`);
+  document.documentElement.style.setProperty('--ob-nav-bottom', `${navBottom}px`);
+}
+window.OUTBASE_SYNC_BOTTOM_SPACE = syncBottomSpace;
+window.addEventListener('resize', syncBottomSpace, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(syncBottomSpace, 120), { passive: true });
 
 refreshRuntimeTheme();
 registerRoute('home', renderHome);
@@ -83,6 +102,7 @@ registerRoute('review', renderMemory);
 bindNavigation();
 go('home');
 updateActiveRecordingIndicator();
+requestAnimationFrame(syncBottomSpace);
 subscribe(updateActiveRecordingIndicator);
 registerServiceWorker().then(() => refreshRuntimeTheme());
 window.setInterval(refreshRuntimeTheme, 60 * 1000);

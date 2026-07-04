@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core06-10-global-ui-reset-20260704';
+import { patchState } from './store.js?v=core06-11-bottom-spacing-final-20260704';
 
 const routes = new Map();
 const ROUTE_LABELS = { home: '予定', search: '探す', prep: '準備', walk: '記録', day: '当日', memory: '思い出', review: '思い出' };
@@ -11,6 +11,7 @@ function applyRoute(resolved, renderer) {
   updateHeader(resolved);
   document.querySelectorAll('[data-route]').forEach((button) => button.classList.toggle('active', button.dataset.route === resolved));
   renderer?.();
+  requestAnimationFrame(() => window.OUTBASE_SYNC_BOTTOM_SPACE?.());
   window.navigator?.vibrate?.(resolved === 'walk' ? 8 : 3);
 }
 export function go(routeName) {

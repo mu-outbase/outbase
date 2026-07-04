@@ -1,0 +1,79 @@
+/* Core06.11 Bottom Spacing Final / 全ページ下余白の統一 */
+:root{
+  --ob-nav-h:64px;
+  --ob-nav-bottom:6px;
+  --ob-content-gap:14px;
+  --ob-bottom-reserve:86px;
+}
+html{min-height:100%;min-height:100dvh;}
+body{
+  min-height:100%;
+  min-height:100dvh;
+  padding-bottom:0!important;
+  overscroll-behavior-y:contain;
+}
+.app-shell{
+  padding-top:8px!important;
+  padding-bottom:var(--ob-bottom-reserve)!important;
+  min-height:auto!important;
+  justify-content:flex-start!important;
+}
+.app-shell>section:last-child,
+.app-shell>.card:last-child,
+.app-shell>.cardless:last-child,
+.premium-page>section:last-child,
+.premium-page>.premium-card:last-child,
+.route-page>section:last-child{
+  margin-bottom:0!important;
+}
+.bottom-nav{
+  bottom:max(var(--ob-nav-bottom),env(safe-area-inset-bottom))!important;
+}
+.active-recording-indicator.compact-live-pill{
+  bottom:calc(var(--ob-nav-h) + max(var(--ob-nav-bottom),env(safe-area-inset-bottom)) + 8px)!important;
+}
+body[data-route="walk"] .active-recording-indicator.compact-live-pill{
+  display:none!important;
+}
+/* スクロール末尾で、最後のカードと下バーの距離を12〜16pxに揃える */
+body[data-route="home"] .app-shell,
+body[data-route="search"] .app-shell,
+body[data-route="prep"] .app-shell,
+body[data-route="day"] .app-shell,
+body[data-route="walk"] .app-shell,
+body[data-route="memory"] .app-shell{
+  padding-bottom:var(--ob-bottom-reserve)!important;
+}
+/* 短いページで見える余白を目立たせない */
+body[data-route="home"] .jorte-next-strip,
+body[data-route="search"] .premium-page,
+body[data-route="prep"] .premium-page,
+body[data-route="day"] .premium-page,
+body[data-route="memory"] .premium-page{
+  margin-bottom:0!important;
+}
+/* 長いリストは下バーに隠れない。短い画面でも最後の操作が狭くならない。 */
+.history-list,
+.day-operate-list,
+.outbase-list,
+.next-camp-items{
+  padding-bottom:0!important;
+}
+.quiet-details:last-child,
+.focus-card:last-child,
+.feature-hub-card:last-child,
+.selected-day-sheet:last-child,
+.next-home-panel:last-child{
+  margin-bottom:0!important;
+}
+/* Android Chrome のアドレスバー変動で詰まり過ぎるのを抑える */
+@supports(height:100dvh){
+  body{min-height:100dvh;}
+}
+@media(max-width:520px){
+  :root{--ob-nav-h:64px;--ob-nav-bottom:6px;--ob-content-gap:12px;--ob-bottom-reserve:84px;}
+  .app-shell{padding-left:8px!important;padding-right:8px!important;padding-bottom:var(--ob-bottom-reserve)!important;}
+}
+@media(max-width:380px){
+  :root{--ob-bottom-reserve:78px;}
+}
