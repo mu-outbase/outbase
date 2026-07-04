@@ -1,0 +1,231 @@
+/* OUTBASE Core06.07 - usability fix: calendar hit area, record cockpit, clear nav */
+:root{
+  --outbase-nav-height: 82px;
+  --nav-bg: rgba(43, 38, 30, .94);
+  --nav-text: rgba(255,250,241,.92);
+  --nav-muted: rgba(255,250,241,.64);
+  --nav-active: #64785a;
+  --nav-record: #b98b4e;
+}
+
+/* Calendar: entire cell is tappable, date number fixed left-top */
+body[data-route="home"] .jorte-day{
+  position:relative!important;
+  display:block!important;
+  width:100%!important;
+  text-align:left!important;
+  touch-action:manipulation!important;
+  cursor:pointer!important;
+  padding:28px 5px 4px!important;
+}
+body[data-route="home"] .jorte-day b{
+  position:absolute!important;
+  top:7px!important;
+  left:8px!important;
+  right:auto!important;
+  width:auto!important;
+  margin:0!important;
+  line-height:1!important;
+  text-align:left!important;
+  pointer-events:none!important;
+}
+body[data-route="home"] .jorte-day em{
+  position:absolute!important;
+  top:28px!important;
+  left:8px!important;
+  right:4px!important;
+  pointer-events:none!important;
+}
+body[data-route="home"] .jorte-events{
+  position:relative!important;
+  z-index:2!important;
+  pointer-events:none!important;
+  margin-top:0!important;
+}
+body[data-route="home"] .jorte-event,
+body[data-route="home"] .jorte-events small{ pointer-events:none!important; }
+body[data-route="home"] .jorte-day.today:after{
+  top:4px!important;
+  left:5px!important;
+  width:34px!important;
+  height:30px!important;
+}
+
+/* Bottom nav: higher contrast, readable at a glance */
+.bottom-nav{
+  background:var(--nav-bg)!important;
+  border:1px solid rgba(255,250,241,.12)!important;
+  box-shadow:0 18px 42px rgba(25,20,14,.30)!important;
+  backdrop-filter:blur(18px)!important;
+}
+.bottom-nav button{
+  color:var(--nav-text)!important;
+  background:transparent!important;
+  border:0!important;
+  opacity:1!important;
+}
+.bottom-nav button small{ color:var(--nav-muted)!important; }
+.bottom-nav button.active{
+  background:linear-gradient(135deg,var(--nav-active),#7d936c)!important;
+  color:#fffaf1!important;
+  box-shadow:0 10px 24px rgba(100,120,90,.25)!important;
+}
+.bottom-nav button.active small{ color:rgba(255,250,241,.74)!important; }
+.bottom-nav .record-tab{
+  background:linear-gradient(145deg,var(--nav-record),#d3b06c)!important;
+  color:#fffaf1!important;
+  box-shadow:0 14px 30px rgba(185,139,78,.30)!important;
+}
+.bottom-nav .record-tab small{ color:rgba(255,250,241,.76)!important; }
+
+/* Do not hijack navigation while recording */
+.active-recording-indicator.passive{
+  pointer-events:none!important;
+  left:18px!important;
+  right:18px!important;
+  bottom:calc(96px + env(safe-area-inset-bottom))!important;
+  min-height:34px!important;
+  padding:7px 10px!important;
+  border-radius:999px!important;
+  grid-template-columns:auto 1fr!important;
+  opacity:.92!important;
+}
+.active-recording-indicator.passive strong{ font-size:.68rem!important; }
+.active-recording-indicator.passive span{ font-size:.75rem!important; }
+body[data-route="walk"] .active-recording-indicator{ display:none!important; }
+
+/* Record cockpit: first screen shows mode, metrics, switcher, actions and map */
+body[data-route="walk"] .app-shell{
+  gap:10px!important;
+  padding:10px 10px calc(var(--outbase-nav-height) + 34px + env(safe-area-inset-bottom))!important;
+}
+.record-field-card.record-active-card{
+  border-radius:28px!important;
+  padding:13px!important;
+}
+.record-cockpit-shell{ display:grid!important; gap:9px!important; }
+.record-now-hero{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  gap:10px!important;
+  align-items:center!important;
+  padding:12px!important;
+  border-radius:22px!important;
+  background:linear-gradient(135deg,#2f291f,#536645)!important;
+  color:#fffaf1!important;
+  box-shadow:0 12px 28px rgba(47,41,31,.18)!important;
+}
+.record-now-main{ min-width:0!important; }
+.record-now-main span{
+  display:block!important;
+  color:rgba(255,250,241,.70)!important;
+  font-weight:950!important;
+  font-size:.68rem!important;
+  letter-spacing:.12em!important;
+}
+.record-now-main h2{
+  color:#fffaf1!important;
+  font-size:clamp(1.18rem, 5.2vw, 1.7rem)!important;
+  line-height:1.05!important;
+  margin:2px 0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.record-now-main p{
+  margin:0!important;
+  color:rgba(255,250,241,.72)!important;
+  font-size:.78rem!important;
+  font-weight:850!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.finish-now{
+  min-width:78px!important;
+  height:44px!important;
+  border-radius:16px!important;
+  border:1px solid rgba(255,250,241,.22)!important;
+  background:rgba(255,250,241,.16)!important;
+  color:#fffaf1!important;
+}
+.record-metrics{ gap:6px!important; }
+.record-metrics div{ padding:8px!important; border-radius:15px!important; }
+.record-metrics span{ font-size:.66rem!important; }
+.record-metrics strong{ font-size:.9rem!important; }
+.record-metrics #walkTimer{ font-size:.96rem!important; }
+.mode-switch-label{
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:end!important;
+  padding:0 2px!important;
+}
+.mode-switch-label strong{ color:var(--field-ink); font-size:.88rem; }
+.mode-switch-label small{ color:var(--field-muted); font-size:.72rem; font-weight:850; }
+.record-mode-switch{
+  position:static!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  overflow:visible!important;
+  padding:0!important;
+}
+.record-mode-switch button{
+  min-width:0!important;
+  min-height:38px!important;
+  padding:6px 5px!important;
+  border-radius:15px!important;
+  font-size:.74rem!important;
+  white-space:nowrap!important;
+}
+.cockpit-actions{ gap:7px!important; }
+.cockpit-actions .action-title{ padding:0 2px!important; }
+.cockpit-actions .action-title strong{ font-size:.9rem!important; }
+.cockpit-actions .action-title span{ font-size:.7rem!important; }
+.cockpit-grid{ gap:6px!important; }
+.action-grid.five.cockpit-grid{ grid-template-columns:repeat(5,minmax(0,1fr))!important; }
+.action-grid.four.cockpit-grid{ grid-template-columns:repeat(4,minmax(0,1fr))!important; }
+.action-grid.three.cockpit-grid{ grid-template-columns:repeat(3,minmax(0,1fr))!important; }
+.action-btn{
+  min-height:50px!important;
+  border-radius:14px!important;
+  padding:6px 3px!important;
+}
+.action-btn strong{ font-size:.78rem!important; }
+.action-btn span{ font-size:.6rem!important; }
+.compact-map{ gap:6px!important; }
+.compact-map .stable-map-head strong{ font-size:.86rem!important; }
+.compact-map .stable-map-head span{ font-size:.68rem!important; }
+.compact-map .stable-map-canvas{
+  min-height:132px!important;
+  border-radius:18px!important;
+  background:
+    radial-gradient(circle at 74% 25%, rgba(255,255,255,.55), transparent 22%),
+    linear-gradient(135deg, rgba(218,231,206,.94), rgba(238,226,202,.96))!important;
+}
+.compact-map .empty-map-message{ height:132px!important; gap:3px!important; }
+.compact-map .empty-map-message strong{ font-size:.86rem!important; }
+.compact-map .empty-map-message span{ font-size:.72rem!important; }
+.compact-map .map-overlay-info{
+  left:7px!important; right:7px!important; bottom:7px!important;
+  padding:6px 8px!important; border-radius:13px!important;
+}
+.compact-map .map-overlay-info span{ font-size:.66rem!important; }
+.compact-map .map-overlay-info strong{ font-size:.84rem!important; }
+.record-controls{
+  grid-template-columns:1fr 1fr!important;
+  gap:6px!important;
+}
+.record-controls .btn{ min-height:38px!important; border-radius:14px!important; font-size:.82rem!important; }
+.record-log-details{ margin-top:2px!important; padding:9px!important; border-radius:16px!important; }
+.record-log-details summary{ font-size:.84rem!important; }
+.record-stack-card{ display:none!important; }
+
+@media(max-width:380px){
+  .action-grid.five.cockpit-grid{ grid-template-columns:repeat(5,minmax(0,1fr))!important; }
+  .action-btn strong{ font-size:.72rem!important; }
+  .action-btn span{ display:none!important; }
+  .record-mode-switch{ grid-template-columns:repeat(3,minmax(0,1fr))!important; }
+  .compact-map .stable-map-canvas{ min-height:116px!important; }
+  .record-now-hero{ padding:10px!important; }
+}

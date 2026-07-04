@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-06-mobile-shell-polish-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-06-mobile-shell-polish-20260704';
-import { go } from '../../core/router.js?v=core06-06-mobile-shell-polish-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-07-usability-fix-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-07-usability-fix-20260704';
+import { go } from '../../core/router.js?v=core06-07-usability-fix-20260704';
 
 function projectName(project) { return project?.reservation?.campground || project?.title || '今日のキャンプ'; }
 function context(state, project) { return { ...(state.prepContext || {}), ...(project?.prepContext || {}) }; }

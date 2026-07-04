@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js?v=core06-06-mobile-shell-polish-20260704';
+import { STORAGE_KEY } from '../config/version.js?v=core06-07-usability-fix-20260704';
 
 export function loadState() {
   try {

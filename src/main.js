@@ -1,15 +1,15 @@
-const BUILD_ID = 'core06-06-mobile-shell-polish-20260704';
+const BUILD_ID = 'core06-07-usability-fix-20260704';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-06-mobile-shell-polish-20260704';
-import { getState, subscribe } from './core/store.js?v=core06-06-mobile-shell-polish-20260704';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-06-mobile-shell-polish-20260704';
-import { renderHome } from './modules/home/home.js?v=core06-06-mobile-shell-polish-20260704';
-import { renderSearch } from './modules/search/search.js?v=core06-06-mobile-shell-polish-20260704';
-import { renderPrep } from './modules/prep/prep.js?v=core06-06-mobile-shell-polish-20260704';
-import { renderDay } from './modules/day/day.js?v=core06-06-mobile-shell-polish-20260704';
-import { renderWalk } from './modules/walk/walk.js?v=core06-06-mobile-shell-polish-20260704';
-import { renderMemory } from './modules/memory/memory.js?v=core06-06-mobile-shell-polish-20260704';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-06-mobile-shell-polish-20260704';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-07-usability-fix-20260704';
+import { getState, subscribe } from './core/store.js?v=core06-07-usability-fix-20260704';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-07-usability-fix-20260704';
+import { renderHome } from './modules/home/home.js?v=core06-07-usability-fix-20260704';
+import { renderSearch } from './modules/search/search.js?v=core06-07-usability-fix-20260704';
+import { renderPrep } from './modules/prep/prep.js?v=core06-07-usability-fix-20260704';
+import { renderDay } from './modules/day/day.js?v=core06-07-usability-fix-20260704';
+import { renderWalk } from './modules/walk/walk.js?v=core06-07-usability-fix-20260704';
+import { renderMemory } from './modules/memory/memory.js?v=core06-07-usability-fix-20260704';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-07-usability-fix-20260704';
 
 document.body.dataset.build = BUILD_ID;
 
@@ -64,11 +64,10 @@ function updateActiveRecordingIndicator(state = getState()) {
     return;
   }
   if (!button) {
-    button = document.createElement('button');
+    button = document.createElement('div');
     button.id = 'activeRecordingIndicator';
-    button.className = 'active-recording-indicator';
-    button.type = 'button';
-    button.addEventListener('click', () => go('walk'));
+    button.className = 'active-recording-indicator passive';
+    button.setAttribute('aria-live', 'polite');
     document.body.appendChild(button);
   }
   button.innerHTML = `<strong>LIVE</strong><span>${label}</span>`;

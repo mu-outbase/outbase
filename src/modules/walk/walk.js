@@ -1,5 +1,5 @@
-import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-06-mobile-shell-polish-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-06-mobile-shell-polish-20260704';
+import { app, card, escapeHtml, listItems, toast } from '../../ui/components.js?v=core06-07-usability-fix-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-07-usability-fix-20260704';
 
 let timer = null;
 let speechRecognition = null;
@@ -155,7 +155,7 @@ function renderStartPanel() {
   const campName = project?.reservation?.campground || project?.campground || '';
   return card(`<section class="record-home-shell">
     <div class="record-home-status">
-      <strong>記録</strong><span>散歩・キャンプ・メモを混ぜずに残す</span>
+      <strong>記録する</strong><span>①選ぶ → ②押す → ③終了保存</span>
     </div>
     <div class="record-launch-grid">
       ${launchButton('homeWalk', '自宅散歩', '近所ルート・時間・距離', '自宅散歩')}
@@ -180,23 +180,24 @@ function renderActiveSession(session) {
   const allRecords = recordsOf(session);
   const parentTitle = session.parentTitle || session.title || modeLabel(session.type);
   const activeTitle = session.activeChild?.title || modeLabel(mode);
-  return card(`<section class="record-active-shell">
-    <div class="record-live-summary">
-      <div class="live-mark"><span></span>LIVE</div>
-      <div class="live-title">
-        <strong>${session.type === 'camp' ? escapeHtml(parentTitle) : escapeHtml(activeTitle)}</strong>
-        <small>${session.type === 'camp' ? `今：${escapeHtml(activeTitle)}` : escapeHtml(session.locationLabel || modeMeta(mode).sub)}</small>
+  const parentLine = session.type === 'camp' ? `親：${parentTitle}` : (session.locationLabel || modeMeta(mode).sub);
+  return card(`<section class="record-active-shell record-cockpit-shell">
+    <div class="record-now-hero">
+      <div class="record-now-main">
+        <span>記録中</span>
+        <h2>今：${escapeHtml(activeTitle)}</h2>
+        <p>${escapeHtml(parentLine)}</p>
       </div>
-      <button class="mini-ghost" id="finishSessionTop">保存終了</button>
+      <button class="mini-ghost finish-now" id="finishSessionTop">終了保存</button>
     </div>
-    ${renderRecordingStack(session)}
     ${renderMetricStrip(session, mode, modePoints)}
+    <div class="mode-switch-label"><strong>モード切替</strong><small>押すだけで移動</small></div>
     ${renderModeSwitch(session)}
     ${renderModeSurface(session, mode, modePoints)}
     ${renderModeControls(session)}
     <input id="photoInput" type="file" accept="image/*" hidden />
     <input id="videoInput" type="file" accept="video/*" hidden />
-    <details class="quiet-details"><summary>今回の記録 ${allRecords.length}件</summary>${renderRecordList(allRecords)}</details>
+    <details class="quiet-details record-log-details"><summary>今回の記録 ${allRecords.length}件</summary>${renderRecordList(allRecords)}</details>
   </section>`, 'record-field-card record-active-card');
 }
 
@@ -242,7 +243,7 @@ function renderModeSwitch(session) {
 }
 
 function renderModeSurface(session, mode, points) {
-  if (isWalkMode(mode)) return `${renderStableWalkMap(session, mode, points)}${renderWalkActions(mode)}`;
+  if (isWalkMode(mode)) return `${renderWalkActions(mode)}${renderStableWalkMap(session, mode, points)}`;
   if (mode === 'camp') return renderCampActions(session);
   if (mode === 'setup') return renderSetupActions();
   if (mode === 'cook') return renderCookActions();
@@ -252,22 +253,16 @@ function renderModeSurface(session, mode, points) {
 
 function renderStableWalkMap(session, mode, points) {
   const latest = points[points.length - 1];
-  const label = mode === 'homeWalk' ? '自宅散歩ルート' : '場内散歩ルート';
-  const zoomText = mode === 'homeWalk' ? '近所が見える距離感' : 'キャンプ場内が見える距離感';
-  const mapsLink = latest ? `https://www.google.com/maps/search/?api=1&query=${latest.lat},${latest.lng}` : '';
-  return `<section class="stable-map-card ${points.length ? 'ready' : 'empty'}">
+  const label = mode === 'homeWalk' ? '自宅散歩マップ' : '場内散歩マップ';
+  const zoomText = latest ? '現在地とルート' : '現在地取得待ち';
+  return `<section class="stable-map-card compact-map ${points.length ? 'ready' : 'empty'}">
     <div class="stable-map-head"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(zoomText)}</span></div>
     <div class="stable-map-canvas">
       ${renderRouteSvg(points)}
       <div class="map-overlay-info">
-        <span>${latest ? `${latest.lat.toFixed(5)}, ${latest.lng.toFixed(5)}` : 'GPS待機中'}</span>
+        <span>${latest ? `${latest.lat.toFixed(5)}, ${latest.lng.toFixed(5)}` : '現在地ボタンで取得'}</span>
         <strong>${distanceKm(points).toFixed(2)}km</strong>
       </div>
-    </div>
-    <div class="stable-map-actions">
-      <button id="addGps" class="btn primary slim">現在地</button>
-      ${mapsLink ? `<a class="btn slim" href="${mapsLink}" target="_blank" rel="noopener">地図で開く</a>` : '<button class="btn slim" disabled>地図で開く</button>'}
-      <button id="pauseWalk" class="btn slim">${session.paused ? '再開' : '一時停止'}</button>
     </div>
   </section>`;
 }
@@ -305,53 +300,55 @@ function renderRouteSvg(points) {
 
 function renderWalkActions(mode) {
   if (mode === 'campWalk') {
-    return `<section class="record-action-panel"><div class="action-title"><strong>よく使う</strong><span>場内確認用</span></div>
-      <div class="action-grid five">
-        ${actionButton('photoBtn', '写真', '残す')}
-        ${actionButton('memoFocus', 'メモ', '入力')}
-        ${actionButton('facilityMemo', '設備', 'トイレ等')}
-        ${actionButton('viewMemo', '景色', '場所')}
-        ${actionButton('riskMemo', '注意', '危険箇所')}
-      </div>${renderMemoInput('サイト周辺、設備、景色、危険箇所など')}
+    return `<section class="record-action-panel cockpit-actions"><div class="action-title"><strong>よく使う</strong><span>場内散歩</span></div>
+      <div class="action-grid five cockpit-grid">
+        ${actionButton('photoBtn', '写真', '撮る')}
+        ${actionButton('memoFocus', 'メモ', '残す')}
+        ${actionButton('addGps', '現在地', 'GPS')}
+        ${actionButton('facilityMemo', '設備', '場所')}
+        ${actionButton('riskMemo', '注意', '危険')}
+      </div>
     </section>`;
   }
-  return `<section class="record-action-panel"><div class="action-title"><strong>よく使う</strong><span>自宅散歩用</span></div>
-    <div class="action-grid four">
-      ${actionButton('photoBtn', '写真', '残す')}
-      ${actionButton('memoFocus', 'メモ', '入力')}
-      ${actionButton('routeMemo', 'ルート', '気づき')}
-      ${actionButton('conditionMemo', '様子', '体調')}
-    </div>${renderMemoInput('散歩ルート、コタの様子、気になったこと')}
+  return `<section class="record-action-panel cockpit-actions"><div class="action-title"><strong>よく使う</strong><span>自宅散歩</span></div>
+    <div class="action-grid five cockpit-grid">
+      ${actionButton('photoBtn', '写真', '撮る')}
+      ${actionButton('memoFocus', 'メモ', '残す')}
+      ${actionButton('addGps', '現在地', 'GPS')}
+      ${actionButton('pauseWalk', sessionPausedLabel(), '散歩')}
+      ${actionButton('conditionMemo', '様子', 'コタ')}
+    </div>
   </section>`;
 }
+function sessionPausedLabel() { return activeSession()?.paused ? '再開' : '一時停止'; }
 
 function renderCampActions(session) {
-  return `<section class="record-action-panel camp-panel"><div class="action-title"><strong>キャンプ中に残す</strong><span>親記録の中にまとめる</span></div>
-    <div class="action-grid five">
+  return `<section class="record-action-panel camp-panel cockpit-actions"><div class="action-title"><strong>キャンプ中に残す</strong><span>次のモードを選ぶ</span></div>
+    <div class="action-grid five cockpit-grid">
       ${childAction('campWalk')}${childAction('setup')}${childAction('cook')}${childAction('teardown')}${childAction('memo')}
-    </div>${renderMemoInput('キャンプ全体の気づき、天気、サイト感など')}
+    </div>
   </section>`;
 }
 function childAction(type) { return `<button class="startChildMode action-btn" data-type="${escapeHtml(type)}"><strong>${escapeHtml(modeShort(type))}</strong><span>${escapeHtml(modeMeta(type).sub)}</span></button>`; }
 function renderSetupActions() {
-  return `<section class="record-action-panel"><div class="action-title"><strong>設営</strong><span>時間と段取り</span></div><div class="action-grid four">
+  return `<section class="record-action-panel cockpit-actions"><div class="action-title"><strong>設営</strong><span>時間と段取り</span></div><div class="action-grid four cockpit-grid">
     ${actionButton('setupStart', '開始', '設営')}${actionButton('setupEnd', '完了', '設営')}${actionButton('photoBtn', '写真', '配置')}${actionButton('setupIssue', '注意', '次回')}
-    </div>${renderMemoInput('設営で詰まったこと、配置、次回直すこと')}</section>`;
+    </div></section>`;
 }
 function renderCookActions() {
-  return `<section class="record-action-panel"><div class="action-title"><strong>料理</strong><span>写真・量・次回</span></div><div class="action-grid four">
+  return `<section class="record-action-panel cockpit-actions"><div class="action-title"><strong>料理</strong><span>写真・量・次回</span></div><div class="action-grid four cockpit-grid">
     ${actionButton('photoBtn', '写真', '料理')}${actionButton('mealAmount', '量', '多/少')}${actionButton('tasteMemo', '味', '感想')}${actionButton('nextMealMemo', '次回', '改善')}
-    </div>${renderMemoInput('料理の量、味、余り、次回の変更点')}</section>`;
+    </div></section>`;
 }
 function renderTeardownActions() {
-  return `<section class="record-action-panel"><div class="action-title"><strong>撤収</strong><span>収納・濡れ物・忘れ物</span></div><div class="action-grid four">
+  return `<section class="record-action-panel cockpit-actions"><div class="action-title"><strong>撤収</strong><span>収納・濡れ物・忘れ物</span></div><div class="action-grid four cockpit-grid">
     ${actionButton('teardownStart', '開始', '撤収')}${actionButton('teardownEnd', '完了', '撤収')}${actionButton('wetItem', '濡れ物', '乾燥')}${actionButton('packingMemo', '収納', '順番')}
-    </div>${renderMemoInput('撤収で時間がかかったこと、濡れ物、収納順')}</section>`;
+    </div></section>`;
 }
 function renderMemoActions() {
-  return `<section class="record-action-panel"><div class="action-title"><strong>メモ</strong><span>軽く残す</span></div><div class="action-grid three">
+  return `<section class="record-action-panel cockpit-actions"><div class="action-title"><strong>メモ</strong><span>軽く残す</span></div><div class="action-grid three cockpit-grid">
     ${actionButton('photoBtn', '写真', '残す')}${actionButton('voiceMemo', '音声', '話す')}${actionButton('memoFocus', 'メモ', '入力')}
-    </div>${renderMemoInput('気づいたことをそのまま残す')}</section>`;
+    </div></section>`;
 }
 function actionButton(id, label, sub) { return `<button id="${escapeHtml(id)}" class="action-btn" type="button"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(sub)}</span></button>`; }
 function renderMemoInput(placeholder) {
@@ -444,7 +441,7 @@ function bindWalk() {
   document.getElementById('finishChild')?.addEventListener('click', finishChildMode);
   document.getElementById('discardChild')?.addEventListener('click', discardChildMode);
   document.getElementById('addMemo')?.addEventListener('click', addTextMemo);
-  document.getElementById('memoFocus')?.addEventListener('click', () => document.getElementById('recordMemo')?.focus());
+  document.getElementById('memoFocus')?.addEventListener('click', promptForMemo);
   document.getElementById('addGps')?.addEventListener('click', () => captureGpsPoint(true));
   document.getElementById('pauseWalk')?.addEventListener('click', togglePauseWalk);
   document.getElementById('photoBtn')?.addEventListener('click', () => document.getElementById('photoInput')?.click());
@@ -581,6 +578,14 @@ function discardChildMode() {
   patchState({ walkSession: { ...session, activeChild: null } });
   toast('子記録を破棄しました');
   renderWalk();
+}
+
+function promptForMemo() {
+  const mode = currentMode(activeSession());
+  const value = window.prompt(`${modeLabel(mode)}のメモを入力`);
+  const detail = String(value || '').trim();
+  if (!detail) return;
+  addRecord(makeRecord('memo', `${modeShort(mode)}メモ`, detail));
 }
 
 function addTextMemo() {

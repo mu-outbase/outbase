@@ -1,0 +1,54 @@
+name: OUTBASE Core06.07 Usability Fix unpack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core06_07_UsabilityFix.zip'
+      - '.github/workflows/unpack-core06-07.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm zip exists
+        run: |
+          set -e
+          ls -la
+          test -f OUTBASE_MVPB_Core06_07_UsabilityFix.zip
+
+      - name: Unzip Core06.07 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core06_07
+          mkdir -p /tmp/outbase_core06_07
+          unzip -o OUTBASE_MVPB_Core06_07_UsabilityFix.zip -d /tmp/outbase_core06_07
+          ls -la /tmp/outbase_core06_07
+          if [ -d /tmp/outbase_core06_07/OUTBASE_MVPB_Core06_07_UsabilityFix ]; then
+            cp -R /tmp/outbase_core06_07/OUTBASE_MVPB_Core06_07_UsabilityFix/. ./
+          else
+            cp -R /tmp/outbase_core06_07/. ./
+          fi
+          rm -f OUTBASE_MVPB_Core06_07_UsabilityFix.zip
+          rm -rf OUTBASE_MVPB_Core06_02_RecordModeMapConfirm OUTBASE_MVPB_Core06_03_RecordUXPolish OUTBASE_MVPB_Core06_04_RecordFieldUX OUTBASE_MVPB_Core06_05_AllPagesVisualUnify OUTBASE_MVPB_Core06_06_MobileShellPolish
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core06.07 usability fix"
+            git push
+          fi
