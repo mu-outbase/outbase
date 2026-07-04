@@ -1,4 +1,4 @@
-import { STORAGE_KEY } from '../config/version.js?v=core05-11-jorte-refined-confirm-20260703';
+import { STORAGE_KEY } from '../config/version.js?v=core06-02-record-mode-map-confirm-20260704';
 
 export function loadState() {
   try {

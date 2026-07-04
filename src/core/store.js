@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core05-11-jorte-refined-confirm-20260703';
-import { VERSION } from '../config/version.js?v=core05-11-jorte-refined-confirm-20260703';
+import { loadState, saveState } from './storage.js?v=core06-02-record-mode-map-confirm-20260704';
+import { VERSION } from '../config/version.js?v=core06-02-record-mode-map-confirm-20260704';
 
 const initialState = {
   version: VERSION,
@@ -60,6 +60,7 @@ function normalizeLoadedState(loaded) {
   merged.notificationPermission = loaded?.notificationPermission || 'unknown';
   merged.calendarReminderNotified = loaded?.calendarReminderNotified || {};
   merged.mvpBetaCheck = { ...initialState.mvpBetaCheck, ...(loaded?.mvpBetaCheck || {}), steps: { ...initialState.mvpBetaCheck.steps, ...(loaded?.mvpBetaCheck?.steps || {}) } };
+  if (loaded?.walkSession && loaded.walkSession.status === 'active') merged.walkSession = loaded.walkSession;
   return merged;
 }
 

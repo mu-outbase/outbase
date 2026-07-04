@@ -1,15 +1,15 @@
-const BUILD_ID = 'core06-01-record-pages-theme-20260704';
+const BUILD_ID = 'core06-02-record-mode-map-confirm-20260704';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-01-record-pages-theme-20260704';
-import { getState, subscribe } from './core/store.js?v=core06-01-record-pages-theme-20260704';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-01-record-pages-theme-20260704';
-import { renderHome } from './modules/home/home.js?v=core06-01-record-pages-theme-20260704';
-import { renderSearch } from './modules/search/search.js?v=core06-01-record-pages-theme-20260704';
-import { renderPrep } from './modules/prep/prep.js?v=core06-01-record-pages-theme-20260704';
-import { renderDay } from './modules/day/day.js?v=core06-01-record-pages-theme-20260704';
-import { renderWalk } from './modules/walk/walk.js?v=core06-01-record-pages-theme-20260704';
-import { renderMemory } from './modules/memory/memory.js?v=core06-01-record-pages-theme-20260704';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-01-record-pages-theme-20260704';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core06-02-record-mode-map-confirm-20260704';
+import { getState, subscribe } from './core/store.js?v=core06-02-record-mode-map-confirm-20260704';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core06-02-record-mode-map-confirm-20260704';
+import { renderHome } from './modules/home/home.js?v=core06-02-record-mode-map-confirm-20260704';
+import { renderSearch } from './modules/search/search.js?v=core06-02-record-mode-map-confirm-20260704';
+import { renderPrep } from './modules/prep/prep.js?v=core06-02-record-mode-map-confirm-20260704';
+import { renderDay } from './modules/day/day.js?v=core06-02-record-mode-map-confirm-20260704';
+import { renderWalk } from './modules/walk/walk.js?v=core06-02-record-mode-map-confirm-20260704';
+import { renderMemory } from './modules/memory/memory.js?v=core06-02-record-mode-map-confirm-20260704';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core06-02-record-mode-map-confirm-20260704';
 
 document.body.dataset.build = BUILD_ID;
 
@@ -17,17 +17,32 @@ function refreshRuntimeTheme() {
   const runtime = applyRuntimeTheme();
   setAppStatus(runtime.label);
   document.body.dataset.runtimeLabel = runtime.label;
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  const color = { morning: '#f4e5cc', day: '#f4efe4', evening: '#ead7c4', night: '#d9d4c8' }[runtime.theme] || '#f4efe4';
+  if (themeMeta) themeMeta.setAttribute('content', color);
   return runtime;
 }
 
-const runtime = refreshRuntimeTheme();
+function modeLabel(type) {
+  return {
+    walk: 'コタ散歩',
+    camp: 'キャンプ',
+    life: 'メモ',
+    setup: '設営',
+    cook: '料理',
+    teardown: '撤収'
+  }[type] || '記録';
+}
 
 function activeRecordingLabel(state = getState()) {
   const session = state.walkSession;
   if (!session || session.status !== 'active') return null;
-  const typeLabel = { walk: 'コタ散歩', camp: 'キャンプ記録', life: 'メモ' }[session.type] || '記録';
+  const parent = session.parentTitle || session.title || modeLabel(session.type);
+  const child = session.activeChild?.type ? modeLabel(session.activeChild.type) : modeLabel(session.type);
   const count = Array.isArray(session.records) ? session.records.length : 0;
-  return `${typeLabel} 記録中 / ${count}件`;
+  if (session.type === 'camp') return `記録中：${parent} ＞ ${child} / ${count}件`;
+  const place = session.locationLabel ? ` / ${session.locationLabel}` : '';
+  return `記録中：${child}${place} / ${count}件`;
 }
 
 function updateActiveRecordingIndicator(state = getState()) {
@@ -46,9 +61,10 @@ function updateActiveRecordingIndicator(state = getState()) {
     button.addEventListener('click', () => go('walk'));
     document.body.appendChild(button);
   }
-  button.innerHTML = `<strong>REC</strong><span>${label}</span>`;
+  button.innerHTML = `<strong>LIVE</strong><span>${label}</span>`;
 }
 
+const runtime = refreshRuntimeTheme();
 
 registerRoute('home', renderHome);
 registerRoute('search', renderSearch);
