@@ -1,4 +1,4 @@
-import { prepBase } from '../../domain/schema.js?v=core07-2-prep-dashboard-20260705';
+import { prepBase } from '../../domain/schema.js?v=core07-2-ui-fix-20260705';
 
 const CAMPGROUND_WORDS = /(キャンプ場|キャンプフィールド|オートキャンプ|Camp|CAMP|camp|ロッジ|Lodge|LODGE|グランピング|RV|スノーピーク|Snow Peak|ほったらかし|ふもとっぱら|那須|赤城|鹿沼|白河|山中湖)/;
 const MEAL_MODE_LABELS = ['絶対やりたい', '過去と違う', '無駄なし', '調理器具から', '映え', '量少なめ', 'もう1品', '付け合わせ', 'おつまみ', '火を使わない', '雨でもOK', '設営ラク'];

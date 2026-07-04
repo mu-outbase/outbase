@@ -1,0 +1,59 @@
+OUTBASE Core07.2 UI-FIX 反映手順
+
+1. GitHubへZIPをアップロード
+https://github.com/mu-outbase/outbase/upload/main
+
+アップロードするZIP:
+OUTBASE_Core07_2_UIFIX_PREP_COMMAND_完成版.zip
+
+2. workflowを作成
+https://github.com/mu-outbase/outbase/new/main
+
+作成するファイル名:
+.github/workflows/unpack-core07-2-uifix.yml
+
+内容:
+name: Unpack Core07.2 UI-FIX ZIP
+
+on:
+  push:
+    paths:
+      - 'OUTBASE_Core07_2_UIFIX_PREP_COMMAND_完成版.zip'
+      - '.github/workflows/unpack-core07-2-uifix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip Core07.2 UI-FIX package
+        run: |
+          unzip -o "OUTBASE_Core07_2_UIFIX_PREP_COMMAND_完成版.zip" -d .
+          rm -f "OUTBASE_Core07_2_UIFIX_PREP_COMMAND_完成版.zip"
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Core07.2 UI-FIX prep command" || echo "No changes to commit"
+          git push
+
+3. Actions確認
+https://github.com/mu-outbase/outbase/actions
+
+4. アプリ確認
+https://mu-outbase.github.io/outbase/?v=core072uifix
+
+確認ポイント:
+- 初期表示が長い一覧ではない
+- 天気判断カードと4つの状態ボタンが中心
+- 料理/ルート/ギア/コタは押した項目だけ詳細表示
+- 下に詳細カードが常時連続しない
