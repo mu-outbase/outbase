@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>OUTBASE</title>
+  <meta name="theme-color" content="#f4efe4" />
+  <link rel="manifest" href="manifest.json?v=core06-02-record-mode-map-confirm-20260704" />
+  <link rel="stylesheet" href="styles/app.css?v=core06-02-record-mode-map-confirm-20260704" />
+  <link rel="stylesheet" href="styles/core05-16.css?v=core06-02-record-mode-map-confirm-20260704" />
+  <link rel="stylesheet" href="styles/core06-01.css?v=core06-02-record-mode-map-confirm-20260704" />
+  <link rel="stylesheet" href="styles/core06-02.css?v=core06-02-record-mode-map-confirm-20260704" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <div class="app-kicker">OUTBASE</div>
+      <h1 id="appTitle">カレンダー</h1>
+    </div>
+    <div id="appStatus" class="status-pill">昼</div>
+  </header>
+
+  <main id="app" class="app-shell" aria-live="polite"></main>
+
+  <nav class="bottom-nav" aria-label="OUTBASE navigation">
+    <button data-route="home"><strong>カレンダー</strong><small>入口</small></button>
+    <button data-route="search"><strong>探す</strong><small>キャンプ場</small></button>
+    <button data-route="prep"><strong>準備</strong><small>買う・持つ</small></button>
+    <button class="record-tab" data-route="walk"><strong>＋</strong><small>記録</small></button>
+    <button data-route="day"><strong>当日</strong><small>出発・設営</small></button>
+    <button data-route="memory"><strong>思い出</strong><small>振り返り</small></button>
+  </nav>
+
+  <script type="module" src="src/main.js?v=core06-02-record-mode-map-confirm-20260704"></script>
+</body>
+</html>
