@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-14-calendar-tap-recording-20260704';
-import { getState, patchState } from '../../core/store.js?v=core05-14-calendar-tap-recording-20260704';
-import { go } from '../../core/router.js?v=core05-14-calendar-tap-recording-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core05-15-next-camp-plans-20260704';
+import { getState, patchState } from '../../core/store.js?v=core05-15-next-camp-plans-20260704';
+import { go } from '../../core/router.js?v=core05-15-next-camp-plans-20260704';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -274,15 +274,25 @@ function uniqueCampPlans(state) {
 }
 
 function nextPanel(state, event) {
-  if (!event) return '';
-  const meta = TYPE_META[event?.type] || TYPE_META.normal;
-  const count = event ? daysUntilISO(event.start) : null;
+  const campPlans = uniqueCampPlans(state);
+  const display = campPlans[0] || event;
+  if (!display && !campPlans.length) return '';
+  const meta = TYPE_META[display?.type] || TYPE_META.normal;
+  const count = display ? daysUntilISO(display.start) : null;
   const countText = count === null ? '' : count <= 0 ? '今日' : `あと${count}日`;
-  const range = event ? (event.start === event.end ? prettyDate(event.start) : `${prettyDate(event.start)}-${prettyDate(event.end)}`) : '';
-  const time = event?.startTime ? ` ${event.startTime}${event.endTime ? `-${event.endTime}` : ''}` : '';
-  return `<section class="jorte-next-strip cardless type-${escapeHtml(event?.type || 'normal')} next-home-panel simple-next-panel">
-    <div class="next-panel-head"><p>NEXT</p><span>次にやること</span></div>
-    <div class="next-main-row"><div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div><div class="strip-main"><h2>${escapeHtml(event.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div><button id="goNextTask">${event.type === 'camp' ? (daysUntilISO(event.start) <= 0 ? '当日' : '準備') : '詳細'}</button></div>
+  const range = display ? (display.start === display.end ? prettyDate(display.start) : `${prettyDate(display.start)}-${prettyDate(display.end)}`) : '';
+  const time = display?.startTime ? ` ${display.startTime}${display.endTime ? `-${display.endTime}` : ''}` : '';
+  const campList = campPlans.map((plan, index) => {
+    const planRange = plan.start === plan.end ? prettyDate(plan.start) : `${prettyDate(plan.start)}-${prettyDate(plan.end)}`;
+    const planCount = daysUntilISO(plan.start);
+    const planCountText = planCount === null ? '' : planCount <= 0 ? '今日' : `あと${planCount}日`;
+    const planTime = plan.startTime ? ` / ${plan.startTime}${plan.endTime ? `-${plan.endTime}` : ''}` : '';
+    return `<button class="next-camp-item ${index === 0 ? 'current' : ''}" data-camp-key="${escapeHtml(occurrenceKey(plan))}" type="button"><strong>${escapeHtml(plan.title)}</strong><span>${escapeHtml(planRange)} / キャンプ${escapeHtml(planTime)}${planCountText ? ` / ${escapeHtml(planCountText)}` : ''}</span></button>`;
+  }).join('');
+  return `<section class="jorte-next-strip cardless type-${escapeHtml(display?.type || 'normal')} next-home-panel next-camp-plans-panel">
+    <div class="next-panel-head"><p>NEXT</p><span>${campPlans.length ? `キャンプ予定 ${campPlans.length}件` : '次にやること'}</span></div>
+    ${display ? `<div class="next-main-row"><div class="strip-date"><strong>${escapeHtml(range)}</strong><span>${escapeHtml(meta.short)}</span></div><div class="strip-main"><h2>${escapeHtml(display.title)}</h2><small>${escapeHtml(meta.label)}${escapeHtml(time)} ${countText ? `/ ${countText}` : ''}</small></div><button id="goNextTask">${display.type === 'camp' ? (daysUntilISO(display.start) <= 0 ? '当日' : '準備') : '詳細'}</button></div>` : ''}
+    ${campPlans.length ? `<div class="next-camp-box all-camp-plans"><div class="next-camp-title"><strong>キャンプ予定</strong><span>${campPlans.length}</span></div><div class="next-camp-items">${campList}</div></div>` : ''}
   </section>`;
 }
 
@@ -632,7 +642,8 @@ export function renderHome() {
   const defaultCursor = parseISO(state.calendarCursor) || parseISO(state.selectedDate) || parseISO(projectEvent?.start) || new Date();
   const cursorDate = firstOfMonth(defaultCursor);
   const events = getEvents({ ...state, calendarCursor: monthKey(cursorDate) }, cursorDate);
-  const upcoming = upcomingEvents(events)[0] || projectEvent;
+  const campPlans = uniqueCampPlans({ ...state, calendarCursor: monthKey(cursorDate) });
+  const upcoming = campPlans[0] || upcomingEvents(events)[0] || projectEvent;
   const selectedDate = state.selectedDate || toISO(new Date());
 
   app().innerHTML = [
