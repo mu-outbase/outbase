@@ -1,7 +1,7 @@
-import { app, listItems, escapeHtml, toast } from '../../ui/components.js?v=core06-07-usability-fix-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-07-usability-fix-20260704';
-import { renderImportPanel } from '../import/import.js?v=core06-07-usability-fix-20260704';
-import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core06-07-usability-fix-20260704';
+import { app, listItems, escapeHtml, toast } from '../../ui/components.js?v=core06-08-human-centered-ux-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-08-human-centered-ux-20260704';
+import { renderImportPanel } from '../import/import.js?v=core06-08-human-centered-ux-20260704';
+import { buildLineList, buildPracticalPrep, normalizePrepContext } from './prepEngine.js?v=core06-08-human-centered-ux-20260704';
 
 const FOCUS_META = { shopping: { label: '買う', sub: '買い物' }, packing: { label: '持つ', sub: 'ギア' }, meal: { label: '食べる', sub: '料理' }, kota: { label: 'コタ', sub: '犬用品' } };
 function firstItems(items = [], count = 7) { return (items || []).slice(0, count); }

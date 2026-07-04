@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-07-usability-fix-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-07-usability-fix-20260704';
-import { go } from '../../core/router.js?v=core06-07-usability-fix-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-08-human-centered-ux-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-08-human-centered-ux-20260704';
+import { go } from '../../core/router.js?v=core06-08-human-centered-ux-20260704';
 
 const HOLIDAYS = {
   '2026-01-01': '元日', '2026-01-12': '成人の日', '2026-02-11': '建国記念の日', '2026-02-23': '天皇誕生日',
@@ -227,7 +227,7 @@ function renderCalendar(state, events, cursorDate, selectedDate) {
       holiday ? 'holiday' : '',
       dayEvents.length ? 'has-event' : ''
     ].filter(Boolean).join(' ');
-    cells.push(`<button class="${classNames}" data-date="${escapeHtml(iso)}" aria-label="${escapeHtml(iso)}">
+    cells.push(`<button type="button" class="${classNames}" data-date="${escapeHtml(iso)}" aria-label="${escapeHtml(iso)}">
       <b>${d.getDate()}</b>
       ${holiday ? `<em>${escapeHtml(shortHoliday(holiday))}</em>` : ''}
       <div class="jorte-events">${dayEvents.slice(0, 3).map((event) => eventLine(event, iso)).join('')}${dayEvents.length > 3 ? `<small>+${dayEvents.length - 3}</small>` : ''}</div>
@@ -704,13 +704,24 @@ export function renderHome() {
   document.getElementById('goNextTask')?.addEventListener('click', () => go(eventRoute(upcoming)));
   document.getElementById('goActiveRecord')?.addEventListener('click', () => go('walk'));
   document.getElementById('scrollSelectedDetail')?.addEventListener('click', () => focusSelectedDetail(false));
+  function selectCalendarCell(iso) {
+    if (!iso) return;
+    const sameDate = getState().selectedDate === iso;
+    patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailKey: '', selectedEventDetailId: '' });
+    renderHome();
+    if (sameDate) window.setTimeout(() => focusSelectedDetail(true), 50);
+  }
+  document.querySelector('.jorte-grid')?.addEventListener('click', (event) => {
+    const cell = event.target.closest?.('.jorte-day[data-date]');
+    if (!cell) return;
+    selectCalendarCell(cell.dataset.date);
+  });
   document.querySelectorAll('[data-date]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const iso = button.dataset.date;
-      const sameDate = getState().selectedDate === iso;
-      patchState({ selectedDate: iso, calendarCursor: monthKey(parseISO(iso) || cursorDate), calendarAddOpen: sameDate, selectedEventDetailKey: '', selectedEventDetailId: '' });
-      renderHome();
-      if (sameDate) window.setTimeout(() => focusSelectedDetail(true), 50);
+    button.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectCalendarCell(button.dataset.date);
+      }
     });
   });
   document.querySelectorAll('[data-detail-date]').forEach((el) => el.addEventListener('click', (event) => {

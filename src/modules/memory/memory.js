@@ -1,6 +1,6 @@
-import { app, listItems, escapeHtml, toast } from '../../ui/components.js?v=core06-07-usability-fix-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-07-usability-fix-20260704';
-import { go } from '../../core/router.js?v=core06-07-usability-fix-20260704';
+import { app, listItems, escapeHtml, toast } from '../../ui/components.js?v=core06-08-human-centered-ux-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-08-human-centered-ux-20260704';
+import { go } from '../../core/router.js?v=core06-08-human-centered-ux-20260704';
 
 function formatTime(value) { if (!value) return ''; try { return new Date(value).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return value; } }
 function unique(items = []) { return [...new Set((items || []).filter(Boolean).map((item) => String(item).trim()).filter(Boolean))]; }

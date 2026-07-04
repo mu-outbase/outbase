@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core06-07-usability-fix-20260704';
-import { VERSION } from '../config/version.js?v=core06-07-usability-fix-20260704';
+import { loadState, saveState } from './storage.js?v=core06-08-human-centered-ux-20260704';
+import { VERSION } from '../config/version.js?v=core06-08-human-centered-ux-20260704';
 
 const initialState = {
   version: VERSION,
