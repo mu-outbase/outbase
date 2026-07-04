@@ -1,0 +1,159 @@
+/* OUTBASE Core06.06 - mobile shell and calendar polish */
+:root {
+  --outbase-nav-height: 82px;
+  --outbase-nav-gap: 14px;
+}
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body {
+  padding-bottom: calc(var(--outbase-nav-height) + 46px + env(safe-area-inset-bottom)) !important;
+}
+.app-shell {
+  width: min(720px, 100%) !important;
+  max-width: 100% !important;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--outbase-nav-height) + 34px + env(safe-area-inset-bottom)) !important;
+}
+
+/* fixed bottom navigation: prevent the Core06.05 width + transform conflict */
+.bottom-nav {
+  position: fixed !important;
+  left: 10px !important;
+  right: 10px !important;
+  bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  transform: none !important;
+  margin: 0 !important;
+  z-index: 300 !important;
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 2px !important;
+  min-height: var(--outbase-nav-height) !important;
+  padding: 7px 6px !important;
+  border-radius: 28px !important;
+  box-sizing: border-box !important;
+}
+.bottom-nav button {
+  min-width: 0 !important;
+  width: 100% !important;
+  min-height: 66px !important;
+  padding: 6px 2px 5px !important;
+  border-radius: 21px !important;
+  display: grid !important;
+  place-items: center !important;
+  grid-template-rows: 1fr auto !important;
+  align-content: center !important;
+  overflow: hidden !important;
+}
+.bottom-nav button strong,
+.bottom-nav button small {
+  display: block !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-align: center !important;
+}
+.bottom-nav button strong {
+  font-size: clamp(10px, 2.7vw, 12px) !important;
+  line-height: 1.08 !important;
+  letter-spacing: -.04em !important;
+}
+.bottom-nav button small {
+  font-size: clamp(7px, 2.05vw, 9px) !important;
+  line-height: 1.15 !important;
+  margin-top: 1px !important;
+  opacity: .82 !important;
+}
+.bottom-nav .record-tab strong {
+  font-size: clamp(20px, 7vw, 28px) !important;
+  line-height: .9 !important;
+  letter-spacing: 0 !important;
+}
+.bottom-nav .record-tab {
+  border-radius: 24px !important;
+}
+
+@media (min-width: 742px) {
+  .bottom-nav {
+    left: 50% !important;
+    right: auto !important;
+    width: 720px !important;
+    transform: translateX(-50%) !important;
+  }
+}
+
+/* keep calendar content clear of the floating nav */
+body[data-route="home"] .app-shell {
+  padding-bottom: calc(var(--outbase-nav-height) + 56px + env(safe-area-inset-bottom)) !important;
+}
+body[data-route="home"] .selected-day-sheet,
+body[data-route="home"] .jorte-detail,
+body[data-route="home"] .event-detail-panel,
+body[data-route="home"] .camp-plan-list,
+body[data-route="home"] .jorte-next-strip {
+  margin-bottom: 14px !important;
+}
+body[data-route="home"] .camp-plan-list:last-child,
+body[data-route="home"] .card:last-child,
+body[data-route="home"] .event-detail-panel:last-child {
+  margin-bottom: calc(var(--outbase-nav-height) + 28px + env(safe-area-inset-bottom)) !important;
+}
+
+/* compact but premium calendar readability */
+body[data-route="home"] .jorte-calendar-shell {
+  margin-inline: 0 !important;
+  border-radius: 24px !important;
+}
+body[data-route="home"] .jorte-monthbar {
+  padding: 10px 12px 8px !important;
+}
+body[data-route="home"] .jorte-monthbar h2 {
+  font-size: clamp(24px, 7.4vw, 32px) !important;
+}
+body[data-route="home"] .jorte-monthbar button {
+  min-width: 42px !important;
+  width: 42px !important;
+  height: 42px !important;
+}
+body[data-route="home"] .jorte-week {
+  margin-inline: 8px !important;
+}
+body[data-route="home"] .jorte-grid {
+  margin: 0 8px 10px !important;
+}
+body[data-route="home"] .jorte-day {
+  min-height: clamp(64px, 12.5vw, 82px) !important;
+  padding: 5px 4px 4px !important;
+}
+body[data-route="home"] .jorte-day b {
+  font-size: clamp(17px, 4.8vw, 24px) !important;
+}
+body[data-route="home"] .jorte-event {
+  height: 15px !important;
+  line-height: 12px !important;
+  font-size: 9.5px !important;
+}
+body[data-route="home"] .selected-day-sheet {
+  border-radius: 24px !important;
+}
+
+@media (max-width: 380px) {
+  .bottom-nav {
+    left: 6px !important;
+    right: 6px !important;
+    padding-inline: 4px !important;
+  }
+  .bottom-nav button {
+    min-height: 62px !important;
+    border-radius: 18px !important;
+  }
+  .bottom-nav button strong { font-size: 9.5px !important; }
+  .bottom-nav button small { font-size: 7px !important; }
+  body[data-route="home"] .jorte-day { min-height: 60px !important; }
+}

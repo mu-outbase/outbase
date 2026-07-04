@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core06-05-all-pages-visual-unify-20260704';
+import { patchState } from './store.js?v=core06-06-mobile-shell-polish-20260704';
 
 const routes = new Map();
 

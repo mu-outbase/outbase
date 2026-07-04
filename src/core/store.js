@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core06-05-all-pages-visual-unify-20260704';
-import { VERSION } from '../config/version.js?v=core06-05-all-pages-visual-unify-20260704';
+import { loadState, saveState } from './storage.js?v=core06-06-mobile-shell-polish-20260704';
+import { VERSION } from '../config/version.js?v=core06-06-mobile-shell-polish-20260704';
 
 const initialState = {
   version: VERSION,

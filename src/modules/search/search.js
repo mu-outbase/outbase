@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-05-all-pages-visual-unify-20260704';
-import { getState, patchState } from '../../core/store.js?v=core06-05-all-pages-visual-unify-20260704';
-import { go } from '../../core/router.js?v=core06-05-all-pages-visual-unify-20260704';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core06-06-mobile-shell-polish-20260704';
+import { getState, patchState } from '../../core/store.js?v=core06-06-mobile-shell-polish-20260704';
+import { go } from '../../core/router.js?v=core06-06-mobile-shell-polish-20260704';
 
 const DEFAULTS = { area: '自宅から4時間以内', dog: '犬可・できればドッグフリー', season: '温水 / 暑期はエアコン優先', budget: '1泊2万円以内目安', view: '景色・静けさ重視' };
 function criteria(state) { return { ...DEFAULTS, ...(state.searchCriteria || {}) }; }

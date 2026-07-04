@@ -1,4 +1,4 @@
-import { prepBase } from '../../domain/schema.js?v=core06-05-all-pages-visual-unify-20260704';
+import { prepBase } from '../../domain/schema.js?v=core06-06-mobile-shell-polish-20260704';
 
 const CAMPGROUND_WORDS = /(キャンプ場|キャンプフィールド|オートキャンプ|Camp|CAMP|camp|ロッジ|Lodge|LODGE|グランピング|RV|スノーピーク|Snow Peak|ほったらかし|ふもとっぱら|那須|赤城|鹿沼|白河|山中湖)/;
 
