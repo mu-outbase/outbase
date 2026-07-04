@@ -1,0 +1,54 @@
+name: OUTBASE Core06.11 Bottom Spacing Final unpack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OUTBASE_MVPB_Core06_11_BottomSpacingFinal.zip'
+      - '.github/workflows/unpack-core06-11.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm zip exists
+        run: |
+          set -e
+          ls -la
+          test -f OUTBASE_MVPB_Core06_11_BottomSpacingFinal.zip
+
+      - name: Unzip Core06.11 package
+        run: |
+          set -e
+          rm -rf /tmp/outbase_core06_11
+          mkdir -p /tmp/outbase_core06_11
+          unzip -o OUTBASE_MVPB_Core06_11_BottomSpacingFinal.zip -d /tmp/outbase_core06_11
+          ls -la /tmp/outbase_core06_11
+          if [ -d /tmp/outbase_core06_11/OUTBASE_MVPB_Core06_11_BottomSpacingFinal ]; then
+            cp -R /tmp/outbase_core06_11/OUTBASE_MVPB_Core06_11_BottomSpacingFinal/. ./
+          else
+            cp -R /tmp/outbase_core06_11/. ./
+          fi
+          rm -f OUTBASE_MVPB_Core06_11_BottomSpacingFinal.zip
+          rm -rf OUTBASE_MVPB_Core06_07_UsabilityFix OUTBASE_MVPB_Core06_08_HumanCenteredUX OUTBASE_MVPB_Core06_09_PremiumInteractionUX OUTBASE_MVPB_Core06_10_GlobalUIReset
+
+      - name: Commit unpacked files
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Apply OUTBASE Core06.11 bottom spacing final"
+            git push
+          fi
