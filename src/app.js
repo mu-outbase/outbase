@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_7_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_8_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-7',
+    version: 'restart-8',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
@@ -192,7 +192,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-7';
+      merged.version = 'restart-8';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -489,6 +489,39 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+
+  function flowItems() {
+    return [
+      { key: '予定', label: '予定', screens: ['home', 'calendar', 'plan', 'search', 'homeWalk', 'campWalk'] },
+      { key: '準備', label: '準備', screens: ['prep', 'shopping', 'cooking', 'gear', 'kota', 'weatherRoute'] },
+      { key: '当日', label: '当日', screens: ['cockpit'] },
+      { key: '記録', label: '記録', screens: ['capture'] },
+      { key: '整理', label: '整理', screens: ['inbox', 'memories'] },
+      { key: '改善', label: '改善', screens: ['improvements'] }
+    ];
+  }
+
+  function currentFlowKey() {
+    const current = flowItems().find((item) => item.screens.includes(state.screen));
+    return current?.key || '予定';
+  }
+
+  function flowRail(compact = false) {
+    const current = currentFlowKey();
+    return `<div class="flow-rail ${compact ? 'compact' : ''}" aria-label="OUTBASEの流れ">
+      ${flowItems().map((item) => `<button class="flow-step ${item.key === current ? 'active' : ''}" data-action="flowJump" data-key="${escapeHtml(item.key)}"><span>${escapeHtml(item.label)}</span></button>`).join('')}
+    </div>`;
+  }
+
+  function screenFromFlow(key) {
+    if (key === '予定') return { screen: 'home', tab: '予定' };
+    if (key === '準備') return { screen: 'prep', tab: '準備' };
+    if (key === '当日') return { screen: 'cockpit', tab: '予定' };
+    if (key === '記録') return { screen: 'capture', tab: '＋' };
+    if (key === '整理') return { screen: state.inbox.length ? 'inbox' : 'memories', tab: '思い出' };
+    return { screen: 'improvements', tab: '思い出' };
+  }
+
   function showToast(message) {
     state.toast = message;
     render();
@@ -503,15 +536,16 @@
     const subtitle = options.subtitle || '予定から思い出まで、一本でつなぐ';
     return `
       <header class="topbar">
-        <div class="brand">
+        <button class="brand brand-button" data-action="go" data-screen="home" data-tab="予定" aria-label="ホームへ戻る">
           <div class="logo">OB</div>
           <div>
             <div class="brand-title">OUTBASE</div>
             <div class="brand-sub">${escapeHtml(subtitle)}</div>
           </div>
-        </div>
-        <span class="pill">${state.inbox.length}件 あとで整理</span>
+        </button>
+        <button class="pill header-pill" data-action="go" data-screen="inbox" data-tab="思い出">${state.inbox.length}件 あとで整理</button>
       </header>
+      ${flowRail()}
       ${content}
       ${bottomNav()}
       ${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}
@@ -586,6 +620,7 @@
         <p>次のキャンプ、コタとの散歩、今残したい記録をここから始めます。</p>
         <span class="pill home-pill">${state.inbox.length}件 あとで整理</span>
       </section>
+      ${flowRail(true)}
       <main class="stack">
         ${card('進行中の流れ', '同時に動かせる', `
           ${projectSwitch()}
@@ -1527,6 +1562,12 @@
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
+
+    if (action === 'flowJump') {
+      const target = screenFromFlow(button.dataset.key);
+      setScreen(target.screen, target.tab);
+      return;
+    }
 
     if (action === 'go') {
       setScreen(button.dataset.screen, button.dataset.tab || null);
