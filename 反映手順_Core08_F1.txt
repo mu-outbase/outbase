@@ -1,0 +1,3 @@
+1. OUTBASE_Core08_F1_FULL_MODE_EXPERIENCE_完成版.zip を GitHub main へアップロード
+2. .github/workflows/unpack-core08-f1.yml を作成
+3. Actions完了後 https://mu-outbase.github.io/outbase/?v=core08f1 を確認
