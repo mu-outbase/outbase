@@ -1,0 +1,4 @@
+1. OUTBASE_Core06_10_CALENDAR_PRODUCT_RECOVERY_完成版.zip を GitHub main にアップロード
+2. .github/workflows/unpack-core06-10.yml を作成
+3. Actions 実行後、https://mu-outbase.github.io/outbase/?v=core0610 を開く
+4. 初期表示がカレンダー主役になっていることを確認

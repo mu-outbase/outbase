@@ -5,24 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>OUTBASE</title>
   <meta name="theme-color" content="#f4efe4" />
-  <link rel="manifest" href="manifest.json?v=core08-f1-full-mode-experience-20260705" />
-  <link rel="stylesheet" href="styles/app.css?v=core08-f1-full-mode-experience-20260705" />
+  <link rel="manifest" href="manifest.json?v=core0610-calendar-product-recovery" />
+  <link rel="stylesheet" href="styles/app.css?v=core0610-calendar-product-recovery" />
 </head>
 <body>
   <header class="app-header">
-    <div><div class="app-kicker">OUTBASE / Core08-F1</div><h1 id="appTitle">当日運転席</h1></div>
-    <div id="appStatus" class="status-pill">保存OK</div>
+    <div>
+      <div class="app-kicker">OUTBASE</div>
+      <h1 id="appTitle">予定</h1>
+    </div>
+    <button id="statusPill" class="status-pill" type="button">保護ON</button>
   </header>
+
   <main id="app" class="app-shell" aria-live="polite"></main>
-  <button id="captureFab" class="capture-fab" aria-label="今すぐ残す">＋</button>
-  <input id="mediaInput" type="file" accept="image/*" hidden />
+
   <nav class="bottom-nav" aria-label="OUTBASE navigation">
-    <button type="button" data-route="home"><strong>予定</strong><small>予定/予約</small></button>
+    <button type="button" data-route="plans"><strong>予定</strong><small>カレンダー</small></button>
     <button type="button" data-route="search"><strong>探す</strong><small>候補</small></button>
-    <button type="button" data-route="prep"><strong>準備</strong><small>買う/持つ</small></button>
-    <button type="button" data-route="day"><strong>当日</strong><small>運転席</small></button>
-    <button type="button" data-route="memory"><strong>思い出</strong><small>整理/改善</small></button>
+    <button type="button" data-route="prep"><strong>準備</strong><small>整える</small></button>
+    <button type="button" class="record-tab" data-route="plus"><strong>＋</strong><small>残す</small></button>
+    <button type="button" data-route="memory"><strong>思い出</strong><small>次回へ</small></button>
   </nav>
-  <script src="src/app.js?v=core08-f1-full-mode-experience-20260705"></script>
+
+  <script type="module" src="src/app.js?v=core0610-calendar-product-recovery"></script>
 </body>
 </html>
