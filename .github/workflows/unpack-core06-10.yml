@@ -1,11 +1,9 @@
-name: OUTBASE Core06.10 Global UI Reset unpack
+name: Unpack Core06.10 Calendar Product Recovery
 
 on:
   push:
-    branches:
-      - main
     paths:
-      - 'OUTBASE_MVPB_Core06_10_GlobalUIReset.zip'
+      - 'OUTBASE_Core06_10_CALENDAR_PRODUCT_RECOVERY_完成版.zip'
       - '.github/workflows/unpack-core06-10.yml'
   workflow_dispatch:
 
@@ -16,39 +14,18 @@ jobs:
   unpack:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Confirm zip exists
-        run: |
-          set -e
-          ls -la
-          test -f OUTBASE_MVPB_Core06_10_GlobalUIReset.zip
 
       - name: Unzip Core06.10 package
         run: |
-          set -e
-          rm -rf /tmp/outbase_core06_10
-          mkdir -p /tmp/outbase_core06_10
-          unzip -o OUTBASE_MVPB_Core06_10_GlobalUIReset.zip -d /tmp/outbase_core06_10
-          ls -la /tmp/outbase_core06_10
-          if [ -d /tmp/outbase_core06_10/OUTBASE_MVPB_Core06_10_GlobalUIReset ]; then
-            cp -R /tmp/outbase_core06_10/OUTBASE_MVPB_Core06_10_GlobalUIReset/. ./
-          else
-            cp -R /tmp/outbase_core06_10/. ./
-          fi
-          rm -f OUTBASE_MVPB_Core06_10_GlobalUIReset.zip
-          rm -rf OUTBASE_MVPB_Core06_02_RecordModeMapConfirm OUTBASE_MVPB_Core06_03_RecordUXPolish OUTBASE_MVPB_Core06_04_RecordFieldUX OUTBASE_MVPB_Core06_05_AllPagesVisualUnify OUTBASE_MVPB_Core06_06_MobileShellPolish OUTBASE_MVPB_Core06_07_UsabilityFix OUTBASE_MVPB_Core06_08_HumanCenteredUX OUTBASE_MVPB_Core06_09_PremiumInteractionUX
+          unzip -o "OUTBASE_Core06_10_CALENDAR_PRODUCT_RECOVERY_完成版.zip" -d .
+          rm -f "OUTBASE_Core06_10_CALENDAR_PRODUCT_RECOVERY_完成版.zip"
 
       - name: Commit unpacked files
         run: |
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add .
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Apply OUTBASE Core06.10 global UI reset"
-            git push
-          fi
+          git commit -m "Core06.10 calendar product recovery" || echo "No changes to commit"
+          git push 
