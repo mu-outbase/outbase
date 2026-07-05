@@ -1,5 +1,5 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d8-simple-hub-reset-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-d8-simple-hub-reset-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d9-nav-autolog-layer-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-d9-nav-autolog-layer-20260705';
 
 const BUILD_LABEL = 'Core08-D8';
 

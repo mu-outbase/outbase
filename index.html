@@ -5,27 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>OUTBASE</title>
   <meta name="theme-color" content="#f4efe4" />
-  <link rel="manifest" href="manifest.json?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/app.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core05-16.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-01.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-02.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-03.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-04.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-05.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-06.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-07.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-08.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-09.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-10.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-11.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core06-12.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core07.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core08b.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core08c.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core08d6.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core08d7.css?v=core08-d8-simple-hub-reset-20260705" />
-  <link rel="stylesheet" href="styles/core08d8.css?v=core08-d8-simple-hub-reset-20260705" />
+  <link rel="manifest" href="manifest.json?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/app.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core05-16.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-01.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-02.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-03.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-04.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-05.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-06.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-07.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-08.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-09.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-10.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-11.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core06-12.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core07.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core08b.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core08c.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core08d6.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core08d7.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core08d8.css?v=core08-d9-nav-autolog-layer-20260705" />
+  <link rel="stylesheet" href="styles/core08d9.css?v=core08-d9-nav-autolog-layer-20260705" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -39,16 +40,15 @@
 
   <main id="app" class="app-shell" aria-live="polite"></main>
 
-  <nav class="bottom-nav" aria-label="OUTBASE navigation">
-    <button type="button" data-route="home"><strong>予定</strong><small>カレンダー</small></button>
+  <nav class="bottom-nav d9-bottom-nav" aria-label="OUTBASE navigation">
+    <button type="button" data-route="home"><strong>予定</strong><small>見る</small></button>
     <button type="button" data-route="search"><strong>探す</strong><small>候補</small></button>
-    <button type="button" data-route="prep"><strong>準備</strong><small>買う/持つ</small></button>
-    <button type="button" class="record-tab" data-route="walk"><strong>＋</strong><small>記録</small></button>
-    <button type="button" data-route="day"><strong>当日</strong><small>状態</small></button>
-    <button type="button" data-route="memory"><strong>思い出</strong><small>次回へ</small></button>
+    <button type="button" data-route="prep"><strong>準備</strong><small>決める</small></button>
+    <button type="button" class="record-tab" data-route="walk"><strong>＋</strong><small>残す</small></button>
+    <button type="button" data-route="memory"><strong>思い出</strong><small>整理</small></button>
   </nav>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" src="src/main.js?v=core08-d8-simple-hub-reset-20260705"></script>
+  <script type="module" src="src/main.js?v=core08-d9-nav-autolog-layer-20260705"></script>
 </body>
 </html>
