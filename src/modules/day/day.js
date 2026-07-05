@@ -1,67 +1,42 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d7-connect-mode-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-d7-connect-mode-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d8-simple-hub-reset-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-d8-simple-hub-reset-20260705';
 
-const BUILD_LABEL = 'Core08-D7';
+const BUILD_LABEL = 'Core08-D8';
 
 const STATUS_STEPS = [
-  { id: 'wake', phase: 'home', mode: '出発前', label: '起床', sub: '事前に決めた起床時間', required: true, tags: ['home'] },
-  { id: 'homeBreakfast', phase: 'home', mode: '出発前', label: '朝食', sub: '家/途中どちらでも後から整理', tags: ['meal'] },
-  { id: 'loadCar', phase: 'home', mode: '出発前', label: '積み込み', sub: '当日積む物・冷蔵品・コタ用品', required: true, tags: ['gear', 'kota'] },
-  { id: 'fuel', phase: 'home', mode: '出発前', label: '給油', sub: '事前/当日の給油', tags: ['drive'] },
-  { id: 'depart', phase: 'driveOut', mode: '往路ドライブ', label: '出発', sub: '予定出発との差を見る', required: true, tags: ['drive'] },
-  { id: 'driveOut', phase: 'driveOut', mode: '往路ドライブ', label: '往路ドライブ', sub: 'Google Mapsを使う・走行/渋滞/停車を候補化', required: true, tags: ['drive', 'route'] },
-  { id: 'restOut', phase: 'driveOut', mode: '往路ドライブ', label: '休憩/コタ休憩', sub: 'SA/PA・トイレ・水分・コタ状態', tags: ['drive', 'kota'] },
-  { id: 'shopping', phase: 'driveOut', mode: '往路ドライブ', label: '買い出し', sub: 'スーパー・コンビニ・現地調達', tags: ['shopping', 'meal'] },
-  { id: 'arriveCamp', phase: 'arrival', mode: '到着受付', label: 'キャンプ場到着', sub: '入口/駐車場/受付前', required: true, tags: ['drive'] },
-  { id: 'reception', phase: 'arrival', mode: '到着受付', label: '受付', sub: 'チェックイン・説明・支払い', required: true, tags: ['site'] },
-  { id: 'moveSite', phase: 'arrival', mode: 'サイト移動', label: 'サイト移動', sub: 'サイト番号・車位置', tags: ['site'] },
-  { id: 'layout', phase: 'setup', mode: '設営', label: 'レイアウト考察', sub: '風・日陰・入口・コタ動線', required: true, tags: ['setup', 'kota', 'weather'] },
-  { id: 'tent', phase: 'setup', mode: '設営', label: 'テント/タープ', sub: 'テント・タープ・ペグ・張り方', required: true, tags: ['setup', 'gear'] },
-  { id: 'insideSetup', phase: 'setup', mode: '設営', label: 'テント内/タープ下/外', sub: '寝床・リビング・外回り・導線', tags: ['setup', 'gear', 'kota'] },
-  { id: 'siteBreak', phase: 'stay', mode: 'サイト滞在', label: '休憩/散歩/トイレ', sub: '設営中の休憩・コタ散歩・トイレ', tags: ['walk', 'kota'] },
-  { id: 'explore', phase: 'stay', mode: '散歩探索', label: 'キャンプ場探索', sub: '場内・景色・炊事場・トイレ・レビュー素材', tags: ['walk', 'site'] },
-  { id: 'dinner', phase: 'meal', mode: '料理', label: '夕食', sub: '予定料理・実際量・味・片付け', required: true, tags: ['meal'] },
-  { id: 'nightCleanup', phase: 'meal', mode: '料理', label: '夜の片付け', sub: '食器・ゴミ・翌朝準備', tags: ['meal', 'gear'] },
-  { id: 'sleep', phase: 'night', mode: '就寝', label: '就寝', sub: '寒さ・暑さ・寝具・コタ', required: true, tags: ['weather', 'gear', 'kota'] },
-  { id: 'morningWake', phase: 'morning', mode: '翌朝', label: '翌朝起床', sub: '気温・結露・コタ状態', required: true, tags: ['weather', 'kota'] },
-  { id: 'breakfast', phase: 'morning', mode: '翌朝', label: '朝食', sub: '量・片付けやすさ', tags: ['meal'] },
-  { id: 'teardown', phase: 'teardown', mode: '撤収', label: '撤収', sub: '設営の逆・濡れ物・乾燥・積み込み', required: true, tags: ['teardown', 'gear', 'weather'] },
-  { id: 'morningWalk', phase: 'teardown', mode: '撤収', label: '撤収日の散歩', sub: '時間があればコタ散歩', tags: ['walk', 'kota'] },
-  { id: 'lateLunch', phase: 'teardown', mode: '撤収', label: '昼食', sub: 'レイトチェックアウト時', tags: ['meal'] },
-  { id: 'checkout', phase: 'teardown', mode: '撤収', label: 'チェックアウト', sub: '受付・ゴミ・最終確認', required: true, tags: ['drive', 'teardown'] },
-  { id: 'driveHome', phase: 'driveHome', mode: '帰路ドライブ', label: '帰路ドライブ', sub: 'Google Mapsを使う・観光・休憩・渋滞', required: true, tags: ['drive', 'route'] },
-  { id: 'returnStop', phase: 'driveHome', mode: '帰路ドライブ', label: '帰りの寄り道/休憩', sub: '観光・温泉・SA/PA・コタ休憩', tags: ['drive', 'kota'] },
-  { id: 'arriveHome', phase: 'homeBack', mode: '帰宅後', label: '帰宅', sub: '到着時間・疲労感', required: true, tags: ['drive'] },
-  { id: 'homeCleanup', phase: 'homeBack', mode: '帰宅後', label: '帰宅後片付け', sub: '干す・洗う・充電・補充・次回注意', required: true, tags: ['gear', 'next'] }
+  { id: 'wake', phase: 'home', mode: '出発前', label: '起床', sub: '起床・朝食・積み込み', required: true, tags: ['home'] },
+  { id: 'loadCar', phase: 'home', mode: '出発前', label: '積み込み', sub: '当日積む物・コタ用品', required: true, tags: ['gear', 'kota'] },
+  { id: 'depart', phase: 'driveOut', mode: '往路ドライブ', label: '出発', sub: 'Google Mapsで移動開始', required: true, tags: ['drive', 'route'] },
+  { id: 'restOut', phase: 'driveOut', mode: '往路ドライブ', label: '休憩/買い出し/給油', sub: '停車候補は未確認箱へ', tags: ['drive', 'shopping', 'kota'] },
+  { id: 'arriveCamp', phase: 'arrival', mode: '到着受付', label: 'キャンプ場到着', sub: '到着・受付・サイト移動', required: true, tags: ['drive', 'site'] },
+  { id: 'layout', phase: 'setup', mode: '設営', label: 'レイアウト考察', sub: '風・日陰・導線', required: true, tags: ['setup', 'weather', 'kota'] },
+  { id: 'tent', phase: 'setup', mode: '設営', label: 'テント/タープ/外回り', sub: '設営写真はここ候補', required: true, tags: ['setup', 'gear'] },
+  { id: 'explore', phase: 'stay', mode: '散歩探索', label: '散歩/探索/休憩', sub: '場内・景色・トイレ・コタ', tags: ['walk', 'site', 'kota'] },
+  { id: 'dinner', phase: 'meal', mode: '料理', label: '夕食/片付け', sub: '料理量・味・食材・片付け', required: true, tags: ['meal'] },
+  { id: 'sleep', phase: 'night', mode: '就寝', label: '就寝', sub: '寒暖・寝具・コタ', required: true, tags: ['weather', 'gear', 'kota'] },
+  { id: 'morning', phase: 'morning', mode: '翌朝', label: '翌朝/朝食', sub: '朝の状態・朝食', tags: ['meal', 'weather'] },
+  { id: 'teardown', phase: 'teardown', mode: '撤収', label: '撤収', sub: '濡れ物・忘れ物・積み込み', required: true, tags: ['teardown', 'gear', 'weather'] },
+  { id: 'checkout', phase: 'teardown', mode: '撤収', label: 'チェックアウト', sub: 'ゴミ・受付・最終確認', required: true, tags: ['drive', 'teardown'] },
+  { id: 'driveHome', phase: 'driveHome', mode: '帰路ドライブ', label: '帰路ドライブ', sub: 'Google Maps・観光・休憩', required: true, tags: ['drive', 'route'] },
+  { id: 'arriveHome', phase: 'homeBack', mode: '帰宅後', label: '帰宅/片付け', sub: '干す・洗う・充電・次回注意', required: true, tags: ['gear', 'next'] }
 ];
 
 const PHASES = {
-  home: { label: '出発前', sub: '起床・朝食・積み込み・給油' },
+  home: { label: '出発前', sub: '起床・積み込み・給油' },
   driveOut: { label: '往路ドライブ', sub: 'Google Maps・休憩・買い出し・コタ休憩' },
-  arrival: { label: '到着受付', sub: 'キャンプ場到着・受付・サイト移動' },
-  setup: { label: '設営', sub: 'レイアウト・テント・タープ・外回り' },
-  stay: { label: 'サイト滞在', sub: '休憩・散歩・探索・トイレ' },
-  meal: { label: '料理', sub: '朝昼晩・量・味・食材・片付け' },
-  night: { label: '就寝', sub: '寒さ/暑さ・寝具・コタ' },
+  arrival: { label: '到着受付', sub: '到着・受付・サイト移動' },
+  setup: { label: '設営', sub: 'レイアウト・テント・タープ' },
+  stay: { label: 'サイト滞在', sub: '休憩・散歩・探索' },
+  meal: { label: '料理', sub: '食事・量・片付け' },
+  night: { label: '就寝', sub: '寝具・気温・コタ' },
   morning: { label: '翌朝', sub: '朝食・結露・朝の状態' },
-  teardown: { label: '撤収', sub: '撤収・昼食・チェックアウト' },
-  driveHome: { label: '帰路ドライブ', sub: 'Google Maps・観光・休憩・帰宅' },
-  homeBack: { label: '帰宅後', sub: '荷下ろし・干す・充電・次回注意' }
+  teardown: { label: '撤収', sub: '撤収・チェックアウト' },
+  driveHome: { label: '帰路ドライブ', sub: 'Google Maps・観光・休憩' },
+  homeBack: { label: '帰宅後', sub: '片付け・次回注意' }
 };
 
-const CONNECTIONS = {
-  prep: { label: '準備', hint: '持ち物・当日積み込み・忘れ物' },
-  route: { label: 'ルート', hint: '出発/到着/寄り道/休憩' },
-  meal: { label: '料理', hint: '量・味・食材・片付け' },
-  gear: { label: 'ギア', hint: '使った/不要/濡れた/忘れた' },
-  kota: { label: 'コタ', hint: '暑さ・散歩・休憩・水' },
-  weather: { label: '天気', hint: '雨・風・寒暖・乾燥' },
-  memory: { label: '思い出', hint: '写真・レビュー素材' },
-  next: { label: '次回', hint: '改善・注意・買う/持つ' }
-};
-
-const RECORD_TYPES = { note: 'メモ', photo: '写真', video: '動画', voice: '音声', later: 'あとで' };
-const RECORD_STATUSES = { confirmed: '確定', inferred: '推定', unconfirmed: '未確認', wrong: '間違い', corrected: '修正済み', dismissed: '却下', later: 'あとで確認' };
+const RECORD_TYPES = { note: 'メモ', photo: '写真', voice: '音声', later: 'あとで' };
+const STATUS_LABELS = { confirmed: '確定', inferred: '推定', unconfirmed: '未確認', wrong: '間違い', corrected: '修正済み', dismissed: '却下', later: 'あとで確認' };
 
 function nowIso() { return new Date().toISOString(); }
 function makeId(prefix = 'day') { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
@@ -82,143 +57,231 @@ function autoEventsOf(state = getState(), key = projectKey(state)) { return safe
 function correctionsOf(state = getState(), key = projectKey(state)) { return safeList(state.dayCorrections?.[key]); }
 function connectQueueOf(state = getState(), key = projectKey(state)) { return safeList(state.dayConnectQueue?.[key]); }
 function modeLogOf(state = getState(), key = projectKey(state)) { return safeList(state.dayModeLog?.[key]); }
+function backupsOf(state = getState(), key = projectKey(state)) { return safeList(state.dayTestBackups?.[key]); }
 function stepById(id) { return STATUS_STEPS.find((step) => step.id === id) || STATUS_STEPS[0]; }
-function phaseOf(key) { return PHASES[key] || PHASES.home; }
 function stepDone(flow, id) { return Boolean(flow[id]?.doneAt || flow[id]?.status === 'confirmed'); }
 function formatTime(value) { if (!value) return ''; try { return new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); } catch { return String(value); } }
 function formatDayTime(value) { if (!value) return ''; try { return new Date(value).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return String(value); } }
-function parseTimeMinutes(text = '') { const m = String(text || '').match(/(\d{1,2})[:：](\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null; }
-function findTimeNear(label, text = '') { const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); const re = new RegExp(`${escaped}[^0-9]{0,20}(\\d{1,2})[:：](\\d{2})`); const m = String(text || '').match(re); return m ? `${String(m[1]).padStart(2, '0')}:${m[2]}` : ''; }
-function plannedTime(step, state) {
-  const project = state.nextProject || {};
-  const reservation = project.reservation || {};
-  const c = context(state, project);
-  const routeText = `${c.routeMemo || ''}\n${reservation.memo || ''}\n${project.memo || ''}`;
-  if (step.id === 'wake') return findTimeNear('起床', routeText) || '';
-  if (step.id === 'depart') return findTimeNear('出発', routeText) || c.departureTime || '';
-  if (step.id === 'shopping') return findTimeNear('買', routeText) || findTimeNear('スーパー', routeText) || '';
-  if (step.id === 'arriveCamp') return findTimeNear('到着', routeText) || '';
-  if (step.id === 'reception') return reservation.checkIn || findTimeNear('チェックイン', routeText) || '';
-  if (step.id === 'checkout') return reservation.checkOut || findTimeNear('チェックアウト', routeText) || '';
-  if (step.id === 'dinner') return findTimeNear('夕食', c.menuMemo || '') || findTimeNear('夜', c.menuMemo || '') || '';
-  if (step.id === 'breakfast') return findTimeNear('朝食', c.menuMemo || '') || '';
-  return '';
-}
-function driftText(step, actualIso, state) { const plan = plannedTime(step, state); const planMin = parseTimeMinutes(plan); if (planMin === null || !actualIso) return ''; const actual = new Date(actualIso); if (Number.isNaN(actual.getTime())) return ''; const actualMin = actual.getHours() * 60 + actual.getMinutes(); const diff = actualMin - planMin; if (Math.abs(diff) < 3) return '予定通り'; return diff > 0 ? `+${diff}分` : `-${Math.abs(diff)}分`; }
-function latestGpsFromWalkSession(state) { const points = safeList(state.walkSession?.gpsPoints); const point = points[points.length - 1]; return point ? { ...point, source: 'activeRecord' } : null; }
+function latestGpsFromWalkSession(state) { const points = safeList(state.walkSession?.gpsPoints); return points[points.length - 1] || null; }
 function latestGps(state) { return latestGpsFromWalkSession(state) || gpsHintsOf(state)[0] || null; }
-function gpsSpeedKmh(gps) { if (!gps || gps.speed === null || gps.speed === undefined) return null; const speed = Number(gps.speed); return Number.isFinite(speed) ? Math.max(0, speed * 3.6) : null; }
-function gpsStateLabel(gps) { if (!gps) return 'GPS未取得'; const speed = gpsSpeedKmh(gps); if (speed === null) return '位置保存済み'; if (speed >= 15) return `車移動 ${speed.toFixed(0)}km/h`; if (speed > 1.5) return `徒歩移動 ${speed.toFixed(1)}km/h`; return '滞在/停車中'; }
-function nextIncomplete(flow, includeOptional = false) { return STATUS_STEPS.find((step) => (includeOptional || step.required) && !stepDone(flow, step.id)) || STATUS_STEPS.find((step) => !stepDone(flow, step.id)) || STATUS_STEPS[STATUS_STEPS.length - 1]; }
-function remainingSteps(flow, count = 4) { const required = STATUS_STEPS.filter((step) => step.required && !stepDone(flow, step.id)); const optional = STATUS_STEPS.filter((step) => !step.required && !stepDone(flow, step.id)); return [...required, ...optional].slice(0, count); }
-function doneSteps(flow, count = 4) { return STATUS_STEPS.filter((step) => stepDone(flow, step.id)).slice(-count).reverse(); }
-function getFlowPatch(state, updater) { const key = projectKey(state); const all = safeObject(state.dayFlowState); const current = safeObject(all[key]); return { dayFlowState: { ...all, [key]: updater(current) } }; }
-function setStep(stepId, patch) { const state = getState(); patchState(getFlowPatch(state, (flow) => ({ ...flow, [stepId]: { ...(flow[stepId] || {}), ...patch, updatedAt: nowIso() } }))); renderDay(); }
-function isOutboundDrive(flow, gps) { const speed = gpsSpeedKmh(gps); if (speed !== null && speed >= 15 && !stepDone(flow, 'arriveCamp')) return true; return stepDone(flow, 'depart') && !stepDone(flow, 'arriveCamp'); }
-function isInboundDrive(flow, gps) { const speed = gpsSpeedKmh(gps); if (speed !== null && speed >= 15 && stepDone(flow, 'checkout') && !stepDone(flow, 'arriveHome')) return true; return stepDone(flow, 'checkout') && !stepDone(flow, 'arriveHome'); }
-function inferStatus(state) {
-  const flow = flowOf(state);
-  const gps = latestGps(state);
-  const speed = gpsSpeedKmh(gps);
-  const hour = new Date().getHours();
-  const override = state.activeDayStatusStep;
-  if (override && STATUS_STEPS.some((step) => step.id === override)) { const step = stepById(override); return { step, phase: phaseOf(step.phase), confidence: '手動モード', drive: step.phase === 'driveOut' || step.phase === 'driveHome' }; }
-  if (isInboundDrive(flow, gps)) return { step: stepById('driveHome'), phase: phaseOf('driveHome'), confidence: speed !== null && speed >= 15 ? 'GPS速度' : 'チェックアウト後', drive: true };
-  if (isOutboundDrive(flow, gps)) return { step: stepById('driveOut'), phase: phaseOf('driveOut'), confidence: speed !== null && speed >= 15 ? 'GPS速度' : '出発後', drive: true };
-  if (!stepDone(flow, 'depart')) return { step: stepById(hour >= 5 && hour <= 11 && !stepDone(flow, 'loadCar') ? 'loadCar' : 'depart'), phase: phaseOf('home'), confidence: '出発前', drive: false };
-  if (!stepDone(flow, 'arriveCamp')) return { step: stepById('driveOut'), phase: phaseOf('driveOut'), confidence: '出発後', drive: true };
-  if (!stepDone(flow, 'reception')) return { step: stepById('reception'), phase: phaseOf('arrival'), confidence: '到着後', drive: false };
-  if (!stepDone(flow, 'tent')) return { step: stepById('tent'), phase: phaseOf('setup'), confidence: '受付後', drive: false };
-  if (!stepDone(flow, 'dinner') && hour >= 15) return { step: stepById('dinner'), phase: phaseOf('meal'), confidence: '夕方', drive: false };
-  if (!stepDone(flow, 'sleep') && hour >= 20) return { step: stepById('sleep'), phase: phaseOf('night'), confidence: '夜', drive: false };
-  if (stepDone(flow, 'sleep') && !stepDone(flow, 'checkout')) return { step: stepById('teardown'), phase: phaseOf('teardown'), confidence: '翌朝/撤収前', drive: false };
-  if (stepDone(flow, 'arriveHome')) return { step: stepById('homeCleanup'), phase: phaseOf('homeBack'), confidence: '帰宅後', drive: false };
-  const next = nextIncomplete(flow);
-  return { step: next, phase: phaseOf(next.phase), confidence: '未完了順', drive: next.phase === 'driveOut' || next.phase === 'driveHome' };
+function gpsSpeedKmh(gps) { const speed = Number(gps?.speed); return Number.isFinite(speed) ? Math.max(0, speed * 3.6) : null; }
+function gpsStateLabel(gps) { if (!gps) return 'GPS未取得'; const speed = gpsSpeedKmh(gps); if (speed === null) return '位置あり'; if (speed > 35) return '走行中っぽい'; if (speed > 6) return '移動中っぽい'; return '滞在中っぽい'; }
+function activeStep(state) { const flow = flowOf(state); if (state.activeDayStatusStep) return stepById(state.activeDayStatusStep); const gps = latestGps(state); const speed = gpsSpeedKmh(gps); if (speed !== null && speed > 30) {
+    const checkoutDone = stepDone(flow, 'checkout');
+    return stepById(checkoutDone ? 'driveHome' : 'driveOut');
+  }
+  return STATUS_STEPS.find((step) => !stepDone(flow, step.id) && step.required) || STATUS_STEPS.find((step) => !stepDone(flow, step.id)) || stepById('homeCleanup');
 }
-function progress(flow) { const required = STATUS_STEPS.filter((step) => step.required); const done = required.filter((step) => stepDone(flow, step.id)).length; return { done, total: required.length, pct: Math.round((done / required.length) * 100) }; }
-function buildGoogleMapsUrl(state, direction = 'out') { const project = state.nextProject || {}; const c = context(state, project); const destination = direction === 'home' ? '自宅' : (project.reservation?.campground || project.title || c.campgroundSearchMemo || 'キャンプ場'); const base = 'https://www.google.com/maps/dir/?api=1&travelmode=driving'; return `${base}&destination=${encodeURIComponent(destination)}`; }
-function openGoogleMaps(direction = 'out') { const state = getState(); const key = projectKey(state); const url = buildGoogleMapsUrl(state, direction); const event = { id: makeId('maps'), type: 'google_maps_opened', label: direction === 'home' ? 'Google Maps 帰路起動' : 'Google Maps 往路起動', status: 'inferred', candidateStepId: direction === 'home' ? 'driveHome' : 'driveOut', candidateStepLabel: direction === 'home' ? '帰路ドライブ' : '往路ドライブ', reason: 'ドライブモードでGoogle Mapsを使用', createdAt: nowIso(), url };
-  patchState({ dayAutoEvents: { ...(state.dayAutoEvents || {}), [key]: [event, ...autoEventsOf(state, key)].slice(0, 90) } });
+function progress(flow) { const done = STATUS_STEPS.filter((step) => stepDone(flow, step.id)).length; return { done, remaining: Math.max(0, STATUS_STEPS.length - done), total: STATUS_STEPS.length }; }
+function unresolvedRecords(state) { return recordsOf(state).filter((record) => ['unconfirmed', 'wrong', 'later'].includes(record.recordStatus || 'unconfirmed')); }
+function unresolvedEvents(state) { return autoEventsOf(state).filter((event) => !['confirmed', 'dismissed'].includes(event.status)); }
+function unresolvedTotal(state) { return unresolvedRecords(state).length + unresolvedEvents(state).length; }
+function doneLabels(flow, limit = 3) { return STATUS_STEPS.filter((step) => stepDone(flow, step.id)).slice(-limit).map((step) => step.label); }
+function remainLabels(flow, limit = 3) { return STATUS_STEPS.filter((step) => !stepDone(flow, step.id) && step.required).slice(0, limit).map((step) => step.label); }
+function isDriveStep(step) { return ['driveOut', 'driveHome'].includes(step.phase); }
+
+function candidateLabels(step, text = '') {
+  const raw = `${step.label} ${step.sub} ${step.tags?.join(' ') || ''} ${text}`;
+  const result = [];
+  if (/コタ|犬|散歩|暑|水/.test(raw)) result.push('コタ');
+  if (/料理|夕食|朝食|食材|エビ|量|味|片付け/.test(raw)) result.push('料理');
+  if (/ギア|テント|タープ|設営|撤収|濡|忘れ/.test(raw)) result.push('ギア');
+  if (/Google|ドライブ|給油|休憩|買い出し|到着|出発/.test(raw)) result.push('ルート');
+  if (/雨|風|暑|寒|結露|乾燥/.test(raw)) result.push('天気');
+  result.push('次回');
+  return [...new Set(result)].slice(0, 4);
+}
+function inferenceFor(step, detail = '') { return candidateLabels(step, detail).map((label) => ({ label, status: 'candidate' })); }
+function queueFor(record, step) {
+  return inferenceFor(step, record.detail || '').slice(0, 3).map((item) => ({
+    id: makeId('connect'),
+    sourceId: record.id,
+    label: `${item.label}に戻せそう`,
+    reason: record.detail || record.title || step.label,
+    status: 'candidate',
+    createdAt: nowIso()
+  }));
+}
+
+function patchProjectMap(key, mapName, value, state = getState()) { return { ...(state[mapName] || {}), [key]: value }; }
+function saveGpsHint() {
+  const state = getState();
+  const key = projectKey(state);
+  const hint = { id: makeId('gps'), createdAt: nowIso(), lat: null, lng: null, speed: null, label: 'GPS更新候補', source: BUILD_LABEL };
+  const save = (point) => {
+    const gps = { ...hint, ...(point || {}) };
+    const event = { id: makeId('auto'), label: gpsSpeedKmh(gps) && gpsSpeedKmh(gps) > 30 ? '走行候補' : '位置更新候補', reason: gpsStateLabel(gps), status: 'unconfirmed', createdAt: nowIso() };
+    patchState({
+      dayGpsHints: patchProjectMap(key, 'dayGpsHints', [gps, ...gpsHintsOf(state, key)].slice(0, 20), state),
+      dayAutoEvents: patchProjectMap(key, 'dayAutoEvents', [event, ...autoEventsOf(state, key)].slice(0, 40), state)
+    });
+    toast('GPS候補を未確認箱へ保存'); renderDay();
+  };
+  if (!navigator.geolocation) return save(null);
+  navigator.geolocation.getCurrentPosition((pos) => save({ lat: pos.coords.latitude, lng: pos.coords.longitude, speed: pos.coords.speed, accuracy: pos.coords.accuracy }), () => save(null), { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+}
+function appendRecord(type = 'note', detail = '', status = 'unconfirmed') {
+  const state = getState();
+  const key = projectKey(state);
+  const step = activeStep(state);
+  const memoEl = document.getElementById('d8Memo');
+  const text = detail || memoEl?.value?.trim() || (type === 'later' ? 'あとで整理' : '');
+  const record = {
+    id: makeId('dayrec'),
+    type,
+    title: type === 'later' ? 'あとで整理' : `${RECORD_TYPES[type] || '記録'}：${step.label}`,
+    detail: text,
+    createdAt: nowIso(),
+    recordStatus: status,
+    statusStepId: step.id,
+    statusStepLabel: step.label,
+    modeLabel: step.mode,
+    inferenceCandidates: inferenceFor(step, text),
+    source: BUILD_LABEL
+  };
+  patchState({
+    dayRecords: patchProjectMap(key, 'dayRecords', [record, ...recordsOf(state, key)].slice(0, 100), state),
+    dayConnectQueue: patchProjectMap(key, 'dayConnectQueue', [...queueFor(record, step), ...connectQueueOf(state, key)].slice(0, 80), state)
+  });
+  if (memoEl) memoEl.value = '';
+  toast(type === 'later' ? 'あとで整理に入れました' : '未確認箱へ残しました');
+  renderDay();
+}
+function confirmStatus() {
+  const state = getState(); const key = projectKey(state); const step = activeStep(state); const flow = flowOf(state, key);
+  patchState({ dayFlowState: patchProjectMap(key, 'dayFlowState', { ...flow, [step.id]: { ...(flow[step.id] || {}), status: 'confirmed', doneAt: nowIso() } }, state) });
+  toast('今の状態を確定'); renderDay();
+}
+function markDifferent() {
+  const state = getState(); const key = projectKey(state); const step = activeStep(state);
+  const fix = { id: makeId('fix'), at: nowIso(), type: 'mode-wrong', before: step.id, message: `${step.label}ではなかった`, status: 'unconfirmed' };
+  patchState({ dayCorrections: patchProjectMap(key, 'dayCorrections', [fix, ...correctionsOf(state, key)].slice(0, 60), state), activeDayStatusStep: '' });
+  toast('違う候補として残しました'); renderDay();
+}
+function switchMode(stepId) {
+  const state = getState(); const key = projectKey(state); const step = stepById(stepId);
+  const log = { id: makeId('mode'), at: nowIso(), stepId: step.id, label: step.label, mode: step.mode, status: 'manual' };
+  patchState({ activeDayStatusStep: step.id, dayModeLog: patchProjectMap(key, 'dayModeLog', [log, ...modeLogOf(state, key)].slice(0, 60), state) });
+  toast(`${step.mode}に切り替え`); renderDay();
+}
+function updateRecord(id, status) {
+  const state = getState(); const key = projectKey(state);
+  patchState({ dayRecords: patchProjectMap(key, 'dayRecords', recordsOf(state, key).map((record) => record.id === id ? { ...record, recordStatus: status, updatedAt: nowIso() } : record), state) });
+  toast(status === 'confirmed' ? '確定しました' : status === 'wrong' ? '間違いとして残しました' : 'あとで確認にしました'); renderDay();
+}
+function updateEvent(id, status) {
+  const state = getState(); const key = projectKey(state);
+  patchState({ dayAutoEvents: patchProjectMap(key, 'dayAutoEvents', autoEventsOf(state, key).map((event) => event.id === id ? { ...event, status, updatedAt: nowIso() } : event), state) });
+  toast(status === 'confirmed' ? '自動候補を確定' : '候補を却下'); renderDay();
+}
+function openGoogleMaps() {
+  const state = getState(); const key = projectKey(state); const project = state.nextProject || {}; const camp = projectName(project);
+  const event = { id: makeId('auto'), label: 'Google Maps起動', reason: `${camp}への移動候補。戻ったらGPS/時刻で補完`, status: 'unconfirmed', createdAt: nowIso() };
+  patchState({ dayAutoEvents: patchProjectMap(key, 'dayAutoEvents', [event, ...autoEventsOf(state, key)].slice(0, 40), state) });
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(camp)}`;
   window.open(url, '_blank', 'noopener');
-  toast('Google Mapsを開きます');
+  toast('Google Maps起動を未確認箱へ保存');
 }
-function autoEventTypeFromGps(status, gps) { const speed = gpsSpeedKmh(gps); if (speed !== null && speed >= 15) return status.step.phase === 'driveHome' ? 'return_drive' : 'outbound_drive'; if (speed !== null && speed > 1.5) return 'walk_or_explore'; if (status.drive) return 'drive_stop'; return 'stay_or_stop'; }
-function autoEventLabel(type) { return { outbound_drive: '往路走行候補', return_drive: '帰路走行候補', drive_stop: '停車イベント候補', walk_or_explore: '散歩/場内移動候補', stay_or_stop: '滞在/作業候補' }[type] || '状態候補'; }
-function addAutoEventFromGps(gps) { const state = getState(); const key = projectKey(state); const status = inferStatus(state); const type = autoEventTypeFromGps(status, gps); const event = { id: makeId('dayauto'), type, label: autoEventLabel(type), status: 'inferred', candidateStepId: status.step.id, candidateStepLabel: status.step.label, reason: `${gpsStateLabel(gps)} / ${status.confidence}`, createdAt: nowIso(), gps }; patchState({ dayAutoEvents: { ...(state.dayAutoEvents || {}), [key]: [event, ...autoEventsOf(state, key)].slice(0, 90) } }); }
-function saveGpsHint() { if (!navigator.geolocation) return toast('この端末はGPS未対応です'); navigator.geolocation.getCurrentPosition((pos) => { const state = getState(); const key = projectKey(state); const hint = { id: makeId('gps'), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, speed: pos.coords.speed, capturedAt: nowIso(), source: 'day-connect' }; patchState({ dayGpsHints: { ...(state.dayGpsHints || {}), [key]: [hint, ...gpsHintsOf(state, key)].slice(0, 30) } }); addAutoEventFromGps(hint); toast('GPSから候補を更新'); renderDay(); }, () => toast('GPSを取得できませんでした'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }); }
-function connectionCandidatesFromText(text = '', step = STATUS_STEPS[0]) { const out = new Set(safeList(step.tags)); if (/買|出発|到着|寄り道|休憩|給油|ガソリン|渋滞|Google|マップ|MAP|SA|PA|道の駅/.test(text)) out.add('route'); if (/料理|朝食|昼食|夕食|食材|味|量|多すぎ|少ない|余り|エビ|肉|ピザ|片付け/.test(text)) out.add('meal'); if (/ギア|テント|タープ|ペグ|イス|机|濡|乾燥|忘れ|不要|積み込み|充電/.test(text)) out.add('gear'); if (/コタ|犬|散歩|暑|寒|水|日陰|足|車内|休憩/.test(text)) out.add('kota'); if (/雨|風|寒|暑|気温|湿度|天気|乾燥|結露/.test(text)) out.add('weather'); if (/写真|景色|レビュー|思い出|探索|場内/.test(text)) out.add('memory'); if (/次回|改善|後悔|失敗|注意|足りない|戻す|買う/.test(text)) out.add('next'); if (/準備|持つ|持っていく|家にある/.test(text)) out.add('prep'); return [...out].filter((tag) => CONNECTIONS[tag]).slice(0, 6); }
-function contextSnapshot(state, status) { const project = state.nextProject || {}; const c = context(state, project); const flow = flowOf(state); const step = status.step; return { build: BUILD_LABEL, projectKey: projectKey(state), projectName: projectName(project), projectDate: projectDate(project), statusStepId: step.id, statusStepLabel: step.label, mode: step.mode, phase: step.phase, phaseLabel: status.phase.label, plannedTime: plannedTime(step, state), actualStart: flow[step.id]?.actualStart || '', actualDone: flow[step.id]?.doneAt || '', drift: driftText(step, flow[step.id]?.actualStart || flow[step.id]?.doneAt, state), gps: latestGps(state), gpsLabel: gpsStateLabel(latestGps(state)), confidence: status.confidence, weatherMemo: c.weatherDecisionMemo || c.weatherMemo || '', routeMemo: c.routeMemo || '', menuMemo: c.menuMemo || c.fixedDishMemo || '', gearMemo: c.gearMemo || '', kotaMemo: c.kotaMemo || '', captureAt: nowIso() }; }
-function inferRecordCandidates(record, state) { const text = `${record.detail || ''} ${record.title || ''} ${record.contextSnapshot?.statusStepLabel || ''} ${record.contextSnapshot?.weatherMemo || ''} ${record.contextSnapshot?.menuMemo || ''} ${record.contextSnapshot?.gearMemo || ''} ${record.contextSnapshot?.kotaMemo || ''}`; return connectionCandidatesFromText(text, stepById(record.statusStepId)).map((tag) => ({ tag, label: CONNECTIONS[tag].label, reason: CONNECTIONS[tag].hint, source: tag === 'drive' || tag === 'route' ? 'gps/route/text' : 'mode/text' })); }
-function addConnectQueueItems(state, record, tags) { const key = projectKey(state); const current = connectQueueOf(state, key); const items = tags.map((tag) => ({ id: makeId('connect'), recordId: record.id, tag, label: CONNECTIONS[tag]?.label || tag, status: 'candidate', createdAt: nowIso(), reason: CONNECTIONS[tag]?.hint || '連携候補' })); return { dayConnectQueue: { ...(state.dayConnectQueue || {}), [key]: [...items, ...current].slice(0, 100) } }; }
-function appendRecord(type, detail = '', mode = 'now') { const state = getState(); const key = projectKey(state); const status = inferStatus(state); const memo = detail || document.getElementById('dayStatusMemo')?.value?.trim() || ''; if (type === 'note' && !memo) return toast('メモを入力してください'); const record = { id: makeId('dayrec'), record_id: makeId('dayrec'), type, captureMode: mode, title: `${RECORD_TYPES[type] || '記録'}：${status.step.mode}`, detail: memo, statusStepId: status.step.id, statusStepLabel: status.step.label, modeLabel: status.step.mode, recordStatus: mode === 'later' ? 'later' : 'unconfirmed', createdAt: nowIso(), contextSnapshot: contextSnapshot(state, status) }; record.inferenceCandidates = inferRecordCandidates(record, state); const tags = safeList(record.inferenceCandidates).map((item) => item.tag); const patch = { dayRecords: { ...(state.dayRecords || {}), [key]: [record, ...recordsOf(state, key)] }, ...addConnectQueueItems(state, record, tags) }; patchState(patch); toast(mode === 'later' ? 'あとで整理に保存' : '未確認記録として保存'); renderDay(); }
-function logCorrection(state, item) { const key = projectKey(state); return { dayCorrections: { ...(state.dayCorrections || {}), [key]: [item, ...correctionsOf(state, key)].slice(0, 80) } }; }
-function updateRecord(recordId, updater, message = '更新しました') { const state = getState(); const key = projectKey(state); const records = recordsOf(state, key); const target = records.find((record) => record.id === recordId || record.record_id === recordId); const next = records.map((record) => (record.id === recordId || record.record_id === recordId) ? updater(record) : record); const correction = { id: makeId('fix'), kind: 'record', recordId, before: target, at: nowIso(), message }; patchState({ dayRecords: { ...(state.dayRecords || {}), [key]: next }, ...logCorrection(state, correction) }); toast(message); renderDay(); }
-function markRecordWrong(recordId) { updateRecord(recordId, (record) => ({ ...record, previousRecordStatus: record.recordStatus || 'unconfirmed', recordStatus: 'wrong', wrongAt: nowIso() }), '間違いとして保留'); }
-function confirmRecord(recordId) { updateRecord(recordId, (record) => ({ ...record, previousRecordStatus: record.recordStatus || 'unconfirmed', recordStatus: 'confirmed', confirmedAt: nowIso() }), '記録を確定'); }
-function deferRecord(recordId) { updateRecord(recordId, (record) => ({ ...record, previousRecordStatus: record.recordStatus || 'unconfirmed', recordStatus: 'later', deferAt: nowIso() }), 'あとで確認へ移動'); }
-function moveRecord(recordId, stepId) { const step = stepById(stepId); updateRecord(recordId, (record) => ({ ...record, previousStepId: record.statusStepId, statusStepId: step.id, statusStepLabel: step.label, modeLabel: step.mode, previousRecordStatus: record.recordStatus || 'unconfirmed', recordStatus: 'corrected', correctedAt: nowIso() }), `${step.mode}へ移動`); }
-function undoLastCorrection() { const state = getState(); const key = projectKey(state); const corrections = correctionsOf(state, key); const last = corrections[0]; if (!last?.before?.id) return toast('戻せる修正がありません'); const records = recordsOf(state, key); const restored = records.map((record) => (record.id === last.before.id || record.record_id === last.before.record_id) ? last.before : record); patchState({ dayRecords: { ...(state.dayRecords || {}), [key]: restored }, dayCorrections: { ...(state.dayCorrections || {}), [key]: corrections.slice(1) } }); toast('直前の修正を戻しました'); renderDay(); }
-function confirmCurrentStatus() { const state = getState(); const status = inferStatus(state); const at = nowIso(); setStep(status.step.id, { actualStart: flowOf(state)[status.step.id]?.actualStart || at, doneAt: at, status: 'confirmed', source: 'user-confirm' }); toast(`${status.step.label}を確定`); }
-function switchMode(stepId) { const state = getState(); const key = projectKey(state); const step = stepById(stepId); const log = { id: makeId('mode'), stepId: step.id, label: step.label, mode: step.mode, at: nowIso(), source: 'user-switch' }; patchState({ activeDayStatusStep: step.id, dayModeLog: { ...(state.dayModeLog || {}), [key]: [log, ...modeLogOf(state, key)].slice(0, 80) } }); toast(`${step.mode}に切替`); renderDay(); }
-function markDifferent() { const state = getState(); const flow = flowOf(state); const current = inferStatus(state).step; const start = STATUS_STEPS.findIndex((step) => step.id === current.id); const next = STATUS_STEPS.slice(start + 1).find((step) => !stepDone(flow, step.id)) || nextIncomplete(flow, true); switchMode(next.id); }
-function confirmAutoEvent(eventId) { const state = getState(); const key = projectKey(state); const events = autoEventsOf(state, key).map((event) => event.id === eventId ? { ...event, status: 'confirmed', confirmedAt: nowIso() } : event); const target = events.find((event) => event.id === eventId); const patch = { dayAutoEvents: { ...(state.dayAutoEvents || {}), [key]: events } }; if (target?.candidateStepId) { const flow = flowOf(state, key); patch.dayFlowState = { ...(state.dayFlowState || {}), [key]: { ...flow, [target.candidateStepId]: { ...(flow[target.candidateStepId] || {}), actualStart: (flow[target.candidateStepId] || {}).actualStart || target.createdAt, doneAt: (flow[target.candidateStepId] || {}).doneAt || target.createdAt, status: 'confirmed', source: 'auto-event-confirm', updatedAt: nowIso() } } }; } patchState(patch); toast('候補を確定'); renderDay(); }
-function dismissAutoEvent(eventId) { const state = getState(); const key = projectKey(state); patchState({ dayAutoEvents: { ...(state.dayAutoEvents || {}), [key]: autoEventsOf(state, key).map((event) => event.id === eventId ? { ...event, status: 'dismissed', dismissedAt: nowIso() } : event) } }); toast('候補を却下'); renderDay(); }
-function renderHero(state, project, status, flow, records, events) { const step = status.step; const gps = latestGps(state); const plan = plannedTime(step, state); const actual = flow[step.id]?.actualStart || flow[step.id]?.doneAt; const drift = driftText(step, actual, state); const prog = progress(flow); const heroClass = status.drive ? 'd7-hero drive' : 'd7-hero'; const mainLabel = status.drive ? (step.phase === 'driveHome' ? '帰路ドライブ中' : '往路ドライブ中') : `${step.mode}モード`; return `<section class="${heroClass}">
-    <div class="d7-hero-top"><span>OUTBASE 当日コネクト</span><button id="gpsSuggest" type="button">GPS更新</button></div>
-    <div class="d7-camp-name">${escapeHtml(projectName(project))}${projectDate(project) ? ` / ${escapeHtml(projectDate(project))}` : ''}</div>
-    <div class="d7-now">今の状態</div>
-    <h2>${escapeHtml(mainLabel)}</h2>
+function resetDayTest() {
+  const state = getState(); const key = projectKey(state);
+  const ok = window.confirm('当日タブのテストデータだけリセットします。予定・準備・ギア台帳・本番の過去記録は消しません。');
+  if (!ok) return;
+  const backup = {
+    id: makeId('daytest'), at: nowIso(), projectKey: key,
+    dayRecords: recordsOf(state, key),
+    dayGpsHints: gpsHintsOf(state, key),
+    dayAutoEvents: autoEventsOf(state, key),
+    dayCorrections: correctionsOf(state, key),
+    dayConnectQueue: connectQueueOf(state, key),
+    dayModeLog: modeLogOf(state, key),
+    dayFlowState: flowOf(state, key),
+    activeDayStatusStep: state.activeDayStatusStep || ''
+  };
+  patchState({
+    dayRecords: patchProjectMap(key, 'dayRecords', [], state),
+    dayGpsHints: patchProjectMap(key, 'dayGpsHints', [], state),
+    dayAutoEvents: patchProjectMap(key, 'dayAutoEvents', [], state),
+    dayCorrections: patchProjectMap(key, 'dayCorrections', [], state),
+    dayConnectQueue: patchProjectMap(key, 'dayConnectQueue', [], state),
+    dayModeLog: patchProjectMap(key, 'dayModeLog', [], state),
+    dayFlowState: patchProjectMap(key, 'dayFlowState', {}, state),
+    activeDayStatusStep: '',
+    dayTestBackups: patchProjectMap(key, 'dayTestBackups', [backup, ...backupsOf(state, key)].slice(0, 3), state)
+  }, { allowDayTestReset: true });
+  toast('当日テストデータをリセット'); renderDay();
+}
+function restoreDayTest() {
+  const state = getState(); const key = projectKey(state); const backup = backupsOf(state, key)[0];
+  if (!backup) return toast('戻せるテストバックアップがありません');
+  patchState({
+    dayRecords: patchProjectMap(key, 'dayRecords', backup.dayRecords || [], state),
+    dayGpsHints: patchProjectMap(key, 'dayGpsHints', backup.dayGpsHints || [], state),
+    dayAutoEvents: patchProjectMap(key, 'dayAutoEvents', backup.dayAutoEvents || [], state),
+    dayCorrections: patchProjectMap(key, 'dayCorrections', backup.dayCorrections || [], state),
+    dayConnectQueue: patchProjectMap(key, 'dayConnectQueue', backup.dayConnectQueue || [], state),
+    dayModeLog: patchProjectMap(key, 'dayModeLog', backup.dayModeLog || [], state),
+    dayFlowState: patchProjectMap(key, 'dayFlowState', backup.dayFlowState || {}, state),
+    activeDayStatusStep: backup.activeDayStatusStep || ''
+  }, { allowDayTestReset: true });
+  toast('リセット前に戻しました'); renderDay();
+}
+
+function renderHero(state, project, step, flow) {
+  const prog = progress(flow); const unconfirmed = unresolvedTotal(state); const gps = latestGps(state); const drive = isDriveStep(step);
+  const done = doneLabels(flow).join(' / ') || 'まだなし';
+  const remain = remainLabels(flow).join(' / ') || '主な残件なし';
+  return `<section class="d8-hero ${drive ? 'drive' : ''}">
+    <div class="d8-top"><span>OUTBASE 当日シンプルハブ</span><button id="gpsSuggest" type="button">GPS</button></div>
+    <div class="d8-camp">${escapeHtml(projectName(project))}${projectDate(project) ? ` / ${escapeHtml(projectDate(project))}` : ''}</div>
+    <small>今の状態</small>
+    <h2>${escapeHtml(step.mode)}っぽい</h2>
     <p>${escapeHtml(step.sub)}</p>
-    <div class="d7-metrics"><span>${escapeHtml(status.confidence)}</span><span>${escapeHtml(gpsStateLabel(gps))}</span>${plan ? `<span>予定 ${escapeHtml(plan)}</span>` : ''}${drift ? `<strong>${escapeHtml(drift)}</strong>` : ''}<span>${prog.done}/${prog.total}完了</span></div>
-    <div class="d7-state-actions"><button id="confirmStatus" class="primary">この状態で確定</button><button id="differentStatus">違う</button><button id="undoCorrection">戻す</button></div>
-    ${status.drive ? `<div class="d7-drive-actions"><button id="openGoogleMaps" class="maps">Google Mapsで開く</button><button data-record-type="voice">声で残す</button><button data-record-type="later">あとで</button></div>` : ''}
-    <div class="d7-safe-note">間違い前提。違う/移動/戻すで修正できる。分類は候補まで。</div>
-  </section>`; }
-function chipList(items, emptyText, cls = '') { return items.length ? items.map((item) => `<span class="${cls}">${escapeHtml(item.label)}</span>`).join('') : `<em>${escapeHtml(emptyText)}</em>`; }
-function renderSnapshot(state, flow) { const done = doneSteps(flow, 4); const remain = remainingSteps(flow, 4); const events = autoEventsOf(state).filter((event) => !['confirmed', 'dismissed'].includes(event.status)).slice(0, 3); const wrong = recordsOf(state).filter((record) => ['wrong', 'later', 'unconfirmed'].includes(record.recordStatus)).slice(0, 3); return `<section class="d7-snapshot">
-    <article><strong>終わったこと</strong><div>${chipList(done, 'まだ確定なし', 'done')}</div></article>
-    <article><strong>残っていること</strong><div>${chipList(remain, '主な残件なし', 'remain')}</div></article>
-    <article><strong>未確認/間違い</strong><div>${wrong.length ? wrong.map((record) => `<button class="d7-auto-mini" data-confirm-record="${escapeHtml(record.id)}">${escapeHtml(RECORD_STATUSES[record.recordStatus] || '未確認')}</button>`).join('') : '<em>未確認なし</em>'}</div></article>
-    <article><strong>自動で拾った候補</strong><div>${events.length ? events.map((event) => `<button class="d7-auto-mini" data-confirm-event="${escapeHtml(event.id)}">${escapeHtml(event.label)}</button>`).join('') : '<em>GPS/Mapsで候補化</em>'}</div></article>
-  </section>`; }
-function renderCapture(status) { const drive = status.drive; return `<section class="d7-capture ${drive ? 'drive' : ''}">
-    <div class="d7-action-grid">
-      ${drive ? '' : '<button data-record-type="photo" class="photo"><strong>写真</strong><small>撮るだけ</small></button>'}
-      <button id="focusMemo"><strong>メモ</strong><small>一言だけ</small></button>
-      <button data-record-type="voice"><strong>音声</strong><small>話すだけ</small></button>
-      <button data-record-type="later"><strong>あとで</strong><small>未分類で保存</small></button>
-    </div>
-    <div class="d7-memo-row"><textarea id="dayStatusMemo" class="field textarea" placeholder="例：給油じゃなくてコンビニ休憩 / 設営写真 / コタ暑そう / エビ多かった"></textarea><button id="saveStatusMemo">残す</button></div>
+    <div class="d8-score"><strong>完了 ${prog.done}</strong><strong>残り ${prog.remaining}</strong><strong>未確認 ${unconfirmed}</strong></div>
+    <div class="d8-one-line"><span>終わった：${escapeHtml(done)}</span><span>残り：${escapeHtml(remain)}</span></div>
+    <div class="d8-actions"><button id="saveQuick" class="primary">残す</button><button id="differentStatus">違う</button><button data-record-type="later">あとで</button></div>
+    ${drive ? `<div class="d8-drive"><button id="openGoogleMaps">Google Mapsで移動</button><span>${escapeHtml(gpsStateLabel(gps))}</span></div>` : `<div class="d8-drive muted"><span>${escapeHtml(gpsStateLabel(gps))}</span><button id="confirmStatus">この状態で確定</button></div>`}
+  </section>`;
+}
+function renderCapture() { return `<section class="d8-capture">
+    <textarea id="d8Memo" class="field textarea" placeholder="例：コタ暑そう / 設営写真 / エビ多かった / 給油じゃなくて休憩"></textarea>
+    <div class="d8-capture-grid"><button data-record-type="photo">写真</button><button data-record-type="voice">音声</button><button id="saveMemo">メモ</button><button data-record-type="later">未分類で保存</button></div>
     <input id="photoInput" type="file" accept="image/*" hidden />
   </section>`; }
-function renderRecords(records) { return `<section class="d7-inbox"><div class="d7-inbox-head"><strong>今日残したもの</strong><span>${records.length}件</span></div>${records.length ? records.slice(0, 4).map(renderRecord).join('') : '<p class="empty-line">写真・声・メモを残すだけ。間違ってもあとで直せます。</p>'}</section>`; }
-function renderRecord(record) { const candidates = safeList(record.inferenceCandidates).slice(0, 3); return `<article class="d7-record ${escapeHtml(record.recordStatus || 'unconfirmed')}"><div><strong>${escapeHtml(record.title || '記録')}</strong><time>${escapeHtml(formatTime(record.createdAt))}</time></div>${record.detail ? `<p>${escapeHtml(record.detail)}</p>` : ''}<div class="d7-record-tags"><span>${escapeHtml(RECORD_STATUSES[record.recordStatus] || '未確認')}</span><span>${escapeHtml(record.modeLabel || record.statusStepLabel || '未整理')}</span>${candidates.map((item) => `<span>${escapeHtml(item.label)}</span>`).join('')}</div><div class="d7-record-actions"><button data-confirm-record="${escapeHtml(record.id)}">確定</button><button data-wrong-record="${escapeHtml(record.id)}">違う</button><button data-defer-record="${escapeHtml(record.id)}">あとで</button></div></article>`; }
-function renderConnections(state) { const queue = connectQueueOf(state).filter((item) => item.status !== 'accepted').slice(0, 6); return `<section class="d7-connect"><div class="d7-connect-head"><strong>連携候補</strong><span>準備・料理・ギア・コタ・次回へ</span></div>${queue.length ? queue.map((item) => `<button data-connect-id="${escapeHtml(item.id)}"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.reason || '')}</small></button>`).join('') : '<p class="empty-line">記録すると連携候補がここに出ます。</p>'}</section>`; }
-function renderAutoEvents(state) { const events = autoEventsOf(state).filter((event) => !['confirmed', 'dismissed'].includes(event.status)).slice(0, 5); return `<section class="d7-events"><div class="d7-connect-head"><strong>自動候補</strong><span>確定しない限り反映しない</span></div>${events.length ? events.map((event) => `<article><div><strong>${escapeHtml(event.label)}</strong><small>${escapeHtml(formatDayTime(event.createdAt))}</small></div><p>${escapeHtml(event.reason || '')}</p><button data-confirm-event="${escapeHtml(event.id)}">確定</button><button data-dismiss-event="${escapeHtml(event.id)}">違う</button></article>`).join('') : '<p class="empty-line">Google Maps起動、GPS更新、停車などを候補として残します。</p>'}</section>`; }
-function renderModeDrawer(state, flow, status) { return `<details class="d7-flow"><summary><strong>モードを切り替える</strong><span>設営・料理・散歩・撤収など</span></summary><div class="d7-mode-grid">${Object.entries(PHASES).map(([phaseKey, phase]) => `<section><h3>${escapeHtml(phase.label)}</h3>${STATUS_STEPS.filter((step) => step.phase === phaseKey).map((step) => { const cls = [status.step.id === step.id ? 'active' : '', stepDone(flow, step.id) ? 'done' : '', step.required ? 'required' : ''].filter(Boolean).join(' '); return `<button class="${cls}" data-select-status="${escapeHtml(step.id)}"><strong>${escapeHtml(step.label)}</strong><small>${escapeHtml(stepDone(flow, step.id) ? '確定済み' : plannedTime(step, state) || step.sub)}</small></button>`; }).join('')}</section>`).join('')}</div></details>`; }
-export function renderDay() { const state = getState(); const project = state.nextProject || {}; const key = projectKey(state); const flow = flowOf(state, key); const records = recordsOf(state, key); const events = autoEventsOf(state, key); const status = inferStatus(state); app().innerHTML = `<section class="route-page d7-day-page">
-    ${renderHero(state, project, status, flow, records, events)}
-    ${renderSnapshot(state, flow)}
-    ${renderCapture(status)}
-    ${renderRecords(records)}
-    ${renderConnections(state)}
-    ${renderAutoEvents(state)}
-    ${renderModeDrawer(state, flow, status)}
+function renderUnconfirmed(state) { const records = unresolvedRecords(state).slice(0, 5); const events = unresolvedEvents(state).slice(0, 5); const count = records.length + events.length;
+  return `<details class="d8-box" ${count ? '' : ''}><summary><strong>未確認箱</strong><span>${count}件 / 普段は開かなくてOK</span></summary>
+    ${records.length ? records.map((record) => `<article><div><strong>${escapeHtml(record.title || '記録')}</strong><time>${escapeHtml(formatTime(record.createdAt))}</time></div><p>${escapeHtml(record.detail || STATUS_LABELS[record.recordStatus] || '未確認')}</p><div><button data-confirm-record="${escapeHtml(record.id)}">確定</button><button data-wrong-record="${escapeHtml(record.id)}">違う</button><button data-defer-record="${escapeHtml(record.id)}">あとで</button></div></article>`).join('') : ''}
+    ${events.length ? events.map((event) => `<article><div><strong>${escapeHtml(event.label)}</strong><time>${escapeHtml(formatDayTime(event.createdAt))}</time></div><p>${escapeHtml(event.reason || '自動候補')}</p><div><button data-confirm-event="${escapeHtml(event.id)}">確定</button><button data-dismiss-event="${escapeHtml(event.id)}">違う</button></div></article>`).join('') : ''}
+    ${!count ? '<p class="empty-line">未確認はありません。</p>' : ''}
+  </details>`;
+}
+function renderModeDrawer(state, flow, step) { return `<details class="d8-box d8-mode"><summary><strong>今の状態を直す</strong><span>${escapeHtml(step.mode)}が違う時だけ開く</span></summary><div class="d8-mode-grid">${Object.entries(PHASES).map(([phaseKey, phase]) => `<section><h3>${escapeHtml(phase.label)}</h3>${STATUS_STEPS.filter((s) => s.phase === phaseKey).map((s) => `<button class="${s.id === step.id ? 'active' : ''} ${stepDone(flow, s.id) ? 'done' : ''}" data-select-status="${escapeHtml(s.id)}"><strong>${escapeHtml(s.label)}</strong><small>${escapeHtml(stepDone(flow, s.id) ? '完了済み' : s.sub)}</small></button>`).join('')}</section>`).join('')}</div></details>`; }
+function renderConnectedSummary(state) { const queue = connectQueueOf(state).filter((item) => item.status !== 'accepted'); const labels = ['準備', '料理', 'ギア', 'コタ', '次回']; return `<section class="d8-summary"><div><strong>連携は裏で保存中</strong><span>${queue.length}件候補 / 確定するまで反映しない</span></div><div>${labels.map((l) => `<span>${escapeHtml(l)}</span>`).join('')}</div></section>`; }
+function renderTestPanel(state) { const key = projectKey(state); const backup = backupsOf(state, key)[0]; return `<details class="d8-box d8-test"><summary><strong>テスト中</strong><span>当日だけリセットできる</span></summary><p>予定・準備・料理予定・ギア台帳・本番の過去記録は消しません。</p><button id="resetDayTest" class="danger">当日データだけリセット</button>${backup ? `<button id="restoreDayTest">リセット前に戻す</button><small>保存：${escapeHtml(formatDayTime(backup.at))}</small>` : ''}</details>`; }
+
+export function renderDay() {
+  const state = getState(); const project = state.nextProject || {}; const flow = flowOf(state); const step = activeStep(state);
+  app().innerHTML = `<section class="route-page d8-day-page">
+    ${renderHero(state, project, step, flow)}
+    ${renderCapture()}
+    ${renderUnconfirmed(state)}
+    ${renderConnectedSummary(state)}
+    ${renderModeDrawer(state, flow, step)}
+    ${renderTestPanel(state)}
   </section>`;
   document.getElementById('gpsSuggest')?.addEventListener('click', saveGpsHint);
-  document.getElementById('confirmStatus')?.addEventListener('click', confirmCurrentStatus);
+  document.getElementById('openGoogleMaps')?.addEventListener('click', openGoogleMaps);
+  document.getElementById('confirmStatus')?.addEventListener('click', confirmStatus);
   document.getElementById('differentStatus')?.addEventListener('click', markDifferent);
-  document.getElementById('undoCorrection')?.addEventListener('click', undoLastCorrection);
-  document.getElementById('openGoogleMaps')?.addEventListener('click', () => openGoogleMaps(status.step.phase === 'driveHome' ? 'home' : 'out'));
-  document.getElementById('focusMemo')?.addEventListener('click', () => document.getElementById('dayStatusMemo')?.focus());
-  document.getElementById('saveStatusMemo')?.addEventListener('click', () => appendRecord('note'));
+  document.getElementById('saveQuick')?.addEventListener('click', () => document.getElementById('d8Memo')?.focus());
+  document.getElementById('saveMemo')?.addEventListener('click', () => appendRecord('note'));
+  document.getElementById('resetDayTest')?.addEventListener('click', resetDayTest);
+  document.getElementById('restoreDayTest')?.addEventListener('click', restoreDayTest);
   document.querySelectorAll('[data-select-status]').forEach((button) => button.addEventListener('click', () => switchMode(button.dataset.selectStatus)));
-  document.querySelectorAll('[data-confirm-event]').forEach((button) => button.addEventListener('click', () => confirmAutoEvent(button.dataset.confirmEvent)));
-  document.querySelectorAll('[data-dismiss-event]').forEach((button) => button.addEventListener('click', () => dismissAutoEvent(button.dataset.dismissEvent)));
-  document.querySelectorAll('[data-confirm-record]').forEach((button) => button.addEventListener('click', () => confirmRecord(button.dataset.confirmRecord)));
-  document.querySelectorAll('[data-wrong-record]').forEach((button) => button.addEventListener('click', () => markRecordWrong(button.dataset.wrongRecord)));
-  document.querySelectorAll('[data-defer-record]').forEach((button) => button.addEventListener('click', () => deferRecord(button.dataset.deferRecord)));
-  document.querySelectorAll('[data-record-type]').forEach((button) => button.addEventListener('click', () => { const type = button.dataset.recordType; if (type === 'photo') return document.getElementById('photoInput')?.click(); if (type === 'later') return appendRecord('later', document.getElementById('dayStatusMemo')?.value?.trim() || 'あとで整理', 'later'); return appendRecord(type, type === 'voice' ? '音声メモを追加' : '', 'now'); }));
+  document.querySelectorAll('[data-confirm-record]').forEach((button) => button.addEventListener('click', () => updateRecord(button.dataset.confirmRecord, 'confirmed')));
+  document.querySelectorAll('[data-wrong-record]').forEach((button) => button.addEventListener('click', () => updateRecord(button.dataset.wrongRecord, 'wrong')));
+  document.querySelectorAll('[data-defer-record]').forEach((button) => button.addEventListener('click', () => updateRecord(button.dataset.deferRecord, 'later')));
+  document.querySelectorAll('[data-confirm-event]').forEach((button) => button.addEventListener('click', () => updateEvent(button.dataset.confirmEvent, 'confirmed')));
+  document.querySelectorAll('[data-dismiss-event]').forEach((button) => button.addEventListener('click', () => updateEvent(button.dataset.dismissEvent, 'dismissed')));
+  document.querySelectorAll('[data-record-type]').forEach((button) => button.addEventListener('click', () => { const type = button.dataset.recordType; if (type === 'photo') return document.getElementById('photoInput')?.click(); if (type === 'later') return appendRecord('later', document.getElementById('d8Memo')?.value?.trim() || 'あとで整理', 'later'); return appendRecord(type, type === 'voice' ? '音声メモを追加' : ''); }));
   document.getElementById('photoInput')?.addEventListener('change', (event) => appendRecord('photo', event.target.files?.[0]?.name || '写真を追加'));
 }

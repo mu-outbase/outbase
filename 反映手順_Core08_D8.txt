@@ -1,0 +1,6 @@
+Core08-D8 反映手順
+
+1. GitHub upload/main に OUTBASE_Core08_D8_DAY_SIMPLE_HUB_完成版.zip をアップロード
+2. .github/workflows/unpack-core08-d8.yml を作成
+3. Actions で Unpack Core08-D8 ZIP が成功することを確認
+4. https://mu-outbase.github.io/outbase/?v=core08d8 を確認

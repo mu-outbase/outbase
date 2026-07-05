@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d7-connect-mode-20260705';
-import { VERSION } from '../config/version.js?v=core08-d7-connect-mode-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d7-connect-mode-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d8-simple-hub-reset-20260705';
+import { VERSION } from '../config/version.js?v=core08-d8-simple-hub-reset-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d8-simple-hub-reset-20260705';
 
 const initialState = {
   version: VERSION,
@@ -51,6 +51,7 @@ const initialState = {
   dayConnectQueue: {},
   dayModeLog: {},
   dayFlowState: {},
+  dayTestBackups: {},
   activeDayFlowStep: '',
   activeDayStatusStep: '',
   dayCaptureMode: 'now',
@@ -73,7 +74,7 @@ const initialState = {
   },
   notes: { shopping: [], packing: [], kota: [], reflection: [] },
   dataGuard: {
-    version: 'core08-d7',
+    version: 'core08-d8',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない。間違い登録は修正/移動/戻すで保護する',
     auditLog: [],
     deletedItems: [],
@@ -105,6 +106,7 @@ function normalizeLoadedState(loaded) {
   merged.dayRecords = loaded?.dayRecords && typeof loaded.dayRecords === 'object' && !Array.isArray(loaded.dayRecords) ? loaded.dayRecords : {};
   merged.dayGpsHints = loaded?.dayGpsHints && typeof loaded.dayGpsHints === 'object' && !Array.isArray(loaded.dayGpsHints) ? loaded.dayGpsHints : {};
   merged.dayFlowState = loaded?.dayFlowState && typeof loaded.dayFlowState === 'object' && !Array.isArray(loaded.dayFlowState) ? loaded.dayFlowState : {};
+  merged.dayTestBackups = loaded?.dayTestBackups && typeof loaded.dayTestBackups === 'object' && !Array.isArray(loaded.dayTestBackups) ? loaded.dayTestBackups : {};
   merged.activeDayFlowStep = loaded?.activeDayFlowStep || '';
   merged.dayCaptureMode = ['now', 'later', 'before', 'rough'].includes(loaded?.dayCaptureMode) ? loaded.dayCaptureMode : 'now';
   merged.activeDayTag = loaded?.activeDayTag || 'unclassified';

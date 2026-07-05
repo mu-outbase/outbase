@@ -33,13 +33,19 @@ function withRecordId(record = {}) {
 
 function withDayRecordId(record = {}) {
   if (record.id || record.record_id) return record;
-  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D6で当日ステータス記録保護IDを付与' };
+  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D8で当日テスト記録保護IDを付与' };
 }
 
 
 function withDayAutoEventId(event = {}) {
   if (event.id) return event;
-  return { ...event, id: stableId('dayauto'), dataGuardNote: 'Core08-D6で自動観測候補IDを付与' };
+  return { ...event, id: stableId('dayauto'), dataGuardNote: 'Core08-D8で自動観測候補IDを付与' };
+}
+
+
+function normalizeDayTestBackups(backups = {}) {
+  if (!backups || typeof backups !== 'object' || Array.isArray(backups)) return {};
+  return Object.fromEntries(Object.entries(backups).map(([key, list]) => [key, Array.isArray(list) ? list.slice(0, 3) : []]));
 }
 
 function normalizeDayGpsHints(hints = {}) {
@@ -49,7 +55,7 @@ function normalizeDayGpsHints(hints = {}) {
 
 function withId(item = {}, prefix = 'item') {
   if (item.id) return item;
-  return { ...item, id: stableId(prefix), dataGuardNote: 'Core08-D7で保護IDを付与' };
+  return { ...item, id: stableId(prefix), dataGuardNote: 'Core08-D8で保護IDを付与' };
 }
 
 function normalizeProjectLists(map = {}, prefix = 'item', max = 100) {
@@ -69,7 +75,7 @@ function normalizeDayAutoEvents(events = {}) {
 
 function normalizeDataGuard(dataGuard = {}) {
   return {
-    version: 'core08-d7',
+    version: 'core08-d8',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: Array.isArray(dataGuard.auditLog) ? dataGuard.auditLog.slice(-MAX_AUDIT) : [],
     deletedItems: Array.isArray(dataGuard.deletedItems) ? dataGuard.deletedItems.slice(-MAX_AUDIT) : [],
@@ -87,6 +93,7 @@ export function normalizeProtectedState(state = {}) {
   next.dayRecords = normalizeDayRecords(state.dayRecords || {});
   next.dayAutoEvents = normalizeDayAutoEvents(state.dayAutoEvents || {});
   next.dayGpsHints = normalizeDayGpsHints(state.dayGpsHints || {});
+  next.dayTestBackups = normalizeDayTestBackups(state.dayTestBackups || {});
   next.dayCorrections = normalizeProjectLists(state.dayCorrections || {}, 'fix', 100);
   next.dayConnectQueue = normalizeProjectLists(state.dayConnectQueue || {}, 'connect', 120);
   next.dayModeLog = normalizeProjectLists(state.dayModeLog || {}, 'mode', 100);
@@ -245,19 +252,20 @@ export function guardPatch(previousState = {}, patch = {}, options = {}) {
   if (Array.isArray(patch.recordHistory)) {
     guardedPatch.recordHistory = guardRecordHistory(previousState.recordHistory || [], patch.recordHistory, audit, deletedItems);
   }
-  if (patch.dayRecords && typeof patch.dayRecords === 'object') {
+  const allowDayTestReset = Boolean(options.allowDayTestReset);
+  if (!allowDayTestReset && patch.dayRecords && typeof patch.dayRecords === 'object') {
     guardedPatch.dayRecords = guardDayRecords(previousState.dayRecords || {}, patch.dayRecords, audit, deletedItems);
   }
-  if (patch.dayAutoEvents && typeof patch.dayAutoEvents === 'object') {
+  if (!allowDayTestReset && patch.dayAutoEvents && typeof patch.dayAutoEvents === 'object') {
     guardedPatch.dayAutoEvents = guardDayAutoEvents(previousState.dayAutoEvents || {}, patch.dayAutoEvents, audit, deletedItems);
   }
-  if (patch.dayCorrections && typeof patch.dayCorrections === 'object') {
+  if (!allowDayTestReset && patch.dayCorrections && typeof patch.dayCorrections === 'object') {
     guardedPatch.dayCorrections = guardProjectListMap(previousState.dayCorrections || {}, patch.dayCorrections, 'dayCorrections', 'fix', 100, audit, deletedItems);
   }
-  if (patch.dayConnectQueue && typeof patch.dayConnectQueue === 'object') {
+  if (!allowDayTestReset && patch.dayConnectQueue && typeof patch.dayConnectQueue === 'object') {
     guardedPatch.dayConnectQueue = guardProjectListMap(previousState.dayConnectQueue || {}, patch.dayConnectQueue, 'dayConnectQueue', 'connect', 120, audit, deletedItems);
   }
-  if (patch.dayModeLog && typeof patch.dayModeLog === 'object') {
+  if (!allowDayTestReset && patch.dayModeLog && typeof patch.dayModeLog === 'object') {
     guardedPatch.dayModeLog = guardProjectListMap(previousState.dayModeLog || {}, patch.dayModeLog, 'dayModeLog', 'mode', 100, audit, deletedItems);
   }
   if (patch.nextProject && !options.allowIdentityOverwrite) {
