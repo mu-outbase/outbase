@@ -1,0 +1,19 @@
+Core08-C 反映手順
+
+1. GitHubへ以下ZIPをアップロード
+   OUTBASE_Core08_C_PREP_WORKSPACE_STABLE_完成版.zip
+
+2. workflowを作成
+   .github/workflows/unpack-core08-c.yml
+
+3. Actionsで Unpack Core08-C ZIP が成功することを確認
+
+4. アプリ確認
+   https://mu-outbase.github.io/outbase/?v=core08c
+
+確認項目
+- 準備トップは短い司令塔のまま
+- 天気/料理/ルート/ギア/コタを押すと専用ワークスペースになる
+- 専用画面中に下段ナビが出ない
+- ← 準備に戻るでトップに戻る
+- 選択中の予定だけに保存される

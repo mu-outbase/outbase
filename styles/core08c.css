@@ -1,0 +1,57 @@
+/* Core08-C / 準備ワークスペース安定化 */
+body[data-route="prep"][data-screen-kind="workspace"]{
+  --ob-scroll-spacer:0px;
+  --ob-bottom-reserve:0px;
+  --ob-screen-bottom-pad:0px;
+}
+.core073-prep-page.prep-workspace-only{
+  min-height:100dvh!important;
+  padding:0!important;
+  gap:0!important;
+}
+.core073-prep-page.prep-workspace-only::after{
+  display:none!important;
+}
+.stable-prep-workspace{
+  display:block!important;
+  min-height:100dvh;
+}
+.stable-workspace-header small{
+  display:block;
+  margin-top:3px;
+  color:var(--ob-muted,#777266);
+  font-size:11px;
+  font-weight:900;
+  line-height:1.35;
+}
+.workspace-guard-note{
+  border:1px solid rgba(36,33,23,.08);
+  border-radius:18px;
+  background:rgba(255,250,241,.74);
+  color:var(--ob-muted,#777266);
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:900;
+  line-height:1.45;
+}
+.prep-dashboard-only .outbase-workspace{
+  display:none!important;
+}
+body[data-route="prep"][data-screen-kind="workspace"] .app-header,
+body[data-route="prep"][data-screen-kind="workspace"] .bottom-nav{
+  display:none!important;
+}
+body[data-route="prep"][data-screen-kind="workspace"] #app.app-shell{
+  padding:0!important;
+  max-width:none!important;
+  width:100%!important;
+}
+body[data-route="prep"][data-screen-kind="workspace"] #app.app-shell::after{
+  display:none!important;
+}
+.core073-status-card .status-tile.active{
+  outline:0!important;
+}
+@media(max-width:520px){
+  .workspace-guard-note{font-size:11px;border-radius:16px;padding:8px 10px;}
+}

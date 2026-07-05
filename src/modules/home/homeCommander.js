@@ -1,6 +1,6 @@
-import { escapeHtml } from '../../ui/components.js?v=core08-b-home-commander-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-b-home-commander-20260705';
-import { go } from '../../core/router.js?v=core08-b-home-commander-20260705';
+import { escapeHtml } from '../../ui/components.js?v=core08-c-prep-workspace-stable-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-c-prep-workspace-stable-20260705';
+import { go } from '../../core/router.js?v=core08-c-prep-workspace-stable-20260705';
 
 let observerStarted = false;
 let rendering = false;

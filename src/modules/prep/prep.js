@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-b-home-commander-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-b-home-commander-20260705';
-import { renderImportPanel } from '../import/import.js?v=core08-b-home-commander-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-c-prep-workspace-stable-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-c-prep-workspace-stable-20260705';
+import { renderImportPanel } from '../import/import.js?v=core08-c-prep-workspace-stable-20260705';
 import {
   buildDepartureLineList,
   buildMealLineList,
@@ -9,7 +9,7 @@ import {
   buildShoppingLineList,
   mealModeLabels,
   normalizePrepContext
-} from './prepEngine.js?v=core08-b-home-commander-20260705';
+} from './prepEngine.js?v=core08-c-prep-workspace-stable-20260705';
 
 const WORKSPACE_META = {
   input: { label: '天気・判断', short: '天気', sub: '無料期限・1時間天気・行く判断' },
@@ -98,6 +98,7 @@ function planStartValue(project, fallback = '') {
 function calendarEventToProject(event) {
   return {
     id: event.id,
+    sourceEventId: event.id,
     title: event.title || 'キャンプ予定',
     status: 'planning',
     reservation: {
@@ -109,7 +110,8 @@ function calendarEventToProject(event) {
       cancelFreeUntil: event.cancelFreeUntil || '',
       sourceText: `${event.title || ''} ${event.memo || ''}`
     },
-    prep: event.prep || {}
+    prep: event.prep || {},
+    prepContext: event.prepContext || {}
   };
 }
 function resolveProject(state) {
@@ -117,7 +119,18 @@ function resolveProject(state) {
   const fallbackKey = state.nextProject?.id || 'nextProject';
   const selectedKey = state.selectedPrepProjectId || fallbackKey;
   const hit = plans.find((plan) => plan.key === selectedKey) || plans[0];
-  return { plans, selectedKey: hit?.key || selectedKey, project: hit?.project || state.nextProject };
+  return { plans, selectedKey: hit?.key || selectedKey, selectedPlan: hit || null, project: hit?.project || state.nextProject };
+}
+function contextForProject(state, project) {
+  const projectContext = project?.prepContext || project?.prep?.context || null;
+  const fallbackContext = state.prepContext || {};
+  return normalizePrepContext(projectContext || fallbackContext, project?.reservation || {});
+}
+function workspaceSourceLabel(model) {
+  return `保存先：${projectName(model.project)}`;
+}
+function scrollPrepTop() {
+  try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch { window.scrollTo(0, 0); }
 }
 
 function renderHero(model, plans, selectedKey) {
@@ -170,12 +183,13 @@ function kotaStatus(model) { return model.context.kotaGoing === 'no' ? '— 同�
 function renderWorkspace(model, activeFeature) {
   const meta = WORKSPACE_META[activeFeature];
   if (!meta) return '';
-  return `<aside class="outbase-workspace core073-workspace" data-workspace-kind="${escapeHtml(activeFeature)}" role="dialog" aria-modal="true" aria-label="${escapeHtml(meta.label)}">
+  return `<aside class="outbase-workspace core073-workspace stable-prep-workspace" data-workspace-kind="${escapeHtml(activeFeature)}" role="dialog" aria-modal="true" aria-label="${escapeHtml(meta.label)}">
     <div class="outbase-workspace-sheet workspace-sheet">
-      <header class="outbase-workspace-header workspace-header">
-        <button class="prepWorkspaceOpen outbase-workspace-back workspace-back" data-feature="dashboard">← 準備に戻る</button>
-        <div><span>${escapeHtml(meta.sub)}</span><h2>${escapeHtml(meta.label)}</h2></div>
+      <header class="outbase-workspace-header workspace-header stable-workspace-header">
+        <button class="prepWorkspaceOpen outbase-workspace-back workspace-back" data-feature="dashboard" type="button">← 準備に戻る</button>
+        <div><span>${escapeHtml(meta.sub)}</span><h2>${escapeHtml(meta.label)}</h2><small>${escapeHtml(workspaceSourceLabel(model))}</small></div>
       </header>
+      <div class="workspace-guard-note">この画面の入力は、選択中の予定だけに保存。別予定名・日付は勝手に上書きしない。</div>
       <div class="outbase-workspace-content workspace-content">${workspaceBody(model, activeFeature)}</div>
     </div>
   </aside>`;
@@ -361,24 +375,51 @@ export function renderPrep() {
     window.OUTBASE_IMPORT?.bind?.();
     return;
   }
-  const context = normalizePrepContext(state.prepContext || project?.prepContext || {}, project?.reservation || {});
+  const context = contextForProject(state, project);
   const model = buildPrepModel(project, context);
   const activeFeature = WORKSPACE_META[state.prepFeature] ? state.prepFeature : 'dashboard';
-  app().innerHTML = `<section class="route-page prep-lean core073-prep-page" data-screen-role="hub">${renderHero(model, plans, selectedKey)}${renderCommandCenter(model)}${renderStatusGrid(model, activeFeature)}${renderWorkspace(model, activeFeature)}</section>`;
+  const screenRole = activeFeature === 'dashboard' ? 'hub' : 'workspace';
+  const body = activeFeature === 'dashboard'
+    ? `${renderHero(model, plans, selectedKey)}${renderCommandCenter(model)}${renderStatusGrid(model, activeFeature)}`
+    : renderWorkspace(model, activeFeature);
+  app().innerHTML = `<section class="route-page prep-lean core073-prep-page ${activeFeature === 'dashboard' ? 'prep-dashboard-only' : 'prep-workspace-only'}" data-screen-role="${screenRole}">${body}</section>`;
   bindPrepActions(project, model);
 }
 
+
+function selectedPrepId(state, project) {
+  return state.selectedPrepProjectId || project?.id || state.nextProject?.id || 'nextProject';
+}
+function patchCurrentPrepContext(project, nextContext, extraPatch = {}) {
+  const currentState = getState();
+  const selectedId = selectedPrepId(currentState, project);
+  const now = new Date().toISOString();
+  const hasCalendarTarget = Array.isArray(currentState.calendarEvents) && currentState.calendarEvents.some((event) => event.id === selectedId);
+  if (hasCalendarTarget) {
+    const calendarEvents = currentState.calendarEvents.map((event) => (event.id === selectedId ? { ...event, prepContext: nextContext, updatedAt: now } : event));
+    patchState({ calendarEvents, ...extraPatch });
+    return;
+  }
+  const baseProject = currentState.nextProject || project;
+  patchState({ prepContext: nextContext, nextProject: { ...baseProject, prepContext: nextContext, updatedAt: now }, ...extraPatch });
+}
+function selectedModelForCopy(project, fallbackContext) {
+  const state = getState();
+  const resolved = resolveProject(state).project || project;
+  const context = contextForProject(state, resolved || project);
+  return buildPrepModel(resolved || project, normalizePrepContext(context || fallbackContext, (resolved || project)?.reservation || {}));
+}
+
 function bindPrepActions(project, model) {
-  document.querySelectorAll('.projectSwitch').forEach((button) => button.addEventListener('click', () => { patchState({ selectedPrepProjectId: button.dataset.projectKey, prepFeature: 'dashboard' }); toast('予定を選択'); renderPrep(); }));
-  document.querySelectorAll('.prepWorkspaceOpen').forEach((button) => button.addEventListener('click', () => { patchState({ prepFeature: button.dataset.feature || 'dashboard' }); renderPrep(); }));
-  document.querySelectorAll('.cancelDecisionBtn').forEach((button) => button.addEventListener('click', () => { const nextContext = { ...model.context, cancelDecisionStatus: button.dataset.status }; patchState({ prepContext: nextContext }); toast(`判断：${button.dataset.status}`); renderPrep(); }));
+  document.querySelectorAll('.projectSwitch').forEach((button) => button.addEventListener('click', () => { patchState({ selectedPrepProjectId: button.dataset.projectKey, prepFeature: 'dashboard' }); toast('予定を選択'); renderPrep(); scrollPrepTop(); }));
+  document.querySelectorAll('.prepWorkspaceOpen').forEach((button) => button.addEventListener('click', () => { const nextFeature = button.dataset.feature || 'dashboard'; patchState({ prepFeature: nextFeature }); renderPrep(); scrollPrepTop(); }));
+  document.querySelectorAll('.cancelDecisionBtn').forEach((button) => button.addEventListener('click', () => { const nextContext = { ...model.context, cancelDecisionStatus: button.dataset.status }; patchCurrentPrepContext(project, nextContext); toast(`判断：${button.dataset.status}`); renderPrep(); }));
   document.querySelectorAll('.prepModeChip').forEach((button) => button.addEventListener('click', () => {
-    const state = getState();
-    const current = normalizePrepContext(state.prepContext || model.context, project?.reservation || {});
+    const current = normalizePrepContext(model.context, project?.reservation || {});
     const set = new Set(current.mealModes || []);
     if (set.has(button.dataset.mode)) set.delete(button.dataset.mode); else set.add(button.dataset.mode);
-    patchState({ prepContext: { ...current, mealModes: [...set] }, prepFeature: 'meal' });
-    renderPrep();
+    model.context.mealModes = [...set];
+    button.classList.toggle('active', set.has(button.dataset.mode));
   }));
   document.getElementById('updatePracticalPrep')?.addEventListener('click', () => {
     const currentState = getState();
@@ -392,18 +433,19 @@ function bindPrepActions(project, model) {
       const calendarEvents = currentState.calendarEvents.map((event) => (event.id === selectedId
         ? { ...event, prep: nextPrep, prepContext: nextContext, updatedAt: now }
         : event));
-      patchState({ prepContext: nextContext, calendarEvents, prepFeature: 'dashboard' });
+      patchState({ calendarEvents, prepFeature: 'dashboard' });
     } else {
       const baseProject = currentState.nextProject || project;
       patchState({ prepContext: nextContext, nextProject: { ...baseProject, prep: nextPrep, prepContext: nextContext, updatedAt: now }, prepFeature: 'dashboard' });
     }
 
-    toast('更新しました');
+    toast('保存して準備トップへ戻りました');
     renderPrep();
+    scrollPrepTop();
   });
-  bindCopy('copyShoppingList', () => buildShoppingLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '買物リストをコピー');
-  bindCopy('copyMealPlan', () => buildMealLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '料理計画をコピー');
-  bindCopy('copyDeparturePlan', () => buildDepartureLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '出発予定をコピー');
+  bindCopy('copyShoppingList', () => buildShoppingLineList(selectedModelForCopy(project, model.context)), '買物リストをコピー');
+  bindCopy('copyMealPlan', () => buildMealLineList(selectedModelForCopy(project, model.context)), '料理計画をコピー');
+  bindCopy('copyDeparturePlan', () => buildDepartureLineList(selectedModelForCopy(project, model.context)), '出発予定をコピー');
 }
 function bindCopy(id, buildText, message) {
   document.getElementById(id)?.addEventListener('click', async () => {

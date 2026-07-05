@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core08-b-home-commander-20260705';
+import { patchState } from './store.js?v=core08-c-prep-workspace-stable-20260705';
 
 const routes = new Map();
 const ROUTE_LABELS = {
