@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-a1-nav-tapfix-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-a1-nav-tapfix-20260705';
-import { renderImportPanel } from '../import/import.js?v=core08-a1-nav-tapfix-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-a2-plan-padfix-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-a2-plan-padfix-20260705';
+import { renderImportPanel } from '../import/import.js?v=core08-a2-plan-padfix-20260705';
 import {
   buildDepartureLineList,
   buildMealLineList,
@@ -9,7 +9,7 @@ import {
   buildShoppingLineList,
   mealModeLabels,
   normalizePrepContext
-} from './prepEngine.js?v=core08-a1-nav-tapfix-20260705';
+} from './prepEngine.js?v=core08-a2-plan-padfix-20260705';
 
 const WORKSPACE_META = {
   input: { label: '天気・判断', short: '天気', sub: '無料期限・1時間天気・行く判断' },
@@ -36,6 +36,7 @@ function campPlans(state) {
       title: projectName(state.nextProject),
       sub: summarizeDate(state.nextProject),
       project: state.nextProject,
+      sourceRank: 0,
       startValue: planStartValue(state.nextProject)
     });
   }
@@ -46,10 +47,30 @@ function campPlans(state) {
       title: event.title || 'キャンプ予定',
       sub: [event.start, event.end && event.end !== event.start ? event.end : ''].filter(Boolean).join('〜') || '日程未確定',
       project,
+      sourceRank: 1,
       startValue: planStartValue(project, event.start)
     });
   });
-  return list.sort((a, b) => a.startValue - b.startValue).slice(0, 8);
+  const unique = new Map();
+  list.forEach((plan) => {
+    const identity = planIdentity(plan);
+    const current = unique.get(identity);
+    if (!current || plan.sourceRank < current.sourceRank) unique.set(identity, plan);
+  });
+  return [...unique.values()]
+    .sort((a, b) => a.startValue - b.startValue || a.sourceRank - b.sourceRank || a.title.localeCompare(b.title, 'ja'))
+    .slice(0, 8);
+}
+function normalizePlanTitle(value = '') {
+  return String(value || '')
+    .replace(/キャンプ予定|準備中|予約/g, '')
+    .replace(/[\s　・･ー\-_/／～〜~]/g, '')
+    .toLowerCase();
+}
+function planIdentity(plan) {
+  const title = normalizePlanTitle(plan.title || projectName(plan.project));
+  const date = Number.isFinite(plan.startValue) ? new Date(plan.startValue).toISOString().slice(0, 10) : 'date-unknown';
+  return `${title || 'camp'}:${date}`;
 }
 function planStartValue(project, fallback = '') {
   const text = `${fallback} ${project?.reservation?.dateText || ''} ${project?.start || ''}`;
@@ -57,20 +78,23 @@ function planStartValue(project, fallback = '') {
   const year = now.getFullYear();
   const today = startOfToday();
   const candidates = [];
-  const ymd = text.match(/(20\d{2})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
-  if (ymd) candidates.push(new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])).getTime());
-  const md = text.match(/(\d{1,2})[/-](\d{1,2})|(?:\b|^)(\d{1,2})月(\d{1,2})日/);
-  if (md) {
-    const m = Number(md[1] || md[3]);
-    const d = Number(md[2] || md[4]);
+  const ymdMatches = [...text.matchAll(/(20\d{2})[-/.年](\d{1,2})[-/.月](\d{1,2})/g)];
+  ymdMatches.forEach((match) => candidates.push(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime()));
+  const withoutYears = text.replace(/20\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}/g, ' ');
+  const mdMatches = [...withoutYears.matchAll(/(^|[^\d])(\d{1,2})[/-](\d{1,2})(?!\d)|(?:^|[^\d])(\d{1,2})月(\d{1,2})日/g)];
+  mdMatches.forEach((match) => {
+    const m = Number(match[2] || match[4]);
+    const d = Number(match[3] || match[5]);
+    if (m < 1 || m > 12 || d < 1 || d > 31) return;
     const thisYear = new Date(year, m - 1, d).getTime();
     const nextYear = new Date(year + 1, m - 1, d).getTime();
     candidates.push(thisYear >= today ? thisYear : nextYear);
-  }
+  });
   const valid = candidates.filter((value) => Number.isFinite(value));
   if (!valid.length) return Number.MAX_SAFE_INTEGER;
-  const nearest = Math.min(...valid);
-  return nearest >= today ? nearest : nearest + 10_000_000_000_000;
+  const future = valid.filter((value) => value >= today).sort((a, b) => a - b);
+  if (future.length) return future[0];
+  return Math.min(...valid) + 10_000_000_000_000;
 }
 function calendarEventToProject(event) {
   return {

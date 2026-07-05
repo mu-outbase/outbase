@@ -1127,3 +1127,64 @@ body:not([data-screen-kind="workspace"]) .outbase-workspace{display:none;}
   body[data-route="prep"][data-screen-kind="hub"] .core073-prep-page{padding-bottom:10px!important;}
   body[data-route="prep"][data-screen-kind="hub"] #app.app-shell::after{height:10px!important;}
 }
+
+/* Core08-A2 / 全ページ共通の下余白・予定重複抑止FIX */
+html body{
+  padding-bottom:0!important;
+}
+html body[data-route] #app.app-shell,
+html body #app.app-shell{
+  padding-bottom:var(--ob-screen-bottom-pad,12px)!important;
+}
+#app.app-shell::after{
+  height:var(--ob-scroll-spacer,72px)!important;
+  min-height:var(--ob-scroll-spacer,72px)!important;
+  flex-basis:var(--ob-scroll-spacer,72px)!important;
+}
+body[data-route="home"],
+body[data-route="search"],
+body[data-route="prep"],
+body[data-route="day"],
+body[data-route="walk"],
+body[data-route="memory"]{
+  --ob-scroll-spacer:72px;
+  --ob-bottom-reserve:72px;
+}
+body[data-recording="active"]:not([data-route="walk"]){
+  --ob-scroll-spacer:92px;
+  --ob-bottom-reserve:92px;
+}
+body[data-screen-kind="workspace"] #app.app-shell,
+body.outbase-workspace-active #app.app-shell{
+  padding-bottom:0!important;
+}
+body[data-screen-kind="workspace"] #app.app-shell::after,
+body.outbase-workspace-active #app.app-shell::after{
+  height:0!important;
+  min-height:0!important;
+  flex-basis:0!important;
+}
+.core073-prep-page{
+  padding-bottom:var(--ob-screen-bottom-pad,12px)!important;
+  --ob-bottom-reserve:var(--ob-scroll-spacer,72px);
+}
+body[data-route="prep"][data-screen-kind="hub"] #app.app-shell::after{
+  height:var(--ob-scroll-spacer,72px)!important;
+  min-height:var(--ob-scroll-spacer,72px)!important;
+  flex-basis:var(--ob-scroll-spacer,72px)!important;
+}
+@media(max-width:520px){
+  body[data-route="home"],
+  body[data-route="search"],
+  body[data-route="prep"],
+  body[data-route="day"],
+  body[data-route="walk"],
+  body[data-route="memory"]{
+    --ob-scroll-spacer:68px;
+    --ob-bottom-reserve:68px;
+  }
+  body[data-recording="active"]:not([data-route="walk"]){
+    --ob-scroll-spacer:88px;
+    --ob-bottom-reserve:88px;
+  }
+}

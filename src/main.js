@@ -1,16 +1,16 @@
-const BUILD_ID = 'core08-a1-nav-tapfix-20260705';
+const BUILD_ID = 'core08-a2-plan-padfix-20260705';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-a1-nav-tapfix-20260705';
-import { getState, subscribe } from './core/store.js?v=core08-a1-nav-tapfix-20260705';
-import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-a1-nav-tapfix-20260705';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-a1-nav-tapfix-20260705';
-import { renderHome } from './modules/home/home.js?v=core08-a1-nav-tapfix-20260705';
-import { renderSearch } from './modules/search/search.js?v=core08-a1-nav-tapfix-20260705';
-import { renderPrep } from './modules/prep/prep.js?v=core08-a1-nav-tapfix-20260705';
-import { renderDay } from './modules/day/day.js?v=core08-a1-nav-tapfix-20260705';
-import { renderWalk } from './modules/walk/walk.js?v=core08-a1-nav-tapfix-20260705';
-import { renderMemory } from './modules/memory/memory.js?v=core08-a1-nav-tapfix-20260705';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-a1-nav-tapfix-20260705';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-a2-plan-padfix-20260705';
+import { getState, subscribe } from './core/store.js?v=core08-a2-plan-padfix-20260705';
+import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-a2-plan-padfix-20260705';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-a2-plan-padfix-20260705';
+import { renderHome } from './modules/home/home.js?v=core08-a2-plan-padfix-20260705';
+import { renderSearch } from './modules/search/search.js?v=core08-a2-plan-padfix-20260705';
+import { renderPrep } from './modules/prep/prep.js?v=core08-a2-plan-padfix-20260705';
+import { renderDay } from './modules/day/day.js?v=core08-a2-plan-padfix-20260705';
+import { renderWalk } from './modules/walk/walk.js?v=core08-a2-plan-padfix-20260705';
+import { renderMemory } from './modules/memory/memory.js?v=core08-a2-plan-padfix-20260705';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-a2-plan-padfix-20260705';
 
 
 document.body.dataset.build = BUILD_ID;
@@ -85,17 +85,18 @@ function syncBottomSpace() {
   const navBottom = Math.max(6, Math.ceil(window.innerHeight - (navRect?.bottom || (window.innerHeight - 6))));
   const activeVisible = active && state.currentRoute !== 'walk' && getComputedStyle(active).display !== 'none';
   const activeHeight = activeVisible ? Math.ceil(active.getBoundingClientRect().height + 8) : 0;
-  const route = context.route;
-  const compactHub = context.screenKind === 'hub' && ['home', 'prep', 'search', 'memory'].includes(route);
   const workspaceOpen = context.screenKind === 'workspace';
-  const gap = workspaceOpen ? 0 : (compactHub ? 10 : 34);
-  const minimum = workspaceOpen ? 0 : (compactHub ? 72 : 96);
-  const spacer = workspaceOpen ? 0 : Math.max(minimum, navHeight + navBottom + activeHeight + gap);
-  document.documentElement.style.setProperty('--ob-nav-h', `${navHeight}px`);
-  document.documentElement.style.setProperty('--ob-nav-bottom', `${navBottom}px`);
-  document.documentElement.style.setProperty('--ob-scroll-spacer', `${spacer}px`);
-  document.documentElement.style.setProperty('--ob-bottom-reserve', `${spacer}px`);
-  document.documentElement.style.setProperty('--ob-screen-bottom-pad', `${workspaceOpen ? 0 : Math.max(12, spacer - navHeight)}px`);
+  const baseSpacer = Math.max(62, Math.round(navHeight * 0.58) + navBottom);
+  const spacer = workspaceOpen ? 0 : Math.min(92, baseSpacer + activeHeight);
+  const screenPad = workspaceOpen ? 0 : Math.max(8, Math.min(18, Math.round(spacer * 0.18)));
+  const targets = [document.documentElement, document.body].filter(Boolean);
+  targets.forEach((target) => {
+    target.style.setProperty('--ob-nav-h', `${navHeight}px`);
+    target.style.setProperty('--ob-nav-bottom', `${navBottom}px`);
+    target.style.setProperty('--ob-scroll-spacer', `${spacer}px`);
+    target.style.setProperty('--ob-bottom-reserve', `${spacer}px`);
+    target.style.setProperty('--ob-screen-bottom-pad', `${screenPad}px`);
+  });
 }
 function syncBottomSpaceSoon() {
   requestAnimationFrame(syncBottomSpace);

@@ -1,0 +1,4 @@
+1. OUTBASE_Core08_A2_PLAN_PADFIX_完成版.zip を GitHub main にアップロード
+2. .github/workflows/unpack-core08-a2.yml を作成
+3. Actions で Unpack Core08-A2 ZIP が緑になることを確認
+4. https://mu-outbase.github.io/outbase/?v=core08a2 で確認
