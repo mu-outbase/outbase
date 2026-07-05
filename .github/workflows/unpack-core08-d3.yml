@@ -1,0 +1,29 @@
+name: Unpack Core08-D3 ZIP
+
+on:
+  push:
+    paths:
+      - 'OUTBASE_Core08_D3_DAY_LINK_GPS_完成版.zip'
+      - '.github/workflows/unpack-core08-d3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Unzip Core08-D3 package
+        run: |
+          unzip -o "OUTBASE_Core08_D3_DAY_LINK_GPS_完成版.zip" -d .
+          rm -f "OUTBASE_Core08_D3_DAY_LINK_GPS_完成版.zip"
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Core08-D3 day link gps" || echo "No changes to commit"
+          git push
