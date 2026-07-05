@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d5-day-now-navi-20260705';
-import { VERSION } from '../config/version.js?v=core08-d5-day-now-navi-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d5-day-now-navi-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d5-uifix-day-premium-20260705';
+import { VERSION } from '../config/version.js?v=core08-d5-uifix-day-premium-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d5-uifix-day-premium-20260705';
 
 const initialState = {
   version: VERSION,

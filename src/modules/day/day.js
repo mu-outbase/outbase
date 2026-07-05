@@ -1,5 +1,5 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d5-day-now-navi-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-d5-day-now-navi-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d5-uifix-day-premium-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-d5-uifix-day-premium-20260705';
 
 const FLOW_SECTIONS = [
   { key: 'home', title: '家', sub: '起床・朝食・積み込み・給油・出発' },
@@ -245,59 +245,78 @@ function saveGpsHint() {
   }, () => toast('GPSを取得できませんでした'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
 }
 
+function shortHint(text = '') {
+  const value = String(text || '').replace(/・/g, ' / ');
+  return value.length > 28 ? `${value.slice(0, 28)}…` : value;
+}
+
 function renderNowCard(state, project, records, flowState, step) {
   const item = flowState[step.id] || {};
   const section = sectionMeta(step.section);
   const plan = plannedTime(step, state);
   const actual = item.actualStart || item.doneAt;
   const drift = driftText(step, actual, state);
-  const next = nextStepsAfter(step, flowState, 3);
-  const p = progress(flowState);
+  const next = nextStepsAfter(step, flowState, 2);
   const gps = latestGpsHint(state);
-  return `<section class="d5-now-card">
-    <div class="d5-project-line"><span>OUTBASE 当日</span><strong>${escapeHtml(projectName(project))}</strong><small>${escapeHtml(projectDate(project) || '予定日未設定')}</small></div>
-    <div class="d5-now-main"><p>今ここ候補</p><h2>${escapeHtml(step.label)}</h2><span>${escapeHtml(section.title)} / ${escapeHtml(step.hint)}</span></div>
-    <div class="d5-meta-line"><em>予定 ${escapeHtml(plan || '--:--')}</em><em>実績 ${escapeHtml(timeOnly(actual) || '未登録')}</em>${drift ? `<em class="drift">${escapeHtml(drift)}</em>` : ''}<em>${escapeHtml(gpsLabel(gps))}</em><em>記録 ${records.length}件</em></div>
-    <div class="d5-next-line"><strong>次に見ること</strong>${next.length ? next.map((n) => `<button data-select-step="${escapeHtml(n.id)}">${escapeHtml(n.label)}</button>`).join('') : '<span>今日はほぼ完了</span>'}</div>
-    <div class="d5-now-actions"><button class="primary" data-step-start="${escapeHtml(step.id)}">開始</button><button data-step-done="${escapeHtml(step.id)}">完了</button><button id="gpsSuggest">GPS更新</button></div>
-    <div class="d5-progress"><i style="width:${p.pct}%"></i></div>
+  return `<section class="d5u-hero-card">
+    <div class="d5u-hero-top"><span>OUTBASE 当日</span><button id="gpsSuggest" type="button">GPS更新</button></div>
+    <div class="d5u-camp-name">${escapeHtml(projectName(project))}</div>
+    <div class="d5u-now-label">今ここ候補</div>
+    <h2>${escapeHtml(step.label)}</h2>
+    <p>${escapeHtml(section.title)} / ${escapeHtml(shortHint(step.hint))}</p>
+    <div class="d5u-status-row">
+      <span>予定 ${escapeHtml(plan || '--:--')}</span>
+      <span>実績 ${escapeHtml(timeOnly(actual) || '未登録')}</span>
+      ${drift ? `<strong>${escapeHtml(drift)}</strong>` : ''}
+    </div>
+    <div class="d5u-next-strip"><em>次</em>${next.length ? next.map((n) => `<button data-select-step="${escapeHtml(n.id)}">${escapeHtml(n.label)}</button>`).join('') : '<span>今日はほぼ完了</span>'}</div>
+    <div class="d5u-hero-actions">
+      <button class="finish" data-step-done="${escapeHtml(step.id)}">完了して次へ</button>
+      <button data-step-start="${escapeHtml(step.id)}">開始だけ記録</button>
+    </div>
+    <div class="d5u-quiet-meta"><span>${escapeHtml(gpsLabel(gps))}</span><span>記録 ${records.length}件</span></div>
   </section>`;
 }
+
 function renderCaptureBox(state, step) {
-  return `<section class="d5-capture-card">
-    <div class="d5-section-head"><strong>すぐ残す</strong><span>工程を選ばなくていい。あとで整理。</span></div>
-    <div class="d5-big-actions">
-      <button data-record-type="photo"><strong>写真</strong><small>撮るだけ</small></button>
-      <button id="focusMemo"><strong>メモ</strong><small>一言だけ</small></button>
-      <button data-record-type="voice"><strong>音声</strong><small>話すだけ</small></button>
-      <button id="laterMode"><strong>あとで</strong><small>押し忘れ</small></button>
+  const mode = state.dayCaptureMode || 'now';
+  return `<section class="d5u-capture-card">
+    <div class="d5u-action-grid">
+      <button class="photo" data-record-type="photo"><span>写真</span><small>撮るだけ</small></button>
+      <button id="focusMemo"><span>メモ</span><small>一言だけ</small></button>
+      <button data-record-type="voice"><span>音声</span><small>話すだけ</small></button>
+      <button id="laterMode" class="${mode === 'later' ? 'active' : ''}"><span>あとで</span><small>押し忘れ</small></button>
     </div>
-    <textarea id="dayQuickMemo" class="field textarea" placeholder="例：さっき設営完了 / コタ暑そう / エビ多かった / 撤収で濡れた"></textarea>
-    <div class="d5-save-row"><button id="saveNoteRecord" class="primary">箱に入れる</button><button data-record-type="video">動画</button><button id="beforeMode">事前メモ</button></div>
+    <div class="d5u-memo-box">
+      <textarea id="dayQuickMemo" class="field textarea" placeholder="例：さっき設営完了 / コタ暑そう / エビ多かった"></textarea>
+      <button id="saveNoteRecord">保存</button>
+    </div>
+    <div class="d5u-sub-actions"><button data-record-type="video">動画</button><button id="beforeMode" class="${mode === 'before' ? 'active' : ''}">事前メモ</button><span>${escapeHtml(CAPTURE_MODES[mode] || '今すぐ')}</span></div>
     <input id="photoInput" type="file" accept="image/*" hidden />
     <input id="videoInput" type="file" accept="video/*" hidden />
   </section>`;
 }
+
 function renderInbox(records) {
-  return `<section class="d5-inbox-card">
-    <div class="d5-section-head"><strong>あとで整理する箱</strong><span>${records.length}件</span></div>
-    ${records.length ? records.slice(0, 5).map(renderRecord).join('') : '<p class="empty-line">まだ空です。迷ったら全部ここに入れます。</p>'}
+  return `<section class="d5u-inbox-card">
+    <div class="d5u-inbox-head"><strong>今日の記録</strong><span>${records.length}件</span></div>
+    ${records.length ? records.slice(0, 3).map(renderRecord).join('') : '<p class="empty-line">迷ったら写真・メモを残すだけでOK。</p>'}
   </section>`;
 }
 function renderRecord(record) {
   const candidates = safeList(record.inferenceCandidates);
-  return `<article class="d5-record"><div><strong>${escapeHtml(record.title || '記録')}</strong><time>${escapeHtml(formatTime(record.createdAt))}</time></div>${record.detail ? `<p>${escapeHtml(record.detail)}</p>` : ''}<div class="d5-record-tags"><span>${escapeHtml(CAPTURE_MODES[record.captureMode] || '今すぐ')}</span><span>${escapeHtml(record.flowStepLabel || '')}</span>${candidates.slice(0, 3).map((item) => `<em>${escapeHtml(item.label)}</em>`).join('')}</div></article>`;
+  const first = candidates[0]?.label || record.flowStepLabel || '未整理';
+  return `<article class="d5u-record"><div><strong>${escapeHtml(record.title || '記録')}</strong><time>${escapeHtml(timeOnly(record.createdAt))}</time></div>${record.detail ? `<p>${escapeHtml(record.detail)}</p>` : ''}<span>${escapeHtml(first)}</span></article>`;
 }
 function renderFlowDrawer(state, flowState, currentStep) {
-  return `<details class="d5-flow-drawer"><summary><strong>今日の流れを見る / 今ここを直す</strong><span>普段は閉じたままでOK</span></summary>
-    <div class="d5-section-pills">${FLOW_SECTIONS.map((section) => `<button data-jump-section="${escapeHtml(section.key)}">${escapeHtml(section.title)}</button>`).join('')}</div>
-    <div class="d5-step-picker">${FLOW_SECTIONS.map((section) => {
+  return `<details class="d5u-flow-drawer"><summary><strong>今日の流れを見る</strong><span>今ここを直す時だけ開く</span></summary>
+    <div class="d5u-flow-panel">${FLOW_SECTIONS.map((section) => {
       const steps = FLOW_STEPS.filter((step) => step.section === section.key);
-      return `<div class="d5-step-group" data-section="${escapeHtml(section.key)}"><h3>${escapeHtml(section.title)}</h3>${steps.map((step) => {
+      return `<section class="d5u-flow-section"><h3>${escapeHtml(section.title)}</h3><div>${steps.map((step) => {
         const item = flowState[step.id] || {};
         const cls = [currentStep.id === step.id ? 'active' : '', item.doneAt ? 'done' : '', step.optional ? 'optional' : ''].filter(Boolean).join(' ');
         return `<button class="${cls}" data-select-step="${escapeHtml(step.id)}"><strong>${escapeHtml(step.label)}</strong><small>${escapeHtml(item.doneAt ? '済' : plannedTime(step, state) || step.hint)}</small></button>`;
-      }).join('')}</div>`;
+      }).join('')}</div></section>`;
     }).join('')}</div>
   </details>`;
 }
@@ -309,7 +328,7 @@ export function renderDay() {
   const records = dayRecords(state, key);
   const flowState = dayFlowState(state, key);
   const step = suggestStep(state);
-  app().innerHTML = `<section class="route-page d5-day-navi-page">
+  app().innerHTML = `<section class="route-page d5u-day-page">
     ${renderNowCard(state, project, records, flowState, step)}
     ${renderCaptureBox(state, step)}
     ${renderInbox(records)}
