@@ -1,0 +1,16 @@
+Core08-D7 反映手順
+
+1. GitHub upload URL:
+https://github.com/mu-outbase/outbase/upload/main
+
+2. Upload:
+OUTBASE_Core08_D7_DAY_CONNECT_MODE_完成版.zip
+
+3. Commit message:
+Upload Core08-D7 day connect mode zip
+
+4. Workflow file:
+.github/workflows/unpack-core08-d7.yml
+
+5. Verify:
+https://mu-outbase.github.io/outbase/?v=core08d7

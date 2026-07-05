@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d6-status-monitor-20260705';
-import { VERSION } from '../config/version.js?v=core08-d6-status-monitor-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d6-status-monitor-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d7-connect-mode-20260705';
+import { VERSION } from '../config/version.js?v=core08-d7-connect-mode-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d7-connect-mode-20260705';
 
 const initialState = {
   version: VERSION,
@@ -47,6 +47,9 @@ const initialState = {
   dayRecords: {},
   dayGpsHints: {},
   dayAutoEvents: {},
+  dayCorrections: {},
+  dayConnectQueue: {},
+  dayModeLog: {},
   dayFlowState: {},
   activeDayFlowStep: '',
   activeDayStatusStep: '',
@@ -70,8 +73,8 @@ const initialState = {
   },
   notes: { shopping: [], packing: [], kota: [], reflection: [] },
   dataGuard: {
-    version: 'core08-d6',
-    immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
+    version: 'core08-d7',
+    immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない。間違い登録は修正/移動/戻すで保護する',
     auditLog: [],
     deletedItems: [],
     conflicts: [],
@@ -95,6 +98,9 @@ function normalizeLoadedState(loaded) {
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.recoverySession = loaded?.recoverySession || null;
   merged.dayAutoEvents = loaded?.dayAutoEvents && typeof loaded.dayAutoEvents === 'object' ? loaded.dayAutoEvents : {};
+  merged.dayCorrections = loaded?.dayCorrections && typeof loaded.dayCorrections === 'object' && !Array.isArray(loaded.dayCorrections) ? loaded.dayCorrections : {};
+  merged.dayConnectQueue = loaded?.dayConnectQueue && typeof loaded.dayConnectQueue === 'object' && !Array.isArray(loaded.dayConnectQueue) ? loaded.dayConnectQueue : {};
+  merged.dayModeLog = loaded?.dayModeLog && typeof loaded.dayModeLog === 'object' && !Array.isArray(loaded.dayModeLog) ? loaded.dayModeLog : {};
   merged.activeDayStatusStep = loaded?.activeDayStatusStep || '';
   merged.dayRecords = loaded?.dayRecords && typeof loaded.dayRecords === 'object' && !Array.isArray(loaded.dayRecords) ? loaded.dayRecords : {};
   merged.dayGpsHints = loaded?.dayGpsHints && typeof loaded.dayGpsHints === 'object' && !Array.isArray(loaded.dayGpsHints) ? loaded.dayGpsHints : {};
