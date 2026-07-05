@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_4_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_5_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-4',
+    version: 'restart-5',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
@@ -103,6 +103,7 @@
         shopping: clone(shoppingBase),
         meals: clone(mealsBase),
         daySteps: clone(dayStepsBase),
+        activeDayStepId: 'before',
         gear: clone(gearBase),
         kota: clone(kotaBase),
         weatherChecks: clone(weatherCheckBase),
@@ -188,7 +189,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-4';
+      merged.version = 'restart-5';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -229,12 +230,71 @@
         project.shopping = Array.isArray(project.shopping) ? project.shopping : clone(shoppingBase);
         project.meals = Array.isArray(project.meals) ? project.meals : clone(mealsBase);
         project.daySteps = Array.isArray(project.daySteps) ? project.daySteps : clone(dayStepsBase);
+        project.daySteps = mergeDaySteps(project.daySteps);
+        if (!project.activeDayStepId || !project.daySteps.some((step) => step.id === project.activeDayStepId)) {
+          const nextStep = project.daySteps.find((step) => step.state === '進行中' || step.state === '次') || project.daySteps[0];
+          project.activeDayStepId = nextStep?.id || 'before';
+        }
         project.gear = Array.isArray(project.gear) ? project.gear : clone(gearBase);
         project.kota = Array.isArray(project.kota) ? project.kota : clone(kotaBase);
         project.weatherChecks = Array.isArray(project.weatherChecks) ? project.weatherChecks : clone(weatherCheckBase);
         project.routeChecks = Array.isArray(project.routeChecks) ? project.routeChecks : clone(routeCheckBase);
       }
     });
+  }
+
+  function mergeDaySteps(steps) {
+    const current = Array.isArray(steps) ? steps : [];
+    return dayStepsBase.map((baseStep, index) => {
+      const existing = current.find((step) => step.id === baseStep.id) || {};
+      const stateValue = existing.state || baseStep.state || (index === 0 ? '次' : '待ち');
+      return {
+        ...baseStep,
+        ...existing,
+        state: ['待ち', '次', '進行中', '完了', '戻し'].includes(stateValue) ? stateValue : (index === 0 ? '次' : '待ち'),
+        startedAt: existing.startedAt || '',
+        finishedAt: existing.finishedAt || ''
+      };
+    });
+  }
+
+  function dayStepById(project, stepId) {
+    return project?.daySteps?.find((step) => step.id === stepId) || null;
+  }
+
+  function activeDayStep(project) {
+    if (!project?.daySteps?.length) return null;
+    return dayStepById(project, project.activeDayStepId) || project.daySteps.find((step) => step.state === '進行中' || step.state === '次') || project.daySteps[0];
+  }
+
+  function dayStepCounts(project) {
+    const steps = project?.daySteps || [];
+    return {
+      done: steps.filter((step) => step.state === '完了').length,
+      doing: steps.filter((step) => step.state === '進行中').length,
+      total: steps.length
+    };
+  }
+
+  function stepRecords(projectId, stepId) {
+    const all = [...state.inbox, ...state.memories];
+    return all.filter((record) => record.projectId === projectId && record.stepId === stepId);
+  }
+
+  function stepStatusClass(step) {
+    if (step.state === '完了') return 'done';
+    if (step.state === '進行中') return 'doing';
+    if (step.state === '次') return 'next';
+    if (step.state === '戻し') return 'reopened';
+    return 'waiting';
+  }
+
+  function stepStatusText(step) {
+    if (step.state === '完了') return '完了';
+    if (step.state === '進行中') return '進行中';
+    if (step.state === '次') return '次';
+    if (step.state === '戻し') return '戻し中';
+    return '待ち';
   }
 
   function projectById(id, source = state) {
@@ -880,33 +940,71 @@
 
   function renderCockpit() {
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
+    const current = activeDayStep(project);
+    const counts = dayStepCounts(project);
+    const currentRecords = current ? stepRecords(project.id, current.id) : [];
     const body = `
-      <section class="hero">
+      <section class="hero cockpit-hero">
         <h1>当日運転席</h1>
-        <p>次にやることを見ながら、写真・声メモ・メモを残します。運転中は操作しないでください。</p>
+        <p>停車中に見る画面です。次にやること、工程ごとの写真・声メモ・メモ、間違えた時の戻しをここにまとめます。</p>
       </section>
       <main class="stack">
-        ${card(project.place, '当日の流れ', `
-          <div class="timeline">
-            ${project.daySteps.map((step, index) => `
-              <div class="step">
-                <div class="dot ${index === 0 ? 'pending' : ''}">${index + 1}</div>
-                <div>
-                  <div class="item-title">${escapeHtml(step.title)}</div>
-                  <div class="item-sub">${escapeHtml(step.note)}</div>
-                  <div class="actions">
-                    ${btn('開始', 'addRecord', { type: 'メモ', projectId: project.id, stepId: step.id, target: step.title, text: `${step.title}を開始` }, 'ghost')}
-                    ${btn('写真', 'addRecord', { type: '写真', projectId: project.id, stepId: step.id, target: step.title, text: `${step.title}の写真` }, 'ghost')}
-                    ${btn('声メモ', 'addRecord', { type: '声', projectId: project.id, stepId: step.id, target: step.title, text: `${step.title}の声メモ` }, 'ghost')}
-                    ${btn('メモ', 'addRecord', { type: 'メモ', projectId: project.id, stepId: step.id, target: step.title, text: `${step.title}のメモ` }, 'ghost')}
+        ${card('今やること', current?.title || '当日の流れ', `
+          <p class="card-text"><strong>${escapeHtml(project.place)}</strong><br>${escapeHtml(projectDate(project))} / ${escapeHtml(project.party)}</p>
+          <div class="metric-row">
+            <div class="metric"><small>進行</small><strong>${counts.done}/${counts.total}</strong></div>
+            <div class="metric"><small>状態</small><strong>${current ? escapeHtml(stepStatusText(current)) : '待ち'}</strong></div>
+            <div class="metric"><small>この工程の記録</small><strong>${currentRecords.length}件</strong></div>
+            <div class="metric"><small>操作</small><strong>停車中のみ</strong></div>
+          </div>
+          <div class="progress"><span style="width:${counts.total ? Math.round((counts.done / counts.total) * 100) : 0}%"></span></div>
+          <p class="note">${escapeHtml(current?.note || '工程を選んで記録します。')}</p>
+        `, current ? `
+          ${btn('この工程を開始', 'startDayStep', { stepId: current.id, projectId: project.id }, current.state === '進行中' ? 'ghost' : 'primary')}
+          ${btn('写真', 'addRecord', { type: '写真', projectId: project.id, stepId: current.id, target: current.title, text: `${current.title}の写真` }, 'ghost')}
+          ${btn('声メモ', 'addRecord', { type: '声', projectId: project.id, stepId: current.id, target: current.title, text: `${current.title}の声メモ` }, 'ghost')}
+          ${btn('メモを書く', 'writeStepMemo', { stepId: current.id, projectId: project.id }, 'ghost')}
+          ${btn('この工程を完了', 'finishDayStep', { stepId: current.id, projectId: project.id }, 'primary')}
+          ${btn('完了を戻す', 'reopenDayStep', { stepId: current.id, projectId: project.id }, 'warn')}
+        ` : '')}
+
+        ${card('当日の流れ', '工程ごとに残す', `
+          <div class="cockpit-steps">
+            ${project.daySteps.map((step, index) => {
+              const records = stepRecords(project.id, step.id);
+              return `
+                <section class="cockpit-step ${stepStatusClass(step)} ${current?.id === step.id ? 'active-step' : ''}">
+                  <button class="step-head" data-action="selectDayStep" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}">
+                    <span class="step-no">${index + 1}</span>
+                    <span class="step-copy"><strong>${escapeHtml(step.title)}</strong><small>${escapeHtml(step.note)}</small></span>
+                    <span class="tag ${step.state === '完了' ? '' : 'light'}">${escapeHtml(stepStatusText(step))}</span>
+                  </button>
+                  <div class="step-tools">
+                    <button class="btn ghost" data-action="startDayStep" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}">開始</button>
+                    <button class="btn ghost" data-action="addRecord" data-type="写真" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}" data-target="${escapeHtml(step.title)}" data-text="${escapeHtml(`${step.title}の写真`)}">写真</button>
+                    <button class="btn ghost" data-action="addRecord" data-type="声" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}" data-target="${escapeHtml(step.title)}" data-text="${escapeHtml(`${step.title}の声メモ`)}">声メモ</button>
+                    <button class="btn ghost" data-action="writeStepMemo" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}">メモ</button>
+                    <button class="btn primary" data-action="finishDayStep" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}">完了</button>
+                    <button class="btn warn" data-action="reopenDayStep" data-project-id="${escapeHtml(project.id)}" data-step-id="${escapeHtml(step.id)}">戻す</button>
                   </div>
-                </div>
-              </div>
-            `).join('')}
+                  <div class="step-records">${records.length ? `${records.length}件 未確認箱/思い出に保存` : 'まだ記録なし'}</div>
+                </section>
+              `;
+            }).join('')}
           </div>
         `)}
+
+        ${card('当日から戻す先', '整理につなげる', `
+          <div class="grid-2">
+            <button class="btn ghost" data-action="go" data-screen="inbox" data-tab="思い出">未確認箱を見る</button>
+            <button class="btn ghost" data-action="go" data-screen="memories" data-tab="思い出">思い出を見る</button>
+            <button class="btn ghost" data-action="go" data-screen="improvements" data-tab="思い出">次回改善を見る</button>
+            <button class="btn ghost" data-action="go" data-screen="prep" data-tab="準備">準備へ戻る</button>
+          </div>
+          <p class="note">当日の記録は勝手に確定しません。工程ごとに未確認箱へ入り、ムーが保存先を決めます。</p>
+        `)}
       </main>`;
-    app.innerHTML = layout(body);
+    app.innerHTML = layout(body, { subtitle: '当日を工程ごとに残す' });
   }
 
   function renderWalk(kind) {
@@ -1188,6 +1286,73 @@
 
     if (action === 'openProject') {
       setActiveProject(button.dataset.projectId, button.dataset.screen, button.dataset.tab || null);
+      return;
+    }
+
+    if (action === 'selectDayStep') {
+      const project = projectById(button.dataset.projectId) || campProject();
+      project.activeDayStepId = button.dataset.stepId;
+      const step = dayStepById(project, button.dataset.stepId);
+      if (step && step.state === '待ち') step.state = '次';
+      saveState();
+      renderCockpit();
+      return;
+    }
+
+    if (action === 'startDayStep') {
+      const project = projectById(button.dataset.projectId) || campProject();
+      const step = dayStepById(project, button.dataset.stepId);
+      if (!step) return;
+      project.daySteps.forEach((entry) => {
+        if (entry.id !== step.id && entry.state === '進行中') entry.state = '次';
+      });
+      project.activeDayStepId = step.id;
+      step.state = '進行中';
+      step.startedAt = step.startedAt || new Date().toISOString();
+      addRecord('メモ', project.id, step.title, `${step.title}を開始`, step.id);
+      renderCockpit();
+      return;
+    }
+
+    if (action === 'finishDayStep') {
+      const project = projectById(button.dataset.projectId) || campProject();
+      const step = dayStepById(project, button.dataset.stepId);
+      if (!step) return;
+      step.state = '完了';
+      step.finishedAt = new Date().toISOString();
+      const index = project.daySteps.findIndex((entry) => entry.id === step.id);
+      const next = project.daySteps.slice(index + 1).find((entry) => entry.state !== '完了');
+      if (next) {
+        next.state = '次';
+        project.activeDayStepId = next.id;
+      } else {
+        project.activeDayStepId = step.id;
+      }
+      addRecord('メモ', project.id, step.title, `${step.title}を完了`, step.id);
+      renderCockpit();
+      return;
+    }
+
+    if (action === 'reopenDayStep') {
+      const project = projectById(button.dataset.projectId) || campProject();
+      const step = dayStepById(project, button.dataset.stepId);
+      if (!step) return;
+      step.state = '戻し';
+      step.finishedAt = '';
+      project.activeDayStepId = step.id;
+      addRecord('メモ', project.id, step.title, `${step.title}を戻す`, step.id);
+      renderCockpit();
+      return;
+    }
+
+    if (action === 'writeStepMemo') {
+      const project = projectById(button.dataset.projectId) || campProject();
+      const step = dayStepById(project, button.dataset.stepId);
+      if (!step) return;
+      const memo = promptText(`${step.title}のメモ`, '');
+      if (memo === null || !memo) return;
+      addRecord('メモ', project.id, step.title, memo, step.id);
+      renderCockpit();
       return;
     }
 
@@ -1546,6 +1711,7 @@
         shopping: clone(shoppingBase),
         meals: clone(mealsBase),
         daySteps: clone(dayStepsBase),
+        activeDayStepId: 'before',
         gear: clone(gearBase),
         kota: clone(kotaBase),
         weatherChecks: clone(weatherCheckBase),
