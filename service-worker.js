@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-2-lock';
+const CACHE_NAME = 'outbase-restart-3-calendar-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-2-lock',
-  './style.css?v=restart-2-lock',
-  './src/app.js?v=restart-2-lock',
-  './manifest.json?v=restart-2-lock'
+  './index.html?v=restart-3-calendar-lock',
+  './style.css?v=restart-3-calendar-lock',
+  './src/app.js?v=restart-3-calendar-lock',
+  './manifest.json?v=restart-3-calendar-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-2-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-3-calendar-lock')))
   );
 });

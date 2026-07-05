@@ -1,5 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_2_state';
+  const STORAGE_KEY = 'outbase_restart_3_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -41,10 +42,12 @@
   ];
 
   const defaultState = {
-    version: 'restart-2',
+    version: 'restart-3',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
+    calendarMonth: '2026-06',
+    selectedDate: '2026-06-26',
     toast: '',
     walk: null,
     projects: [
@@ -141,9 +144,15 @@
 
   function loadState() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        const legacyKey = LEGACY_STORAGE_KEYS.find((key) => localStorage.getItem(key));
+        raw = legacyKey ? localStorage.getItem(legacyKey) : null;
+      }
       if (!raw) return cloneDefaultState();
-      return mergeState(cloneDefaultState(), JSON.parse(raw));
+      const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
+      merged.version = 'restart-3';
+      return merged;
     } catch (error) {
       return cloneDefaultState();
     }
@@ -170,6 +179,12 @@
     target.memories = Array.isArray(target.memories) ? target.memories : [];
     target.improvements = Array.isArray(target.improvements) ? target.improvements : [];
     target.calendarItems = Array.isArray(target.calendarItems) ? target.calendarItems : [];
+    const fallbackMonth = target.projects.find((project) => project.startDate)?.startDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+    target.calendarMonth = /^\d{4}-\d{2}$/.test(target.calendarMonth || '') ? target.calendarMonth : fallbackMonth;
+    target.selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(target.selectedDate || '') ? target.selectedDate : `${target.calendarMonth}-01`;
+    target.inbox.forEach((record) => { if (!record.date) record.date = todayISO(); });
+    target.memories.forEach((record) => { if (!record.date) record.date = todayISO(); });
+    target.improvements.forEach((item) => { if (!item.date) item.date = todayISO(); });
     if (!projectById(target.activeProjectId, target)) target.activeProjectId = target.projects[0].id;
     target.projects.forEach((project) => {
       if (project.type === 'camp') {
@@ -207,6 +222,87 @@
     if (!project?.startDate) return '日付はあとで決める';
     if (project.endDate && project.endDate !== project.startDate) return `${project.startDate}〜${project.endDate}`;
     return project.startDate;
+  }
+
+
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function monthStartDate(month) {
+    const [year, monthIndex] = month.split('-').map(Number);
+    return new Date(year, monthIndex - 1, 1);
+  }
+
+  function addMonths(month, delta) {
+    const date = monthStartDate(month);
+    date.setMonth(date.getMonth() + delta);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function monthTitle(month) {
+    const [year, monthNumber] = month.split('-');
+    return `${year}年${Number(monthNumber)}月`;
+  }
+
+  function daysForCalendar(month) {
+    const first = monthStartDate(month);
+    const year = first.getFullYear();
+    const monthIndex = first.getMonth();
+    const firstWeekday = first.getDay();
+    const lastDate = new Date(year, monthIndex + 1, 0).getDate();
+    const days = [];
+    for (let i = 0; i < firstWeekday; i += 1) days.push(null);
+    for (let day = 1; day <= lastDate; day += 1) {
+      days.push(`${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+    }
+    while (days.length % 7 !== 0) days.push(null);
+    return days;
+  }
+
+  function calendarEntriesForDate(date) {
+    const entries = [];
+    state.calendarItems.filter((item) => item.date === date).forEach((item) => {
+      const project = projectById(item.projectId);
+      entries.push({ id: item.id, kind: item.kind || project?.type || 'plan', label: item.label, projectId: item.projectId, source: '予定' });
+    });
+    state.inbox.filter((record) => record.date === date).forEach((record) => {
+      entries.push({ id: record.id, kind: 'inbox', label: `${record.type}：未確認`, projectId: record.projectId, source: '未確認' });
+    });
+    state.memories.filter((record) => record.date === date).forEach((record) => {
+      entries.push({ id: record.id, kind: 'memory', label: `${record.type}：思い出`, projectId: record.projectId, source: '思い出' });
+    });
+    state.improvements.filter((item) => item.date === date).forEach((item) => {
+      entries.push({ id: item.id, kind: 'improvement', label: item.done ? '反映済み改善' : '次回改善', projectId: item.projectId, source: '改善' });
+    });
+    return entries;
+  }
+
+  function calendarEntriesInMonth(month) {
+    return daysForCalendar(month).filter(Boolean).flatMap((date) => calendarEntriesForDate(date).map((entry) => ({ ...entry, date })));
+  }
+
+  function upcomingEntries(limit = 3) {
+    const entries = [
+      ...state.calendarItems.map((item) => ({ ...item, source: '予定' })),
+      ...state.inbox.map((record) => ({ id: record.id, date: record.date || todayISO(), label: `${record.type}を整理`, projectId: record.projectId, kind: 'inbox', source: '未確認' })),
+      ...state.improvements.map((item) => ({ id: item.id, date: item.date || todayISO(), label: item.done ? '反映済み改善' : '次回改善', projectId: item.projectId, kind: 'improvement', source: '改善' }))
+    ];
+    return entries
+      .filter((item) => item.date)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, limit);
+  }
+
+  function calendarTargetScreen(entry) {
+    if (entry.kind === 'inbox') return 'inbox';
+    if (entry.kind === 'memory') return 'memories';
+    if (entry.kind === 'improvement') return 'improvements';
+    const project = projectById(entry.projectId);
+    if (project?.type === 'walk') return 'homeWalk';
+    if (project?.type === 'campWalk') return 'campWalk';
+    if (project?.type === 'search') return 'search';
+    return 'plan';
   }
 
   function prepPercent(project) {
@@ -356,6 +452,12 @@
           <p class="note">キャンプ、散歩、探している候補、外出を裏側で分けて保存します。画面は増やしすぎず、入口はこのまま保ちます。</p>
         `)}
 
+        ${card('予定カレンダー', '日付で見る', `
+          <div class="mini-calendar-list">
+            ${upcomingEntries(3).map((entry) => `<button class="mini-calendar-item" data-action="openCalendarDate" data-date="${escapeHtml(entry.date)}"><span>${escapeHtml(entry.date.slice(5))}</span><strong>${escapeHtml(entry.label)}</strong><small>${escapeHtml(projectLabel(projectById(entry.projectId)))} / ${escapeHtml(entry.source || '予定')}</small></button>`).join('') || '<div class="empty">予定・未確認・改善が日付に出ます。</div>'}
+          </div>
+        `, `${btn('カレンダーを見る', 'go', { screen: 'calendar', tab: '予定' }, 'primary')}`)}
+
         ${card('次のキャンプ', '予定', `
           <p class="card-text"><strong>${escapeHtml(camp.place)}</strong><br>${escapeHtml(projectDate(camp))} / <span class="tag light">${escapeHtml(camp.party)}</span></p>
           <div class="metric-row">
@@ -381,6 +483,56 @@
       </main>
     `;
     app.innerHTML = homeLayout(content);
+  }
+
+  function renderCalendar() {
+    const month = state.calendarMonth;
+    const selectedDate = state.selectedDate;
+    const monthEntries = calendarEntriesInMonth(month);
+    const selectedEntries = calendarEntriesForDate(selectedDate);
+    const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
+    const body = `
+      <section class="hero">
+        <h1>予定カレンダー</h1>
+        <p>キャンプ予定、散歩、未確認、思い出、次回改善を日付で見ます。日付を押すと、その日の流れに入れます。</p>
+      </section>
+      <main class="stack">
+        ${card(monthTitle(month), '予定 / 記録 / 改善', `
+          <div class="calendar-toolbar">
+            ${btn('前の月', 'changeCalendarMonth', { delta: -1 }, 'ghost')}
+            <div class="calendar-summary"><strong>${monthEntries.length}件</strong><span>この月に紐づくもの</span></div>
+            ${btn('次の月', 'changeCalendarMonth', { delta: 1 }, 'ghost')}
+          </div>
+          <div class="calendar-weekdays">
+            ${weekLabels.map((label) => `<span>${label}</span>`).join('')}
+          </div>
+          <div class="calendar-grid">
+            ${daysForCalendar(month).map((date) => {
+              if (!date) return '<div class="calendar-day empty-day" aria-hidden="true"></div>';
+              const entries = calendarEntriesForDate(date);
+              const isSelected = date === selectedDate;
+              const isToday = date === todayISO();
+              return `<button class="calendar-day ${entries.length ? 'has-items' : ''} ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" data-action="selectCalendarDate" data-date="${escapeHtml(date)}">
+                <span class="day-number">${Number(date.slice(-2))}</span>
+                <span class="day-dots">
+                  ${entries.slice(0, 3).map((entry) => `<i class="dot-${escapeHtml(entry.kind)}"></i>`).join('')}
+                </span>
+                ${entries.length > 3 ? `<small>+${entries.length - 3}</small>` : ''}
+              </button>`;
+            }).join('')}
+          </div>
+        `)}
+        ${card(selectedDate, 'この日に入っているもの', `
+          ${selectedEntries.length ? `<div class="list">${selectedEntries.map((entry) => {
+            const project = projectById(entry.projectId);
+            return `<button class="item" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
+              <div class="item-main"><div class="item-title">${escapeHtml(entry.label)}</div><div class="item-sub">${escapeHtml(projectLabel(project))} / ${escapeHtml(entry.source)}</div></div>
+              <span class="tag light">開く</span>
+            </button>`;
+          }).join('')}</div>` : '<div class="empty">この日にはまだ予定・記録・改善がありません。</div>'}
+        `, `${btn('この日に記録する', 'calendarCapture', { date: selectedDate }, 'primary')}${btn('未確認を片付ける', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
+      </main>`;
+    app.innerHTML = layout(body);
   }
 
   function renderPlan() {
@@ -731,9 +883,12 @@
       target,
       text,
       time: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      date: state.captureDate || todayISO(),
+      createdAt: new Date().toISOString(),
       status: '未確認'
     };
     state.inbox.unshift(record);
+    state.captureDate = '';
     saveState();
     showToast('未確認箱に残しました');
   }
@@ -768,6 +923,7 @@
 
   function render() {
     switch (state.screen) {
+      case 'calendar': renderCalendar(); break;
       case 'plan': renderPlan(); break;
       case 'search': renderSearch(); break;
       case 'prep': renderPrep(); break;
@@ -791,6 +947,44 @@
 
     if (action === 'go') {
       setScreen(button.dataset.screen, button.dataset.tab || null);
+      return;
+    }
+
+    if (action === 'openCalendarDate') {
+      state.selectedDate = button.dataset.date;
+      state.calendarMonth = button.dataset.date.slice(0, 7);
+      setScreen('calendar', '予定');
+      return;
+    }
+
+    if (action === 'changeCalendarMonth') {
+      state.calendarMonth = addMonths(state.calendarMonth, Number(button.dataset.delta || 0));
+      state.selectedDate = `${state.calendarMonth}-01`;
+      saveState();
+      renderCalendar();
+      return;
+    }
+
+    if (action === 'selectCalendarDate') {
+      state.selectedDate = button.dataset.date;
+      saveState();
+      renderCalendar();
+      return;
+    }
+
+    if (action === 'openCalendarEntry') {
+      if (button.dataset.projectId && projectById(button.dataset.projectId)) state.activeProjectId = button.dataset.projectId;
+      setScreen(button.dataset.screen || 'plan', button.dataset.screen === 'memories' || button.dataset.screen === 'improvements' || button.dataset.screen === 'inbox' ? '思い出' : '予定');
+      return;
+    }
+
+    if (action === 'calendarCapture') {
+      state.screen = 'capture';
+      state.activeTab = '＋';
+      state.captureDate = button.dataset.date;
+      saveState();
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -970,7 +1164,7 @@
     }
 
     if (action === 'addImprovement') {
-      state.improvements.unshift({ id: makeId('imp'), projectId: button.dataset.projectId || state.activeProjectId, text: button.dataset.text || '次回改善', target: button.dataset.target || '次の準備', done: false });
+      state.improvements.unshift({ id: makeId('imp'), projectId: button.dataset.projectId || state.activeProjectId, text: button.dataset.text || '次回改善', target: button.dataset.target || '次の準備', date: todayISO(), done: false });
       saveState();
       showToast('次回改善に追加しました');
       return;
@@ -979,7 +1173,7 @@
     if (action === 'improveFromMemory') {
       const record = state.memories.find((entry) => entry.id === button.dataset.id);
       if (record) {
-        state.improvements.unshift({ id: makeId('imp'), projectId: record.projectId, text: `${record.target}：${record.text}`, target: '次の準備', done: false });
+        state.improvements.unshift({ id: makeId('imp'), projectId: record.projectId, text: `${record.target}：${record.text}`, target: '次の準備', date: todayISO(), done: false });
         saveState();
         showToast('次回改善に送りました');
       }
