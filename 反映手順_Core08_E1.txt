@@ -1,0 +1,12 @@
+Core08-E1 反映手順
+
+1. OUTBASE_Core08_E1_ONE_TAP_RECORD_完成版.zip を GitHub の main にアップロード
+2. workflow unpack-core08-e1.yml を作成
+3. Actions 完了後、 https://mu-outbase.github.io/outbase/?v=core08e1 で確認
+
+確認ポイント
+- ＋を押した先が「残す」になっている
+- 写真 / 声 / メモ / あとで の4操作だけが大きく出る
+- 自宅散歩 / キャンプ滞在 / 設営 / 料理 / 撤収 の選択が最初に出ない
+- 未確認箱の件数だけが見える
+- テスト記録リセットがある
