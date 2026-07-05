@@ -1,9 +1,9 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=core0610",
+  "start_url": "./?v=mvp-all-in-one",
   "display": "standalone",
   "background_color": "#f4efe4",
-  "theme_color": "#f4efe4",
+  "theme_color": "#405638",
   "icons": []
 }

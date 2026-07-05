@@ -1,0 +1,11 @@
+アップロード先:
+https://github.com/mu-outbase/outbase/upload/main
+
+アップロードするZIP:
+OUTBASE_Core06_10_CALENDAR_PRODUCT_RECOVERY_完成版.zip
+
+解凍:
+手動解凍しない。既存の .github/workflows/unpack-core06-10.yml がこのZIP名を検知して自動解凍する。
+
+確認URL:
+https://mu-outbase.github.io/outbase/?v=mvp-all-in-one

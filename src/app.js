@@ -1,398 +1,113 @@
-const BUILD_ID = 'core0610-calendar-product-recovery-20260705';
-const STORAGE_KEY = 'outbase_core0610_product_state';
-const LEGACY_KEYS = ['outbase_core08_f1_state', 'outbase_core08_e3_state', 'OUTBASE_STATE', 'outbase_state'];
 
-const $ = (selector, root = document) => root.querySelector(selector);
-const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const app = $('#app');
-const title = $('#appTitle');
-const statusPill = $('#statusPill');
-const todayISO = () => toISO(new Date());
-const pad = (n) => String(n).padStart(2, '0');
-function toISO(date) { return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`; }
-function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
-function parseDate(value) {
-  if (!value) return null;
-  const d = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-function fmtDate(value) {
-  const d = parseDate(value);
-  if (!d) return '日程未定';
-  return `${d.getMonth() + 1}/${d.getDate()}(${['日','月','火','水','木','金','土'][d.getDay()]})`;
-}
-function esc(value = '') { return String(value ?? '').replace(/[&<>'"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m])); }
-function uid(prefix) { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
-function daysUntil(value) {
-  const d = parseDate(value);
-  if (!d) return null;
-  const today = parseDate(todayISO());
-  return Math.round((d.getTime() - today.getTime()) / 86400000);
-}
-function rangeDates(start, end) {
-  const a = parseDate(start); const b = parseDate(end || start);
-  if (!a || !b) return [];
-  const out = [];
-  for (let d = new Date(a); d <= b; d = addDays(d, 1)) out.push(toISO(d));
-  return out;
-}
-function humanTime(value) {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-const MODE_LIBRARY = {
-  walkHome: {
-    label: '自宅散歩', stage: '記録', first: '地図・距離・時間・コタの様子を中心に残す',
-    buttons: ['写真', '声', 'メモ', 'GPS', 'コタ', '終了'], auto: ['開始時刻', 'GPS', '距離', '天気候補'], next: ['暑さ寒さ対策', '足元注意', '散歩コース改善']
-  },
-  drive: {
-    label: 'ドライブ', stage: '往路/帰路', first: '運転中は操作させず、Google Maps・給油・買い出し・休憩だけを候補化',
-    buttons: ['Google Maps', '給油', '買い出し', '休憩', 'コタ休憩', '到着'], auto: ['移動開始候補', 'GPS', '停車候補', '到着時刻'], next: ['出発時間', '経由地', '買い出し場所', '渋滞回避']
-  },
-  setup: {
-    label: '設営', stage: '当日', first: 'レイアウト→テント→タープ→寝室→リビング→外回りの順に段取りを見せる',
-    buttons: ['開始', 'レイアウト', 'テント', 'タープ', '寝室', '完了'], auto: ['開始時刻', '完了時刻', '写真', '風メモ'], next: ['設営順', '足りない道具', '風対策', 'レイアウト改善']
-  },
-  cook: {
-    label: '料理', stage: '滞在', first: '予定メニューを見ながら、写真・量・味・余り・失敗を残す',
-    buttons: ['写真', '量', '味', '余り', '失敗', '次回'], auto: ['料理時間', '写真', '人数', '余り候補'], next: ['量調整', '買い物量', '調味料', '次回メニュー']
-  },
-  teardown: {
-    label: '撤収', stage: '帰宅前', first: '濡れ物・乾燥・収納・忘れ物・積載・ゴミを順番に確認',
-    buttons: ['開始', '濡れ物', '乾燥', '収納', '忘れ物', '完了'], auto: ['撤収開始', '完了時刻', '天気', '乾燥候補'], next: ['乾燥サービス', '収納順', '忘れ物防止', '帰宅後片付け']
-  },
-  campWalk: {
-    label: 'キャンプ場散歩', stage: '滞在', first: 'キャンプ滞在の子記録。場内ルート、設備、景色、犬連れ目線を地図中心で残す',
-    buttons: ['写真', 'GPS', '設備', '景色', '注意', '終了'], auto: ['GPS', '距離', '場内地点', '写真時刻'], next: ['サイト選び', '水場/トイレ評価', 'ドッグラン', 'レビュー素材']
-  },
-  fieldExplore: {
-    label: '場内探索', stage: '滞在', first: 'サイト周辺・施設・景色・騒音・地面・傾斜を確認して次回サイト選びへ戻す',
-    buttons: ['設備', '水場', 'トイレ', '売店', '地面', '犬目線'], auto: ['GPS', '写真', '注意点'], next: ['次回サイト指定', '犬連れ注意', 'レビュー']
-  }
+'use strict';
+const BUILD_ID = 'outbase-mvp-all-in-one-recovery-20260705';
+const LOCK_DATA = {"mvp": [["01", "カレンダー・予定", "予定", "月間カレンダー、次回予定、複数予定、予約情報、準備/当日導線"], ["02", "キャンプ候補探し", "探す", "犬可、ドッグフリー、温水、景色、距離、季節条件、候補比較、予定化"], ["03", "複数キャンプ予定の管理", "予定/準備", "予定ごとに買う/持つ/食べる/コタ/ギア/ルートを分離"], ["04", "予約情報取込", "予定", "予約メール/スクショ/手入力を候補抽出、確認して予定反映"], ["05", "準備", "準備", "買物/料理/ギア/コタ/ルート/天気/積込/出発前を予定に紐づけ"], ["06", "詳細買物リスト", "準備", "肉部位、魚介、チーズ、野菜、調味料、量、代替、不要、LINEコピー"], ["07", "料理計画", "準備/当日", "1泊2日、朝昼晩、人数、友人、設営撤収時間、食べ過ぎ防止"], ["08", "ギア管理", "準備/撤収", "台帳、持参、積載、使用有無、濡れ物、乾燥、次回"], ["09", "ルート・経由地", "準備/当日", "Google Maps、経由地、買出し、給油、休憩、往路/帰路差分"], ["10", "当日進行", "予定→当日運転席", "出発、経由地、チェックイン、設営、料理、散歩、撤収、帰宅"], ["11", "キャンプ滞在記録", "当日/+", "キャンプ滞在を親記録、設営/料理/散歩/撤収を子記録"], ["12", "自宅散歩", "+ / 思い出", "地図主役、GPS、距離、時間、写真、声、メモ、履歴、復旧"], ["13", "キャンプ場散歩", "+ / 当日", "キャンプ滞在＞キャンプ場散歩、場内レビュー、設備、景色、場所カード"], ["14", "設営・撤収ログ", "当日/+", "工程、タイマー、写真、注意、濡れ物、忘れ物、次回段取り"], ["15", "写真・動画・音声・メモ", "+", "今すぐ残す。分類は候補。確定は後から"], ["16", "GPS・地図・場所カード", "+ / 思い出", "位置、ルート、場所候補、場所カード。広すぎずチカチカしない"], ["17", "履歴詳細", "思い出", "時系列、写真、メモ、GPS、活動ログ、親子記録を詳細表示"], ["18", "思い出整理", "思い出", "未確認箱、レビュー、反省、写真整理、Google Photos参照"], ["19", "次回改善", "思い出→準備", "忘れ物、料理量、ギア、設営順、コタ、天気対策を次回準備へ"], ["20", "天気・イベント監視", "準備/当日", "雨、風、気温、設営/撤収/乾燥、服装、冷暖房、コタ判断"], ["21", "Google Photos / データ保存", "思い出/管理", "写真動画はGoogle Photos、OUTBASEは参照/メタデータ"], ["22", "オフライン・復旧", "全体", "圏外保存、未同期、終了/破棄ミス復旧、未確認キュー"], ["23", "チャッピー提案", "準備/思い出", "提案は候補。採用/保留/違う/修正。自動確定禁止"]], "modes": [{"id": "M01", "name": "予定モード", "フェーズ": "探す/予定", "分類": "予定", "役割": "次に行くキャンプと複数予定を管理する。準備対象を間違えないための起点。", "開始条件": "予定作成/予約入力/カレンダー日付タップ", "最初に出す情報": "次回予定カード、日程、場所、チェックイン/アウト、同行者、準備状況", "主要ボタン": "準備へ、予約確認、予定切替、削除ではなく保留", "自動で拾う情報": "作成日時、更新履歴、関連準備ID", "連携データ": "予約情報、準備、ルート、料理、ギア、コタ、天気", "完了条件": "予定確定/保留/キャンセル", "思い出へ残す": "準備対象ID、当日運転席の元データ", "次回改善へ戻す": "次回候補、予定重複・予定上書き防止", "UIルール": "日付と予定名を大きく。複数予定は選択中を固定表示。", "保護ルール": "予定・準備・記録を勝手に統合/上書きしない。"}, {"id": "M02", "name": "探すモード", "フェーズ": "探す/予定", "分類": "候補", "役割": "犬可・温水・景色・距離など、行きたいキャンプ場候補を探して予定候補化する。", "開始条件": "探すタブ/候補登録", "最初に出す情報": "候補カード、犬可、ドッグフリー、温水、景色、距離、季節条件", "主要ボタン": "候補保存、比較、予定化、却下", "自動で拾う情報": "検索条件、比較メモ、候補評価", "連携データ": "予定、過去レビュー、コタ条件、季節、天気傾向", "完了条件": "候補保存/予定化/却下", "思い出へ残す": "候補DB、予定候補", "次回改善へ戻す": "次回行きたいリスト、候補比較軸", "UIルール": "検索画面を大きくしすぎない。候補カードは要点だけ。", "保護ルール": "候補は予定に勝手に変換しない。"}, {"id": "M03", "name": "予約情報取込モード", "フェーズ": "探す/予定", "分類": "予定", "役割": "予約メール/スクショ/手入力から予定情報を候補として取り込む。", "開始条件": "予約情報貼付/写真/メール転記", "最初に出す情報": "候補抽出結果、日程、場所、金額、サイト、チェックイン/アウト", "主要ボタン": "採用、修正、未確認、予定へ反映", "自動で拾う情報": "入力元、抽出候補、信頼度", "連携データ": "予定、準備、当日運転席", "完了条件": "ユーザー確認後に反映", "思い出へ残す": "予約情報候補、予定更新履歴", "次回改善へ戻す": "予約ミス防止", "UIルール": "抽出結果は必ず確認カードにする。", "保護ルール": "AIが勝手に予定を更新しない。"}, {"id": "M04", "name": "準備モード", "フェーズ": "準備", "分類": "準備", "役割": "行く前に決める場所。買う/持つ/食べる/コタ/ギア/ルート/天気を予定ごとに持つ。", "開始条件": "準備タブ/予定選択", "最初に出す情報": "選択中予定、準備進捗、買う/持つ/食べる/コタ/ルート", "主要ボタン": "買物、料理、ギア、ルート、天気、当日積込", "自動で拾う情報": "更新時刻、完了率、未決定", "連携データ": "予定、買物、料理、ギア、コタ、天気、当日", "完了条件": "準備完了/一部保留", "思い出へ残す": "当日運転席へ渡す準備データ", "次回改善へ戻す": "未準備・忘れ物候補", "UIルール": "1予定前提にしない。選択中予定を常時表示。", "保護ルール": "別予定の準備を上書きしない。"}, {"id": "M05", "name": "買い物モード", "フェーズ": "準備", "分類": "準備", "役割": "詳細買物リストを作る。品名だけでなく量・代替品・不要品・LINEコピペを持つ。", "開始条件": "準備→買物", "最初に出す情報": "食材/調味料/消耗品/代替品/買わなくて良い物", "主要ボタン": "追加、購入済み、代替、LINEコピー、当日買う", "自動で拾う情報": "購入チェック、代替理由、未購入", "連携データ": "料理、人数、泊数、友人、コタ、天気", "完了条件": "買物完了/当日買うへ移動", "思い出へ残す": "買物リスト、当日買出し候補", "次回改善へ戻す": "余った/不足した食材を次回量へ反映", "UIルール": "カテゴリは少なく、買う順で見せる。LINE用は一発コピー。", "保護ルール": "購入済みを削除せず履歴化。"}, {"id": "M06", "name": "料理計画モード", "フェーズ": "準備", "分類": "準備", "役割": "1日目/2日目の朝昼晩、量、設営/撤収時間、友人有無を考慮する。", "開始条件": "準備→料理", "最初に出す情報": "泊数別の朝昼晩、予定メニュー、量、調理タイミング", "主要ボタン": "メニュー追加、買物へ送る、量調整、バケット不要等判断", "自動で拾う情報": "選択メニュー、人数、量、食材", "連携データ": "買物、当日料理、思い出、次回改善", "完了条件": "献立確定/保留", "思い出へ残す": "料理予定、買物素材", "次回改善へ戻す": "量が多い/少ない、次回メニュー候補", "UIルール": "一画面に全日程を詰めない。日別カード。", "保護ルール": "料理予定を勝手に買物へ確定しない。"}, {"id": "M07", "name": "ギア準備モード", "フェーズ": "準備", "分類": "準備", "役割": "持参/積載/使った/使わなかった/濡れ物/乾燥をつなげる。", "開始条件": "準備→ギア", "最初に出す情報": "持参候補、必須、任意、積載、忘れ物注意", "主要ボタン": "持つ、不要、積載済み、当日積込、メモ", "自動で拾う情報": "チェック、積載時刻、使用予定", "連携データ": "ギアDB、当日設営/撤収、次回改善", "完了条件": "積載完了/未積載", "思い出へ残す": "持参リスト、当日積込、撤収チェック", "次回改善へ戻す": "使わなかった/忘れた/濡れ物を次回へ", "UIルール": "カテゴリはテント/寝具/料理/コタ/電源など。", "保護ルール": "ギア台帳を勝手に削除しない。"}, {"id": "M08", "name": "ルート・経由地モード", "フェーズ": "準備", "分類": "準備", "役割": "Google Maps前提で出発時間、経由地、買出し、給油、休憩を管理する。", "開始条件": "準備→ルート", "最初に出す情報": "出発予定、目的地、経由地、買出し、給油、休憩", "主要ボタン": "Google Mapsで開く、経由地追加、給油、買出し", "自動で拾う情報": "Maps起動時刻、戻り時刻、位置差分", "連携データ": "当日運転席、往路/帰路ドライブ", "完了条件": "ルート確定/保留", "思い出へ残す": "当日ドライブ候補", "次回改善へ戻す": "寄り道/渋滞/休憩を次回へ", "UIルール": "OUTBASEはナビしない。Google Mapsを開く。", "保護ルール": "運転中操作を求めない。"}, {"id": "M09", "name": "コタ準備モード", "フェーズ": "準備", "分類": "準備", "役割": "コタ用品と散歩・暑さ寒さ・足元・水・休憩・寝床を準備する。", "開始条件": "準備→コタ", "最初に出す情報": "コタ用品、散歩予定、暑さ/寒さ、足元、休憩、水", "主要ボタン": "持つ、当日注意、散歩候補、メモ", "自動で拾う情報": "準備チェック、注意メモ", "連携データ": "当日、散歩、場内探索、撤収", "完了条件": "コタ準備完了", "思い出へ残す": "コタ持参/注意リスト", "次回改善へ戻す": "足元/暑さ/休憩を次回へ", "UIルール": "ペット情報は目立ちすぎず必要時に出す。", "保護ルール": "コタ情報を勝手に公開/削除しない。"}, {"id": "M10", "name": "当日運転席モード", "フェーズ": "当日", "分類": "当日", "役割": "今日やることの運転席。記録ボタン置き場ではない。", "開始条件": "予定日/当日タブ/＋から当日開始", "最初に出す情報": "今の状態、次にやること、出発時間、経由地、チェックイン、設営順、料理、天気風、コタ散歩、撤収、帰り予定", "主要ボタン": "次へ、記録、Maps、メモ、あとで", "自動で拾う情報": "時刻差分、位置、天気更新、未確認候補", "連携データ": "準備、ルート、料理、ギア、コタ、天気、記録", "完了条件": "1日の流れ完了/帰宅後へ", "思い出へ残す": "時系列ログ、未確認箱", "次回改善へ戻す": "遅れ、忘れ物、段取り改善", "UIルール": "次に押すボタンを1つ大きく。全部並べない。", "保護ルール": "当日推定を勝手に確定しない。"}, {"id": "M11", "name": "出発前モード", "フェーズ": "当日", "分類": "当日", "役割": "起床、朝食、積込、給油、出発準備を扱う。", "開始条件": "当日運転席の出発前/朝", "最初に出す情報": "起床予定、朝食、当日積込、給油、出発予定、天気", "主要ボタン": "積込済み、給油済み、出発、メモ", "自動で拾う情報": "時刻、GPS、自宅出発推定", "連携データ": "準備、ギア、買物、ルート", "完了条件": "出発完了", "思い出へ残す": "出発ログ、遅れ候補", "次回改善へ戻す": "積込忘れ、出発時間改善", "UIルール": "朝はチェックだけ。入力を増やさない。", "保護ルール": "積込チェックを勝手に完了しない。"}, {"id": "M12", "name": "往路ドライブモード", "フェーズ": "当日", "分類": "移動", "役割": "往路移動をGoogle Maps中心で扱う。運転中操作させない。", "開始条件": "出発/Maps起動", "最初に出す情報": "目的地、経由地、到着予定、買出し/給油/休憩候補", "主要ボタン": "Google Mapsで開く、休憩、給油、買出し、到着", "自動で拾う情報": "Maps起動/復帰、GPS、時刻、停車候補", "連携データ": "ルート、買物、コタ、当日", "完了条件": "到着/受付へ", "思い出へ残す": "往路ログ、寄り道候補", "次回改善へ戻す": "出発時間、休憩場所、買出し改善", "UIルール": "画面は最小。大ボタンはMaps。", "保護ルール": "運転中に確認操作を求めない。"}, {"id": "M13", "name": "寄り道・買出し・給油モード", "フェーズ": "当日", "分類": "移動", "役割": "ドライブ中の買出し・給油・休憩を候補化する。", "開始条件": "停車/GPS/手動", "最初に出す情報": "現在地、目的、買う物、給油/休憩/コタ休憩", "主要ボタン": "買出し、給油、休憩、コタ休憩、メモ", "自動で拾う情報": "停車時間、場所、写真/メモ", "連携データ": "買物、ルート、コタ", "完了条件": "再出発/完了", "思い出へ残す": "寄り道ログ、未購入更新", "次回改善へ戻す": "買い忘れ、寄り道便利度", "UIルール": "運転中ではなく停車中だけ表示。", "保護ルール": "推定寄り道は未確認へ。"}, {"id": "M14", "name": "到着・受付モード", "フェーズ": "当日", "分類": "当日", "役割": "到着、受付、サイト移動、注意事項を扱う。", "開始条件": "キャンプ場付近到着/手動", "最初に出す情報": "到着時刻、チェックイン差分、受付、サイト、注意事項", "主要ボタン": "到着、受付済み、サイトへ、注意メモ", "自動で拾う情報": "GPS、到着時刻、写真", "連携データ": "予定、キャンプ場DB、当日", "完了条件": "サイト移動へ", "思い出へ残す": "到着/受付ログ", "次回改善へ戻す": "受付待ち、案内事項、チェックイン改善", "UIルール": "迷わず次に進む導線。", "保護ルール": "到着推定は未確認へ。"}, {"id": "M15", "name": "サイト移動モード", "フェーズ": "当日", "分類": "当日", "役割": "受付後、サイトまでの移動とサイト情報を残す。", "開始条件": "受付済み/サイトへ", "最初に出す情報": "サイト番号、移動、地面、傾斜、近隣、景色", "主要ボタン": "サイト到着、写真、メモ、レイアウトへ", "自動で拾う情報": "位置、写真、時刻", "連携データ": "キャンプ場DB、場内探索、設営", "完了条件": "レイアウト検討へ", "思い出へ残す": "サイトカード素材", "次回改善へ戻す": "次回サイト選び", "UIルール": "サイトカード化を意識した表示。", "保護ルール": "サイト情報を勝手に公開しない。"}, {"id": "M16", "name": "レイアウト検討モード", "フェーズ": "設営", "分類": "設営", "役割": "テント/タープ/車/動線/コタの位置を検討する。", "開始条件": "サイト到着/設営前", "最初に出す情報": "サイト写真、方角、地面、風、動線、コタ位置", "主要ボタン": "写真、メモ、決定、設営開始", "自動で拾う情報": "写真、方角メモ、風、地面", "連携データ": "天気、ギア、設営", "完了条件": "レイアウト決定", "思い出へ残す": "レイアウト候補、設営ログ", "次回改善へ戻す": "次回配置メモ", "UIルール": "写真大きめ、メモ短く。", "保護ルール": "レイアウト候補を勝手に確定しない。"}, {"id": "M17", "name": "設営モード", "フェーズ": "設営", "分類": "設営", "役割": "設営全体の親モード。テント/タープ/寝室/リビング/外回りを工程化。", "開始条件": "レイアウト決定/手動", "最初に出す情報": "設営開始時刻、工程、天気風、休憩、進捗", "主要ボタン": "開始、工程切替、写真、声、メモ、完了", "自動で拾う情報": "タイマー、写真、GPS、時刻", "連携データ": "ギア、天気、コタ、思い出", "完了条件": "設営完了", "思い出へ残す": "設営時間、工程ログ", "次回改善へ戻す": "段取り、ギア不足、風対策", "UIルール": "工程はタブではなく次工程カード。", "保護ルール": "完了ミスは復旧可能。"}, {"id": "M18", "name": "テント設営モード", "フェーズ": "設営", "分類": "設営", "役割": "テント設営工程を記録する。", "開始条件": "設営→テント", "最初に出す情報": "使用テント、向き、ペグ、風、地面", "主要ボタン": "開始、写真、注意、完了", "自動で拾う情報": "時刻、写真、メモ", "連携データ": "ギア、天気", "完了条件": "工程完了", "思い出へ残す": "テント設営ログ", "次回改善へ戻す": "次回向き/ペグ/地面対策", "UIルール": "工程の詳細は折りたたむ。", "保護ルール": "注意を消さない。"}, {"id": "M19", "name": "タープ設営モード", "フェーズ": "設営", "分類": "設営", "役割": "タープ設営工程を記録する。", "開始条件": "設営→タープ", "最初に出す情報": "タープ種、張り方向、風、雨、影", "主要ボタン": "開始、写真、注意、完了", "自動で拾う情報": "時刻、写真、メモ", "連携データ": "ギア、天気", "完了条件": "工程完了", "思い出へ残す": "タープログ", "次回改善へ戻す": "風対策/張り方改善", "UIルール": "写真を主役。", "保護ルール": "未確認メモ保持。"}, {"id": "M20", "name": "寝室準備モード", "フェーズ": "設営", "分類": "設営", "役割": "寝室、寝具、ライト、寒暖、コタ寝床を準備する。", "開始条件": "設営→寝室", "最初に出す情報": "寝具、マット、ライト、温度、コタ寝床", "主要ボタン": "完了、写真、寒い/暑い、メモ", "自動で拾う情報": "時刻、写真、メモ", "連携データ": "ギア、コタ、天気、就寝", "完了条件": "寝室完了", "思い出へ残す": "寝室準備ログ", "次回改善へ戻す": "寝具/ライト/温度改善", "UIルール": "シンプルなチェック。", "保護ルール": "寝具設定を勝手に変更しない。"}, {"id": "M21", "name": "リビング準備モード", "フェーズ": "設営", "分類": "設営", "役割": "タープ下/リビング、テーブル、チェア、キッチンを整える。", "開始条件": "設営→リビング", "最初に出す情報": "テーブル、チェア、IGT、キッチン、導線", "主要ボタン": "完了、写真、使いにくい、メモ", "自動で拾う情報": "時刻、写真、メモ", "連携データ": "ギア、料理", "完了条件": "リビング完了", "思い出へ残す": "リビング配置ログ", "次回改善へ戻す": "次回配置改善", "UIルール": "配置写真を残しやすく。", "保護ルール": "写真/配置は公開候補にしない。"}, {"id": "M22", "name": "外回り準備モード", "フェーズ": "設営", "分類": "設営", "役割": "車周り、ロープ、ゴミ、電源、外灯などを整える。", "開始条件": "設営→外回り", "最初に出す情報": "車、ロープ、ゴミ、電源、灯り、風雨対策", "主要ボタン": "完了、注意、写真、メモ", "自動で拾う情報": "時刻、写真、メモ", "連携データ": "ギア、天気、撤収", "完了条件": "外回り完了", "思い出へ残す": "外回りログ", "次回改善へ戻す": "忘れ物/安全改善", "UIルール": "注意項目だけ目立たせる。", "保護ルール": "危険メモは消さない。"}, {"id": "M23", "name": "休憩モード", "フェーズ": "滞在", "分類": "滞在", "役割": "設営中/移動中/滞在中の休憩を記録する。", "開始条件": "手動/長時間停止", "最初に出す情報": "休憩開始、場所、コタ、水分、天気", "主要ボタン": "写真、メモ、再開", "自動で拾う情報": "時刻、場所、気温", "連携データ": "コタ、天気、当日", "完了条件": "再開", "思い出へ残す": "休憩ログ", "次回改善へ戻す": "次回休憩タイミング", "UIルール": "小さく邪魔しない。", "保護ルール": "休憩推定は未確認。"}, {"id": "M24", "name": "料理実行モード", "フェーズ": "料理", "分類": "料理", "役割": "予定メニューを実行し、写真・量・味・余り・失敗を残す。", "開始条件": "当日料理/手動", "最初に出す情報": "今日の料理、予定量、材料、手順、開始時刻", "主要ボタン": "写真、量、味、余り、失敗、完了", "自動で拾う情報": "時刻、写真、声、メモ", "連携データ": "料理計画、買物、思い出", "完了条件": "料理完了", "思い出へ残す": "料理ログ、写真、評価", "次回改善へ戻す": "量/材料/手順を次回へ", "UIルール": "予定メニューから選ぶ。ボタンだけ並べない。", "保護ルール": "料理メモを勝手に上書きしない。"}, {"id": "M25", "name": "食事モード", "フェーズ": "料理", "分類": "料理", "役割": "食べた感想、量、満足度、コタ対応を残す。", "開始条件": "料理完了/手動", "最初に出す情報": "食事写真、量、残り、味、コタ", "主要ボタン": "美味しい、多い/少ない、残った、メモ", "自動で拾う情報": "写真、メモ、時刻", "連携データ": "料理、コタ、思い出", "完了条件": "食事終了", "思い出へ残す": "食事ログ", "次回改善へ戻す": "次回量調整", "UIルール": "感想は一言で残せる。", "保護ルール": "評価を勝手に公開しない。"}, {"id": "M26", "name": "片付けモード", "フェーズ": "料理", "分類": "料理", "役割": "食後片付け、洗い物、ゴミ、残り食材を整理する。", "開始条件": "食事終了/手動", "最初に出す情報": "洗い物、ゴミ、残り食材、保冷", "主要ボタン": "完了、残り、ゴミ、メモ", "自動で拾う情報": "時刻、メモ", "連携データ": "料理、撤収、買物", "完了条件": "片付け完了", "思い出へ残す": "片付けログ", "次回改善へ戻す": "次回食材量/ゴミ対策", "UIルール": "短いチェック。", "保護ルール": "残り食材を勝手に買物更新しない。"}, {"id": "M27", "name": "自宅散歩モード", "フェーズ": "散歩", "分類": "散歩", "役割": "日常散歩。地図主役、GPS、距離、時間、写真/声/メモ、履歴、復旧。", "開始条件": "＋→散歩/自宅散歩", "最初に出す情報": "地図、時間、距離、現在地、コタ状態", "主要ボタン": "写真、声、メモ、現在地、終了", "自動で拾う情報": "GPS連続、距離、時刻、写真", "連携データ": "コタ、履歴、場所カード", "完了条件": "終了保存/復旧", "思い出へ残す": "散歩履歴、ルート", "次回改善へ戻す": "体調/散歩コース改善", "UIルール": "地図は広域すぎずチカチカしない。", "保護ルール": "終了/破棄ミスは復旧。"}, {"id": "M28", "name": "キャンプ場散歩モード", "フェーズ": "散歩", "分類": "散歩", "役割": "キャンプ滞在の子記録。場内レビュー素材、設備、景色、水場、トイレなど。", "開始条件": "キャンプ滞在中/場内散歩", "最初に出す情報": "地図、場内ルート、設備候補、写真", "主要ボタン": "写真、設備、注意、景色、現在地、終了", "自動で拾う情報": "GPS、写真、時刻、場所候補", "連携データ": "キャンプ滞在、場所カード、思い出", "完了条件": "子記録保存", "思い出へ残す": "場内散歩ログ、場所カード", "次回改善へ戻す": "キャンプ場レビュー、次回サイト選び", "UIルール": "キャンプ中の散歩は親子関係を表示。", "保護ルール": "親記録と勝手に統合しない。"}, {"id": "M29", "name": "場内探索モード", "フェーズ": "散歩", "分類": "探索", "役割": "サイト周辺/施設/景色/騒音/地面/傾斜/犬連れ目線を残す。", "開始条件": "到着後/滞在中", "最初に出す情報": "探索テーマ、現在地、写真、レビュー素材", "主要ボタン": "写真、設備、景色、注意、メモ", "自動で拾う情報": "GPS、写真、時刻", "連携データ": "キャンプ場DB、場所カード、思い出", "完了条件": "探索終了", "思い出へ残す": "探索ログ、レビュー素材", "次回改善へ戻す": "次回サイト/場内導線", "UIルール": "探索テーマを絞って表示。", "保護ルール": "公開前確認必須。"}, {"id": "M30", "name": "コタ対応モード", "フェーズ": "コタ/天気", "分類": "コタ", "役割": "散歩、暑さ寒さ、足元、水、休憩、寝床、用品を記録する。", "開始条件": "必要時/コタ注意カード", "最初に出す情報": "コタ状態、気温、足元、水、休憩、寝床", "主要ボタン": "水、休憩、暑い/寒い、足元注意、メモ", "自動で拾う情報": "時刻、天気、場所、メモ", "連携データ": "準備、散歩、就寝、撤収", "完了条件": "対応完了", "思い出へ残す": "コタ対応ログ", "次回改善へ戻す": "コタ用品/休憩/寝床改善", "UIルール": "常時大きくは出さず必要時だけ。", "保護ルール": "ペット情報の公開注意。"}, {"id": "M31", "name": "天気・風確認モード", "フェーズ": "コタ/天気", "分類": "天気", "役割": "現在天気、風、雨、気温を設営/撤収/乾燥判断へつなげる。", "開始条件": "準備/当日/設営/撤収", "最初に出す情報": "現在/予報、雨、風、気温、判断メモ", "主要ボタン": "更新、設営判断、撤収判断、服装、メモ", "自動で拾う情報": "時刻、天気データ、位置", "連携データ": "設営、撤収、コタ、料理", "完了条件": "判断完了", "思い出へ残す": "天気ログ、判断理由", "次回改善へ戻す": "雨撤収/乾燥/冷暖房改善", "UIルール": "数値より判断を大きく。", "保護ルール": "天気由来の提案は未確認。"}, {"id": "M32", "name": "就寝モード", "フェーズ": "夜/朝", "分類": "滞在", "役割": "寝室準備、ライト、寒暖、音、コタ、翌朝予定を扱う。", "開始条件": "夜/手動", "最初に出す情報": "寝室、灯り、気温、音、コタ、翌朝予定", "主要ボタン": "就寝、寒い/暑い、音、メモ", "自動で拾う情報": "時刻、メモ", "連携データ": "寝室、コタ、天気、翌朝", "完了条件": "就寝記録", "思い出へ残す": "就寝ログ", "次回改善へ戻す": "寝具/ライト/防寒改善", "UIルール": "暗所で見やすくボタン少なめ。", "保護ルール": "個人メモを公開しない。"}, {"id": "M33", "name": "翌朝モード", "フェーズ": "夜/朝", "分類": "滞在", "役割": "起床、朝食、散歩、撤収前準備、レイトチェックアウト判断。", "開始条件": "翌朝/手動", "最初に出す情報": "起床、天気、朝食、散歩、撤収予定", "主要ボタン": "起床、朝食、散歩、撤収へ、メモ", "自動で拾う情報": "時刻、天気、写真", "連携データ": "料理、散歩、撤収", "完了条件": "撤収へ移行", "思い出へ残す": "朝ログ", "次回改善へ戻す": "朝食量/撤収開始改善", "UIルール": "次の行動を1つ大きく。", "保護ルール": "予定を勝手に変更しない。"}, {"id": "M34", "name": "朝食モード", "フェーズ": "夜/朝", "分類": "料理", "役割": "キャンプ朝食または帰路/なしの判断を扱う。", "開始条件": "翌朝/料理予定", "最初に出す情報": "朝食予定、量、片付け時間、撤収時間", "主要ボタン": "写真、量、なし、完了", "自動で拾う情報": "時刻、写真、メモ", "連携データ": "料理、撤収", "完了条件": "朝食完了", "思い出へ残す": "朝食ログ", "次回改善へ戻す": "朝食量/撤収時間改善", "UIルール": "撤収とのバランスを見せる。", "保護ルール": "食事予定を勝手に削除しない。"}, {"id": "M35", "name": "撤収モード", "フェーズ": "撤収/帰宅", "分類": "撤収", "役割": "撤収全体。開始、濡れ物、乾燥、収納、忘れ物、積載、ゴミ、完了時間。", "開始条件": "撤収開始", "最初に出す情報": "撤収開始時刻、天気、濡れ物、収納、忘れ物、積載", "主要ボタン": "開始、濡れ物、乾燥、収納、忘れ物、完了", "自動で拾う情報": "時刻、写真、メモ、天気", "連携データ": "ギア、天気、コタ、帰路", "完了条件": "撤収完了", "思い出へ残す": "撤収ログ、忘れ物候補", "次回改善へ戻す": "収納順/乾燥/忘れ物改善", "UIルール": "工程チェックは少なく。重要項目優先。", "保護ルール": "完了/破棄ミス復旧。"}, {"id": "M36", "name": "濡れ物・乾燥モード", "フェーズ": "撤収/帰宅", "分類": "撤収", "役割": "雨撤収や濡れ物の乾燥管理を残す。", "開始条件": "撤収中/雨/手動", "最初に出す情報": "濡れ物、乾燥要否、袋、帰宅後乾燥", "主要ボタン": "濡れ物追加、乾燥済み、帰宅後へ", "自動で拾う情報": "写真、メモ、天気", "連携データ": "ギア、帰宅後片付け", "完了条件": "乾燥完了/帰宅後へ", "思い出へ残す": "乾燥タスク", "次回改善へ戻す": "乾燥忘れ防止", "UIルール": "帰宅後タスクに残す導線。", "保護ルール": "乾燥タスクを勝手に消さない。"}, {"id": "M37", "name": "忘れ物確認モード", "フェーズ": "撤収/帰宅", "分類": "撤収", "役割": "忘れ物、ゴミ、積載、サイト確認を扱う。", "開始条件": "撤収終盤", "最初に出す情報": "忘れ物チェック、ゴミ、サイト写真、積載", "主要ボタン": "確認、写真、忘れ物、完了", "自動で拾う情報": "写真、時刻、メモ", "連携データ": "ギア、撤収、思い出", "完了条件": "チェックアウトへ", "思い出へ残す": "忘れ物ログ", "次回改善へ戻す": "次回チェックリスト", "UIルール": "最後に一画面で済ませる。", "保護ルール": "確認前に完了扱いしない。"}, {"id": "M38", "name": "帰路ドライブモード", "フェーズ": "撤収/帰宅", "分類": "移動", "役割": "帰路、休憩、観光、買物、渋滞、帰宅予定差分を扱う。", "開始条件": "チェックアウト/帰路開始", "最初に出す情報": "自宅まで、寄り道、休憩、帰宅予定", "主要ボタン": "Google Maps、休憩、観光、買物、帰宅", "自動で拾う情報": "Maps、GPS、時刻、停車", "連携データ": "ルート、思い出、コタ", "完了条件": "帰宅", "思い出へ残す": "帰路ログ", "次回改善へ戻す": "帰路休憩/寄り道改善", "UIルール": "Maps中心、運転中操作禁止。", "保護ルール": "帰宅推定は未確認。"}, {"id": "M39", "name": "観光・立ち寄りモード", "フェーズ": "撤収/帰宅", "分類": "移動", "役割": "帰り/行きの観光や立ち寄りを思い出に残す。", "開始条件": "寄り道/手動", "最初に出す情報": "場所、写真、滞在、コタ可、メモ", "主要ボタン": "写真、メモ、保存、あとで", "自動で拾う情報": "GPS、写真、時刻", "連携データ": "思い出、場所カード", "完了条件": "立ち寄り終了", "思い出へ残す": "立ち寄りログ", "次回改善へ戻す": "次回寄り道候補", "UIルール": "写真中心。", "保護ルール": "公開前確認。"}, {"id": "M40", "name": "帰宅後片付けモード", "フェーズ": "撤収/帰宅", "分類": "帰宅後", "役割": "荷下ろし、乾燥、洗い物、充電、補充、破損確認を次回準備へ戻す。", "開始条件": "帰宅/手動", "最初に出す情報": "荷下ろし、乾燥、洗い物、充電、補充、破損", "主要ボタン": "完了、あとで、次回へ、破損", "自動で拾う情報": "時刻、メモ", "連携データ": "ギア、買物、次回改善", "完了条件": "片付け完了/未完了保存", "思い出へ残す": "帰宅後タスク", "次回改善へ戻す": "補充/乾燥/破損を次回へ", "UIルール": "疲れている前提で最小チェック。", "保護ルール": "未完了を消さない。"}, {"id": "M41", "name": "思い出整理モード", "フェーズ": "思い出/改善", "分類": "思い出", "役割": "写真/動画/音声/メモ/GPS/時系列/レビュー/反省/未確認を整理する。", "開始条件": "帰宅後/思い出タブ", "最初に出す情報": "時系列、写真、未確認、レビュー素材、地図", "主要ボタン": "確認、修正、レビュー、次回へ、Google Photos連携", "自動で拾う情報": "記録全体、メディア参照、GPS", "連携データ": "Google Photos、次回改善、チャッピー", "完了条件": "整理済み/保留", "思い出へ残す": "思い出カード、レビュー", "次回改善へ戻す": "次回準備へ反映", "UIルール": "一気に整理させない。未確認を小分け。", "保護ルール": "勝手に統合・削除しない。"}, {"id": "M42", "name": "次回改善モード", "フェーズ": "思い出/改善", "分類": "改善", "役割": "忘れ物、料理量、設営順、ギア、コタ、天気対策、キャンプ場評価を次回準備へ反映する。", "開始条件": "思い出→次回改善", "最初に出す情報": "改善候補、根拠、反映先予定", "主要ボタン": "採用、保留、却下、準備へ戻す", "自動で拾う情報": "記録/メモ/写真由来候補", "連携データ": "準備、ギア、料理、買物", "完了条件": "反映/保留", "思い出へ残す": "次回準備タスク", "次回改善へ戻す": "次回の具体タスク", "UIルール": "根拠を短く表示。", "保護ルール": "AIが勝手に反映しない。"}, {"id": "M43", "name": "チャッピー提案モード", "フェーズ": "思い出/改善", "分類": "AI", "役割": "次回やること、改善、不要データ整理、レビュー文案、買物/ギア/料理提案を出す。", "開始条件": "思い出/準備/未確認", "最初に出す情報": "提案、根拠、影響、反映先", "主要ボタン": "採用、保留、違う、修正", "自動で拾う情報": "過去記録、予定、天気、ギア、料理", "連携データ": "準備、思い出、データ管理", "完了条件": "採用/保留/却下", "思い出へ残す": "提案履歴、改善候補", "次回改善へ戻す": "次回アクション", "UIルール": "提案は押し付けない。", "保護ルール": "自動確定しない。"}, {"id": "M44", "name": "復旧・修正モード", "フェーズ": "データ/安全", "分類": "安全", "役割": "間違い登録、終了ミス、破棄ミス、あとで確認、未確認、復元を扱う。", "開始条件": "常時/ミス時", "最初に出す情報": "直前操作、復旧候補、未確認箱", "主要ボタン": "復旧、戻す、移動、違う、あとで", "自動で拾う情報": "操作履歴、削除箱、状態", "連携データ": "全モード", "完了条件": "復旧完了/保留", "思い出へ残す": "監査ログ、復元状態", "次回改善へ戻す": "操作事故防止", "UIルール": "安心感を最優先。危険操作は控えめ。", "保護ルール": "削除せず却下/復元可能へ。"}, {"id": "M45", "name": "データ管理・Google Photosモード", "フェーズ": "データ/安全", "分類": "保存", "役割": "Google Photosを正本メディア置き場とし、OUTBASEは参照/メタデータ管理する。", "開始条件": "思い出/管理", "最初に出す情報": "保存状態、同期、共有アルバム、容量、参照切れ", "主要ボタン": "同期、確認、再接続、あとで", "自動で拾う情報": "写真ID、参照、メタデータ", "連携データ": "思い出、家族共有、データ管理", "完了条件": "同期確認", "思い出へ残す": "参照DB、保存ログ", "次回改善へ戻す": "参照切れ修正", "UIルール": "内部事情を出しすぎない。", "保護ルール": "写真/動画を勝手に複製/削除しない。"}, {"id": "M46", "name": "オフライン・復旧モード", "フェーズ": "データ/安全", "分類": "安全", "役割": "電波不安定でも記録を失わず、後で同期する。", "開始条件": "常時/圏外", "最初に出す情報": "オフライン状態、未同期件数、復旧状態", "主要ボタン": "保存、あとで同期、復旧", "自動で拾う情報": "ローカル記録、同期状態", "連携データ": "全モード", "完了条件": "同期完了/保留", "思い出へ残す": "未同期キュー", "次回改善へ戻す": "データ損失防止", "UIルール": "不安を煽らず状態表示。", "保護ルール": "オフライン中も保存を止めない。"}, {"id": "M47", "name": "テストリセットモード", "フェーズ": "データ/安全", "分類": "安全", "役割": "テスト中の記録だけ安全に消す。本番データは守る。", "開始条件": "管理/テスト時", "最初に出す情報": "消える対象、残る対象、復旧可否", "主要ボタン": "テスト記録リセット、復元、キャンセル", "自動で拾う情報": "対象ID、バックアップ", "連携データ": "全モード", "完了条件": "リセット完了/復旧", "思い出へ残す": "テスト状態リセット", "次回改善へ戻す": "開発検証効率化", "UIルール": "確認は短く明確。", "保護ルール": "予定/準備/過去記録を消さない。"}]};
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const storeKey = 'outbase.mvp.allinone.state.v1';
+const defaultState = {
+  route: 'plans',
+  activePlanId: 'akagi-2026-07',
+  activeContext: 'camp',
+  noteDraft: '',
+  gps: null,
+  media: [],
+  records: [
+    {id:'r1', type:'キャンプ', title:'赤城山の準備開始', time:'2026/07/05 09:12', body:'買い物・料理・ギア・コタを予定に紐づけ。', status:'未確認'},
+    {id:'r2', type:'自宅散歩', title:'コタ散歩候補', time:'今日', body:'暑さ・足元・水分を見て開始。地図とGPSを主役にする。', status:'候補'},
+  ],
+  recovery: [
+    {id:'q1', title:'F1テスト画面の残骸', body:'完成扱いにしない。Core06.10入口へ戻した状態。', action:'保護'},
+    {id:'q2', title:'未確認メモ候補', body:'AI/GPS推定は勝手に確定しない。', action:'未確認'},
+  ],
+  done: {}
 };
-
-const DAY_STEPS = [
-  { id: 'before', label: '出発前', sub: '積み込み・コタ・天気・買い物確認', mode: '準備' },
-  { id: 'driveOut', label: '往路', sub: 'Google Maps、給油、買い出し、休憩', mode: 'ドライブ', activity: 'drive' },
-  { id: 'arrival', label: '到着受付', sub: '到着・受付・サイト移動・注意事項', mode: '受付' },
-  { id: 'layout', label: 'レイアウト', sub: '風・傾斜・導線・コタの居場所', mode: '設営前' },
-  { id: 'setup', label: '設営', sub: 'テント、タープ、寝室、リビング、外回り', mode: '設営', activity: 'setup' },
-  { id: 'stay', label: '滞在', sub: '散歩、場内探索、休憩、写真', mode: '滞在' },
-  { id: 'cook', label: '料理', sub: '予定メニュー、量、味、余り、次回', mode: '料理', activity: 'cook' },
-  { id: 'sleep', label: '就寝/翌朝', sub: '寝室、灯り、寒暖、朝食、朝散歩', mode: '夜朝' },
-  { id: 'teardown', label: '撤収', sub: '濡れ物、乾燥、収納、忘れ物、積載', mode: '撤収', activity: 'teardown' },
-  { id: 'driveHome', label: '帰路', sub: '観光、休憩、渋滞、帰宅予定差分', mode: 'ドライブ', activity: 'drive' },
-  { id: 'afterHome', label: '帰宅後', sub: '荷下ろし、乾燥、洗い物、充電、補充', mode: '片付け' }
+const plans = [
+  {id:'akagi-2026-07', type:'キャンプ', title:'スノーピーク赤城山キャンプフィールド', date:'2026/07/20 - 07/21', people:'夫婦＋コタ', site:'予約/サイト未確認', check:'IN 13:00 / OUT 11:00', weather:'雨・風・気温を要確認', progress:46, tags:['犬可','標高','乾燥/雨対策','1泊2日']},
+  {id:'walk-today', type:'自宅散歩', title:'今日のコタ散歩', date:'今日', people:'ムー＋コタ', site:'自宅周辺', check:'暑さ・足元・水分', weather:'気温/路面注意', progress:20, tags:['地図主役','GPS','復旧']},
+  {id:'picnic-next', type:'ピクニック/軽量外出', title:'週末ピクニック候補', date:'未定', people:'夫婦＋コタ', site:'公園/水辺/日陰', check:'駐車場・犬可・暑さ', weather:'雨風と日陰', progress:12, tags:['軽量準備','食べ物','写真']},
 ];
-
-const PREP_GROUPS = [
-  { key: 'shopping', label: '買い物', items: ['肉・主菜', '野菜', 'チーズ/乳製品', '調味料', '飲み物', '買わない物確認'] },
-  { key: 'meal', label: '料理', items: ['1日目夜', '翌朝', '量が多すぎないか', '友人分', 'コタ不可食材', '次回調整メモ'] },
-  { key: 'gear', label: 'ギア', items: ['テント/タープ', '寝具', '照明', '電源/EcoFlow', '雨対策', '乾燥対象'] },
-  { key: 'kota', label: 'コタ', items: ['水', 'フード', '散歩用品', '暑さ寒さ', '寝床', '足拭き'] },
-  { key: 'route', label: 'ルート', items: ['出発時刻', '給油', '買い出し', '休憩', 'Google Maps', '帰り候補'] },
-  { key: 'weather', label: '天気', items: ['雨', '風', '気温', '乾燥判断', '服装/冷暖房', '撤収判断'] }
+const candidates = [
+  {name:'犬可キャンプ候補', type:'キャンプ場', score:'候補化', keys:['犬可','ドッグフリー','温水','景色','4時間以内'], next:'予定化する前に予約情報候補へ'},
+  {name:'自宅散歩コース', type:'散歩場所', score:'日常', keys:['コタ','日陰','足元','距離','過去履歴'], next:'＋から自宅散歩開始'},
+  {name:'場内探索スポット', type:'キャンプ場散歩', score:'現地', keys:['水場','トイレ','売店','ドッグラン','景色'], next:'キャンプ滞在の子記録へ'},
+  {name:'帰路立ち寄り', type:'ドライブ/観光', score:'任意', keys:['駐車場','犬可','休憩','買い物','帰宅差分'], next:'帰路ドライブの候補へ'},
+  {name:'ピクニック候補', type:'軽量外出', score:'会話回収', keys:['犬可','駐車場','日陰','食べ物','天気'], next:'宿泊なしの予定→準備→記録へ'},
 ];
-
-const SEARCH_CANDIDATES = [
-  { id: 'dogfree', title: 'ドッグフリーサイト優先', tags: ['犬可', '区画', '安心'], memo: 'コタが落ち着けるか、柵・地面・隣接距離を確認。' },
-  { id: 'hotwater', title: '冬は温水・乾燥重視', tags: ['温水', '乾燥', '撤収'], memo: '雨撤収や冬キャンプの負担を下げる候補。' },
-  { id: 'view', title: '景色が良い候補', tags: ['景色', '写真', '思い出'], memo: '写真・レビュー素材として残しやすい場所。' },
-  { id: 'distance', title: '自宅から4時間以内', tags: ['距離', '下り', '休憩'], memo: '柏からの移動負担、給油・休憩をセットで考える。' }
+const prepGroups = [
+  {id:'shopping', title:'買い物', sub:'肉部位・魚介・チーズ・野菜・調味料・量・代替・不要・LINE', items:['ブラックタイガー/むきえび代替','にんにく・バター・オリーブオイル','チーズ種類と必要数','買わなくて良いものを分離','LINEコピペ用を生成']},
+  {id:'meals', title:'料理', sub:'1泊2日・朝昼晩・人数・友人・設営/撤収時間・食べ過ぎ防止', items:['1日目 朝/昼/夜','2日目 朝/昼/夜','バケット不要など過去判断','量が多すぎない確認','当日料理記録へ渡す']},
+  {id:'gear', title:'ギア', sub:'台帳・持参・積載・使用有無・濡れ物・乾燥・次回', items:['テント/タープ/寝具','料理/IGT/火器','電源/EcoFlow','コタ用品','濡れ物/乾燥タスク']},
+  {id:'kota', title:'コタ', sub:'散歩・暑さ寒さ・足元・水・休憩・寝床', items:['水と休憩','路面/足元注意','寝床/ドッグ用品','キャンプ場散歩候補','公開前確認']},
+  {id:'route', title:'ルート・経由地', sub:'Google Maps・出発・給油・買出し・休憩・帰路差分', items:['出発予定','コンビニ/買出し','給油/休憩','Google Mapsで開く','往路/帰路ログへ']},
+  {id:'weather', title:'天気・風', sub:'雨・風・気温・設営/撤収/乾燥・服装・冷暖房・コタ判断', items:['設営判断','撤収/乾燥判断','服装/冷暖房','コタ暑さ寒さ','天気ログを思い出へ']},
+  {id:'loading', title:'積み込み・出発前', sub:'朝に見る最小チェック。積込/給油/出発時刻', items:['当日積込','給油','朝食/車内','出発する','忘れ物確認']},
 ];
-
-function defaultState() {
-  const now = new Date();
-  const cursor = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
-  return {
-    version: BUILD_ID,
-    route: 'plans',
-    calendarCursor: cursor,
-    selectedDate: todayISO(),
-    activeDayStep: 'before',
-    selectedPlanId: '',
-    activeActivity: null,
-    protectedMessage: '予定・記録・写真・メモ・GPS・コタ情報は勝手に上書き/削除しない',
-    plans: [
-      { id: 'past_akagi_20260626', title: 'スノーピーク赤城山CF', start: '2026-06-26', end: '2026-06-27', status: '記録候補', checkin: '13:00', checkout: '11:00', members: '夫婦＋コタ＋友人夫婦', note: 'Lake Lodge YAMANAKAキャンセル後の予定。梅雨・乾燥サービス重視。' }
-    ],
-    prepDone: {},
-    records: [],
-    unresolved: [],
-    improvements: [],
-    candidates: [],
-    audit: []
-  };
-}
-
-function migrateLegacy() {
-  const base = defaultState();
-  try {
-    for (const key of LEGACY_KEYS) {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-      const old = JSON.parse(raw);
-      if (Array.isArray(old?.plans)) return { ...base, ...old, route: 'plans', version: BUILD_ID };
-      const plans = [];
-      if (old?.nextProject) {
-        const project = old.nextProject;
-        const res = project.reservation || {};
-        plans.push({
-          id: project.id || 'migrated_next_project',
-          title: res.campground || project.title || '次のキャンプ',
-          start: String(res.dateText || project.start || '').match(/20\d{2}[-/]\d{1,2}[-/]\d{1,2}/)?.[0]?.replace(/\//g, '-') || todayISO(),
-          end: String(res.dateText || project.end || project.start || '').match(/20\d{2}[-/]\d{1,2}[-/]\d{1,2}/)?.[0]?.replace(/\//g, '-') || todayISO(),
-          status: '移行予定', checkin: res.checkin || '', checkout: res.checkout || '', members: res.members || '', note: res.memo || project.memo || ''
-        });
-      }
-      if (Array.isArray(old?.calendarEvents)) {
-        old.calendarEvents.filter((e) => e?.type === 'camp' || /キャンプ|camp/i.test(e?.title || '')).forEach((e) => plans.push({
-          id: e.id || uid('legacy'), title: e.title || 'キャンプ予定', start: String(e.start || todayISO()).slice(0, 10), end: String(e.end || e.start || todayISO()).slice(0, 10), status: '移行予定', checkin: '', checkout: '', members: '', note: e.memo || ''
-        }));
-      }
-      if (plans.length || Array.isArray(old?.recordHistory)) {
-        return { ...base, plans: dedupePlans([...plans, ...base.plans]), records: Array.isArray(old?.recordHistory) ? old.recordHistory.map((r) => ({ id: r.session_id || uid('old'), type: r.type || '記録', title: r.title || '旧記録', detail: `${r.parentTitle || ''} ${r.locationLabel || ''}`.trim(), at: r.startedAt || new Date().toISOString(), status: '移行' })) : base.records, route: 'plans', version: BUILD_ID };
-      }
-    }
-  } catch (error) { console.warn('legacy migration failed', error); }
-  return base;
-}
-function dedupePlans(plans) {
-  const seen = new Set();
-  return plans.filter((p) => {
-    const key = `${p.title}_${p.start}_${p.end}`;
-    if (seen.has(key)) return false;
-    seen.add(key); return true;
-  });
-}
-
+const dayFlow = [
+  ['出発前','積込・給油・朝食・出発予定'],['往路','Google Maps・買出し・給油・休憩・コタ休憩'],['到着/受付','到着時刻・チェックイン差分・注意事項'],['サイト/レイアウト','地面・傾斜・風・コタ位置'],['設営','テント・タープ・寝室・リビング・外回り'],['滞在','料理・食事・休憩・コタ・場内探索'],['就寝/翌朝','寝室・ライト・寒暖・朝食・撤収準備'],['撤収','濡れ物・乾燥・忘れ物・積載・ゴミ'],['帰路','Maps・休憩・観光・買物・帰宅差分'],['帰宅後','荷下ろし・乾燥・洗い物・充電・補充・破損']
+];
+const contexts = ['キャンプ滞在','自宅散歩','キャンプ場散歩','ドライブ','ピクニック/軽量外出','設営','料理','撤収','観光・立ち寄り','買い物','ギア','コタ'];
+function loadState(){try{return {...defaultState,...JSON.parse(localStorage.getItem(storeKey)||'{}')}}catch(e){return structuredClone(defaultState)}}
 let state = loadState();
-function loadState() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (saved?.version) return { ...defaultState(), ...saved, route: saved.route || 'plans' };
-  } catch (error) { console.warn(error); }
-  const migrated = migrateLegacy();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-  return migrated;
+function save(){localStorage.setItem(storeKey, JSON.stringify(state));}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function activePlan(){return plans.find(p=>p.id===state.activePlanId)||plans[0];}
+function setRoute(route){state.route=route;save();render();}
+function button(label, action, cls='btn'){return `<button class="${cls}" type="button" data-action="${action}">${label}</button>`}
+function card(title, body, footer=''){return `<section class="card"><div class="title">${title}</div><div class="muted small" style="margin-top:5px">${body}</div>${footer}</section>`}
+function renderCalendar(){
+ const days=['月','火','水','木','金','土','日'];
+ let nums=''; for(let i=0;i<35;i++){const d=i-1; const n=d>0?d:''; const has=[5,12,20,21,26].includes(d); nums+=`<div class="day ${d===5?'today':''} ${has?'has':''}"><b>${n}</b>${d===20?'<br><span class="small">赤城山</span>':''}${d===5?'<br><span class="small">今日</span>':''}</div>`}
+ return `<div class="calendar"><div class="row"><div><div class="label">CALENDAR FIRST</div><div class="title">2026年7月</div></div><span class="chip green">複数予定</span></div><div class="calendar-head">${days.map(d=>`<div>${d}</div>`).join('')}</div><div class="calendar-grid">${nums}</div></div>`;
 }
-function saveState() {
-  state.version = BUILD_ID;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function renderPlans(){const p=activePlan(); return `<div class="stack">
+ <section class="hero"><div class="row wrap"><div><div class="label">次の予定</div><div class="big-title">${esc(p.title)}</div><div class="muted">${esc(p.date)} / ${esc(p.people)} / ${esc(p.check)}</div></div><span class="chip green">${p.type}</span></div><div class="chips" style="margin-top:12px">${p.tags.map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div><div style="margin-top:14px"><div class="row"><b>準備進捗</b><span>${p.progress}%</span></div><div class="progress"><div class="bar" style="width:${p.progress}%"></div></div></div><div class="btns" style="margin-top:14px">${button('準備する','go-prep','btn primary')}${button('当日運転席','go-day','btn dark')}${button('＋ いま残す','go-plus')}${button('思い出へ','go-memory')}</div></section>
+ <section class="card">${renderCalendar()}</section>
+ <section class="panel"><div class="section-title"><h2>予定を切り替える</h2><span class="small muted">キャンプ/散歩/軽量外出を同じ流れで扱う</span></div><div class="grid2" style="margin-top:10px">${plans.map(plan=>`<button class="tile ${plan.id===state.activePlanId?'selected':''}" type="button" data-plan="${plan.id}"><div class="label">${plan.type}</div><div class="title">${plan.title}</div><div class="small muted">${plan.date} / ${plan.check}</div></button>`).join('')}</div></section>
+ <section class="ok-note">予定・準備・記録・写真・メモ・GPS・コタ情報は、ユーザー操作なしに勝手に上書き/統合/削除しない。</section>
+ </div>`}
+function renderSearch(){return `<div class="stack"><section class="hero"><div class="label">探す</div><div class="big-title">候補を予定にする前の場所</div><p class="muted">犬可・温水・景色・距離・季節条件。キャンプ場だけでなく、散歩場所・ピクニック・立ち寄りも「候補」として残す。</p><div class="chips"><span class="chip green">犬可</span><span class="chip">ドッグフリー</span><span class="chip">温水</span><span class="chip">景色</span><span class="chip">4時間以内</span><span class="chip blue">駐車場</span></div></section><div class="grid2">${candidates.map(c=>`<section class="card"><div class="row"><span class="chip green">${c.type}</span><span class="small muted">${c.score}</span></div><div class="title" style="margin-top:8px">${c.name}</div><div class="chips" style="margin-top:8px">${c.keys.map(k=>`<span class="chip">${k}</span>`).join('')}</div><p class="small muted">次：${c.next}</p><div class="btns"><button class="btn primary" data-action="save-candidate">候補保存</button><button class="btn" data-action="candidate-to-plan">予定候補へ</button><button class="btn ghost" data-action="hold">保留</button></div></section>`).join('')}</div></div>`}
+function renderPrep(){const p=activePlan(); return `<div class="stack"><section class="hero"><div class="row wrap"><div><div class="label">準備ワークスペース</div><div class="big-title">${esc(p.title)}</div><p class="muted">買う・持つ・食べる・コタ・ルート・天気を予定ごとに分離。別予定を上書きしない。</p></div><span class="chip green">${p.progress}%</span></div></section><div class="grid2">${prepGroups.map(g=>`<section class="card"><div class="label">${g.id}</div><div class="title">${g.title}</div><p class="small muted">${g.sub}</p><div class="list">${g.items.map((it,idx)=>`<div class="item ${state.done[g.id+'-'+idx]?'done':''}" data-check="${g.id}-${idx}"><span class="check">${state.done[g.id+'-'+idx]?'✓':''}</span><span>${it}</span></div>`).join('')}</div><div class="btns" style="margin-top:10px"><button class="btn primary" data-prep="${g.id}">開く</button><button class="btn ghost" data-action="send-to-day">当日へ渡す</button></div></section>`).join('')}</div><section class="panel"><div class="section-title"><h2>LINEコピペ用 買い物</h2><button class="btn" data-action="copy-shopping">コピー</button></div><textarea id="shoppingText">【買い物】
+・エビ：ブラックタイガー/むきえび/冷凍可 200〜300g
+・にんにく、バター、オリーブオイル、レモン
+・塩、黒こしょう、パセリ
+・チーズ、野菜、肉、調味料
+・買わなくて良いもの：今回は量が多いものは削る
+・あったら良いもの：白ワイン、チリ</textarea></section></div>`}
+function renderDay(){const p=activePlan(); return `<div class="stack"><section class="hero"><div class="label">当日運転席</div><div class="big-title">今日やることを上から順に</div><p class="muted">記録ボタン置き場ではない。準備から渡された情報を見ながら、出発前→帰宅後まで進める。</p><div class="btns">${button('出発前を開始','start-day','btn primary')}${button('Google Maps','maps','btn dark')}${button('＋記録','go-plus')}</div></section><section class="panel"><div class="timeline">${dayFlow.map((f,i)=>`<div class="event"><div class="row"><b>${i+1}. ${f[0]}</b><button class="btn" data-flow="${f[0]}">記録</button></div><div class="small muted">${f[1]}</div></div>`).join('')}</div></section><section class="danger-note">運転中に操作させない。Maps中心。停車中だけ買出し・給油・休憩・コタ休憩を記録する。</section></div>`}
+function renderPlus(){return `<div class="stack"><section class="hero"><div class="label">＋ 今すぐ残す</div><div class="big-title">分類はあとで。消さずに未確認へ。</div><p class="muted">キャンプ中ならキャンプへ、散歩中なら散歩へ、ドライブ中なら移動へ、ピクニックなら軽量外出へ紐づける。</p></section><section class="panel"><div class="section-title"><h2>今の活動</h2><span class="small muted">モード一覧ではなく、記録先の選択</span></div><div class="chips" style="margin-top:10px">${contexts.map(c=>`<button class="chip ${state.activeContext===c?'green':''}" data-context="${c}">${c}</button>`).join('')}</div></section><section class="grid2"><button class="tile" data-action="photo"><div class="title">写真/動画</div><div class="small muted">Google Photos参照前提。OUTBASEはメタデータ保持。</div></button><button class="tile" data-action="voice"><div class="title">声メモ</div><div class="small muted">文字起こし候補として未確認へ。</div></button><button class="tile" data-action="gps"><div class="title">GPS</div><div class="small muted">場所カード・散歩地図・移動ログへ。</div></button><button class="tile" data-action="quick-save"><div class="title">あとで整理</div><div class="small muted">分類ミスを防ぐため未確認箱へ。</div></button></section><section class="panel"><div class="title">メモ</div><textarea id="noteDraft" placeholder="今気づいたこと。料理、散歩、買い物、ギア、コタ、天気、なんでも残す。">${esc(state.noteDraft)}</textarea><div class="btns" style="margin-top:10px"><button class="btn primary" data-action="save-note">保存</button><button class="btn ghost" data-action="clear-note">クリア</button></div></section><section class="card"><div class="title">現在の保存状態</div><div class="small muted">GPS：${state.gps?esc(state.gps):'未取得'} / メディア：${state.media.length}件 / 未確認：${state.recovery.length}件</div></section></div>`}
+function renderMemory(){return `<div class="stack"><section class="hero"><div class="label">思い出</div><div class="big-title">整理して、次回準備に戻す</div><p class="muted">アルバムではなく、時系列・未確認・レビュー・反省・次回改善・Google Photos参照・復旧の場所。</p></section><section class="panel"><div class="section-title"><h2>時系列</h2><span class="small muted">キャンプ/散歩/ドライブ/ピクニックを混ぜずに保持</span></div><div class="timeline" style="margin-top:12px">${state.records.map(r=>`<div class="event"><div class="row"><b>${r.title}</b><span class="chip">${r.type}</span></div><div class="small muted">${r.time} / ${r.status}</div><div>${r.body}</div></div>`).join('')}</div></section><section class="grid2"><div class="card"><div class="title">未確認箱</div><div class="list">${state.recovery.map(q=>`<div class="item"><div><b>${q.title}</b><div class="small muted">${q.body}</div></div><span class="chip red">${q.action}</span></div>`).join('')}</div></div><div class="card"><div class="title">次回改善</div><div class="list"><div class="item"><span class="check"></span><span>買い物の量を次回に反映</span></div><div class="item"><span class="check"></span><span>設営順・風対策を準備へ戻す</span></div><div class="item"><span class="check"></span><span>コタの暑さ/足元/休憩を次回注意へ</span></div><div class="item"><span class="check"></span><span>濡れ物・乾燥・補充を帰宅後タスクへ</span></div></div></div></section><section class="panel"><details><summary>正本MVP 23項目カバー</summary><div class="coverage"><div class="list" style="margin-top:10px">${LOCK_DATA.mvp.map(m=>`<div class="item"><div><b>${m[0]}. ${m[1]}</b><div class="small muted">${m[2]}：${m[3]}</div></div><span class="chip green">LOCK</span></div>`).join('')}</div></div></details><details><summary>全47モードの中身LOCK</summary><div class="coverage"><div class="accordion" style="margin-top:10px">${LOCK_DATA.modes.map(m=>`<details><summary>${m.id} ${m.name}</summary><div class="small muted">${m['役割']||''}</div><div class="chips" style="margin-top:8px"><span class="chip">${m['フェーズ']||''}</span><span class="chip">${m['分類']||''}</span></div><div class="small" style="margin-top:8px"><b>初期表示：</b>${m['最初に出す情報']||''}<br><b>主要ボタン：</b>${m['主要ボタン']||''}<br><b>復旧/保護：</b>${m['保護ルール']||''}</div></details>`).join('')}</div></div></details></section></div>`}
+function render(){
+ const titles={plans:'予定',search:'探す',prep:'準備',plus:'＋',memory:'思い出',day:'当日運転席'};
+ $('#appTitle').textContent=titles[state.route]||'OUTBASE';
+ $$('.bottom-nav button').forEach(b=>b.classList.toggle('active', b.dataset.route===state.route));
+ const app=$('#app');
+ app.innerHTML = state.route==='plans'?renderPlans():state.route==='search'?renderSearch():state.route==='prep'?renderPrep():state.route==='plus'?renderPlus():state.route==='memory'?renderMemory():state.route==='day'?renderDay():renderPlans();
 }
-function patch(patch) { state = { ...state, ...patch }; saveState(); render(); }
-function audit(message) { state.audit = [{ id: uid('audit'), at: new Date().toISOString(), message }, ...(state.audit || [])].slice(0, 40); saveState(); }
-
-function plansSorted() {
-  return [...(state.plans || [])].sort((a, b) => (parseDate(a.start)?.getTime() || 0) - (parseDate(b.start)?.getTime() || 0));
-}
-function futurePlans() { const t = parseDate(todayISO()).getTime(); return plansSorted().filter((p) => (parseDate(p.end || p.start)?.getTime() || 0) >= t); }
-function nextPlan() { return futurePlans()[0] || null; }
-function selectedPlan() { return state.plans.find((p) => p.id === state.selectedPlanId) || nextPlan() || state.plans[0] || null; }
-function prepKey(group, item) { return `${selectedPlan()?.id || 'no_plan'}__${group}__${item}`; }
-function prepProgress() {
-  const total = PREP_GROUPS.flatMap((g) => g.items.map((i) => prepKey(g.key, i))).length;
-  const done = PREP_GROUPS.reduce((sum, g) => sum + g.items.filter((i) => state.prepDone[prepKey(g.key, i)]).length, 0);
-  return { done, total, pct: total ? Math.round(done / total * 100) : 0 };
-}
-function recordsForPlan(planId = selectedPlan()?.id) { return (state.records || []).filter((r) => !planId || r.planId === planId || !r.planId); }
-function addRecord(type, detail = '', extra = {}) {
-  const plan = selectedPlan();
-  const activeStep = DAY_STEPS.find((s) => s.id === state.activeDayStep) || DAY_STEPS[0];
-  const activity = state.activeActivity ? MODE_LIBRARY[state.activeActivity] : null;
-  const record = {
-    id: uid('rec'), at: new Date().toISOString(), type,
-    title: activity?.label || activeStep.label || type,
-    detail: detail || `${type}を残しました`, planId: plan?.id || '', stepId: activeStep.id,
-    status: '未確認', ...extra
-  };
-  state.records = [record, ...(state.records || [])].slice(0, 200);
-  state.unresolved = [record, ...(state.unresolved || [])].slice(0, 80);
-  audit(`${type}を未確認箱へ保存`);
-  saveState();
-  render();
-}
-function finishActivity() {
-  if (!state.activeActivity) return;
-  const mode = MODE_LIBRARY[state.activeActivity];
-  addRecord('完了', `${mode.label}を終了。思い出整理と次回改善へ送る`, { status: '確定' });
-  state.improvements = [...new Set([...(state.improvements || []), ...mode.next])].slice(0, 80);
-  state.activeActivity = null;
-  saveState(); render();
-}
-
-function routeTo(route) { state.route = route; saveState(); render(); }
-function setTitle(text) { title.textContent = text; }
-function setActiveNav() { $$('.bottom-nav [data-route]').forEach((btn) => btn.classList.toggle('active', btn.dataset.route === state.route || (state.route === 'today' && btn.dataset.route === 'plans'))); }
-function card(inner, cls = '') { return `<section class="card ${cls}">${inner}</section>`; }
-function sectionHead(title, sub = '', right = '') { return `<div class="section-head"><div><h3>${esc(title)}</h3>${sub ? `<span>${esc(sub)}</span>` : ''}</div>${right}</div>`; }
-function metric(label, value) { return `<div class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`; }
-
-function renderPlans() {
-  setTitle('予定');
-  const next = nextPlan();
-  const prog = prepProgress();
-  const count = next ? daysUntil(next.start) : null;
-  const countText = next ? (count === 0 ? '今日' : count > 0 ? `あと${count}日` : '思い出整理へ') : '未設定';
-  app.innerHTML = `<div class="stack">
-    ${card(`<div class="eyebrow">CALENDAR FIRST</div><h2>${esc(next?.title || '次のキャンプを予定に入れる')}</h2><p>${esc(next ? `${fmtDate(next.start)}〜${fmtDate(next.end)} / ${next.members || '同行者未設定'}` : '最初にカレンダー。そこから準備・当日・記録・思い出へつなげる。')}</p><div class="hero-grid">${metric('次の予定', countText)}${metric('準備', `${prog.pct}%`)}${metric('未確認', `${state.unresolved.length}件`)}</div><div class="actions"><button class="btn" data-action="openPrep">準備へ</button><button class="ghost" data-action="openToday">当日運転席</button><button class="ghost" data-action="addPlanOpen">予定を追加</button></div>`, 'hero')}
-    <div class="layout-2"><div>${renderCalendar()}</div><div class="stack">${renderSelectedDate()}${renderPlanList()}${renderTodayOverview()}</div></div>
-  </div>`;
-}
-function renderCalendar() {
-  const cursor = parseDate(state.calendarCursor) || new Date();
-  const year = cursor.getFullYear(); const month = cursor.getMonth();
-  const start = new Date(year, month, 1);
-  const gridStart = addDays(start, -start.getDay());
-  const cells = [];
-  const eventMap = new Map();
-  (state.plans || []).forEach((p) => rangeDates(p.start, p.end).forEach((d) => eventMap.set(d, [...(eventMap.get(d) || []), p])));
-  (state.records || []).forEach((r) => { const d = String(r.at || '').slice(0, 10); eventMap.set(d, [...(eventMap.get(d) || []), { record: true }]); });
-  for (let i = 0; i < 42; i++) {
-    const d = addDays(gridStart, i); const iso = toISO(d); const events = eventMap.get(iso) || [];
-    const cls = ['calendar-day']; if (d.getMonth() !== month) cls.push('out'); if (iso === todayISO()) cls.push('today'); if (iso === state.selectedDate) cls.push('selected');
-    cells.push(`<button class="${cls.join(' ')}" data-date="${iso}"><b>${d.getDate()}</b>${events.slice(0,3).map((e) => `<i class="dot ${e.record ? 'memory' : e.status === '未確定' ? 'todo' : ''}"></i>`).join('')}</button>`);
-  }
-  return card(`<div class="month-head"><button data-month="prev">‹</button><strong>${year}年${month + 1}月</strong><button data-month="next">›</button></div><div class="week-grid">${['日','月','火','水','木','金','土'].map((d) => `<b>${d}</b>`).join('')}</div><div class="calendar-grid">${cells.join('')}</div>`, 'month-card');
-}
-function renderSelectedDate() {
-  const date = state.selectedDate || todayISO();
-  const plans = (state.plans || []).filter((p) => rangeDates(p.start, p.end).includes(date));
-  const records = (state.records || []).filter((r) => String(r.at || '').slice(0, 10) === date);
-  return card(`${sectionHead(`${fmtDate(date)}の予定`, `${plans.length}件 / 記録${records.length}件`)}${plans.length ? plans.map((p) => `<button class="plan-row" data-select-plan="${esc(p.id)}"><div><strong>${esc(p.title)}</strong><span>${esc(p.status || '')} / ${esc(p.note || '準備へつなげる')}</span></div><b>開く</b></button>`).join('') : '<div class="empty">この日のキャンプ予定は未登録</div>'}<div class="form-grid"><button class="ghost" data-action="addPlanOpen">この日に予定を入れる</button></div>`);
-}
-function renderPlanList() {
-  const list = plansSorted().slice(-2).reverse().concat(futurePlans().slice(0, 4)).filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i).slice(0, 5);
-  return card(`${sectionHead('キャンプ予定', '予定は勝手に統合・上書きしない')}${list.map((p) => `<button class="plan-row" data-select-plan="${esc(p.id)}"><div><strong>${esc(p.title)}</strong><span>${esc(fmtDate(p.start))}〜${esc(fmtDate(p.end))} / ${esc(p.status || '予定')}</span></div><b>›</b></button>`).join('') || '<div class="empty">予定がありません</div>'}`);
-}
-function renderTodayOverview() {
-  const plan = selectedPlan();
-  return card(`${sectionHead('今日の運転席', '予定から当日の行動へ')}${DAY_STEPS.slice(0, 5).map((s) => `<button class="step-row ${state.activeDayStep === s.id ? 'done' : ''}" data-step="${esc(s.id)}"><div><strong>${esc(s.label)}</strong><small>${esc(s.sub)}</small></div><span>${esc(s.mode)}</span></button>`).join('')}<div class="actions"><button class="btn" data-action="openToday">運転席を開く</button><button class="ghost" data-route="plus">今すぐ残す</button></div>${plan ? `<p>対象：${esc(plan.title)}</p>` : '<p>予定未設定でも、今日の散歩・メモは残せる。</p>'}`);
-}
-
-function renderAddPlan() {
-  setTitle('予定を追加');
-  const date = state.selectedDate || todayISO();
-  app.innerHTML = `<div class="stack">${card(`${sectionHead('キャンプ予定を追加', 'カレンダーに登録して準備へつなげる')}<div class="form-grid"><input id="planTitle" type="text" placeholder="キャンプ場名" value=""><input id="planStart" type="date" value="${date}"><input id="planEnd" type="date" value="${date}"><input id="planMembers" type="text" placeholder="同行者 / コタ / 友人"><input id="planNote" type="text" placeholder="予約メモ・サイト・注意点"><div class="actions"><button class="btn" data-action="savePlan">保存して準備へ</button><button class="ghost" data-route="plans">戻る</button></div></div>`)} </div>`;
-}
-function savePlanFromForm() {
-  const title = $('#planTitle')?.value.trim();
-  if (!title) return addRecord('予定メモ', 'キャンプ場名未入力の予定追加を中断', { status: 'あとで' });
-  const p = { id: uid('plan'), title, start: $('#planStart').value || todayISO(), end: $('#planEnd').value || $('#planStart').value || todayISO(), status: '予定', checkin: '', checkout: '', members: $('#planMembers').value.trim(), note: $('#planNote').value.trim() };
-  state.plans = dedupePlans([p, ...(state.plans || [])]);
-  state.selectedPlanId = p.id;
-  audit(`予定追加：${title}`);
-  saveState(); routeTo('prep');
-}
-
-function renderSearch() {
-  setTitle('探す');
-  app.innerHTML = `<div class="stack">${card(`<div class="eyebrow">FIND</div><h2>犬連れ前提で候補を探す</h2><p>犬可を最低条件に、ドッグフリー・温水・景色・距離・季節条件を比較して予定化する。</p><div class="chips"><span class="chip">犬可必須</span><span class="chip">冬は温水</span><span class="chip">4時間以内</span><span class="chip">景色</span></div>`, 'hero')}${SEARCH_CANDIDATES.map((c) => card(`${sectionHead(c.title, c.memo)}<div class="chips">${c.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join('')}</div><div class="actions"><button class="ghost" data-candidate="${c.id}">候補に残す</button><button class="btn" data-action="addPlanOpen">予定化</button></div>`)).join('')}</div>`;
-}
-
-function renderPrep() {
-  setTitle('準備');
-  const plan = selectedPlan(); const prog = prepProgress();
-  app.innerHTML = `<div class="stack">${card(`<div class="eyebrow">PREP WORKSPACE</div><h2>${esc(plan?.title || '準備する予定を選ぶ')}</h2><p>${esc(plan ? `${fmtDate(plan.start)}〜${fmtDate(plan.end)} / ${plan.members || '夫婦＋コタを前提に準備'}` : '予定がなくても買い物・ギア・料理の型は準備できる。')}</p><div class="progress-bar"><i style="width:${prog.pct}%"></i></div><div class="hero-grid">${metric('準備', `${prog.done}/${prog.total}`)}${metric('買い物', `${groupDone('shopping')}件`)}${metric('コタ', `${groupDone('kota')}件`)}</div><div class="actions"><button class="btn" data-action="openToday">当日運転席へ</button><button class="ghost" data-route="plans">カレンダー</button></div>`, 'hero')}${PREP_GROUPS.map(renderPrepGroup).join('')}</div>`;
-}
-function groupDone(key) { const g = PREP_GROUPS.find((x) => x.key === key); return g ? g.items.filter((i) => state.prepDone[prepKey(g.key, i)]).length : 0; }
-function renderPrepGroup(group) {
-  return card(`${sectionHead(group.label, groupHint(group.key))}${group.items.map((item) => { const key = prepKey(group.key, item); const done = state.prepDone[key]; return `<button class="prep-task ${done ? 'done' : ''}" data-prep="${esc(key)}"><i class="check">${done ? '✓' : ''}</i><div><strong>${esc(item)}</strong><small>${esc(prepDetail(group.key, item))}</small></div><span>${done ? '完了' : '確認'}</span></button>`; }).join('')}`);
-}
-function groupHint(key) { return { shopping: '買う/買わない/代替まで残す', meal: '泊数・人数・量を調整', gear: '持つ/使う/乾かす', kota: 'コタの安全と快適さ', route: '移動負担と寄り道', weather: '風・雨・気温で判断' }[key] || ''; }
-function prepDetail(key, item) { return `${item}を当日・思い出・次回改善へ接続`; }
-
-function renderToday() {
-  setTitle('当日運転席');
-  const plan = selectedPlan(); const step = DAY_STEPS.find((s) => s.id === state.activeDayStep) || DAY_STEPS[0];
-  app.innerHTML = `<div class="stack">${card(`<div class="eyebrow">DAY COCKPIT</div><h2>${esc(step.label)}</h2><p>${esc(step.sub)}</p><div class="hero-grid">${metric('対象', plan?.title || '未設定')}${metric('状態', step.mode)}${metric('未確認', `${state.unresolved.length}件`)}</div><div class="actions"><button class="btn" data-step-done="${esc(step.id)}">終わった</button>${step.activity ? `<button class="ghost" data-start-activity="${esc(step.activity)}">${esc(MODE_LIBRARY[step.activity].label)}を開始</button>` : ''}<button class="ghost" data-route="plus">記録する</button></div>`, 'hero')}
-    ${card(`<div class="stage-strip">${DAY_STEPS.map((s) => `<button class="${state.activeDayStep === s.id ? 'active' : ''}" data-step="${esc(s.id)}">${esc(s.label)}</button>`).join('')}</div><h3>${esc(step.mode)}の中身</h3><p>${esc(step.sub)}</p><div class="grid2"><button class="quick-button" data-record="写真"><strong>写真</strong><span>今の状態に紐付け</span></button><button class="quick-button" data-record="声"><strong>声</strong><span>あとで文字化候補</span></button><button class="quick-button" data-record="メモ"><strong>メモ</strong><span>未確認箱へ保存</span></button><button class="quick-button" data-record="GPS"><strong>GPS</strong><span>場所候補を保存</span></button></div>`)}</div>`;
-}
-
-function renderPlus() {
-  setTitle('＋');
-  if (state.activeActivity) return renderActiveActivity();
-  app.innerHTML = `<div class="stack">${card(`<div class="eyebrow">QUICK RECORD</div><h2>今のことを残す</h2><p>分類を強制しない。今の予定・当日ステップ・時刻に紐付け、未確認箱で後から整理する。</p>`, 'hero')}${card(`${sectionHead('今すぐ残す', '写真・動画・声・メモ・GPS・あとで')}<div class="grid3"><button class="quick-button" data-record="写真"><strong>写真</strong><span>撮る/選ぶ</span></button><button class="quick-button" data-record="動画"><strong>動画</strong><span>短く残す</span></button><button class="quick-button" data-record="声"><strong>声</strong><span>話して残す</span></button><button class="quick-button" data-record="メモ"><strong>メモ</strong><span>自由入力</span></button><button class="quick-button" data-record="GPS"><strong>GPS</strong><span>現在地</span></button><button class="quick-button" data-record="あとで"><strong>あとで</strong><span>空メモ</span></button></div>`)}${card(`${sectionHead('活動を始める', '開始と終了があるものだけここから')}<div class="grid2">${Object.entries(MODE_LIBRARY).map(([key, m]) => `<button class="mode-button" data-start-activity="${esc(key)}"><strong>${esc(m.label)}</strong><span>${esc(m.first)}</span></button>`).join('')}</div>`)}</div>`;
-}
-function renderActiveActivity() {
-  const mode = MODE_LIBRARY[state.activeActivity];
-  app.innerHTML = `<div class="stack">${card(`<div class="eyebrow">RECORDING</div><h2>${esc(mode.label)}中</h2><p>${esc(mode.first)}</p><div class="hero-grid">${metric('状態', '記録中')}${metric('自動', mode.auto.length + '項目')}${metric('未確認', `${state.unresolved.length}件`)}</div><div class="actions"><button class="btn" data-action="finishActivity">終了して保存</button><button class="ghost" data-route="plans">カレンダーへ</button></div>`, 'hero recording-live')}${card(`${sectionHead('押すもの', 'この活動でよく使う操作')}<div class="grid3">${mode.buttons.map((b) => `<button class="quick-button" data-record="${esc(b)}"><strong>${esc(b)}</strong><span>${esc(mode.label)}に紐付け</span></button>`).join('')}</div>`)}${card(`${sectionHead('裏で拾うもの', '勝手に確定せず候補として保存')}<div class="chips">${mode.auto.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div><p>次回改善：${esc(mode.next.join(' / '))}</p>`)}</div>`;
-}
-
-function renderMemory() {
-  setTitle('思い出');
-  const records = recordsForPlan();
-  app.innerHTML = `<div class="stack">${card(`<div class="eyebrow">MEMORY</div><h2>思い出整理</h2><p>写真・動画・声・メモ・GPSを時系列にまとめ、未確認箱から次回改善へ戻す。</p><div class="hero-grid">${metric('記録', `${records.length}件`)}${metric('未確認', `${state.unresolved.length}件`)}${metric('改善', `${state.improvements.length}件`)}</div>`, 'hero')}${card(`${sectionHead('未確認箱', '確定するまで予定や準備へ反映しない')}${state.unresolved.length ? state.unresolved.slice(0, 12).map((r) => `<article class="memory-item"><strong>${esc(r.title)} / ${esc(r.type)}</strong><span>${esc(humanTime(r.at))} ${esc(r.detail)}</span><div class="actions"><button class="ghost" data-confirm="${esc(r.id)}">確定</button><button class="ghost" data-defer="${esc(r.id)}">あとで</button><button class="danger-btn" data-wrong="${esc(r.id)}">違う</button></div></article>`).join('') : '<div class="empty">未確認はありません</div>'}`)}${card(`${sectionHead('時系列', 'キャンプ1回の流れとして見る')}<div class="timeline">${records.slice(0, 20).map((r) => `<article class="memory-item"><strong>${esc(r.title)} / ${esc(r.type)}</strong><span>${esc(humanTime(r.at))} ${esc(r.detail)} / ${esc(r.status || '')}</span></article>`).join('') || '<div class="empty">まだ記録はありません</div>'}</div>`)}${card(`${sectionHead('次回改善', '準備へ戻す候補')}<div class="chips">${(state.improvements.length ? state.improvements : ['忘れ物', '料理量', '設営順', 'コタ', '天気対策']).map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div><div class="actions"><button class="ghost" data-route="prep">準備へ戻す</button><button class="ghost" data-action="googlePhotos">Google Photos整理候補</button></div>`)}</div>`;
-}
-
-function handleClick(event) {
-  const target = event.target.closest('button'); if (!target) return;
-  if (target.dataset.route) return routeTo(target.dataset.route);
-  if (target.dataset.date) { state.selectedDate = target.dataset.date; saveState(); return render(); }
-  if (target.dataset.month) { const d = parseDate(state.calendarCursor) || new Date(); d.setMonth(d.getMonth() + (target.dataset.month === 'next' ? 1 : -1)); state.calendarCursor = `${d.getFullYear()}-${pad(d.getMonth()+1)}-01`; saveState(); return render(); }
-  if (target.dataset.selectPlan) { state.selectedPlanId = target.dataset.selectPlan; audit('予定を選択'); saveState(); return render(); }
-  if (target.dataset.prep) { state.prepDone[target.dataset.prep] = !state.prepDone[target.dataset.prep]; audit('準備項目を更新'); saveState(); return render(); }
-  if (target.dataset.step) { state.activeDayStep = target.dataset.step; saveState(); return renderToday(); }
-  if (target.dataset.stepDone) { const step = DAY_STEPS.find((s) => s.id === target.dataset.stepDone); state.improvements = [...new Set([...(state.improvements || []), `${step.label}の実績確認`])]; addRecord('完了', `${step.label}を完了`); return; }
-  if (target.dataset.record) { return quickRecord(target.dataset.record); }
-  if (target.dataset.startActivity) { state.activeActivity = target.dataset.startActivity; addRecord('開始', `${MODE_LIBRARY[state.activeActivity].label}を開始`, { status: '確定' }); return; }
-  if (target.dataset.confirm) { confirmUnresolved(target.dataset.confirm, '確定'); return; }
-  if (target.dataset.defer) { confirmUnresolved(target.dataset.defer, 'あとで'); return; }
-  if (target.dataset.wrong) { confirmUnresolved(target.dataset.wrong, '違う'); return; }
-  if (target.dataset.candidate) { state.candidates = [target.dataset.candidate, ...(state.candidates || [])].slice(0,20); audit('候補を保存'); saveState(); return render(); }
-  const action = target.dataset.action;
-  if (action === 'openPrep') return routeTo('prep');
-  if (action === 'openToday') { state.route = 'today'; saveState(); return render(); }
-  if (action === 'addPlanOpen') { state.route = 'addPlan'; saveState(); return render(); }
-  if (action === 'savePlan') return savePlanFromForm();
-  if (action === 'finishActivity') return finishActivity();
-  if (action === 'googlePhotos') { addRecord('整理候補', 'Google Photos共有アルバムへ移す候補を作成', { status: 'あとで' }); return; }
-}
-function quickRecord(type) {
-  if (type === 'メモ') {
-    const detail = prompt('メモを入力');
-    if (!detail) return;
-    addRecord('メモ', detail);
-    return;
-  }
-  if (type === '声') {
-    addRecord('声', '音声メモ候補。対応ブラウザでは文字起こしへ接続予定');
-    return;
-  }
-  if (type === 'GPS') {
-    if (!navigator.geolocation) return addRecord('GPS', '位置情報が使えない');
-    navigator.geolocation.getCurrentPosition((pos) => addRecord('GPS', `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`, { point: { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy } }), () => addRecord('GPS', '取得失敗。許可を確認'));
-    return;
-  }
-  addRecord(type, `${type}を今の状態に紐付け`);
-}
-function confirmUnresolved(id, status) {
-  state.unresolved = (state.unresolved || []).map((r) => r.id === id ? { ...r, status } : r).filter((r) => status === 'あとで' || r.status !== '確定');
-  state.records = (state.records || []).map((r) => r.id === id ? { ...r, status } : r);
-  if (status === '確定') state.improvements = [...new Set([...(state.improvements || []), '確定記録から次回改善確認'])].slice(0, 80);
-  audit(`未確認を${status}へ更新`);
-  saveState(); render();
-}
-
-function render() {
-  document.body.dataset.build = BUILD_ID;
-  const labels = { plans: '予定', search: '探す', prep: '準備', plus: '＋', memory: '思い出', today: '当日運転席', addPlan: '予定追加' };
-  setTitle(labels[state.route] || '予定');
-  statusPill.textContent = '保護ON';
-  setActiveNav();
-  if (state.route === 'search') renderSearch();
-  else if (state.route === 'prep') renderPrep();
-  else if (state.route === 'plus') renderPlus();
-  else if (state.route === 'memory') renderMemory();
-  else if (state.route === 'today') renderToday();
-  else if (state.route === 'addPlan') renderAddPlan();
-  else renderPlans();
-}
-
-document.addEventListener('click', handleClick);
-statusPill.addEventListener('click', () => alert(state.protectedMessage));
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => undefined);
+function addRecord(type,title,body){const now=new Date(); state.records.unshift({id:'r'+Date.now(),type,title,time:now.toLocaleString('ja-JP'),body,status:'未確認'}); save();}
+async function getGps(){return new Promise((resolve)=>{if(!navigator.geolocation) return resolve('GPS非対応'); navigator.geolocation.getCurrentPosition(p=>resolve(`${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)} / ±${Math.round(p.coords.accuracy)}m`),()=>resolve('GPS取得できず'),{enableHighAccuracy:true,timeout:7000})})}
+document.addEventListener('click', async (e)=>{
+ const nav=e.target.closest('.bottom-nav button'); if(nav) return setRoute(nav.dataset.route);
+ const plan=e.target.closest('[data-plan]'); if(plan){state.activePlanId=plan.dataset.plan; save(); render(); return;}
+ const ctx=e.target.closest('[data-context]'); if(ctx){state.activeContext=ctx.dataset.context; save(); render(); return;}
+ const check=e.target.closest('[data-check]'); if(check){state.done[check.dataset.check]=!state.done[check.dataset.check]; save(); render(); return;}
+ const action=e.target.closest('[data-action]')?.dataset.action;
+ if(!action) return;
+ if(action==='go-prep') return setRoute('prep'); if(action==='go-day') return setRoute('day'); if(action==='go-plus') return setRoute('plus'); if(action==='go-memory') return setRoute('memory');
+ if(action==='photo'){$('#mediaInput').click();return;}
+ if(action==='gps'){state.gps=await getGps(); addRecord(state.activeContext,'GPS場所カード候補',state.gps); render(); return;}
+ if(action==='save-note'){const t=$('#noteDraft')?.value||''; state.noteDraft=t; if(t.trim()) addRecord(state.activeContext,'メモ保存',t.trim()); state.noteDraft=''; render(); return;}
+ if(action==='clear-note'){state.noteDraft='';render();return;}
+ if(action==='quick-save'){addRecord(state.activeContext,'あとで整理', '分類は未確認。勝手に確定しない。');render();return;}
+ if(action==='voice'){addRecord(state.activeContext,'声メモ候補','音声メモ開始候補。文字起こし後に未確認へ。');render();return;}
+ if(action==='maps'){window.open('https://www.google.com/maps','_blank');return;}
+ if(action==='copy-shopping'){const t=$('#shoppingText')?.value||''; try{await navigator.clipboard.writeText(t);}catch(_e){} addRecord('買い物','LINE用買い物リストをコピー',t.slice(0,140)); render(); return;}
+ if(action==='save-candidate'){addRecord('探す','候補を保存','予定化はまだしない。候補DBへ。');render();return;}
+ if(action==='candidate-to-plan'){addRecord('予定','予定候補へ','予約/日程/場所は確認してから反映。');render();return;}
+ if(action==='hold'){addRecord('未確認','保留','勝手に削除しない。');render();return;}
+ if(action==='send-to-day'){addRecord('準備','当日運転席へ渡す','買う/持つ/食べる/コタ/ルートを当日へ。');render();return;}
+ if(action==='start-day'){addRecord('当日','当日運転席開始','出発前→往路→到着→設営→滞在→撤収→帰路。');render();return;}
+});
+$('#mediaInput').addEventListener('change', (e)=>{const files=Array.from(e.target.files||[]).map(f=>({name:f.name,type:f.type,size:f.size})); state.media.push(...files); addRecord(state.activeContext,'写真/動画を追加',files.map(f=>f.name).join(', ')||'メディア候補'); render(); e.target.value='';});
+document.addEventListener('input',(e)=>{if(e.target?.id==='noteDraft'){state.noteDraft=e.target.value; save();}});
 render();

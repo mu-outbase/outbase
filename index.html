@@ -5,28 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>OUTBASE</title>
   <meta name="theme-color" content="#f4efe4" />
-  <link rel="manifest" href="manifest.json?v=core0610-calendar-product-recovery" />
-  <link rel="stylesheet" href="styles/app.css?v=core0610-calendar-product-recovery" />
+  <link rel="manifest" href="manifest.json?v=mvp-all-in-one" />
+  <link rel="stylesheet" href="styles/app.css?v=mvp-all-in-one" />
 </head>
 <body>
   <header class="app-header">
     <div>
-      <div class="app-kicker">OUTBASE</div>
+      <div class="app-kicker">OUTBASE / MVP一括回収</div>
       <h1 id="appTitle">予定</h1>
     </div>
     <button id="statusPill" class="status-pill" type="button">保護ON</button>
   </header>
-
   <main id="app" class="app-shell" aria-live="polite"></main>
-
+  <input id="mediaInput" type="file" accept="image/*,video/*" multiple hidden />
   <nav class="bottom-nav" aria-label="OUTBASE navigation">
     <button type="button" data-route="plans"><strong>予定</strong><small>カレンダー</small></button>
     <button type="button" data-route="search"><strong>探す</strong><small>候補</small></button>
-    <button type="button" data-route="prep"><strong>準備</strong><small>整える</small></button>
+    <button type="button" data-route="prep"><strong>準備</strong><small>買う/持つ</small></button>
     <button type="button" class="record-tab" data-route="plus"><strong>＋</strong><small>残す</small></button>
     <button type="button" data-route="memory"><strong>思い出</strong><small>次回へ</small></button>
   </nav>
-
-  <script type="module" src="src/app.js?v=core0610-calendar-product-recovery"></script>
+  <script type="module" src="src/app.js?v=mvp-all-in-one"></script>
 </body>
 </html>
