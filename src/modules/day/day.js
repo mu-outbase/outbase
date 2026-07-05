@@ -1,212 +1,214 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d-day-record-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-d-day-record-20260705';
-import { go } from '../../core/router.js?v=core08-d-day-record-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-d2-day-easy-record-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-d2-day-easy-record-20260705';
+import { go } from '../../core/router.js?v=core08-d2-day-easy-record-20260705';
 
-const PHASES = [
-  { key: 'depart', label: '出発', icon: '🚙', hint: '出発時間・渋滞・寄り道' },
-  { key: 'arrive', label: '到着', icon: '📍', hint: '受付・サイト確認・第一印象' },
-  { key: 'setup', label: '設営', icon: '⛺', hint: '設営開始/完了・配置・困りごと' },
-  { key: 'meal', label: '料理', icon: '🍳', hint: '写真・量・味・次回調整' },
-  { key: 'walk', label: '場内確認', icon: '🧭', hint: 'トイレ・炊事場・景色・危険箇所' },
-  { key: 'kota', label: 'コタ', icon: '🐾', hint: '暑さ寒さ・水・休憩・足元' },
-  { key: 'teardown', label: '撤収', icon: '📦', hint: '濡れ物・収納・忘れ物・乾燥' }
+const TAGS = [
+  { key: 'unclassified', label: '未分類', icon: '•' },
+  { key: 'depart', label: '出発', icon: '🚙' },
+  { key: 'arrive', label: '到着', icon: '📍' },
+  { key: 'setup', label: '設営', icon: '⛺' },
+  { key: 'meal', label: '料理', icon: '🍳' },
+  { key: 'walk', label: '場内確認', icon: '🧭' },
+  { key: 'kota', label: 'コタ', icon: '🐾' },
+  { key: 'teardown', label: '撤収', icon: '📦' },
+  { key: 'shopping', label: '買い物', icon: '🛒' },
+  { key: 'notice', label: '気づき', icon: '💡' },
+  { key: 'forgot', label: '忘れ物', icon: '⚠' },
+  { key: 'next', label: '次回注意', icon: '↗' }
 ];
 
-const RECORD_TYPES = {
-  note: 'メモ',
-  photo: '写真',
-  video: '動画',
-  voice: '音声メモ',
-  issue: '次回注意',
-  weather: '天気変化',
-  kota: 'コタ',
-  timing: '時間'
+const CAPTURE_MODES = {
+  now: { label: '今すぐ', sub: '今この場で残す', prefix: '今のメモ' },
+  later: { label: 'あとで登録', sub: '押し忘れた分を戻す', prefix: 'あとから思い出したこと' },
+  before: { label: '事前メモ', sub: 'あとで撮る/確認する予定', prefix: '事前に置いておくメモ' },
+  rough: { label: '何となく', sub: '分類せず仮置き', prefix: '分類しないメモ' }
 };
 
+const RECORD_TYPES = {
+  note: 'メモ', photo: '写真', video: '動画', voice: '音声', rough: '何となく', before: '事前メモ', later: 'あとで登録'
+};
+
+const TIME_HINTS = ['今', 'さっき', '朝', '午前', '昼ごろ', '午後', '夕方', '夜', '昨日', '不明'];
+
 function nowIso() { return new Date().toISOString(); }
+function safeList(value) { return Array.isArray(value) ? value : []; }
+function safeObject(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+function makeId(prefix = 'dayrec') { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
+function projectName(project) { return project?.reservation?.campground || project?.title || '今日のキャンプ'; }
+function projectDate(project) { return project?.reservation?.dateText || project?.dateText || ''; }
+function projectKey(state = getState()) {
+  const project = state.nextProject || {};
+  const reservation = project.reservation || {};
+  return project.id || project.baseId || project.projectId || ['nextProject', reservation.campground || project.title || 'camp', reservation.dateText || 'undated'].join('__');
+}
+function context(state, project) { return { ...(state.prepContext || {}), ...(project?.prepContext || {}) }; }
+function dayRecords(state = getState(), key = projectKey(state)) { return safeList(state.dayRecords?.[key]); }
+function captureMode(state = getState()) { return CAPTURE_MODES[state.dayCaptureMode] ? state.dayCaptureMode : 'now'; }
+function activeTag(state = getState()) { return TAGS.some((item) => item.key === state.activeDayTag) ? state.activeDayTag : 'unclassified'; }
+function tagMeta(key) { return TAGS.find((item) => item.key === key) || TAGS[0]; }
+function modeMeta(key) { return CAPTURE_MODES[key] || CAPTURE_MODES.now; }
+function recordTypeLabel(type) { return RECORD_TYPES[type] || RECORD_TYPES.note; }
 function formatTime(value) {
   if (!value) return '';
   try { return new Date(value).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
   catch { return value; }
 }
-function projectName(project) { return project?.reservation?.campground || project?.title || '今日のキャンプ'; }
-function projectDate(project) { return project?.reservation?.dateText || project?.dateText || ''; }
-function projectKey(state = getState()) {
-  const project = state.nextProject || {};
-  const id = project.id || project.baseId || project.projectId || '';
-  const reservation = project.reservation || {};
-  return id || ['nextProject', reservation.campground || project.title || 'camp', reservation.dateText || 'undated'].join('__');
+function elapsedText(value) {
+  if (!value) return '未開始';
+  const diff = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (diff < 60) return `${diff}分`;
+  return `${Math.floor(diff / 60)}時間${diff % 60}分`;
 }
-function context(state, project) { return { ...(state.prepContext || {}), ...(project?.prepContext || {}) }; }
-function safeList(value) { return Array.isArray(value) ? value : []; }
-function dayRecords(state = getState(), key = projectKey(state)) { return safeList(state.dayRecords?.[key]); }
-function phaseMap(state = getState(), key = projectKey(state)) { return state.dayPhaseState?.[key] || {}; }
-function currentPhase(state = getState()) { return state.activeDayPhase || 'arrive'; }
-function phaseMeta(key) { return PHASES.find((item) => item.key === key) || PHASES[1]; }
-function recordTypeLabel(type) { return RECORD_TYPES[type] || RECORD_TYPES.note; }
-function makeId(prefix = 'dayrec') { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
-function elapsedText(startedAt, endedAt = null) {
-  if (!startedAt) return '未開始';
-  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
-  const diff = Math.max(0, Math.floor((end - new Date(startedAt).getTime()) / 1000));
-  const h = Math.floor(diff / 3600);
-  const m = Math.floor((diff % 3600) / 60);
-  return h ? `${h}時間${m}分` : `${m}分`;
-}
+function modeCount(records, mode) { return records.filter((record) => record.captureMode === mode).length; }
 
-function summarizeToday(records = []) {
-  const text = records.map((record) => `${record.title} ${record.detail}`).join(' ');
+function summarize(records = []) {
+  const text = records.map((record) => `${record.title} ${record.detail} ${record.tagLabel}`).join(' ');
   const items = [];
-  if (/忘れ|不足|足りない|足りな|買え/.test(text)) items.push('忘れ物・不足を準備へ戻す');
-  if (/雨|濡|乾燥|撤収/.test(text)) items.push('雨撤収と乾燥サービスを次回確認');
-  if (/暑|熱|冷却|WAVE|扇風機|コタ/.test(text)) items.push('暑さ対策とコタ負担を次回確認');
-  if (/料理|量|多すぎ|少ない|余り|味/.test(text)) items.push('料理量・食材量を次回調整');
-  if (/設営|撤収|時間|段取り/.test(text)) items.push('設営/撤収時間を次回段取りへ反映');
+  if (/忘れ|不足|足りない|足りな|買え/.test(text)) items.push('忘れ物・不足を次回準備へ戻す候補');
+  if (/雨|濡|乾燥|撤収/.test(text)) items.push('雨撤収・濡れ物・乾燥サービスの確認候補');
+  if (/暑|熱|冷却|WAVE|扇風機|コタ|犬/.test(text)) items.push('暑さ対策とコタ負担の確認候補');
+  if (/料理|量|多すぎ|少ない|余り|味|食材/.test(text)) items.push('料理量・食材量の調整候補');
+  if (/設営|撤収|時間|段取り/.test(text)) items.push('設営/撤収の段取り改善候補');
   return [...new Set(items)].slice(0, 4);
 }
 
-function renderProgress(state, key) {
-  const map = phaseMap(state, key);
-  return `<section class="day-live-progress day-card">
-    <div class="day-section-head"><div><span>FLOW</span><strong>今日の進行</strong></div><small>押して現在工程を切替</small></div>
-    <div class="day-phase-strip">
-      ${PHASES.map((phase) => {
-        const item = map[phase.key] || {};
-        const active = currentPhase(state) === phase.key;
-        return `<button type="button" class="day-phase-pill ${active ? 'active' : ''} ${item.done ? 'done' : ''}" data-phase="${escapeHtml(phase.key)}">
-          <span>${escapeHtml(phase.icon)}</span><strong>${escapeHtml(phase.label)}</strong><small>${item.done ? '済' : item.startedAt ? '進行中' : '未'}</small>
-        </button>`;
-      }).join('')}
+function renderHero(state, project, records) {
+  const c = context(state, project);
+  const start = state.dayStartedAt || '';
+  return `<section class="easy-day-hero day-card">
+    <div class="easy-day-title"><span>当日かんたん記録</span><h2>${escapeHtml(projectName(project))}</h2><p>${escapeHtml(projectDate(project) || c.weatherDecisionMemo || c.routeMemo || '押し忘れても大丈夫。あとから、事前に、何となくでも残せます。')}</p></div>
+    <div class="easy-day-status"><strong>${records.length}</strong><span>今日の記録</span><small>${escapeHtml(start ? `開始から${elapsedText(start)}` : '未開始')}</small></div>
+  </section>`;
+}
+
+function renderModeTabs(state, records) {
+  const current = captureMode(state);
+  return `<section class="easy-mode-card day-card">
+    <div class="easy-mode-head"><strong>どう残す？</strong><span>きっちり選ばなくてOK</span></div>
+    <div class="easy-mode-tabs">
+      ${Object.entries(CAPTURE_MODES).map(([key, item]) => `<button type="button" class="easy-mode-tab ${current === key ? 'active' : ''}" data-capture-mode="${escapeHtml(key)}"><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.sub)}</span><em>${modeCount(records, key)}</em></button>`).join('')}
     </div>
   </section>`;
 }
 
-function renderPhaseControl(state, key) {
-  const phase = phaseMeta(currentPhase(state));
-  const item = phaseMap(state, key)[phase.key] || {};
-  return `<section class="day-current-card day-card">
-    <div class="day-current-main"><span>${escapeHtml(phase.icon)} ${escapeHtml(phase.label)}</span><h2>${escapeHtml(phase.hint)}</h2><p>${escapeHtml(item.startedAt ? `${formatTime(item.startedAt)} 開始 / ${elapsedText(item.startedAt, item.endedAt)}` : 'この工程で残した記録だけが、今日のタイムラインへ追記されます。')}</p></div>
-    <div class="day-current-actions">
-      <button id="startPhase" class="mini-ghost" type="button">開始</button>
-      <button id="finishPhase" class="mini-ghost" type="button">完了</button>
-      <button id="openWalkRecord" class="mini-ghost" type="button">記録タブ</button>
+function renderBigCapture(state) {
+  const mode = modeMeta(captureMode(state));
+  return `<section class="easy-capture-card day-card">
+    <div class="easy-capture-head"><div><span>${escapeHtml(mode.label)}</span><strong>${escapeHtml(mode.prefix)}</strong></div><small>大きいボタンだけ使えばOK</small></div>
+    <div class="easy-big-actions">
+      <button id="easyPhoto" type="button"><strong>写真</strong><span>撮ったものを残す</span></button>
+      <button id="easyMemoFocus" type="button"><strong>メモ</strong><span>短く書く</span></button>
+      <button id="easyVoice" type="button"><strong>音声</strong><span>話して残す</span></button>
+      <button id="easyVideo" type="button"><strong>動画</strong><span>動画名を残す</span></button>
     </div>
+    ${renderLooseForm(state)}
+    <input id="easyPhotoInput" type="file" accept="image/*" hidden />
+    <input id="easyVideoInput" type="file" accept="video/*" hidden />
   </section>`;
 }
 
-function renderCapture() {
-  const phase = phaseMeta(currentPhase());
-  return `<section class="day-capture-card day-card">
-    <div class="day-section-head"><div><span>CAPTURE</span><strong>現地記録</strong></div><small>削除なし・追記保存</small></div>
-    <div class="day-quick-grid">
-      <button id="photoDayRecord" type="button"><strong>写真</strong><span>ファイル名保存</span></button>
-      <button id="videoDayRecord" type="button"><strong>動画</strong><span>ファイル名保存</span></button>
-      <button id="voiceDayRecord" type="button"><strong>音声</strong><span>文字起こし</span></button>
-      <button class="quickRecord" data-type="weather" data-title="天気変化" type="button"><strong>天気</strong><span>変化メモ</span></button>
-      <button class="quickRecord" data-type="kota" data-title="コタ様子" type="button"><strong>コタ</strong><span>負担・水・足</span></button>
-      <button class="quickRecord" data-type="issue" data-title="次回注意" type="button"><strong>注意</strong><span>忘れ物/改善</span></button>
+function renderLooseForm(state) {
+  const mode = captureMode(state);
+  const modeLabel = modeMeta(mode).label;
+  return `<div class="easy-loose-form">
+    <textarea id="easyMemo" class="field textarea easy-memo" rows="4" placeholder="${escapeHtml(modeLabel)}：例）さっき設営終わった。風が強かった。コタは日陰なら平気。"></textarea>
+    <div class="easy-mini-row">
+      <label><span>時間ざっくり</span><select id="easyTimeHint" class="field">${TIME_HINTS.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('')}</select></label>
+      <label><span>タグ任意</span><select id="easyTag" class="field">${TAGS.map((item) => `<option value="${escapeHtml(item.key)}" ${activeTag(state) === item.key ? 'selected' : ''}>${escapeHtml(item.icon)} ${escapeHtml(item.label)}</option>`).join('')}</select></label>
     </div>
-    <textarea id="dayRecordMemo" class="field textarea day-record-input" rows="4" placeholder="${escapeHtml(phase.label)}メモ：例）設営35分。風が強くてタープ低め。コタは日陰なら問題なし。"></textarea>
-    <div class="day-save-row">
-      <select id="dayRecordType" class="field">
-        <option value="note">メモ</option><option value="timing">時間</option><option value="weather">天気変化</option><option value="kota">コタ</option><option value="issue">次回注意</option>
-      </select>
-      <button id="saveDayRecord" class="btn primary" type="button">この工程に追記</button>
-    </div>
-    <input id="dayPhotoInput" type="file" accept="image/*" hidden />
-    <input id="dayVideoInput" type="file" accept="video/*" hidden />
-  </section>`;
+    <div class="easy-save-row"><button id="easySaveMemo" class="btn primary" type="button">残す</button><button id="easyRoughSave" class="btn" type="button">何となく残す</button></div>
+  </div>`;
 }
 
 function renderTimeline(records = []) {
-  return `<section class="day-timeline-card day-card">
-    <div class="day-section-head"><div><span>TIMELINE</span><strong>今日の記録</strong></div><small>${records.length}件</small></div>
-    ${records.length ? `<div class="day-timeline-list">${records.slice(0, 20).map(renderRecord).join('')}</div>` : '<p class="empty-line">まだ当日記録はありません。写真・動画・音声・メモをここに追記します。</p>'}
+  return `<section class="easy-timeline-card day-card">
+    <div class="easy-section-head"><div><span>TIMELINE</span><strong>今日の記録</strong></div><small>${records.length}件</small></div>
+    ${records.length ? `<div class="easy-timeline-list">${records.slice(0, 30).map(renderRecord).join('')}</div>` : '<p class="empty-line">まだ記録はありません。写真・メモ・音声・動画を大きいボタンから残します。</p>'}
   </section>`;
 }
 
 function renderRecord(record) {
-  const phase = phaseMeta(record.phase);
+  const tag = tagMeta(record.tag || 'unclassified');
+  const mode = modeMeta(record.captureMode || 'now');
   const attachments = safeList(record.attachments);
-  return `<article class="day-record-row type-${escapeHtml(record.type || 'note')}">
-    <div class="day-record-head"><span>${escapeHtml(phase.icon)} ${escapeHtml(phase.label)}</span><strong>${escapeHtml(recordTypeLabel(record.type))}</strong><time>${escapeHtml(formatTime(record.createdAt))}</time></div>
+  return `<article class="easy-record-row mode-${escapeHtml(record.captureMode || 'now')}">
+    <div class="easy-record-top"><span>${escapeHtml(mode.label)}</span><strong>${escapeHtml(recordTypeLabel(record.type))}</strong><time>${escapeHtml(record.timeHint || formatTime(record.createdAt))}</time></div>
     <h3>${escapeHtml(record.title || recordTypeLabel(record.type))}</h3>
     ${record.detail ? `<p>${escapeHtml(record.detail)}</p>` : ''}
-    ${attachments.length ? `<div class="day-attachments">${attachments.map((file) => `<span>${escapeHtml(file.kind || '')} ${escapeHtml(file.name || 'file')} ${file.size ? `/${Math.round(Number(file.size) / 1024)}KB` : ''}</span>`).join('')}</div>` : ''}
+    <div class="easy-record-meta"><span>${escapeHtml(tag.icon)} ${escapeHtml(record.tagLabel || tag.label)}</span><span>${escapeHtml(formatTime(record.createdAt))}</span>${record.planned ? '<span>予定メモ</span>' : ''}</div>
+    ${attachments.length ? `<div class="easy-attachments">${attachments.map((file) => `<span>${escapeHtml(file.kind || '')} ${escapeHtml(file.name || 'file')} ${file.size ? `/${Math.round(Number(file.size) / 1024)}KB` : ''}</span>`).join('')}</div>` : ''}
   </article>`;
 }
 
-function renderReflection(records = []) {
-  const items = summarizeToday(records);
-  return `<section class="day-reflect-card day-card">
-    <div class="day-section-head"><div><span>NEXT</span><strong>次回へ戻す候補</strong></div><small>自動反映しない</small></div>
-    ${items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul><p class="guard-note">AI候補は表示だけ。準備・ギア・料理へ勝手に上書きしません。</p>` : '<p class="empty-line">記録が増えると、次回に戻す候補だけ表示します。</p>'}
+function renderOrganizer(records = []) {
+  const items = summarize(records);
+  return `<section class="easy-organizer-card day-card">
+    <div class="easy-section-head"><div><span>あとで整理</span><strong>AI整理候補</strong></div><small>自動反映なし</small></div>
+    ${items.length ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<p class="empty-line">記録が増えると、次回へ戻す候補だけ出します。</p>'}
+    <p class="easy-guard-note">分類・上書き・削除は勝手にしません。候補表示だけです。</p>
   </section>`;
 }
 
-function buildRecord({ type = 'note', title = '', detail = '', attachments = [] } = {}) {
+function buildRecord({ type = 'note', title = '', detail = '', attachments = [], forceMode = null, forceTag = null, planned = false } = {}) {
   const state = getState();
   const project = state.nextProject || {};
   const key = projectKey(state);
-  const phase = currentPhase(state);
+  const mode = forceMode || captureMode(state);
+  const selectedTag = forceTag || document.getElementById('easyTag')?.value || activeTag(state);
+  const tag = tagMeta(selectedTag);
+  const timeHint = document.getElementById('easyTimeHint')?.value || (mode === 'now' ? '今' : '不明');
   return {
     id: makeId('dayrec'),
     projectId: key,
     projectName: projectName(project),
     projectDate: projectDate(project),
-    phase,
+    captureMode: mode,
     type,
     title: title || recordTypeLabel(type),
     detail: String(detail || '').trim(),
+    tag: tag.key,
+    tagLabel: tag.label,
+    timeHint,
+    planned: planned || mode === 'before',
     attachments,
-    source: 'day',
+    source: 'day-easy',
     locked: true,
     createdAt: nowIso()
   };
 }
 
-function appendDayRecord(partial, message = '当日記録を追記しました') {
+function appendRecord(partial, message = '記録を残しました') {
   const state = getState();
   const key = projectKey(state);
-  const previous = dayRecords(state, key);
+  const records = dayRecords(state, key);
   const record = buildRecord(partial);
-  if (!record.detail && !record.attachments.length && ['note', 'voice', 'issue', 'weather', 'kota', 'timing'].includes(record.type)) {
-    return toast('メモ内容を入力してください');
-  }
-  patchState({ dayRecords: { ...(state.dayRecords || {}), [key]: [record, ...previous] } });
+  if (!record.detail && !record.attachments.length && ['note', 'voice', 'rough', 'before', 'later'].includes(record.type)) return toast('内容を少しだけ入れてください');
+  patchState({ dayRecords: { ...(state.dayRecords || {}), [key]: [record, ...records] }, dayStartedAt: state.dayStartedAt || nowIso(), activeDayTag: record.tag, dayCaptureMode: record.captureMode });
   toast(message);
   renderDay();
 }
 
-function updatePhase(phaseKey, changes) {
-  const state = getState();
-  const key = projectKey(state);
-  const map = phaseMap(state, key);
-  patchState({ dayPhaseState: { ...(state.dayPhaseState || {}), [key]: { ...map, [phaseKey]: { ...(map[phaseKey] || {}), ...changes } } } });
-}
-
-function saveManualRecord() {
-  const detail = document.getElementById('dayRecordMemo')?.value || '';
-  const type = document.getElementById('dayRecordType')?.value || 'note';
-  appendDayRecord({ type, title: phaseMeta(currentPhase()).label, detail });
+function saveMemo(forceMode = null) {
+  const detail = document.getElementById('easyMemo')?.value || '';
+  const mode = forceMode || captureMode();
+  const type = mode === 'later' ? 'later' : mode === 'before' ? 'before' : mode === 'rough' ? 'rough' : 'note';
+  appendRecord({ type, title: modeMeta(mode).label, detail, forceMode: mode, planned: mode === 'before' });
 }
 
 function handleFile(kind, file) {
   if (!file) return;
-  appendDayRecord({
+  const detail = document.getElementById('easyMemo')?.value || '';
+  appendRecord({
     type: kind === 'video' ? 'video' : 'photo',
     title: kind === 'video' ? '動画' : '写真',
-    detail: document.getElementById('dayRecordMemo')?.value || '',
+    detail,
     attachments: [{ kind: kind === 'video' ? '動画' : '写真', name: file.name, size: file.size, type: file.type, capturedAt: nowIso() }]
-  }, kind === 'video' ? '動画記録を追記しました' : '写真記録を追記しました');
+  }, kind === 'video' ? '動画を残しました' : '写真を残しました');
 }
 
 function startVoiceMemo() {
   const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Rec) {
-    const detail = document.getElementById('dayRecordMemo')?.value || '';
-    return appendDayRecord({ type: 'voice', title: '音声メモ', detail }, '音声メモとして追記しました');
-  }
+  if (!Rec) return appendRecord({ type: 'voice', title: '音声メモ', detail: document.getElementById('easyMemo')?.value || '' }, '音声メモとして残しました');
   try {
     const recognition = new Rec();
     recognition.lang = 'ja-JP';
@@ -214,57 +216,53 @@ function startVoiceMemo() {
     recognition.maxAlternatives = 1;
     recognition.onresult = (event) => {
       const text = event.results?.[0]?.[0]?.transcript || '';
-      appendDayRecord({ type: 'voice', title: '音声メモ', detail: text }, '音声メモを追記しました');
+      appendRecord({ type: 'voice', title: '音声メモ', detail: text }, '音声メモを残しました');
     };
-    recognition.onerror = () => toast('音声認識に失敗しました');
+    recognition.onerror = () => toast('音声認識に失敗しました。メモに書いて残せます。');
     recognition.start();
     toast('話してください');
   } catch {
-    toast('音声認識を開始できませんでした');
+    toast('音声認識を開始できませんでした。メモに書いて残せます。');
   }
+}
+
+function seedBeforeMemo() {
+  patchState({ dayCaptureMode: 'before' });
+  renderDay();
+  window.setTimeout(() => document.getElementById('easyMemo')?.focus(), 60);
 }
 
 export function renderDay() {
   const state = getState();
   const project = state.nextProject;
-  const c = context(state, project);
-  const r = project?.reservation || {};
   const key = projectKey(state);
   const records = dayRecords(state, key);
-  const phase = phaseMeta(currentPhase(state));
-  app().innerHTML = `<section class="route-page day-operator core08d-day">
-    <section class="day-hero-card day-card">
-      <div><span>当日記録</span><h2>${escapeHtml(projectName(project))}</h2><p>${escapeHtml(projectDate(project) || c.routeMemo || '写真・動画・音声・メモを、今日の流れに沿って追記します。')}</p></div>
-      <button id="goPrepFromDay" class="mini-ghost" type="button">準備を見る</button>
+  app().innerHTML = `<section class="route-page day-easy-page core08d2-day">
+    ${renderHero(state, project, records)}
+    ${renderModeTabs(state, records)}
+    ${renderBigCapture(state)}
+    <section class="easy-shortcuts day-card">
+      <button id="jumpLater" type="button"><strong>あとで登録</strong><span>押し忘れた分</span></button>
+      <button id="jumpBefore" type="button"><strong>事前にメモ</strong><span>あとで撮る/確認</span></button>
+      <button id="jumpRough" type="button"><strong>何となく残す</strong><span>分類なし</span></button>
     </section>
-    <section class="day-status-grid">
-      <div><span>工程</span><strong>${escapeHtml(phase.label)}</strong></div>
-      <div><span>記録</span><strong>${records.length}件</strong></div>
-      <div><span>IN/OUT</span><strong>${escapeHtml([r.checkIn, r.checkOut].filter(Boolean).join(' / ') || '未設定')}</strong></div>
-    </section>
-    ${renderProgress(state, key)}
-    ${renderPhaseControl(state, key)}
-    ${renderCapture()}
     ${renderTimeline(records)}
-    ${renderReflection(records)}
-    <section class="panel-card tight-card legacy-day-memo"><div class="section-title-row"><strong>当日メモ</strong><small>簡易メモ</small></div><textarea id="dayMemo" class="field textarea compact" placeholder="例：途中コンビニ、設営30分、雨なら濡れ物先">${escapeHtml(state.dayMemo || '')}</textarea><button id="saveDayMemo" class="primary-compact" type="button">保存</button></section>
+    ${renderOrganizer(records)}
+    <section class="easy-footer-actions"><button id="goPrepFromDay" class="mini-ghost" type="button">準備を見る</button><button id="openRecordTab" class="mini-ghost" type="button">記録タブ</button></section>
   </section>`;
 
+  document.querySelectorAll('[data-capture-mode]').forEach((button) => button.addEventListener('click', () => { patchState({ dayCaptureMode: button.dataset.captureMode || 'now' }); renderDay(); }));
+  document.getElementById('easyMemoFocus')?.addEventListener('click', () => document.getElementById('easyMemo')?.focus());
+  document.getElementById('easySaveMemo')?.addEventListener('click', () => saveMemo());
+  document.getElementById('easyRoughSave')?.addEventListener('click', () => saveMemo('rough'));
+  document.getElementById('easyPhoto')?.addEventListener('click', () => document.getElementById('easyPhotoInput')?.click());
+  document.getElementById('easyVideo')?.addEventListener('click', () => document.getElementById('easyVideoInput')?.click());
+  document.getElementById('easyPhotoInput')?.addEventListener('change', (event) => handleFile('photo', event.target.files?.[0]));
+  document.getElementById('easyVideoInput')?.addEventListener('change', (event) => handleFile('video', event.target.files?.[0]));
+  document.getElementById('easyVoice')?.addEventListener('click', startVoiceMemo);
+  document.getElementById('jumpLater')?.addEventListener('click', () => { patchState({ dayCaptureMode: 'later' }); renderDay(); window.setTimeout(() => document.getElementById('easyMemo')?.focus(), 60); });
+  document.getElementById('jumpBefore')?.addEventListener('click', seedBeforeMemo);
+  document.getElementById('jumpRough')?.addEventListener('click', () => { patchState({ dayCaptureMode: 'rough', activeDayTag: 'unclassified' }); renderDay(); window.setTimeout(() => document.getElementById('easyMemo')?.focus(), 60); });
   document.getElementById('goPrepFromDay')?.addEventListener('click', () => go('prep'));
-  document.getElementById('openWalkRecord')?.addEventListener('click', () => go('walk'));
-  document.getElementById('saveDayMemo')?.addEventListener('click', () => { patchState({ dayMemo: document.getElementById('dayMemo')?.value || '' }); toast('当日メモを保存'); });
-  document.getElementById('saveDayRecord')?.addEventListener('click', saveManualRecord);
-  document.getElementById('photoDayRecord')?.addEventListener('click', () => document.getElementById('dayPhotoInput')?.click());
-  document.getElementById('videoDayRecord')?.addEventListener('click', () => document.getElementById('dayVideoInput')?.click());
-  document.getElementById('dayPhotoInput')?.addEventListener('change', (event) => handleFile('photo', event.target.files?.[0]));
-  document.getElementById('dayVideoInput')?.addEventListener('change', (event) => handleFile('video', event.target.files?.[0]));
-  document.getElementById('voiceDayRecord')?.addEventListener('click', startVoiceMemo);
-  document.querySelectorAll('[data-phase]').forEach((button) => button.addEventListener('click', () => { patchState({ activeDayPhase: button.dataset.phase || 'arrive' }); renderDay(); }));
-  document.getElementById('startPhase')?.addEventListener('click', () => { updatePhase(currentPhase(), { startedAt: nowIso(), done: false }); appendDayRecord({ type: 'timing', title: `${phaseMeta(currentPhase()).label}開始`, detail: '開始' }, '工程開始を記録しました'); });
-  document.getElementById('finishPhase')?.addEventListener('click', () => { updatePhase(currentPhase(), { endedAt: nowIso(), done: true }); appendDayRecord({ type: 'timing', title: `${phaseMeta(currentPhase()).label}完了`, detail: '完了' }, '工程完了を記録しました'); });
-  document.querySelectorAll('.quickRecord').forEach((button) => button.addEventListener('click', () => {
-    const memo = document.getElementById('dayRecordMemo');
-    const title = button.dataset.title || recordTypeLabel(button.dataset.type);
-    appendDayRecord({ type: button.dataset.type || 'note', title, detail: memo?.value || title });
-  }));
+  document.getElementById('openRecordTab')?.addEventListener('click', () => go('walk'));
 }

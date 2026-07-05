@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-c-prep-workspace-stable-20260705';
-import { VERSION } from '../config/version.js?v=core08-c-prep-workspace-stable-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-c-prep-workspace-stable-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d2-day-easy-record-20260705';
+import { VERSION } from '../config/version.js?v=core08-d2-day-easy-record-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d2-day-easy-record-20260705';
 
 const initialState = {
   version: VERSION,
@@ -44,6 +44,11 @@ const initialState = {
   recordHistory: [],
   selectedRecordSessionId: null,
   recoverySession: null,
+  dayRecords: {},
+  dayCaptureMode: 'now',
+  activeDayTag: 'unclassified',
+  dayStartedAt: null,
+  dayPhaseState: {},
   prepFeature: 'dashboard',
   reviewQueue: [],
   appliedReviewQueue: [],
@@ -84,6 +89,11 @@ function normalizeLoadedState(loaded) {
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.recoverySession = loaded?.recoverySession || null;
+  merged.dayRecords = loaded?.dayRecords && typeof loaded.dayRecords === 'object' && !Array.isArray(loaded.dayRecords) ? loaded.dayRecords : {};
+  merged.dayCaptureMode = ['now', 'later', 'before', 'rough'].includes(loaded?.dayCaptureMode) ? loaded.dayCaptureMode : 'now';
+  merged.activeDayTag = loaded?.activeDayTag || 'unclassified';
+  merged.dayStartedAt = loaded?.dayStartedAt || null;
+  merged.dayPhaseState = loaded?.dayPhaseState && typeof loaded.dayPhaseState === 'object' && !Array.isArray(loaded.dayPhaseState) ? loaded.dayPhaseState : {};
   merged.prepFeature = loaded?.prepFeature || 'dashboard';
   merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
   merged.calendarEvents = Array.isArray(loaded?.calendarEvents) ? loaded.calendarEvents : [];

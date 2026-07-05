@@ -1,0 +1,4 @@
+1. OUTBASE_Core08_D2_DAY_EASY_RECORD_完成版.zip を GitHub main へアップロード
+2. .github/workflows/unpack-core08-d2.yml を作成
+3. Actions で Unpack Core08-D2 ZIP が緑になることを確認
+4. https://mu-outbase.github.io/outbase/?v=core08d2 を確認
