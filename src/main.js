@@ -1,16 +1,16 @@
-const BUILD_ID = 'core08-e2-plus-action-hub-20260705';
+const BUILD_ID = 'core08-e3-mvp-integrated-20260705';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-e2-plus-action-hub-20260705';
-import { getState, subscribe } from './core/store.js?v=core08-e2-plus-action-hub-20260705';
-import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-e2-plus-action-hub-20260705';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-e2-plus-action-hub-20260705';
-import { renderHome } from './modules/home/home.js?v=core08-e2-plus-action-hub-20260705';
-import { enhanceHomeCommander, initHomeCommander } from './modules/home/homeCommander.js?v=core08-e2-plus-action-hub-20260705';
-import { renderSearch } from './modules/search/search.js?v=core08-e2-plus-action-hub-20260705';
-import { renderPrep } from './modules/prep/prep.js?v=core08-e2-plus-action-hub-20260705';
-import { renderWalk } from './modules/walk/walk.js?v=core08-e2-plus-action-hub-20260705';
-import { renderMemory } from './modules/memory/memory.js?v=core08-e2-plus-action-hub-20260705';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-e2-plus-action-hub-20260705';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-e3-mvp-integrated-20260705';
+import { getState, subscribe } from './core/store.js?v=core08-e3-mvp-integrated-20260705';
+import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-e3-mvp-integrated-20260705';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-e3-mvp-integrated-20260705';
+import { renderHome } from './modules/home/home.js?v=core08-e3-mvp-integrated-20260705';
+import { enhanceHomeCommander, initHomeCommander } from './modules/home/homeCommander.js?v=core08-e3-mvp-integrated-20260705';
+import { renderSearch } from './modules/search/search.js?v=core08-e3-mvp-integrated-20260705';
+import { renderPrep } from './modules/prep/prep.js?v=core08-e3-mvp-integrated-20260705';
+import { renderWalk } from './modules/walk/walk.js?v=core08-e3-mvp-integrated-20260705';
+import { renderMemory } from './modules/memory/memory.js?v=core08-e3-mvp-integrated-20260705';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-e3-mvp-integrated-20260705';
 
 
 document.body.dataset.build = BUILD_ID;
@@ -135,12 +135,12 @@ function insertD9HomeBridge() {
   card.className = 'd9-autolog-card';
   card.dataset.d9HomeBridge = 'true';
   card.innerHTML = `
-    <div class="d9-kicker">OUTBASE 自動ログ</div>
-    <h2>当日は「＋」で残すだけ</h2>
+    <div class="d9-kicker">OUTBASE 正本統合</div>
+    <h2>予定→準備→記録→思い出→次回改善</h2>
     <p>${escapeForD9(d9ProjectLabel())}</p>
     <div class="d9-home-actions">
       <button type="button" data-d9-go="prep"><strong>行く前は準備</strong><small>ルート / 料理 / ギア / コタ</small></button>
-      <button type="button" data-d9-go="walk" class="primary"><strong>当日は＋で残す</strong><small>写真 / 声 / メモ / あとで</small></button>
+      <button type="button" data-d9-go="walk" class="primary"><strong>当日は＋で残す</strong><small>写真 / 声 / メモ / 散歩 / ドライブ / 設営</small></button>
       <button type="button" data-d9-go="memory"><strong>帰宅後は思い出</strong><small>未確認 ${count.total}件</small></button>
     </div>
   `;
@@ -158,7 +158,7 @@ function insertD9MemoryBridge() {
   card.innerHTML = `
     <div class="d9-kicker">未確認箱</div>
     <h2>キャンプ後にまとめて整理</h2>
-    <p>当日タブは廃止。Google Maps・GPS・写真・メモ・声の候補は裏で持ち、ここで確認する。</p>
+    <p>写真・声・メモ・GPS・Google Maps・散歩・ドライブ・設営・料理・撤収を未確認箱へ集約。間違いはここで直す。</p>
     <div class="d9-counts"><span>未確認 ${count.total}件</span><span>記録 ${count.records}件</span><span>自動 ${count.events}件</span><span>連携 ${count.queue}件</span></div>
   `;
   shell.prepend(card);

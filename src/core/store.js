@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d9-nav-autolog-layer-20260705';
-import { VERSION } from '../config/version.js?v=core08-d9-nav-autolog-layer-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d9-nav-autolog-layer-20260705';
+import { loadState, saveState } from './storage.js?v=core08-e3-mvp-integrated-20260705';
+import { VERSION } from '../config/version.js?v=core08-e3-mvp-integrated-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-e3-mvp-integrated-20260705';
 
 const initialState = {
   version: VERSION,
