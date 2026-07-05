@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_8_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_9_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,8 @@
   ];
 
   const defaultState = {
-    version: 'restart-8',
+    version: 'restart-9',
+    savedAt: '',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
@@ -192,7 +193,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-8';
+      merged.version = 'restart-9';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -252,6 +253,60 @@
         project.routeChecks = Array.isArray(project.routeChecks) ? project.routeChecks : clone(routeCheckBase);
       }
     });
+    repairLinkedData(target);
+  }
+
+  function repairLinkedData(target) {
+    const fallbackProject = target.projects[0];
+    const projectIds = new Set(target.projects.map((project) => project.id));
+    const ensureProjectId = (item) => {
+      if (!item.projectId || !projectIds.has(item.projectId)) item.projectId = fallbackProject.id;
+      if (!item.date) item.date = todayISO();
+      if (!item.id) item.id = makeId('item');
+      return item;
+    };
+    target.inbox.forEach((record) => {
+      ensureProjectId(record);
+      record.status = record.status || '未確認';
+      record.candidateHistory = Array.isArray(record.candidateHistory) ? record.candidateHistory : [{ projectId: record.projectId, label: projectLabelFromTarget(target, record.projectId), at: record.createdAt || todayISO() }];
+      record.protect = record.protect !== false;
+    });
+    target.memories.forEach((record) => {
+      ensureProjectId(record);
+      record.status = record.status || '確定';
+    });
+    target.improvements.forEach((item) => {
+      ensureProjectId(item);
+      item.target = item.target || '次の準備';
+      item.reflectionLog = Array.isArray(item.reflectionLog) ? item.reflectionLog : [];
+      item.done = Boolean(item.done);
+    });
+    target.deletedRecords = target.deletedRecords.map((record) => {
+      ensureProjectId(record);
+      record.status = '復旧控え';
+      record.deletedAt = record.deletedAt || todayISO();
+      return record;
+    });
+    target.calendarItems = target.calendarItems.filter((item) => item && item.date && (!item.projectId || projectIds.has(item.projectId)));
+    target.projects.filter((project) => project.type === 'camp').forEach((project) => syncProjectCalendar(target, project));
+  }
+
+  function projectLabelFromTarget(target, projectId) {
+    const project = target.projects.find((entry) => entry.id === projectId);
+    return project?.label || project?.title || '未確認箱';
+  }
+
+  function syncProjectCalendar(target, project) {
+    if (!project || project.type !== 'camp' || !project.startDate) return;
+    target.calendarItems = target.calendarItems.filter((item) => {
+      if (item.projectId !== project.id) return true;
+      if (item.kind !== 'camp') return true;
+      return !['キャンプ出発', '撤収・帰宅'].includes(item.label);
+    });
+    target.calendarItems.push({ id: `cal-${project.id}-start`, projectId: project.id, date: project.startDate, label: 'キャンプ出発', kind: 'camp' });
+    if (project.endDate && project.endDate !== project.startDate) {
+      target.calendarItems.push({ id: `cal-${project.id}-end`, projectId: project.id, date: project.endDate, label: '撤収・帰宅', kind: 'camp' });
+    }
   }
 
   function mergeDaySteps(steps) {
@@ -456,8 +511,39 @@
     return list.filter((item) => item.projectId === projectId).length;
   }
 
+  function routeSummary() {
+    return {
+      projects: state.projects.length,
+      calendar: state.calendarItems.length,
+      inbox: state.inbox.filter((record) => record.status !== '削除候補').length,
+      deleteCandidates: state.inbox.filter((record) => record.status === '削除候補').length,
+      memories: state.memories.length,
+      improvements: state.improvements.length,
+      backups: state.deletedRecords.length
+    };
+  }
+
+  function healthNotes() {
+    const notes = [];
+    const ids = new Set(state.projects.map((project) => project.id));
+    const brokenRecords = [...state.inbox, ...state.memories, ...state.improvements, ...state.deletedRecords].filter((item) => item.projectId && !ids.has(item.projectId)).length;
+    const campWithoutCalendar = state.projects.filter((project) => project.type === 'camp' && project.startDate && !state.calendarItems.some((item) => item.projectId === project.id && item.date === project.startDate)).length;
+    if (brokenRecords) notes.push(`保存先が見つからない記録 ${brokenRecords}件`);
+    if (campWithoutCalendar) notes.push(`カレンダー未反映の予定 ${campWithoutCalendar}件`);
+    if (!state.inbox.length && !state.memories.length) notes.push('記録はこれから蓄積');
+    return notes.length ? notes : ['一本線の紐づけは正常'];
+  }
+
+  function backupText() {
+    const safeState = { ...state, toast: '' };
+    return JSON.stringify(safeState, null, 2);
+  }
+
   function saveState() {
     clearTimeout(saveTimer);
+    state.savedAt = new Date().toISOString();
+    state.version = 'restart-9';
+    repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
     }, 10);
@@ -626,6 +712,20 @@
           ${projectSwitch()}
           <p class="note">キャンプ、散歩、探している候補、外出を裏側で分けて保存します。画面は増やしすぎず、入口はこのまま保ちます。</p>
         `)}
+
+        ${card('実機確認', '抜け漏れを先に見る', `
+          ${(() => {
+            const summary = routeSummary();
+            return `<div class="metric-row">
+              <div class="metric"><small>流れ</small><strong>${summary.projects}件</strong></div>
+              <div class="metric"><small>日付紐づけ</small><strong>${summary.calendar}件</strong></div>
+              <div class="metric"><small>未整理</small><strong>${summary.inbox}件</strong></div>
+              <div class="metric"><small>改善</small><strong>${summary.improvements}件</strong></div>
+            </div>`;
+          })()}
+          <div class="health-list">${healthNotes().map((text) => `<span>${escapeHtml(text)}</span>`).join('')}</div>
+          <p class="note">反映後に古い画面が出る時は表示だけ更新します。保存データは消しません。</p>
+        `, `${btn('表示を更新', 'refreshApp', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
 
         ${card('予定カレンダー', '日付で見る', `
           <div class="mini-calendar-list">
@@ -1425,8 +1525,14 @@
           ${records.length ? `<div class="list">${records.map((record) => inboxItem(record)).join('')}</div>` : '<div class="empty">この条件の記録はありません。＋から残したものがここに入ります。</div>'}
         `)}
         ${card('復旧の考え方', '間違えても戻せる', `
-          <p class="note">削除候補はまだ消しません。完全に消す時だけ確認を出します。完全削除後も控えに名前と日時を残します。</p>
-        `, `${btn('＋で記録する', 'go', { screen: 'capture', tab: '＋' }, 'primary')}${btn('思い出を見る', 'go', { screen: 'memories', tab: '思い出' }, 'ghost')}`)}
+          <p class="note">削除候補はまだ消しません。完全に消す時だけ確認を出します。完全削除した記録も復旧控えから未確認箱へ戻せます。</p>
+          ${state.deletedRecords.length ? `<div class="list recovery-list">${state.deletedRecords.map((record) => `
+            <div class="item item-warn">
+              <div class="item-main"><div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(record.target)}</div><div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(record.deletedAt || '')}</div></div>
+              <button class="tag light" data-action="restoreDeletedRecord" data-id="${escapeHtml(record.id)}">戻す</button>
+            </div>
+          `).join('')}</div>` : '<div class="empty">復旧控えはありません。</div>'}
+        `, `${btn('＋で記録する', 'go', { screen: 'capture', tab: '＋' }, 'primary')}${btn('思い出を見る', 'go', { screen: 'memories', tab: '思い出' }, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
@@ -1728,11 +1834,15 @@
       if (start === null) return;
       const end = promptText('終了日', project.endDate || start);
       if (end === null) return;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+        showToast('日付は 2026-06-26 の形で入力してください');
+        return;
+      }
       project.startDate = start;
       project.endDate = end;
-      state.calendarItems = state.calendarItems.filter((item) => item.projectId !== project.id);
-      state.calendarItems.push({ id: makeId('cal'), projectId: project.id, date: start, label: 'キャンプ出発', kind: 'camp' });
-      state.calendarItems.push({ id: makeId('cal'), projectId: project.id, date: end, label: '撤収・帰宅', kind: 'camp' });
+      syncProjectCalendar(state, project);
+      state.calendarMonth = start.slice(0, 7);
+      state.selectedDate = start;
       saveState();
       renderPlan();
       showToast('日程を更新しました');
@@ -2036,7 +2146,7 @@
       const ok = window.confirm('この記録を完全に削除します。削除候補から戻せなくなります。よろしいですか？');
       if (!ok) return;
       state.inbox.splice(index, 1);
-      state.deletedRecords.unshift({ id: record.id, type: record.type, text: record.text, target: record.target, projectId: record.projectId, deletedAt: new Date().toISOString() });
+      state.deletedRecords.unshift({ ...record, status: '復旧控え', deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
       saveState();
       renderInbox();
       showToast('完全に削除しました');
@@ -2052,6 +2162,41 @@
         saveState();
         renderInbox();
         showToast('未確認箱に戻しました');
+      }
+      return;
+    }
+
+    if (action === 'restoreDeletedRecord') {
+      const index = state.deletedRecords.findIndex((entry) => entry.id === button.dataset.id);
+      const record = state.deletedRecords[index];
+      if (!record) return;
+      state.deletedRecords.splice(index, 1);
+      record.status = '未確認';
+      record.deleteCandidateAt = '';
+      record.updatedAt = new Date().toISOString();
+      record.candidateHistory = Array.isArray(record.candidateHistory) ? record.candidateHistory : [{ projectId: record.projectId, label: record.target || projectLabel(projectById(record.projectId)), at: record.updatedAt }];
+      state.inbox.unshift(record);
+      saveState();
+      renderInbox();
+      showToast('復旧控えから未確認箱へ戻しました');
+      return;
+    }
+
+    if (action === 'copyBackup') {
+      const text = backupText();
+      navigator.clipboard?.writeText(text).then(() => showToast('OUTBASEの控えをコピーしました')).catch(() => {
+        window.prompt('OUTBASEの控え', text);
+        showToast('控えを表示しました');
+      });
+      return;
+    }
+
+    if (action === 'refreshApp') {
+      const reload = () => window.location.reload();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(registrations.map((registration) => registration.update()))).finally(reload);
+      } else {
+        reload();
       }
       return;
     }

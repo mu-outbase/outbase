@@ -960,3 +960,24 @@ button, .item, .calendar-day, .capture-tile, .switch-btn, .filter-pill, .target-
     scroll-behavior: auto !important;
   }
 }
+
+.health-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.health-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--accent-2);
+  background: rgba(47, 95, 74, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.recovery-list { margin-top: 12px; }
