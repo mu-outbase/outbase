@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_6_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_7_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-6',
+    version: 'restart-7',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
@@ -192,7 +192,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-6';
+      merged.version = 'restart-7';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -228,7 +228,12 @@
     target.selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(target.selectedDate || '') ? target.selectedDate : `${target.calendarMonth}-01`;
     target.inbox.forEach((record) => { if (!record.date) record.date = todayISO(); });
     target.memories.forEach((record) => { if (!record.date) record.date = todayISO(); });
-    target.improvements.forEach((item) => { if (!item.date) item.date = todayISO(); });
+    target.improvements.forEach((item) => {
+      if (!item.date) item.date = todayISO();
+      if (!item.target) item.target = '次の準備';
+      item.done = Boolean(item.done);
+      item.reflectionLog = Array.isArray(item.reflectionLog) ? item.reflectionLog : [];
+    });
     if (!projectById(target.activeProjectId, target)) target.activeProjectId = target.projects[0].id;
     target.projects.forEach((project) => {
       if (project.type === 'camp') {
@@ -1099,22 +1104,186 @@
     </div>`;
   }
 
+  function memoryCategory(record) {
+    const source = `${record?.target || ''} ${record?.type || ''} ${record?.text || ''}`;
+    if (/料理|食|量|味|余り|ガーリック|ピザ|朝|昼|夜/.test(source)) return '料理';
+    if (/ギア|幕|設営|撤収|乾燥|寝具|ライト|電源|タープ/.test(source)) return 'ギア';
+    if (/コタ|散歩|犬|フード|水|暑さ|寒さ/.test(source)) return 'コタ';
+    if (/雨|風|天気|気温|地面|ルート|道|渋滞|出発|帰路/.test(source)) return '天気・ルート';
+    if (/場所|サイト|トイレ|炊事場|売店|景色|ドッグラン|候補/.test(source)) return '場所';
+    return '記録';
+  }
+
+  function improvementTargetForMemory(record) {
+    const category = memoryCategory(record);
+    if (category === '場所') return '探す';
+    if (category === '天気・ルート') return /ルート|道|渋滞|出発|帰路/.test(`${record?.target || ''} ${record?.text || ''}`) ? 'ルート' : '天気';
+    if (category === '記録') return '次の準備';
+    return category;
+  }
+
+  function memoryGroups(records) {
+    const groups = {};
+    records.forEach((record) => {
+      const category = memoryCategory(record);
+      if (!groups[category]) groups[category] = [];
+      groups[category].push(record);
+    });
+    return groups;
+  }
+
+  function memorySummary(records) {
+    return {
+      total: records.length,
+      photo: records.filter((record) => record.type === '写真').length,
+      voice: records.filter((record) => record.type === '声').length,
+      memo: records.filter((record) => record.type === 'メモ').length,
+      gps: records.filter((record) => record.type === 'GPS').length
+    };
+  }
+
+  function improvementCounts(projectId) {
+    const list = state.improvements.filter((item) => item.projectId === projectId);
+    return {
+      total: list.length,
+      open: list.filter((item) => !item.done).length,
+      done: list.filter((item) => item.done).length
+    };
+  }
+
+  function improvementTargets() {
+    return ['買い物', '料理', 'ギア', 'コタ', '天気', 'ルート', '探す', '次の予定', '次の準備'];
+  }
+
+  function formatShortDate(value) {
+    if (!value) return '日付なし';
+    const parts = String(value).split('-');
+    if (parts.length === 3) return `${Number(parts[1])}/${Number(parts[2])}`;
+    return value;
+  }
+
+  function ensureReflectionLog(item, message) {
+    item.reflectionLog = Array.isArray(item.reflectionLog) ? item.reflectionLog : [];
+    item.reflectionLog.unshift({ at: new Date().toISOString(), message });
+    item.reflectionLog = item.reflectionLog.slice(0, 6);
+  }
+
+  function applyImprovementToProject(item) {
+    const project = projectById(item.projectId) || campProject();
+    const target = item.target || '次の準備';
+    const text = item.text || '次回改善';
+    const already = (list) => Array.isArray(list) && list.some((entry) => entry.improvementId === item.id);
+
+    if (project.type !== 'camp') {
+      item.reflectedTo = projectLabel(project);
+      ensureReflectionLog(item, `${projectLabel(project)}に反映済みとして残しました`);
+      return;
+    }
+
+    if (target.includes('買い物')) {
+      if (!already(project.shopping)) {
+        project.shopping.push({ id: makeId('shop'), group: '改善から追加', name: text, qty: '次回確認', owner: '準備で確認', detail: '思い出から反映', state: '未購入', improvementId: item.id });
+      }
+      updateShoppingPrep(project);
+      item.reflectedTo = '買い物';
+      ensureReflectionLog(item, '買い物に確認項目を追加しました');
+      return;
+    }
+
+    if (target.includes('料理')) {
+      if (!already(project.meals)) project.meals.push({ id: makeId('meal'), slot: '次回メモ', menu: text, caution: '思い出から反映', improvementId: item.id });
+      const prep = project.prep?.find((entry) => entry.id === 'cook');
+      if (prep) prep.status = '確認中';
+      item.reflectedTo = '料理';
+      ensureReflectionLog(item, '料理計画に次回メモを追加しました');
+      return;
+    }
+
+    if (target.includes('ギア')) {
+      if (!already(project.gear)) project.gear.push({ id: makeId('gear'), group: '改善から追加', name: text, qty: '次回確認', note: '思い出から反映', done: false, improvementId: item.id });
+      updatePrepStatus(project, 'gear', project.gear, '確認中');
+      item.reflectedTo = 'ギア';
+      ensureReflectionLog(item, 'ギア準備に確認項目を追加しました');
+      return;
+    }
+
+    if (target.includes('コタ')) {
+      if (!already(project.kota)) project.kota.push({ id: makeId('kota'), group: '改善から追加', name: text, qty: '次回確認', note: '思い出から反映', done: false, improvementId: item.id });
+      updatePrepStatus(project, 'kota', project.kota, '未確認');
+      item.reflectedTo = 'コタ';
+      ensureReflectionLog(item, 'コタ用品に確認項目を追加しました');
+      return;
+    }
+
+    if (target.includes('天気')) {
+      if (!already(project.weatherChecks)) project.weatherChecks.push({ id: makeId('weather'), name: text, note: '思い出から反映', done: false, improvementId: item.id });
+      updatePrepStatus(project, 'weather', project.weatherChecks, '要確認');
+      item.reflectedTo = '天気';
+      ensureReflectionLog(item, '天気確認に項目を追加しました');
+      return;
+    }
+
+    if (target.includes('ルート')) {
+      if (!already(project.routeChecks)) project.routeChecks.push({ id: makeId('route'), name: text, note: '思い出から反映', done: false, improvementId: item.id });
+      updatePrepStatus(project, 'route', project.routeChecks, '確認中');
+      item.reflectedTo = 'ルート';
+      ensureReflectionLog(item, 'ルート確認に項目を追加しました');
+      return;
+    }
+
+    if (target.includes('探す')) {
+      item.reflectedTo = '探す';
+      ensureReflectionLog(item, '次に探す条件として残しました');
+      return;
+    }
+
+    item.reflectedTo = target;
+    ensureReflectionLog(item, `${target}に戻す改善として残しました`);
+  }
+
   function renderMemories() {
     const project = activeProject();
     const projectMemories = state.memories.filter((record) => record.projectId === project.id);
+    const groups = memoryGroups(projectMemories);
+    const summary = memorySummary(projectMemories);
+    const counts = improvementCounts(project.id);
     const body = `
-      <section class="hero">
+      <section class="hero memories-hero">
         <h1>思い出</h1>
-        <p>アルバムで終わらせず、次回改善に戻します。</p>
+        <p>写真やメモを眺めるだけで終わらせず、料理・ギア・コタ・天気・場所の振り返りに分け、次回改善へ戻します。</p>
       </section>
       <main class="stack">
         ${card('見る流れを選ぶ', '予定別に整理', `${projectSwitch()}`)}
-        ${card(project.title, '時系列', `
-          ${projectMemories.length ? `<div class="list">${projectMemories.map((record) => memoryItem(record)).join('')}</div>` : '<div class="empty">まだ思い出に確定した記録はありません。未確認箱から移すとここに並びます。</div>'}
+        ${card(project.title, '思い出の状態', `
+          <div class="metric-row">
+            <div class="metric"><small>思い出</small><strong>${summary.total}件</strong></div>
+            <div class="metric"><small>写真</small><strong>${summary.photo}件</strong></div>
+            <div class="metric"><small>声メモ</small><strong>${summary.voice}件</strong></div>
+            <div class="metric"><small>改善待ち</small><strong>${counts.open}件</strong></div>
+          </div>
         `, `${btn('未確認を片付ける', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}${btn('次回改善へ', 'go', { screen: 'improvements', tab: '思い出' }, 'ghost')}`)}
-        ${card('振り返り', '次に活かす', `
+        ${card('カテゴリ別に振り返る', '次回へ送る前の整理', `
+          ${projectMemories.length ? `<div class="memory-groups">${Object.entries(groups).map(([category, records]) => `
+            <div class="memory-group">
+              <div class="memory-group-head"><strong>${escapeHtml(category)}</strong><span>${records.length}件</span></div>
+              <div class="list">${records.map((record) => memoryItem(record)).join('')}</div>
+            </div>
+          `).join('')}</div>` : '<div class="empty">まだ思い出に確定した記録はありません。未確認箱から移すと、ここでカテゴリ別に整理できます。</div>'}
+        `)}
+        ${card('振り返りテンプレ', 'すぐ改善へ送る', `
           <div class="grid-2">
-            ${['良かったこと', '失敗したこと', '忘れ物', '料理の量', 'ギア使用結果', 'コタの様子', '天気と撤収', '場所カード'].map((text) => `<button class="btn ghost" data-action="addImprovement" data-project-id="${escapeHtml(project.id)}" data-text="${escapeHtml(text)}を振り返る">${escapeHtml(text)}</button>`).join('')}
+            ${[
+              ['良かったこと', '次の予定'],
+              ['失敗したこと', '次の準備'],
+              ['忘れ物', 'ギア'],
+              ['料理の量', '料理'],
+              ['買い物の過不足', '買い物'],
+              ['コタの様子', 'コタ'],
+              ['雨風と撤収', '天気'],
+              ['道と寄り道', 'ルート'],
+              ['サイトの良し悪し', '探す'],
+              ['次もやること', '次の準備']
+            ].map(([text, target]) => `<button class="btn ghost" data-action="addImprovement" data-project-id="${escapeHtml(project.id)}" data-text="${escapeHtml(text)}を振り返る" data-target="${escapeHtml(target)}">${escapeHtml(text)}</button>`).join('')}
           </div>
         `)}
       </main>`;
@@ -1123,12 +1292,36 @@
 
   function memoryItem(record) {
     return `
-      <div class="item">
+      <div class="item memory-item">
+        <div class="memory-icon">${escapeHtml(typeIcon(record.type))}</div>
         <div class="item-main">
-          <div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(record.target)}</div>
-          <div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(record.time)}</div>
+          <div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(memoryCategory(record))}</div>
+          <div class="item-sub">${escapeHtml(record.target)} · ${escapeHtml(record.text)} · ${escapeHtml(formatShortDate(record.date))} · ${escapeHtml(record.time)}</div>
+          <div class="record-meta">
+            <span>${escapeHtml(record.source || '記録')}</span>
+            ${record.stepId ? `<span>${escapeHtml(dayStepById(projectById(record.projectId), record.stepId)?.title || record.stepId)}</span>` : ''}
+            <span>保存済み</span>
+          </div>
         </div>
         <button class="tag light" data-action="improveFromMemory" data-id="${escapeHtml(record.id)}">改善へ</button>
+      </div>
+    `;
+  }
+
+  function improvementItem(item, compact = false) {
+    const targetButtons = improvementTargets().map((target) => `<button class="target-mini ${item.target === target ? 'active' : ''}" data-action="setImprovementTarget" data-id="${escapeHtml(item.id)}" data-target="${escapeHtml(target)}">${escapeHtml(target)}</button>`).join('');
+    return `
+      <div class="item improvement-item ${item.done ? 'is-reflected' : ''}">
+        <div class="item-main">
+          <div class="item-title">${escapeHtml(item.text)}</div>
+          <div class="item-sub">反映先：${escapeHtml(item.target || '次の準備')} / ${escapeHtml(formatShortDate(item.date))}${item.reflectedTo ? ` / ${escapeHtml(item.reflectedTo)}へ反映済み` : ''}</div>
+          ${compact ? '' : `<div class="target-picker improvement-targets">${targetButtons}</div>`}
+          ${item.reflectionLog?.length ? `<div class="reflection-log">${item.reflectionLog.slice(0, 2).map((log) => `<span>${escapeHtml(log.message)}</span>`).join('')}</div>` : ''}
+        </div>
+        <div class="actions compact-actions">
+          <button class="btn ${item.done ? 'ghost' : 'primary'}" data-action="reflectImprovement" data-id="${escapeHtml(item.id)}">${item.done ? '反映済み' : '準備へ反映'}</button>
+          ${compact ? '' : `<button class="btn ghost" data-action="editImprovement" data-id="${escapeHtml(item.id)}">修正</button>`}
+        </div>
       </div>
     `;
   }
@@ -1136,24 +1329,34 @@
   function renderImprovements() {
     const project = activeProject();
     const list = state.improvements.filter((item) => item.projectId === project.id);
+    const open = list.filter((item) => !item.done);
+    const done = list.filter((item) => item.done);
+    const targetSummary = improvementTargets().map((target) => ({ target, count: list.filter((item) => item.target === target).length })).filter((entry) => entry.count);
     const body = `
-      <section class="hero">
+      <section class="hero improvements-hero">
         <h1>次回改善</h1>
-        <p>この記録を、次の準備に戻します。</p>
+        <p>思い出から出た改善を、買い物・料理・ギア・コタ・天気・ルート・探す・次の予定へ戻します。</p>
       </section>
       <main class="stack">
         ${card('反映する流れを選ぶ', '予定別に戻す', `${projectSwitch()}`)}
-        ${card('改善候補', '準備へ反映', `
-          ${list.length ? `<div class="list">${list.map((item) => `
-            <div class="item">
-              <div class="item-main"><div class="item-title">${escapeHtml(item.text)}</div><div class="item-sub">反映先：${escapeHtml(item.target || '次の準備')}</div></div>
-              <button class="tag ${item.done ? '' : 'light'}" data-action="reflectImprovement" data-id="${escapeHtml(item.id)}">${item.done ? '反映済み' : '反映'}</button>
-            </div>
-          `).join('')}</div>` : '<div class="empty">思い出から次回改善に送るとここに並びます。</div>'}
+        ${card(project.title, '改善の状態', `
+          <div class="metric-row">
+            <div class="metric"><small>改善</small><strong>${list.length}件</strong></div>
+            <div class="metric"><small>未反映</small><strong>${open.length}件</strong></div>
+            <div class="metric"><small>反映済み</small><strong>${done.length}件</strong></div>
+            <div class="metric"><small>反映先</small><strong>${targetSummary.length || 0}種類</strong></div>
+          </div>
+          ${targetSummary.length ? `<div class="target-summary">${targetSummary.map((entry) => `<span>${escapeHtml(entry.target)} ${entry.count}</span>`).join('')}</div>` : '<p class="note">思い出から改善に送ると、ここで反映先を選べます。</p>'}
         `)}
-        ${card('反映先', '戻す場所', `
+        ${card('未反映の改善', '次の準備へ戻す', `
+          ${open.length ? `<div class="list">${open.map((item) => improvementItem(item)).join('')}</div>` : '<div class="empty">未反映の改善はありません。思い出から送るか、下の反映先から追加します。</div>'}
+        `)}
+        ${card('反映済み', '戻した履歴', `
+          ${done.length ? `<div class="list">${done.map((item) => improvementItem(item, true)).join('')}</div>` : '<div class="empty">まだ反映済みの改善はありません。</div>'}
+        `, `${btn('準備を見る', 'openProject', { projectId: project.id, screen: 'prep', tab: '準備' }, 'primary')}${btn('思い出を見る', 'go', { screen: 'memories', tab: '思い出' }, 'ghost')}`)}
+        ${card('反映先を追加', '戻す場所', `
           <div class="grid-2">
-            ${['買い物', '料理', 'ギア', 'コタ', '天気', 'ルート', '探す', '次の予定'].map((text) => `<button class="btn ghost" data-action="addImprovement" data-project-id="${escapeHtml(project.id)}" data-text="${escapeHtml(text)}に反映する改善" data-target="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join('')}
+            ${improvementTargets().map((target) => `<button class="btn ghost" data-action="addImprovement" data-project-id="${escapeHtml(project.id)}" data-text="${escapeHtml(target)}に反映する改善" data-target="${escapeHtml(target)}">${escapeHtml(target)}</button>`).join('')}
           </div>
         `)}
       </main>`;
@@ -1813,7 +2016,7 @@
     }
 
     if (action === 'addImprovement') {
-      state.improvements.unshift({ id: makeId('imp'), projectId: button.dataset.projectId || state.activeProjectId, text: button.dataset.text || '次回改善', target: button.dataset.target || '次の準備', date: todayISO(), done: false });
+      state.improvements.unshift({ id: makeId('imp'), projectId: button.dataset.projectId || state.activeProjectId, text: button.dataset.text || '次回改善', target: button.dataset.target || '次の準備', date: todayISO(), done: false, reflectionLog: [] });
       saveState();
       showToast('次回改善に追加しました');
       return;
@@ -1822,7 +2025,7 @@
     if (action === 'improveFromMemory') {
       const record = state.memories.find((entry) => entry.id === button.dataset.id);
       if (record) {
-        state.improvements.unshift({ id: makeId('imp'), projectId: record.projectId, text: `${record.target}：${record.text}`, target: '次の準備', date: todayISO(), done: false });
+        state.improvements.unshift({ id: makeId('imp'), projectId: record.projectId, text: `${record.target}：${record.text}`, target: improvementTargetForMemory(record), date: record.date || todayISO(), done: false, sourceRecordId: record.id, reflectionLog: [] });
         saveState();
         showToast('次回改善に送りました');
       }
@@ -1831,10 +2034,49 @@
 
     if (action === 'reflectImprovement') {
       const item = state.improvements.find((entry) => entry.id === button.dataset.id);
-      if (item) item.done = !item.done;
+      if (!item) return;
+      if (item.done) {
+        item.done = false;
+        item.updatedAt = new Date().toISOString();
+        ensureReflectionLog(item, '反映済みを解除しました。追加した確認項目は残します');
+        saveState();
+        renderImprovements();
+        showToast('反映済みを解除しました');
+        return;
+      }
+      item.done = true;
+      item.reflectedAt = new Date().toISOString();
+      applyImprovementToProject(item);
       saveState();
       renderImprovements();
-      showToast(item?.done ? '次の準備へ反映しました' : '反映を戻しました');
+      showToast('次の準備へ反映しました');
+      return;
+    }
+
+    if (action === 'setImprovementTarget') {
+      const item = state.improvements.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      item.target = button.dataset.target || '次の準備';
+      item.updatedAt = new Date().toISOString();
+      saveState();
+      renderImprovements();
+      showToast('反映先を変更しました');
+      return;
+    }
+
+    if (action === 'editImprovement') {
+      const item = state.improvements.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      const text = promptText('改善内容', item.text);
+      if (text === null) return;
+      const target = promptText('反映先', item.target || '次の準備');
+      if (target === null) return;
+      item.text = text || item.text;
+      item.target = target || item.target || '次の準備';
+      item.updatedAt = new Date().toISOString();
+      saveState();
+      renderImprovements();
+      showToast('改善を修正しました');
       return;
     }
 

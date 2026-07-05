@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-6-record-lock';
+const CACHE_NAME = 'outbase-restart-7-memory-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-6-record-lock',
-  './style.css?v=restart-6-record-lock',
-  './src/app.js?v=restart-6-record-lock',
-  './manifest.json?v=restart-6-record-lock'
+  './index.html?v=restart-7-memory-lock',
+  './style.css?v=restart-7-memory-lock',
+  './src/app.js?v=restart-7-memory-lock',
+  './manifest.json?v=restart-7-memory-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-6-record-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-7-memory-lock')))
   );
 });
