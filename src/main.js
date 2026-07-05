@@ -1,16 +1,17 @@
-const BUILD_ID = 'core08-a3-data-guard-20260705';
+const BUILD_ID = 'core08-b-home-commander-20260705';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-a3-data-guard-20260705';
-import { getState, subscribe } from './core/store.js?v=core08-a3-data-guard-20260705';
-import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-a3-data-guard-20260705';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-a3-data-guard-20260705';
-import { renderHome } from './modules/home/home.js?v=core08-a3-data-guard-20260705';
-import { renderSearch } from './modules/search/search.js?v=core08-a3-data-guard-20260705';
-import { renderPrep } from './modules/prep/prep.js?v=core08-a3-data-guard-20260705';
-import { renderDay } from './modules/day/day.js?v=core08-a3-data-guard-20260705';
-import { renderWalk } from './modules/walk/walk.js?v=core08-a3-data-guard-20260705';
-import { renderMemory } from './modules/memory/memory.js?v=core08-a3-data-guard-20260705';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-a3-data-guard-20260705';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-b-home-commander-20260705';
+import { getState, subscribe } from './core/store.js?v=core08-b-home-commander-20260705';
+import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-b-home-commander-20260705';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-b-home-commander-20260705';
+import { renderHome } from './modules/home/home.js?v=core08-b-home-commander-20260705';
+import { enhanceHomeCommander, initHomeCommander } from './modules/home/homeCommander.js?v=core08-b-home-commander-20260705';
+import { renderSearch } from './modules/search/search.js?v=core08-b-home-commander-20260705';
+import { renderPrep } from './modules/prep/prep.js?v=core08-b-home-commander-20260705';
+import { renderDay } from './modules/day/day.js?v=core08-b-home-commander-20260705';
+import { renderWalk } from './modules/walk/walk.js?v=core08-b-home-commander-20260705';
+import { renderMemory } from './modules/memory/memory.js?v=core08-b-home-commander-20260705';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-b-home-commander-20260705';
 
 
 document.body.dataset.build = BUILD_ID;
@@ -109,7 +110,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncBottomSpaceSoo
 
 refreshRuntimeTheme();
 applyScreenContext(getState());
-registerRoute('home', renderHome);
+registerRoute('home', () => { renderHome(); enhanceHomeCommander(); });
 registerRoute('search', renderSearch);
 registerRoute('prep', renderPrep);
 registerRoute('day', renderDay);
@@ -118,6 +119,7 @@ registerRoute('memory', renderMemory);
 registerRoute('review', renderMemory);
 bindNavigation();
 go(getState().currentRoute || 'home');
+initHomeCommander();
 updateActiveRecordingIndicator();
 syncBottomSpaceSoon();
 subscribe((state) => { applyScreenContext(state); updateActiveRecordingIndicator(state); syncBottomSpaceSoon(); });

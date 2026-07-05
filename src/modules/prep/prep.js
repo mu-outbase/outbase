@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-a3-data-guard-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-a3-data-guard-20260705';
-import { renderImportPanel } from '../import/import.js?v=core08-a3-data-guard-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-b-home-commander-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-b-home-commander-20260705';
+import { renderImportPanel } from '../import/import.js?v=core08-b-home-commander-20260705';
 import {
   buildDepartureLineList,
   buildMealLineList,
@@ -9,7 +9,7 @@ import {
   buildShoppingLineList,
   mealModeLabels,
   normalizePrepContext
-} from './prepEngine.js?v=core08-a3-data-guard-20260705';
+} from './prepEngine.js?v=core08-b-home-commander-20260705';
 
 const WORKSPACE_META = {
   input: { label: '天気・判断', short: '天気', sub: '無料期限・1時間天気・行く判断' },

@@ -1,0 +1,170 @@
+/* Core08-B / ホーム司令塔：カレンダーの上に判断と入口を集約 */
+.home-command-center{
+  display:grid;
+  gap:10px;
+  border:1px solid rgba(34,32,24,.10);
+  border-radius:28px;
+  background:linear-gradient(180deg,rgba(255,250,241,.94),rgba(246,238,224,.88));
+  box-shadow:0 18px 42px rgba(54,44,31,.10);
+  padding:12px;
+  overflow:hidden;
+}
+.home-command-hero{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:10px;
+  border-radius:22px;
+  background:linear-gradient(135deg,#313026,#5f5843);
+  color:#fffaf1;
+  padding:14px;
+}
+.home-command-hero p,
+.home-command-note{
+  margin:0;
+  font-size:10px;
+  font-weight:1000;
+  letter-spacing:.16em;
+  color:rgba(255,250,241,.62);
+}
+.home-command-hero h2{
+  margin:3px 0 4px;
+  font-size:25px;
+  line-height:1.05;
+  color:#fffaf1;
+}
+.home-command-hero span{
+  font-size:12px;
+  font-weight:900;
+  color:rgba(255,250,241,.76);
+}
+.home-command-main{
+  min-width:86px;
+  min-height:52px;
+  border:0;
+  border-radius:18px;
+  background:#fffaf1;
+  color:#313026;
+  font-weight:1000;
+  box-shadow:0 12px 24px rgba(0,0,0,.16);
+}
+.home-command-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+.home-command-stats button,
+.home-command-actions button,
+.home-command-camps button,
+.home-command-live{
+  border:1px solid rgba(34,32,24,.08);
+  border-radius:18px;
+  background:rgba(255,255,255,.58);
+  color:#222018;
+  font-family:inherit;
+}
+.home-command-stats button{
+  min-height:58px;
+  display:grid;
+  gap:3px;
+  padding:8px;
+}
+.home-command-stats span,
+.home-command-actions span,
+.home-command-camps span,
+.home-command-live span{
+  color:#7a7162;
+  font-size:11px;
+  font-weight:900;
+}
+.home-command-stats strong{
+  font-size:17px;
+  line-height:1;
+}
+.home-command-actions{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+.home-command-actions button{
+  min-height:70px;
+  padding:10px;
+  text-align:left;
+}
+.home-command-actions strong,
+.home-command-camps strong{
+  display:block;
+  font-size:14px;
+  line-height:1.15;
+}
+.home-command-actions span,
+.home-command-camps span{
+  display:block;
+  margin-top:5px;
+  line-height:1.25;
+}
+.home-command-camps{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding-bottom:1px;
+  scrollbar-width:none;
+}
+.home-command-camps::-webkit-scrollbar{display:none;}
+.home-command-camps button{
+  flex:0 0 min(215px,72vw);
+  min-height:56px;
+  padding:10px 12px;
+  text-align:left;
+}
+.home-command-live{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:9px;
+  padding:9px 10px;
+  background:rgba(111,128,99,.13);
+}
+.home-command-live strong{
+  color:#6f8063;
+  font-size:12px;
+}
+.home-command-live button{
+  min-height:34px;
+  border:0;
+  border-radius:999px;
+  padding:0 12px;
+  background:#313026;
+  color:#fffaf1;
+  font-weight:1000;
+}
+.home-command-note{
+  color:#7a7162;
+  letter-spacing:0;
+  font-size:11px;
+  line-height:1.4;
+}
+body[data-route="home"] #app.app-shell{
+  gap:10px!important;
+}
+body[data-route="home"] #app.app-shell::after{
+  height:var(--ob-scroll-spacer,64px)!important;
+  min-height:var(--ob-scroll-spacer,64px)!important;
+  flex-basis:var(--ob-scroll-spacer,64px)!important;
+}
+@media(max-width:520px){
+  .home-command-center{border-radius:24px;padding:10px;gap:8px;}
+  .home-command-hero{grid-template-columns:1fr;gap:9px;border-radius:20px;padding:13px;}
+  .home-command-hero h2{font-size:23px;}
+  .home-command-main{width:100%;}
+  .home-command-actions{grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .home-command-actions button{min-height:66px;padding:9px 8px;}
+  .home-command-actions strong{font-size:13px;}
+  .home-command-actions span{font-size:10px;}
+  .home-command-stats{gap:6px;}
+  .home-command-stats button{min-height:54px;}
+}
+@media(max-width:380px){
+  .home-command-actions{grid-template-columns:1fr;}
+  .home-command-actions button{min-height:52px;}
+}

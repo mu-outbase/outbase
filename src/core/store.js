@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-a3-data-guard-20260705';
-import { VERSION } from '../config/version.js?v=core08-a3-data-guard-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-a3-data-guard-20260705';
+import { loadState, saveState } from './storage.js?v=core08-b-home-commander-20260705';
+import { VERSION } from '../config/version.js?v=core08-b-home-commander-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-b-home-commander-20260705';
 
 const initialState = {
   version: VERSION,

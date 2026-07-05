@@ -1,0 +1,16 @@
+Core08-B 反映手順
+
+1. GitHubに OUTBASE_Core08_B_HOME_COMMANDER_完成版.zip をアップロード
+   https://github.com/mu-outbase/outbase/upload/main
+
+2. workflowを作成
+   https://github.com/mu-outbase/outbase/new/main
+
+3. ファイル名
+   .github/workflows/unpack-core08-b.yml
+
+4. workflow名
+   Unpack Core08-B ZIP
+
+5. 反映後確認URL
+   https://mu-outbase.github.io/outbase/?v=core08b
