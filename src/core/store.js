@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d2-day-easy-record-20260705';
-import { VERSION } from '../config/version.js?v=core08-d2-day-easy-record-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d2-day-easy-record-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d3-day-link-gps-20260705';
+import { VERSION } from '../config/version.js?v=core08-d3-day-link-gps-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d3-day-link-gps-20260705';
 
 const initialState = {
   version: VERSION,
@@ -45,6 +45,7 @@ const initialState = {
   selectedRecordSessionId: null,
   recoverySession: null,
   dayRecords: {},
+  dayGpsHints: {},
   dayCaptureMode: 'now',
   activeDayTag: 'unclassified',
   dayStartedAt: null,
@@ -65,7 +66,7 @@ const initialState = {
   },
   notes: { shopping: [], packing: [], kota: [], reflection: [] },
   dataGuard: {
-    version: 'core08-a3',
+    version: 'core08-d3',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: [],
     deletedItems: [],
@@ -90,6 +91,7 @@ function normalizeLoadedState(loaded) {
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.recoverySession = loaded?.recoverySession || null;
   merged.dayRecords = loaded?.dayRecords && typeof loaded.dayRecords === 'object' && !Array.isArray(loaded.dayRecords) ? loaded.dayRecords : {};
+  merged.dayGpsHints = loaded?.dayGpsHints && typeof loaded.dayGpsHints === 'object' && !Array.isArray(loaded.dayGpsHints) ? loaded.dayGpsHints : {};
   merged.dayCaptureMode = ['now', 'later', 'before', 'rough'].includes(loaded?.dayCaptureMode) ? loaded.dayCaptureMode : 'now';
   merged.activeDayTag = loaded?.activeDayTag || 'unclassified';
   merged.dayStartedAt = loaded?.dayStartedAt || null;

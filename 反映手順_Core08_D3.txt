@@ -1,0 +1,4 @@
+1. OUTBASE_Core08_D3_DAY_LINK_GPS_完成版.zip を main へアップロード
+2. .github/workflows/unpack-core08-d3.yml を作成
+3. Actions で Unpack Core08-D3 ZIP を実行/確認
+4. https://mu-outbase.github.io/outbase/?v=core08d3 で確認

@@ -33,7 +33,13 @@ function withRecordId(record = {}) {
 
 function withDayRecordId(record = {}) {
   if (record.id || record.record_id) return record;
-  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D2で当日記録保護IDを付与' };
+  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D3で当日記録保護IDを付与' };
+}
+
+
+function normalizeDayGpsHints(hints = {}) {
+  if (!hints || typeof hints !== 'object' || Array.isArray(hints)) return {};
+  return Object.fromEntries(Object.entries(hints).map(([key, list]) => [key, Array.isArray(list) ? list.slice(0, 20) : []]));
 }
 
 function normalizeDayRecords(records = {}) {
@@ -43,7 +49,7 @@ function normalizeDayRecords(records = {}) {
 
 function normalizeDataGuard(dataGuard = {}) {
   return {
-    version: 'core08-d2',
+    version: 'core08-d3',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: Array.isArray(dataGuard.auditLog) ? dataGuard.auditLog.slice(-MAX_AUDIT) : [],
     deletedItems: Array.isArray(dataGuard.deletedItems) ? dataGuard.deletedItems.slice(-MAX_AUDIT) : [],
@@ -59,6 +65,7 @@ export function normalizeProtectedState(state = {}) {
   if (Array.isArray(next.calendarEvents)) next.calendarEvents = next.calendarEvents.map(withEventId);
   if (Array.isArray(next.recordHistory)) next.recordHistory = next.recordHistory.map(withRecordId);
   next.dayRecords = normalizeDayRecords(state.dayRecords || {});
+  next.dayGpsHints = normalizeDayGpsHints(state.dayGpsHints || {});
   return next;
 }
 
