@@ -1,0 +1,10 @@
+OUTBASE Core07.2.1 反映手順
+
+1. GitHubに OUTBASE_Core07_2_1_PREP_USABILITY_完成版.zip をアップロード
+2. .github/workflows/unpack-core07-2-1.yml を作成
+3. Actions で Unpack Core07.2.1 ZIP を実行
+4. 準備タブで以下を確認
+   - 予定が日程近い順に並ぶ
+   - 天気判断コピーが消えている
+   - 料理/ルート/ギア/コタを押すと中身が出る
+   - 下の無駄な空白が減っている

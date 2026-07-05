@@ -810,3 +810,40 @@
   .command-title-row,.command-meta-grid,.decision-pill-row,.command-actions,.core073-two-actions,.core073-mini-rows p,.core073-shopping-preview p{grid-template-columns:1fr;}
   .core073-status-grid{grid-template-columns:repeat(2,1fr);}
 }
+
+
+/* Core07.2.1 / 予定順・コピー削除・下余白削減 */
+.core073-prep-page{
+  padding-bottom:22px!important;
+  --ob-scroll-spacer:22px;
+  --ob-bottom-reserve:22px;
+}
+.core073-prep-page::after{
+  height:22px!important;
+}
+.core073-plan-row .projectSwitch span{
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.command-actions.single{
+  grid-template-columns:1fr;
+}
+.core073-selected-panel{
+  margin-bottom:0!important;
+}
+.core073-panel-body .core073-mini-list:first-of-type span{
+  background:#f3f6ed;
+  border-color:rgba(111,128,99,.25);
+}
+@media(max-width:520px){
+  .core073-prep-page{padding-bottom:18px!important;}
+}
+
+#app.app-shell:has(.core073-prep-page)::after{
+  height:32px!important;
+}
+#app.app-shell:has(.core073-prep-page){
+  padding-bottom:0!important;
+}

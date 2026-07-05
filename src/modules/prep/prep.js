@@ -1,16 +1,15 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core07-2-ui-fix-20260705';
-import { getState, patchState } from '../../core/store.js?v=core07-2-ui-fix-20260705';
-import { renderImportPanel } from '../import/import.js?v=core07-2-ui-fix-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core07-2-1-prep-usability-20260705';
+import { getState, patchState } from '../../core/store.js?v=core07-2-1-prep-usability-20260705';
+import { renderImportPanel } from '../import/import.js?v=core07-2-1-prep-usability-20260705';
 import {
   buildDepartureLineList,
   buildMealLineList,
   buildPrepModel,
   buildPracticalPrep,
   buildShoppingLineList,
-  buildWeatherDecisionLineList,
   mealModeLabels,
   normalizePrepContext
-} from './prepEngine.js?v=core07-2-ui-fix-20260705';
+} from './prepEngine.js?v=core07-2-1-prep-usability-20260705';
 
 const PANEL_META = {
   meal: { label: '料理', short: '料理', sub: '献立・買物' },
@@ -27,12 +26,44 @@ function summarizeDate(project) {
 }
 function campPlans(state) {
   const list = [];
-  if (state.nextProject) list.push({ key: state.nextProject.id || 'nextProject', title: projectName(state.nextProject), sub: summarizeDate(state.nextProject), project: state.nextProject });
-  (state.calendarEvents || []).filter((e) => e?.type === 'camp').slice(0, 6).forEach((event) => {
+  if (state.nextProject) {
+    list.push({
+      key: state.nextProject.id || 'nextProject',
+      title: projectName(state.nextProject),
+      sub: summarizeDate(state.nextProject),
+      project: state.nextProject,
+      startValue: planStartValue(state.nextProject)
+    });
+  }
+  (state.calendarEvents || []).filter((e) => e?.type === 'camp').forEach((event) => {
     const dateText = [event.start, event.end && event.end !== event.start ? event.end : ''].filter(Boolean).join('〜') || '日程未確定';
-    list.push({ key: event.id, title: event.title || 'キャンプ予定', sub: dateText, project: calendarEventToProject(event) });
+    const project = calendarEventToProject(event);
+    list.push({ key: event.id, title: event.title || 'キャンプ予定', sub: dateText, project, startValue: planStartValue(project, event.start) });
   });
-  return list;
+  return list.sort((a, b) => a.startValue - b.startValue).slice(0, 8);
+}
+function planStartValue(project, fallback = '') {
+  const text = `${fallback} ${project?.reservation?.dateText || ''} ${project?.start || ''}`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const candidates = [];
+  const ymd = text.match(/(20\d{2})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
+  if (ymd) candidates.push(new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])).getTime());
+  const md = text.match(/(\d{1,2})[/-](\d{1,2})|(?:\b|^)(\d{1,2})月(\d{1,2})日/);
+  if (md) {
+    const m = Number(md[1] || md[3]);
+    const d = Number(md[2] || md[4]);
+    const thisYear = new Date(year, m - 1, d).getTime();
+    const nextYear = new Date(year + 1, m - 1, d).getTime();
+    candidates.push(thisYear >= startOfToday() ? thisYear : nextYear);
+  }
+  const valid = candidates.filter((value) => Number.isFinite(value));
+  if (!valid.length) return Number.MAX_SAFE_INTEGER;
+  return Math.min(...valid);
+}
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
 function calendarEventToProject(event) {
   return {
@@ -85,7 +116,7 @@ function renderCommandCenter(model) {
     </div>
     <div class="decision-pill-row"><button class="cancelDecisionBtn ${w.status === '行く' ? 'active' : ''}" data-status="行く">行く</button><button class="cancelDecisionBtn ${w.status === '保留' ? 'active' : ''}" data-status="保留">保留</button><button class="cancelDecisionBtn ${w.status === 'キャンセル検討' ? 'active' : ''}" data-status="キャンセル検討">検討</button></div>
     <ol class="command-next-list">${topActions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>
-    <div class="command-actions"><button class="primary-compact prepPanelTab" data-feature="input">天気・期限を入れる</button><button id="copyWeatherDecision" class="secondary-compact">判断コピー</button></div>
+    <div class="command-actions single"><button class="primary-compact prepPanelTab" data-feature="input">天気・期限を入れる</button></div>
   </section>`;
 }
 
@@ -126,33 +157,55 @@ function mealPanel(model) {
   const night = model.meals.find((meal) => meal.label === '1日目 夜');
   const morning = model.meals.find((meal) => meal.label === '2日目 朝');
   const common = model.commonFoods.map((item) => item.name).slice(0, 4).join(' / ') || '未検出';
+  const foodTasks = [
+    model.weatherDecision?.mealAdvice?.[0] || '天気に合わせて火数と手間を決める',
+    morning?.menu ? `2日目朝：${morning.menu}` : '2日目朝ごはんを決める',
+    model.shoppingItems.length ? `買物：${model.shoppingItems.length}件を確認` : '料理を入れて買物を出す',
+    common !== '未検出' ? `共通食材：${common}` : '共通食材は未検出'
+  ];
   return `<div class="core073-panel-body">${miniRows([
-    ['天気', model.weatherDecision?.mealAdvice?.[0] || '雨なら簡単飯寄り'],
+    ['天気判断', model.weatherDecision?.mealAdvice?.[0] || '雨なら簡単飯寄り'],
     ['1日目夜', night?.menu || night?.fallback || '未定'],
     ['2日目朝', morning?.menu || morning?.fallback || '未定'],
     ['共通食材', common]
-  ])}<div class="core073-two-actions"><button id="copyShoppingList" class="primary-compact">買物コピー</button><button id="copyMealPlan" class="secondary-compact">料理コピー</button></div>${shoppingPreview(model)}${modeChips(model)}</div>`;
+  ])}${miniList('料理で確認すること', foodTasks)}<div class="core073-two-actions"><button id="copyShoppingList" class="primary-compact">買物コピー</button><button id="copyMealPlan" class="secondary-compact">料理コピー</button></div>${shoppingPreview(model)}${modeChips(model)}</div>`;
 }
 function routePanel(model) {
+  const routeTasks = [
+    model.weatherDecision?.routeAdvice?.[0] || '雨前に設営できる出発へ寄せる',
+    model.route.departure ? `出発：${model.route.departure}` : '出発時間を決める',
+    model.route.stops.length ? `経由：${model.route.stops.join(' / ')}` : 'スーパー/コンビニを決める',
+    model.context.kotaGoing !== 'no' ? 'コタ休憩ポイントを入れる' : '休憩ポイントを確認'
+  ];
   return `<div class="core073-panel-body">${miniRows([
-    ['天気', model.weatherDecision?.routeAdvice?.[0] || '雨前に設営できる出発へ寄せる'],
+    ['天気判断', model.weatherDecision?.routeAdvice?.[0] || '雨前に設営できる出発へ寄せる'],
     ['出発', model.route.departure || '未設定'],
     ['経由地', model.route.stops.join(' / ') || 'スーパー/コンビニ未設定'],
     ['IN', model.route.checkIn || '未設定']
-  ])}<div class="core073-two-actions"><button id="copyDeparturePlan" class="primary-compact">出発コピー</button><button class="secondary-compact prepPanelTab" data-feature="input">ルート入力</button></div></div>`;
+  ])}${miniList('ルートで確認すること', routeTasks)}<div class="core073-two-actions"><button id="copyDeparturePlan" class="primary-compact">出発コピー</button><button class="secondary-compact prepPanelTab" data-feature="input">ルート入力</button></div></div>`;
 }
 function gearPanel(model) {
+  const gearTasks = [
+    ...(model.weatherDecision?.gearAdvice || []).slice(0, 3),
+    model.gear.status || '今回持つものを決める',
+    model.gear.ledger.length ? `台帳登録済み：${model.gear.ledger.length}件` : 'ギア台帳に保管場所/用途を登録'
+  ].filter(Boolean);
   return `<div class="core073-panel-body">${miniRows([
-    ['天気', model.weatherDecision?.gearAdvice?.[0] || '天気から必要ギアを決める'],
+    ['天気判断', model.weatherDecision?.gearAdvice?.[0] || '天気から必要ギアを決める'],
     ['今回', model.gear.status || '未確認'],
     ['台帳', model.gear.ledger.length ? `${model.gear.ledger.length}件` : '未登録']
-  ])}${miniList('今回の候補', model.gear.items.slice(0, 6))}<div class="core073-two-actions"><button class="primary-compact prepPanelTab" data-feature="input">ギア入力</button><button class="secondary-compact prepPanelTab" data-feature="input">台帳登録</button></div></div>`;
+  ])}${miniList('ギアで確認すること', gearTasks)}${miniList('今回の候補', model.gear.items.slice(0, 6))}<div class="core073-two-actions"><button class="primary-compact prepPanelTab" data-feature="input">今回ギア入力</button><button class="secondary-compact prepPanelTab" data-feature="input">台帳登録</button></div></div>`;
 }
 function kotaPanel(model) {
+  const kotaTasks = [
+    ...(model.weatherDecision?.kotaAdvice || []).slice(0, 3),
+    model.context.kotaGoing === 'no' ? 'コタ同行なし' : '水 / 暑さ / 雨 / 休憩を確認',
+    model.route.kotaBreak ? '休憩ポイント入力済み' : 'コタ休憩ポイントを入れる'
+  ].filter(Boolean);
   return `<div class="core073-panel-body">${miniRows([
-    ['天気', model.weatherDecision?.kotaAdvice?.[0] || '暑さ・雨・休憩を確認'],
+    ['天気判断', model.weatherDecision?.kotaAdvice?.[0] || '暑さ・雨・休憩を確認'],
     ['状態', model.kota.status || '要確認']
-  ])}${miniList('コタ用品', model.kota.items.slice(0, 7))}<div class="core073-two-actions"><button class="primary-compact prepPanelTab" data-feature="input">コタ条件入力</button><button id="copyShoppingList" class="secondary-compact">買物コピー</button></div></div>`;
+  ])}${miniList('コタで確認すること', kotaTasks)}${miniList('コタ用品', model.kota.items.slice(0, 7))}<div class="core073-two-actions"><button class="primary-compact prepPanelTab" data-feature="input">コタ条件入力</button><button class="secondary-compact prepPanelTab" data-feature="route">ルート確認</button></div></div>`;
 }
 function miniList(title, items = []) {
   if (!items.length) return `<p class="empty-line">${escapeHtml(title)}：入力待ち</p>`;
@@ -221,7 +274,6 @@ function bindPrepActions(project, model) {
     toast('更新しました');
     renderPrep();
   });
-  bindCopy('copyWeatherDecision', () => buildWeatherDecisionLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '天気判断をコピー');
   bindCopy('copyShoppingList', () => buildShoppingLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '買物リストをコピー');
   bindCopy('copyMealPlan', () => buildMealLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '料理計画をコピー');
   bindCopy('copyDeparturePlan', () => buildDepartureLineList(buildPrepModel(getState().nextProject || project, normalizePrepContext(getState().prepContext || model.context, project?.reservation || {}))), '出発予定をコピー');
