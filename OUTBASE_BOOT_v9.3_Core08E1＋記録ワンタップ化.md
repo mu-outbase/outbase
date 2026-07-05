@@ -4,7 +4,7 @@
 2026-07-05
 
 ## Build ID
-core08-e1-one-tap-record-20260705
+core08-e2-plus-action-hub-20260705
 
 ## 位置づけ
 Core08-D9で下ナビから当日タブを外し、当日機能を裏側の自動ログレイヤーへ移した。

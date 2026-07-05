@@ -1,0 +1,4 @@
+1. GitHubに OUTBASE_Core08_E2_PLUS_ACTION_HUB_完成版.zip をアップロード
+2. .github/workflows/unpack-core08-e2.yml を作成
+3. Actions 実行完了後、Pagesで確認
+4. 確認URL：https://mu-outbase.github.io/outbase/?v=core08e2

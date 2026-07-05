@@ -1,16 +1,16 @@
-const BUILD_ID = 'core08-e1-one-tap-record-20260705';
+const BUILD_ID = 'core08-e2-plus-action-hub-20260705';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-e1-one-tap-record-20260705';
-import { getState, subscribe } from './core/store.js?v=core08-e1-one-tap-record-20260705';
-import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-e1-one-tap-record-20260705';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-e1-one-tap-record-20260705';
-import { renderHome } from './modules/home/home.js?v=core08-e1-one-tap-record-20260705';
-import { enhanceHomeCommander, initHomeCommander } from './modules/home/homeCommander.js?v=core08-e1-one-tap-record-20260705';
-import { renderSearch } from './modules/search/search.js?v=core08-e1-one-tap-record-20260705';
-import { renderPrep } from './modules/prep/prep.js?v=core08-e1-one-tap-record-20260705';
-import { renderWalk } from './modules/walk/walk.js?v=core08-e1-one-tap-record-20260705';
-import { renderMemory } from './modules/memory/memory.js?v=core08-e1-one-tap-record-20260705';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-e1-one-tap-record-20260705';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-e2-plus-action-hub-20260705';
+import { getState, subscribe } from './core/store.js?v=core08-e2-plus-action-hub-20260705';
+import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-e2-plus-action-hub-20260705';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-e2-plus-action-hub-20260705';
+import { renderHome } from './modules/home/home.js?v=core08-e2-plus-action-hub-20260705';
+import { enhanceHomeCommander, initHomeCommander } from './modules/home/homeCommander.js?v=core08-e2-plus-action-hub-20260705';
+import { renderSearch } from './modules/search/search.js?v=core08-e2-plus-action-hub-20260705';
+import { renderPrep } from './modules/prep/prep.js?v=core08-e2-plus-action-hub-20260705';
+import { renderWalk } from './modules/walk/walk.js?v=core08-e2-plus-action-hub-20260705';
+import { renderMemory } from './modules/memory/memory.js?v=core08-e2-plus-action-hub-20260705';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-e2-plus-action-hub-20260705';
 
 
 document.body.dataset.build = BUILD_ID;
@@ -28,7 +28,7 @@ function refreshRuntimeTheme() {
 function modeLabel(type) {
   return {
     homeWalk: '自宅散歩', campWalk: '場内散歩', walk: '自宅散歩', camp: 'キャンプ滞在',
-    life: 'メモ', memo: 'メモ', setup: '設営', cook: '料理', teardown: '撤収'
+    life: 'メモ', memo: 'メモ', setup: '設営', cook: '料理', teardown: '撤収', drive: 'ドライブ', campWalk: '場内探索'
   }[type] || '記録';
 }
 
