@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d4-day-flow-actual-20260705';
-import { VERSION } from '../config/version.js?v=core08-d4-day-flow-actual-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d4-day-flow-actual-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d5-day-now-navi-20260705';
+import { VERSION } from '../config/version.js?v=core08-d5-day-now-navi-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d5-day-now-navi-20260705';
 
 const initialState = {
   version: VERSION,
@@ -68,7 +68,7 @@ const initialState = {
   },
   notes: { shopping: [], packing: [], kota: [], reflection: [] },
   dataGuard: {
-    version: 'core08-d4',
+    version: 'core08-d5',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: [],
     deletedItems: [],

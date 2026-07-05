@@ -1,0 +1,3 @@
+1. OUTBASE_Core08_D5_DAY_NOW_NAVI_完成版.zip を main にアップロード
+2. .github/workflows/unpack-core08-d5.yml を作成
+3. Actions完了後、https://mu-outbase.github.io/outbase/?v=core08d5 で確認

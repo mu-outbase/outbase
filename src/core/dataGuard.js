@@ -49,7 +49,7 @@ function normalizeDayRecords(records = {}) {
 
 function normalizeDataGuard(dataGuard = {}) {
   return {
-    version: 'core08-d4',
+    version: 'core08-d5',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: Array.isArray(dataGuard.auditLog) ? dataGuard.auditLog.slice(-MAX_AUDIT) : [],
     deletedItems: Array.isArray(dataGuard.deletedItems) ? dataGuard.deletedItems.slice(-MAX_AUDIT) : [],
