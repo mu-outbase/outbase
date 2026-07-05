@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_3_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_4_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -41,8 +41,41 @@
     { id: 'driveHome', title: '帰路', note: '寄り道・帰宅時間・片付けへ', state: '待ち' }
   ];
 
+
+  const gearBase = [
+    { id: 'shelter', group: '幕・寝室', name: 'リビングシェル / アメニティドーム', qty: '各1', note: '寝室とリビングを分ける。雨なら乾燥まで残す。', done: false },
+    { id: 'tarp', group: '幕・寝室', name: 'ヘキサエヴォまたはタープ', qty: '必要時', note: '雨風と同行者の動線で判断。', done: false },
+    { id: 'sleep', group: '寝具', name: 'コット / グランドフトン / 枕', qty: '夫婦分', note: '寝室側へまとめる。', done: false },
+    { id: 'light', group: '灯り', name: 'ほおずき / たねほおずき / ランタン', qty: '必要分', note: '寝室・食事・導線で分ける。', done: false },
+    { id: 'igt', group: 'キッチン', name: 'IGT / バーナー / スキレット', qty: '料理に合わせる', note: '料理計画と連動して増減。', done: false },
+    { id: 'power', group: '電源・空調', name: 'EcoFlow / WAVE / Glacier', qty: '必要時', note: '暑さ・冷蔵・雨撤収で判断。', done: false }
+  ];
+
+  const kotaBase = [
+    { id: 'food', group: '基本', name: 'コタのごはん', qty: '日数分＋予備', note: '小分け。食いつきも記録。', done: false },
+    { id: 'water', group: '基本', name: '水 / フードボウル', qty: '必要分', note: '移動中とサイト用を分ける。', done: false },
+    { id: 'lead', group: '移動', name: 'リード / ハーネス / 首輪', qty: '各1', note: '予備リードも確認。', done: false },
+    { id: 'cart', group: '移動', name: 'AirBuggy Dome3', qty: '1台', note: '場内移動と暑さ対策。', done: false },
+    { id: 'heatCold', group: '快適', name: '暑さ寒さ対策', qty: '天気次第', note: '気温・風・標高で判断。', done: false },
+    { id: 'cleanup', group: '片付け', name: 'うんち袋 / タオル / 消臭', qty: '多め', note: '雨ならタオルを増やす。', done: false }
+  ];
+
+  const weatherCheckBase = [
+    { id: 'rain', name: '雨量', note: '設営・撤収・乾燥サービスに影響', done: false },
+    { id: 'wind', name: '風速', note: 'タープ・焚火・幕の向きに影響', done: false },
+    { id: 'temp', name: '気温', note: 'コタ、寝具、空調、服装に影響', done: false },
+    { id: 'ground', name: '地面', note: '水はけ、泥、ペグ、撤収に影響', done: false }
+  ];
+
+  const routeCheckBase = [
+    { id: 'leave', name: '出発時間', note: '柏からの出発と渋滞を確認', done: false },
+    { id: 'conv', name: 'コンビニ / 買い出し', note: '通り道で寄る場所を決める', done: false },
+    { id: 'gas', name: '給油 / 充電', note: '往復と寄り道に備える', done: false },
+    { id: 'return', name: '帰路', note: '撤収後に無理なく帰れる道を確認', done: false }
+  ];
+
   const defaultState = {
-    version: 'restart-3',
+    version: 'restart-4',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
@@ -69,7 +102,11 @@
         prep: clone(prepBase),
         shopping: clone(shoppingBase),
         meals: clone(mealsBase),
-        daySteps: clone(dayStepsBase)
+        daySteps: clone(dayStepsBase),
+        gear: clone(gearBase),
+        kota: clone(kotaBase),
+        weatherChecks: clone(weatherCheckBase),
+        routeChecks: clone(routeCheckBase)
       },
       {
         id: 'walk-home-kota',
@@ -151,7 +188,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-3';
+      merged.version = 'restart-4';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -192,6 +229,10 @@
         project.shopping = Array.isArray(project.shopping) ? project.shopping : clone(shoppingBase);
         project.meals = Array.isArray(project.meals) ? project.meals : clone(mealsBase);
         project.daySteps = Array.isArray(project.daySteps) ? project.daySteps : clone(dayStepsBase);
+        project.gear = Array.isArray(project.gear) ? project.gear : clone(gearBase);
+        project.kota = Array.isArray(project.kota) ? project.kota : clone(kotaBase);
+        project.weatherChecks = Array.isArray(project.weatherChecks) ? project.weatherChecks : clone(weatherCheckBase);
+        project.routeChecks = Array.isArray(project.routeChecks) ? project.routeChecks : clone(routeCheckBase);
       }
     });
   }
@@ -310,6 +351,34 @@
     const doneWords = ['確認済み', '買った', '完了'];
     const done = project.prep.filter((item) => doneWords.includes(item.status)).length;
     return Math.round((done / project.prep.length) * 100);
+  }
+
+
+  function checkedCount(list) {
+    return Array.isArray(list) ? list.filter((item) => item.done).length : 0;
+  }
+
+  function checklistText(list) {
+    const total = Array.isArray(list) ? list.length : 0;
+    return `${checkedCount(list)}/${total}`;
+  }
+
+  function updatePrepStatus(project, prepId, list, partial = '確認中') {
+    const item = project?.prep?.find((entry) => entry.id === prepId);
+    if (!item || !Array.isArray(list)) return;
+    item.status = list.length && list.every((entry) => entry.done) ? '確認済み' : partial;
+  }
+
+  function updateShoppingPrep(project) {
+    if (!project?.shopping) return;
+    const item = project.prep?.find((entry) => entry.id === 'shop');
+    if (!item) return;
+    const needBuy = project.shopping.filter((entry) => entry.group !== '今回は買わないもの');
+    item.status = needBuy.length && needBuy.every((entry) => entry.state === '買った') ? '確認済み' : '未完了';
+  }
+
+  function groupNames(list) {
+    return [...new Set((list || []).map((item) => item.group || 'その他'))];
   }
 
   function countByProject(list, projectId) {
@@ -611,56 +680,71 @@
 
   function renderPrep() {
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
+    const percent = prepPercent(project);
     const body = `
       <section class="hero">
         <h1>準備</h1>
         <p>${escapeHtml(project.place)} の準備を、買い物・料理・ギア・コタ・天気・ルートでつなげます。</p>
       </section>
       <main class="stack">
+        ${card('準備率', '出発前の状態', `
+          <div class="metric-row">
+            <div class="metric"><small>全体</small><strong>${percent}%</strong></div>
+            <div class="metric"><small>ギア</small><strong>${escapeHtml(checklistText(project.gear))}</strong></div>
+            <div class="metric"><small>コタ</small><strong>${escapeHtml(checklistText(project.kota))}</strong></div>
+            <div class="metric"><small>天気/ルート</small><strong>${checkedCount(project.weatherChecks) + checkedCount(project.routeChecks)}/${project.weatherChecks.length + project.routeChecks.length}</strong></div>
+          </div>
+          <div class="progress"><span style="width:${percent}%"></span></div>
+        `, `${btn('当日運転席へ', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'primary')}${btn('予定詳細', 'openProject', { projectId: project.id, screen: 'plan', tab: '予定' }, 'ghost')}`)}
         ${card('今日やること', '準備する', `
           <div class="list">
-            ${project.prep.slice(0, 3).map((item) => `
-              <button class="item" data-action="togglePrep" data-id="${escapeHtml(item.id)}">
+            ${project.prep.map((item) => `
+              <button class="item" data-action="openPrepItem" data-key="${escapeHtml(item.key)}">
                 <div class="item-main"><div class="item-title">${escapeHtml(item.key)}を確認</div><div class="item-sub">${escapeHtml(item.note)}</div></div>
                 <span class="tag ${item.status === '確認済み' ? '' : 'light'}">${escapeHtml(item.status)}</span>
               </button>
             `).join('')}
           </div>
         `)}
-        ${card('準備メニュー', '予定に紐づく', `
-          <div class="list">
-            ${project.prep.map((item) => `
-              <button class="item" data-action="openPrepItem" data-key="${escapeHtml(item.key)}">
-                <div class="item-main"><div class="item-title">${escapeHtml(item.key)}</div><div class="item-sub">${escapeHtml(item.note)}</div></div>
-                <span class="tag ${item.status === '確認済み' ? '' : 'light'}">${escapeHtml(item.status)}</span>
-              </button>
-            `).join('')}
-          </div>
-        `, `${btn('当日運転席へ', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'primary')}`)}
+        ${card('準備を残す', '未確認箱へ', `
+          <p class="card-text">迷ったもの、足りなかったもの、次回減らすものは、準備中でも未確認箱に残します。</p>
+        `, `${btn('忘れ物メモ', 'addRecord', { type: 'メモ', projectId: project.id, target: '準備', text: '忘れ物候補' }, 'ghost')}${btn('次回減らすもの', 'addImprovement', { projectId: project.id, text: '次回は持ち物を減らす', target: 'ギア' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
 
   function renderShopping() {
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
-    const groups = ['食材', '調味料', '今回は買わないもの'];
+    const groups = ['食材', '調味料', '消耗品', '今回は買わないもの'];
     const body = `
       <section class="hero">
         <h1>買い物</h1>
-        <p>料理計画から反映されています。売っていない時の代替と、買わないものも残します。</p>
+        <p>料理計画から反映されています。数量・担当・代替品まで確認します。</p>
       </section>
       <main class="stack">
+        ${card('買い物の状態', 'LINEに貼れる', `
+          <div class="metric-row">
+            <div class="metric"><small>未購入</small><strong>${project.shopping.filter((item) => item.group !== '今回は買わないもの' && item.state !== '買った').length}件</strong></div>
+            <div class="metric"><small>買った</small><strong>${project.shopping.filter((item) => item.state === '買った').length}件</strong></div>
+            <div class="metric"><small>買わない</small><strong>${project.shopping.filter((item) => item.group === '今回は買わないもの').length}件</strong></div>
+          </div>
+        `, `${btn('LINE用にコピー', 'copyShopping', {}, 'primary')}${btn('未購入だけコピー', 'copyShoppingOpen', {}, 'ghost')}`)}
         ${groups.map((group) => card(group, '買い忘れ防止', `
           <div class="list">
             ${project.shopping.filter((item) => item.group === group).map((item) => `
               <div class="item">
                 <div class="item-main"><div class="item-title">${escapeHtml(item.name)}</div><div class="item-sub">${escapeHtml(item.qty)} / ${escapeHtml(item.owner)} / ${escapeHtml(item.detail)}</div></div>
-                <button class="tag ${item.state === '未購入' ? 'light' : ''}" data-action="toggleShopping" data-id="${escapeHtml(item.id)}">${escapeHtml(item.state)}</button>
+                <div class="actions compact-actions">
+                  <button class="tag light" data-action="editShoppingItem" data-id="${escapeHtml(item.id)}">編集</button>
+                  <button class="tag ${item.state === '未購入' ? 'light' : ''}" data-action="toggleShopping" data-id="${escapeHtml(item.id)}">${escapeHtml(item.state)}</button>
+                </div>
               </div>
             `).join('') || '<div class="empty">ここに追加した買い物が入ります。</div>'}
           </div>
         `)).join('')}
-        ${card('LINE用コピー', 'そのまま貼れる', `<p class="card-text">食材・調味料・買わないものを分け、数量と担当も入れてコピーします。</p>`, `${btn('LINE用にコピー', 'copyShopping', {}, 'primary')}${btn('未購入だけコピー', 'copyShoppingOpen', {}, 'ghost')}${btn('料理に戻る', 'go', { screen: 'cooking', tab: '準備' }, 'ghost')}`)}
+        ${card('追加する', '料理と準備から増やす', `
+          <p class="card-text">売っていなかったもの、追加したい調味料、買わない判断をここで残します。</p>
+        `, `${btn('食材を追加', 'addShoppingItem', { group: '食材' }, 'primary')}${btn('調味料を追加', 'addShoppingItem', { group: '調味料' }, 'ghost')}${btn('買わないものを追加', 'addShoppingItem', { group: '今回は買わないもの' }, 'ghost')}${btn('料理に戻る', 'go', { screen: 'cooking', tab: '準備' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
@@ -670,24 +754,126 @@
     const body = `
       <section class="hero">
         <h1>料理計画</h1>
-        <p>日程・人数・量・設営時間を見ながら、買い物と調理ギアへ反映します。</p>
+        <p>日程・人数・量・設営時間を見ながら、買い物と当日料理へ反映します。</p>
       </section>
       <main class="stack">
-        ${card('食べる流れ', '量を見ながら決める', `
+        ${card('量の確認', '食べすぎ防止', `
+          <div class="metric-row">
+            <div class="metric"><small>人数</small><strong>${escapeHtml(project.party)}</strong></div>
+            <div class="metric"><small>注意</small><strong>貝なし / 魚卵なし</strong></div>
+            <div class="metric"><small>夜</small><strong>量を増やしすぎない</strong></div>
+          </div>
+          <p class="card-text">多すぎた料理、買わなかった食材、次回減らすものは改善へ戻します。</p>
+        `)}
+        ${card('食べる流れ', '買い物へ反映', `
           <div class="list">
             ${project.meals.map((meal) => `
-              <button class="item" data-action="editMeal" data-id="${escapeHtml(meal.id)}">
+              <div class="item">
                 <div class="item-main"><div class="item-title">${escapeHtml(meal.slot)}：${escapeHtml(meal.menu)}</div><div class="item-sub">${escapeHtml(meal.caution)}</div></div>
-                <span class="tag light">編集</span>
-              </button>
+                <div class="actions compact-actions">
+                  <button class="tag light" data-action="editMeal" data-id="${escapeHtml(meal.id)}">編集</button>
+                  <button class="tag light" data-action="addMealToShopping" data-id="${escapeHtml(meal.id)}">買い物へ</button>
+                </div>
+              </div>
             `).join('')}
           </div>
-        `, `${btn('買い物に反映', 'go', { screen: 'shopping', tab: '準備' })}${btn('当日料理に送る', 'go', { screen: 'cockpit', tab: '予定' }, 'ghost')}`)}
+        `, `${btn('買い物を見る', 'go', { screen: 'shopping', tab: '準備' })}${btn('当日料理に送る', 'go', { screen: 'cockpit', tab: '予定' }, 'ghost')}`)}
         ${card('当日後に聞くこと', '次回改善へ', `
           <div class="list">
-            ${['量はどうだった？', '味はどうだった？', '余った？', '次回も作る？', '次回は減らす？'].map((text) => `<button class="item" data-action="addImprovement" data-text="${escapeHtml(text)}" data-project-id="${escapeHtml(project.id)}"><div class="item-main"><div class="item-title">${escapeHtml(text)}</div><div class="item-sub">思い出から次回改善へ送ります</div></div><span class="tag light">追加</span></button>`).join('')}
+            ${['量はどうだった？', '味はどうだった？', '余った？', '次回も作る？', '次回は減らす？', '買わなくてよかったものは？'].map((text) => `<button class="item" data-action="addImprovement" data-text="${escapeHtml(text)}" data-project-id="${escapeHtml(project.id)}" data-target="料理"><div class="item-main"><div class="item-title">${escapeHtml(text)}</div><div class="item-sub">思い出から次回改善へ送ります</div></div><span class="tag light">追加</span></button>`).join('')}
           </div>
         `)}
+      </main>`;
+    app.innerHTML = layout(body);
+  }
+
+  function renderGear() {
+    const project = activeProject().type === 'camp' ? activeProject() : campProject();
+    const body = `
+      <section class="hero">
+        <h1>ギア準備</h1>
+        <p>持つもの、使った結果、乾燥までこの予定に残します。</p>
+      </section>
+      <main class="stack">
+        ${card('ギア確認', '準備率に反映', `
+          <div class="metric-row">
+            <div class="metric"><small>確認済み</small><strong>${escapeHtml(checklistText(project.gear))}</strong></div>
+            <div class="metric"><small>乾燥</small><strong>撤収後に確認</strong></div>
+          </div>
+        `, `${btn('ギアを追加', 'addGearItem', {}, 'primary')}${btn('準備へ戻る', 'go', { screen: 'prep', tab: '準備' }, 'ghost')}`)}
+        ${groupNames(project.gear).map((group) => card(group, '持ち物', `
+          <div class="list">
+            ${project.gear.filter((item) => item.group === group).map((item) => `
+              <div class="item">
+                <div class="item-main"><div class="item-title">${escapeHtml(item.name)}</div><div class="item-sub">${escapeHtml(item.qty)} / ${escapeHtml(item.note)}</div></div>
+                <div class="actions compact-actions">
+                  <button class="tag ${item.done ? '' : 'light'}" data-action="toggleGear" data-id="${escapeHtml(item.id)}">${item.done ? '確認済み' : '確認'}</button>
+                  <button class="tag light" data-action="addRecord" data-type="メモ" data-project-id="${escapeHtml(project.id)}" data-target="ギア" data-text="${escapeHtml(item.name)}の使用結果">使用結果</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `)).join('')}
+      </main>`;
+    app.innerHTML = layout(body);
+  }
+
+  function renderKota() {
+    const project = activeProject().type === 'camp' ? activeProject() : campProject();
+    const body = `
+      <section class="hero">
+        <h1>コタ用品</h1>
+        <p>ごはん・水・移動・暑さ寒さ対策を、キャンプ予定に紐づけます。</p>
+      </section>
+      <main class="stack">
+        ${card('コタの準備', '忘れ物防止', `
+          <div class="metric-row">
+            <div class="metric"><small>確認済み</small><strong>${escapeHtml(checklistText(project.kota))}</strong></div>
+            <div class="metric"><small>当日</small><strong>様子を残す</strong></div>
+          </div>
+        `, `${btn('コタ用品を追加', 'addKotaItem', {}, 'primary')}${btn('コタの様子を残す', 'addRecord', { type: 'メモ', projectId: project.id, target: 'コタ', text: 'コタの様子' }, 'ghost')}${btn('準備へ戻る', 'go', { screen: 'prep', tab: '準備' }, 'ghost')}`)}
+        ${groupNames(project.kota).map((group) => card(group, 'コタ用品', `
+          <div class="list">
+            ${project.kota.filter((item) => item.group === group).map((item) => `
+              <div class="item">
+                <div class="item-main"><div class="item-title">${escapeHtml(item.name)}</div><div class="item-sub">${escapeHtml(item.qty)} / ${escapeHtml(item.note)}</div></div>
+                <button class="tag ${item.done ? '' : 'light'}" data-action="toggleKota" data-id="${escapeHtml(item.id)}">${item.done ? '確認済み' : '確認'}</button>
+              </div>
+            `).join('')}
+          </div>
+        `)).join('')}
+      </main>`;
+    app.innerHTML = layout(body);
+  }
+
+  function renderWeatherRoute() {
+    const project = activeProject().type === 'camp' ? activeProject() : campProject();
+    const body = `
+      <section class="hero">
+        <h1>天気とルート</h1>
+        <p>雨・風・気温・出発・買い出しを、当日運転席へつなげます。</p>
+      </section>
+      <main class="stack">
+        ${card('天気確認', '設営と撤収に反映', `
+          <div class="list">
+            ${project.weatherChecks.map((item) => `
+              <div class="item">
+                <div class="item-main"><div class="item-title">${escapeHtml(item.name)}</div><div class="item-sub">${escapeHtml(item.note)}</div></div>
+                <button class="tag ${item.done ? '' : 'light'}" data-action="toggleWeather" data-id="${escapeHtml(item.id)}">${item.done ? '確認済み' : '確認'}</button>
+              </div>
+            `).join('')}
+          </div>
+        `, `${btn('雨対策メモ', 'addRecord', { type: 'メモ', projectId: project.id, target: '天気', text: '雨対策メモ' }, 'ghost')}${btn('風対策メモ', 'addRecord', { type: 'メモ', projectId: project.id, target: '天気', text: '風対策メモ' }, 'ghost')}`)}
+        ${card('ルート確認', '出発から帰宅まで', `
+          <div class="list">
+            ${project.routeChecks.map((item) => `
+              <div class="item">
+                <div class="item-main"><div class="item-title">${escapeHtml(item.name)}</div><div class="item-sub">${escapeHtml(item.note)}</div></div>
+                <button class="tag ${item.done ? '' : 'light'}" data-action="toggleRoute" data-id="${escapeHtml(item.id)}">${item.done ? '確認済み' : '確認'}</button>
+              </div>
+            `).join('')}
+          </div>
+        `, `${btn('買い出しメモ', 'addRecord', { type: 'メモ', projectId: project.id, target: 'ルート', text: '買い出し場所メモ' }, 'ghost')}${btn('当日運転席へ', 'go', { screen: 'cockpit', tab: '予定' }, 'primary')}${btn('準備へ戻る', 'go', { screen: 'prep', tab: '準備' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
@@ -901,11 +1087,15 @@
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
     const targetItems = openOnly ? project.shopping.filter((item) => item.state === '未購入') : project.shopping;
     const lines = [openOnly ? '未購入リスト' : '買い物リスト', '', '■食材'];
-    targetItems.filter((item) => item.group === '食材').forEach((item) => lines.push(`・${item.name}（${item.qty} / ${item.owner}）`));
+    targetItems.filter((item) => item.group === '食材').forEach((item) => lines.push(`・${item.name}（${item.qty} / ${item.owner}${item.detail ? ` / ${item.detail}` : ''}）`));
     lines.push('', '■調味料');
-    targetItems.filter((item) => item.group === '調味料').forEach((item) => lines.push(`・${item.name}（${item.qty} / ${item.owner}）`));
-    lines.push('', '■今回は買わない');
-    targetItems.filter((item) => item.group === '今回は買わないもの').forEach((item) => lines.push(`・${item.name}`));
+    targetItems.filter((item) => item.group === '調味料').forEach((item) => lines.push(`・${item.name}（${item.qty} / ${item.owner}${item.detail ? ` / ${item.detail}` : ''}）`));
+    lines.push('', '■消耗品');
+    targetItems.filter((item) => item.group === '消耗品').forEach((item) => lines.push(`・${item.name}（${item.qty} / ${item.owner}${item.detail ? ` / ${item.detail}` : ''}）`));
+    if (!openOnly) {
+      lines.push('', '■今回は買わない');
+      targetItems.filter((item) => item.group === '今回は買わないもの').forEach((item) => lines.push(`・${item.name}`));
+    }
     const text = lines.join('\n');
     navigator.clipboard?.writeText(text).then(() => showToast('LINE用にコピーしました')).catch(() => showToast('コピー文を作りました'));
   }
@@ -929,6 +1119,9 @@
       case 'prep': renderPrep(); break;
       case 'shopping': renderShopping(); break;
       case 'cooking': renderCooking(); break;
+      case 'gear': renderGear(); break;
+      case 'kota': renderKota(); break;
+      case 'weatherRoute': renderWeatherRoute(); break;
       case 'cockpit': renderCockpit(); break;
       case 'homeWalk': renderWalk('home'); break;
       case 'campWalk': renderWalk('camp'); break;
@@ -1002,7 +1195,9 @@
       const key = button.dataset.key;
       if (key === '買い物') setScreen('shopping', '準備');
       else if (key === '料理') setScreen('cooking', '準備');
-      else if (key === 'ルート' || key === '天気') setScreen('cockpit', '予定');
+      else if (key === 'ギア') setScreen('gear', '準備');
+      else if (key === 'コタ') setScreen('kota', '準備');
+      else if (key === 'ルート' || key === '天気') setScreen('weatherRoute', '準備');
       else showToast(`${key}を確認しました`);
       return;
     }
@@ -1050,9 +1245,52 @@
       const project = activeProject().type === 'camp' ? activeProject() : campProject();
       const item = project.shopping.find((entry) => entry.id === button.dataset.id);
       if (item) item.state = item.state === '買った' ? '未購入' : '買った';
+      updateShoppingPrep(project);
       saveState();
       renderShopping();
       showToast('買い物を更新しました');
+      return;
+    }
+
+    if (action === 'editShoppingItem') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.shopping.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      const name = promptText('品名', item.name);
+      if (name === null) return;
+      const qty = promptText('数量', item.qty);
+      if (qty === null) return;
+      const owner = promptText('担当・買う場所', item.owner);
+      if (owner === null) return;
+      const detail = promptText('代替やメモ', item.detail);
+      if (detail === null) return;
+      item.name = name;
+      item.qty = qty;
+      item.owner = owner;
+      item.detail = detail;
+      updateShoppingPrep(project);
+      saveState();
+      renderShopping();
+      showToast('買い物を更新しました');
+      return;
+    }
+
+    if (action === 'addShoppingItem') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const group = button.dataset.group || '食材';
+      const name = promptText(`${group}を追加`, '');
+      if (name === null || !name) return;
+      const qty = promptText('数量', group === '今回は買わないもの' ? 'なし' : '1つ');
+      if (qty === null) return;
+      const owner = promptText('担当・買う場所', group === '今回は買わないもの' ? '買わない' : '当日購入');
+      if (owner === null) return;
+      const detail = promptText('代替やメモ', '');
+      if (detail === null) return;
+      project.shopping.push({ id: makeId('shop'), name, group, qty, owner, detail, state: group === '今回は買わないもの' ? '今回は買わない' : '未購入' });
+      updateShoppingPrep(project);
+      saveState();
+      renderShopping();
+      showToast('買い物に追加しました');
       return;
     }
 
@@ -1079,6 +1317,102 @@
       saveState();
       renderCooking();
       showToast('料理計画を更新しました');
+      return;
+    }
+
+    if (action === 'addMealToShopping') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const meal = project.meals.find((entry) => entry.id === button.dataset.id);
+      if (!meal) return;
+      const name = promptText(`${meal.menu}で買うもの`, meal.menu);
+      if (name === null || !name) return;
+      const qty = promptText('数量', '必要量');
+      if (qty === null) return;
+      project.shopping.push({ id: makeId('shop'), name, group: '食材', qty, owner: '料理から追加', detail: `${meal.slot}：${meal.menu}`, state: '未購入' });
+      updateShoppingPrep(project);
+      saveState();
+      renderCooking();
+      showToast('買い物に反映しました');
+      return;
+    }
+
+    if (action === 'toggleGear') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.gear.find((entry) => entry.id === button.dataset.id);
+      if (item) item.done = !item.done;
+      updatePrepStatus(project, 'gear', project.gear, '確認中');
+      saveState();
+      renderGear();
+      showToast('ギア準備を更新しました');
+      return;
+    }
+
+    if (action === 'addGearItem') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const name = promptText('追加するギア', '');
+      if (name === null || !name) return;
+      const group = promptText('分類', '追加ギア');
+      if (group === null) return;
+      const qty = promptText('数量', '1');
+      if (qty === null) return;
+      const note = promptText('メモ', '');
+      if (note === null) return;
+      project.gear.push({ id: makeId('gear'), group: group || '追加ギア', name, qty, note, done: false });
+      updatePrepStatus(project, 'gear', project.gear, '確認中');
+      saveState();
+      renderGear();
+      showToast('ギアを追加しました');
+      return;
+    }
+
+    if (action === 'toggleKota') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.kota.find((entry) => entry.id === button.dataset.id);
+      if (item) item.done = !item.done;
+      updatePrepStatus(project, 'kota', project.kota, '未確認');
+      saveState();
+      renderKota();
+      showToast('コタ用品を更新しました');
+      return;
+    }
+
+    if (action === 'addKotaItem') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const name = promptText('追加するコタ用品', '');
+      if (name === null || !name) return;
+      const group = promptText('分類', '追加用品');
+      if (group === null) return;
+      const qty = promptText('数量', '1');
+      if (qty === null) return;
+      const note = promptText('メモ', '');
+      if (note === null) return;
+      project.kota.push({ id: makeId('kota'), group: group || '追加用品', name, qty, note, done: false });
+      updatePrepStatus(project, 'kota', project.kota, '未確認');
+      saveState();
+      renderKota();
+      showToast('コタ用品を追加しました');
+      return;
+    }
+
+    if (action === 'toggleWeather') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.weatherChecks.find((entry) => entry.id === button.dataset.id);
+      if (item) item.done = !item.done;
+      updatePrepStatus(project, 'weather', project.weatherChecks, '要確認');
+      saveState();
+      renderWeatherRoute();
+      showToast('天気確認を更新しました');
+      return;
+    }
+
+    if (action === 'toggleRoute') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.routeChecks.find((entry) => entry.id === button.dataset.id);
+      if (item) item.done = !item.done;
+      updatePrepStatus(project, 'route', project.routeChecks, '確認中');
+      saveState();
+      renderWeatherRoute();
+      showToast('ルート確認を更新しました');
       return;
     }
 
@@ -1211,7 +1545,11 @@
         prep: clone(prepBase),
         shopping: clone(shoppingBase),
         meals: clone(mealsBase),
-        daySteps: clone(dayStepsBase)
+        daySteps: clone(dayStepsBase),
+        gear: clone(gearBase),
+        kota: clone(kotaBase),
+        weatherChecks: clone(weatherCheckBase),
+        routeChecks: clone(routeCheckBase)
       };
       state.projects.unshift(newProject);
       state.activeProjectId = newProject.id;
