@@ -1,0 +1,32 @@
+name: Unpack Core08-A ZIP
+
+on:
+  push:
+    paths:
+      - 'OUTBASE_Core08_A_NAV_WORKSPACE_完成版.zip'
+      - '.github/workflows/unpack-core08-a.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip Core08-A package
+        run: |
+          unzip -o "OUTBASE_Core08_A_NAV_WORKSPACE_完成版.zip" -d .
+          rm -f "OUTBASE_Core08_A_NAV_WORKSPACE_完成版.zip"
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Core08-A nav workspace foundation" || echo "No changes to commit"
+          git push
