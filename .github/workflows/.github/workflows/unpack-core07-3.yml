@@ -1,0 +1,32 @@
+name: Unpack Core07.3 ZIP
+
+on:
+  push:
+    paths:
+      - 'OUTBASE_Core07_3_PREP_WORKSPACE_完成版.zip'
+      - '.github/workflows/unpack-core07-3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip Core07.3 package
+        run: |
+          unzip -o "OUTBASE_Core07_3_PREP_WORKSPACE_完成版.zip" -d .
+          rm -f "OUTBASE_Core07_3_PREP_WORKSPACE_完成版.zip"
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Core07.3 prep workspace" || echo "No changes to commit"
+          git push
