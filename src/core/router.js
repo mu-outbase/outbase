@@ -1,4 +1,4 @@
-import { patchState } from './store.js?v=core08-a2-plan-padfix-20260705';
+import { patchState } from './store.js?v=core08-a3-data-guard-20260705';
 
 const routes = new Map();
 const ROUTE_LABELS = {

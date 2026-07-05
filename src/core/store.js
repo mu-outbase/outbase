@@ -1,5 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-a2-plan-padfix-20260705';
-import { VERSION } from '../config/version.js?v=core08-a2-plan-padfix-20260705';
+import { loadState, saveState } from './storage.js?v=core08-a3-data-guard-20260705';
+import { VERSION } from '../config/version.js?v=core08-a3-data-guard-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-a3-data-guard-20260705';
 
 const initialState = {
   version: VERSION,
@@ -57,7 +58,16 @@ const initialState = {
     memo: '',
     updatedAt: null
   },
-  notes: { shopping: [], packing: [], kota: [], reflection: [] }
+  notes: { shopping: [], packing: [], kota: [], reflection: [] },
+  dataGuard: {
+    version: 'core08-a3',
+    immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
+    auditLog: [],
+    deletedItems: [],
+    conflicts: [],
+    backups: [],
+    lastProtectedAt: null
+  }
 };
 
 function clone(value) {
@@ -84,7 +94,8 @@ function normalizeLoadedState(loaded) {
   merged.calendarReminderNotified = loaded?.calendarReminderNotified || {};
   merged.mvpBetaCheck = { ...initialState.mvpBetaCheck, ...(loaded?.mvpBetaCheck || {}), steps: { ...initialState.mvpBetaCheck.steps, ...(loaded?.mvpBetaCheck?.steps || {}) } };
   if (loaded?.walkSession && loaded.walkSession.status === 'active') merged.walkSession = loaded.walkSession;
-  return merged;
+  merged.dataGuard = { ...initialState.dataGuard, ...(loaded?.dataGuard || {}) };
+  return normalizeProtectedState(merged);
 }
 
 let state = normalizeLoadedState(loadState());
@@ -92,8 +103,12 @@ const listeners = new Set();
 
 export function getState() { return clone(state); }
 
-export function patchState(patch) {
-  state = normalizeLoadedState({ ...state, ...patch, version: VERSION, updatedAt: new Date().toISOString() });
+export function patchState(patch, options = {}) {
+  const previous = normalizeProtectedState(state);
+  const guardedPatch = guardPatch(previous, patch || {}, options);
+  const backup = createStateBackup(previous, Object.keys(patch || {}).join(', ') || 'state-change');
+  const backupRecord = backup ? { dataGuard: { ...(guardedPatch.dataGuard || previous.dataGuard), backups: [backup, ...((previous.dataGuard?.backups) || [])].slice(0, 8) } } : {};
+  state = normalizeLoadedState({ ...previous, ...guardedPatch, ...backupRecord, version: VERSION, updatedAt: new Date().toISOString() });
   saveState(state);
   listeners.forEach((listener) => listener(getState()));
 }
@@ -109,7 +124,20 @@ export function subscribe(listener) {
 }
 
 export function resetPrototypeState() {
-  state = { ...initialState };
+  const previous = normalizeProtectedState(state);
+  const backup = createStateBackup(previous, 'resetPrototypeState');
+  state = normalizeLoadedState({
+    ...initialState,
+    dataGuard: {
+      ...(previous.dataGuard || initialState.dataGuard),
+      backups: backup ? [backup, ...((previous.dataGuard?.backups) || [])].slice(0, 8) : ((previous.dataGuard?.backups) || []),
+      auditLog: [
+        ...((previous.dataGuard?.auditLog) || []),
+        { id: `audit_${Date.now()}`, at: new Date().toISOString(), message: 'リセット前状態をバックアップへ保護', keys: ['resetPrototypeState'] }
+      ].slice(-80),
+      lastProtectedAt: new Date().toISOString()
+    }
+  });
   saveState(state);
   listeners.forEach((listener) => listener(getState()));
 }

@@ -1,6 +1,6 @@
-import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-a2-plan-padfix-20260705';
-import { getState, patchState } from '../../core/store.js?v=core08-a2-plan-padfix-20260705';
-import { renderImportPanel } from '../import/import.js?v=core08-a2-plan-padfix-20260705';
+import { app, escapeHtml, toast } from '../../ui/components.js?v=core08-a3-data-guard-20260705';
+import { getState, patchState } from '../../core/store.js?v=core08-a3-data-guard-20260705';
+import { renderImportPanel } from '../import/import.js?v=core08-a3-data-guard-20260705';
 import {
   buildDepartureLineList,
   buildMealLineList,
@@ -9,7 +9,7 @@ import {
   buildShoppingLineList,
   mealModeLabels,
   normalizePrepContext
-} from './prepEngine.js?v=core08-a2-plan-padfix-20260705';
+} from './prepEngine.js?v=core08-a3-data-guard-20260705';
 
 const WORKSPACE_META = {
   input: { label: '天気・判断', short: '天気', sub: '無料期限・1時間天気・行く判断' },
@@ -53,9 +53,8 @@ function campPlans(state) {
   });
   const unique = new Map();
   list.forEach((plan) => {
-    const identity = planIdentity(plan);
-    const current = unique.get(identity);
-    if (!current || plan.sourceRank < current.sourceRank) unique.set(identity, plan);
+    const identity = plan.key || planIdentity(plan);
+    if (!unique.has(identity)) unique.set(identity, plan);
   });
   return [...unique.values()]
     .sort((a, b) => a.startValue - b.startValue || a.sourceRank - b.sourceRank || a.title.localeCompare(b.title, 'ja'))
@@ -382,9 +381,23 @@ function bindPrepActions(project, model) {
     renderPrep();
   }));
   document.getElementById('updatePracticalPrep')?.addEventListener('click', () => {
+    const currentState = getState();
+    const selectedId = currentState.selectedPrepProjectId || project.id || currentState.nextProject?.id || 'nextProject';
     const nextContext = readPrepContext(project.reservation || {}, model.context);
     const nextPrep = buildPracticalPrep(project, nextContext);
-    patchState({ prepContext: nextContext, nextProject: { ...project, prep: nextPrep, prepContext: nextContext, updatedAt: new Date().toISOString() }, prepFeature: 'dashboard' });
+    const now = new Date().toISOString();
+    const hasCalendarTarget = Array.isArray(currentState.calendarEvents) && currentState.calendarEvents.some((event) => event.id === selectedId);
+
+    if (hasCalendarTarget) {
+      const calendarEvents = currentState.calendarEvents.map((event) => (event.id === selectedId
+        ? { ...event, prep: nextPrep, prepContext: nextContext, updatedAt: now }
+        : event));
+      patchState({ prepContext: nextContext, calendarEvents, prepFeature: 'dashboard' });
+    } else {
+      const baseProject = currentState.nextProject || project;
+      patchState({ prepContext: nextContext, nextProject: { ...baseProject, prep: nextPrep, prepContext: nextContext, updatedAt: now }, prepFeature: 'dashboard' });
+    }
+
     toast('更新しました');
     renderPrep();
   });
