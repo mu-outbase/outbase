@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core08-a-navigation-20260705';
-import { VERSION } from '../config/version.js?v=core08-a-navigation-20260705';
+import { loadState, saveState } from './storage.js?v=core08-a1-nav-tapfix-20260705';
+import { VERSION } from '../config/version.js?v=core08-a1-nav-tapfix-20260705';
 
 const initialState = {
   version: VERSION,

@@ -1,0 +1,5 @@
+1. OUTBASE_Core08_A1_NAV_TAPFIX_完成版.zip を GitHub main にアップロード。
+2. unpack workflow は ZIP名を OUTBASE_Core08_A1_NAV_TAPFIX_完成版.zip にする。
+3. Actions で Unpack Core08-A1 ZIP が緑になることを確認。
+4. src/main.js の BUILD_ID が core08-a1-nav-tapfix-20260705 になっていることを確認。
+5. アプリで下段バーの各項目が予定に戻されず遷移することを確認。
