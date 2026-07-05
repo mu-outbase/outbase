@@ -1,0 +1,13 @@
+OUTBASE Core07.3 反映手順
+
+1. GitHubの outbase リポジトリ main に以下ZIPをアップロード
+   OUTBASE_Core07_3_PREP_WORKSPACE_完成版.zip
+
+2. 展開workflowを作成/更新
+   .github/workflows/unpack-core07-3.yml
+
+3. workflow_dispatch または push で展開
+
+4. 反映確認
+   準備タブで「作業メニュー」の料理/ルート/ギア/コタを押す。
+   下に詳細が増えず、専用の全画面ワークスペースが開けばOK。

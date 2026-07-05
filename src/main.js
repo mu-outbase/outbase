@@ -1,15 +1,16 @@
-const BUILD_ID = 'core07-2-1-prep-usability-20260705';
+const BUILD_ID = 'core08-a-navigation-20260705';
 
-import { bindNavigation, registerRoute, go } from './core/router.js?v=core07-2-1-prep-usability-20260705';
-import { getState, subscribe } from './core/store.js?v=core07-2-1-prep-usability-20260705';
-import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core07-2-1-prep-usability-20260705';
-import { renderHome } from './modules/home/home.js?v=core07-2-1-prep-usability-20260705';
-import { renderSearch } from './modules/search/search.js?v=core07-2-1-prep-usability-20260705';
-import { renderPrep } from './modules/prep/prep.js?v=core07-2-1-prep-usability-20260705';
-import { renderDay } from './modules/day/day.js?v=core07-2-1-prep-usability-20260705';
-import { renderWalk } from './modules/walk/walk.js?v=core07-2-1-prep-usability-20260705';
-import { renderMemory } from './modules/memory/memory.js?v=core07-2-1-prep-usability-20260705';
-import { registerServiceWorker } from './modules/pwa/pwa.js?v=core07-2-1-prep-usability-20260705';
+import { bindNavigation, registerRoute, go } from './core/router.js?v=core08-a-navigation-20260705';
+import { getState, subscribe } from './core/store.js?v=core08-a-navigation-20260705';
+import { applyScreenContext, deriveScreenContext } from './core/workspace.js?v=core08-a-navigation-20260705';
+import { setAppStatus, applyRuntimeTheme } from './ui/components.js?v=core08-a-navigation-20260705';
+import { renderHome } from './modules/home/home.js?v=core08-a-navigation-20260705';
+import { renderSearch } from './modules/search/search.js?v=core08-a-navigation-20260705';
+import { renderPrep } from './modules/prep/prep.js?v=core08-a-navigation-20260705';
+import { renderDay } from './modules/day/day.js?v=core08-a-navigation-20260705';
+import { renderWalk } from './modules/walk/walk.js?v=core08-a-navigation-20260705';
+import { renderMemory } from './modules/memory/memory.js?v=core08-a-navigation-20260705';
+import { registerServiceWorker } from './modules/pwa/pwa.js?v=core08-a-navigation-20260705';
 
 
 document.body.dataset.build = BUILD_ID;
@@ -75,19 +76,26 @@ function updateActiveRecordingIndicator(state = getState()) {
 
 
 function syncBottomSpace() {
+  const state = getState();
+  const context = applyScreenContext(state);
   const nav = document.querySelector('.bottom-nav');
   const active = document.getElementById('activeRecordingIndicator');
   const navRect = nav?.getBoundingClientRect?.();
   const navHeight = Math.ceil(navRect?.height || 64);
   const navBottom = Math.max(6, Math.ceil(window.innerHeight - (navRect?.bottom || (window.innerHeight - 6))));
-  const activeVisible = active && getState().currentRoute !== 'walk' && getComputedStyle(active).display !== 'none';
+  const activeVisible = active && state.currentRoute !== 'walk' && getComputedStyle(active).display !== 'none';
   const activeHeight = activeVisible ? Math.ceil(active.getBoundingClientRect().height + 8) : 0;
-  const gap = window.matchMedia('(max-width:520px)').matches ? 42 : 38;
-  const spacer = Math.max(96, navHeight + navBottom + activeHeight + gap);
+  const route = context.route;
+  const compactHub = context.screenKind === 'hub' && ['home', 'prep', 'search', 'memory'].includes(route);
+  const workspaceOpen = context.screenKind === 'workspace';
+  const gap = workspaceOpen ? 0 : (compactHub ? 10 : 34);
+  const minimum = workspaceOpen ? 0 : (compactHub ? 72 : 96);
+  const spacer = workspaceOpen ? 0 : Math.max(minimum, navHeight + navBottom + activeHeight + gap);
   document.documentElement.style.setProperty('--ob-nav-h', `${navHeight}px`);
   document.documentElement.style.setProperty('--ob-nav-bottom', `${navBottom}px`);
   document.documentElement.style.setProperty('--ob-scroll-spacer', `${spacer}px`);
   document.documentElement.style.setProperty('--ob-bottom-reserve', `${spacer}px`);
+  document.documentElement.style.setProperty('--ob-screen-bottom-pad', `${workspaceOpen ? 0 : Math.max(12, spacer - navHeight)}px`);
 }
 function syncBottomSpaceSoon() {
   requestAnimationFrame(syncBottomSpace);
@@ -99,6 +107,7 @@ window.addEventListener('resize', syncBottomSpaceSoon, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(syncBottomSpaceSoon, 120), { passive: true });
 
 refreshRuntimeTheme();
+applyScreenContext(getState());
 registerRoute('home', renderHome);
 registerRoute('search', renderSearch);
 registerRoute('prep', renderPrep);
@@ -110,6 +119,6 @@ bindNavigation();
 go('home');
 updateActiveRecordingIndicator();
 syncBottomSpaceSoon();
-subscribe((state) => { updateActiveRecordingIndicator(state); syncBottomSpaceSoon(); });
+subscribe((state) => { applyScreenContext(state); updateActiveRecordingIndicator(state); syncBottomSpaceSoon(); });
 registerServiceWorker().then(() => refreshRuntimeTheme());
 window.setInterval(refreshRuntimeTheme, 60 * 1000);

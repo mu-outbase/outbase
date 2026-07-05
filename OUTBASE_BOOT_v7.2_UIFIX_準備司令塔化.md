@@ -28,7 +28,7 @@ Core07.2の大枠フローは維持し、準備タブを「長い一覧」から
 - styles/core07.css
 
 ## BUILD_ID
-core07-2-1-prep-usability-20260705
+core08-a-navigation-20260705
 
 ## 検証
 - node --check src/main.js

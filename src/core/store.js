@@ -1,5 +1,5 @@
-import { loadState, saveState } from './storage.js?v=core07-2-1-prep-usability-20260705';
-import { VERSION } from '../config/version.js?v=core07-2-1-prep-usability-20260705';
+import { loadState, saveState } from './storage.js?v=core08-a-navigation-20260705';
+import { VERSION } from '../config/version.js?v=core08-a-navigation-20260705';
 
 const initialState = {
   version: VERSION,
@@ -43,7 +43,7 @@ const initialState = {
   recordHistory: [],
   selectedRecordSessionId: null,
   recoverySession: null,
-  prepFeature: 'summary',
+  prepFeature: 'dashboard',
   reviewQueue: [],
   appliedReviewQueue: [],
   calendarEvents: [],
@@ -74,7 +74,7 @@ function normalizeLoadedState(loaded) {
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.recoverySession = loaded?.recoverySession || null;
-  merged.prepFeature = loaded?.prepFeature || 'summary';
+  merged.prepFeature = loaded?.prepFeature || 'dashboard';
   merged.appliedReviewQueue = Array.isArray(loaded?.appliedReviewQueue) ? loaded.appliedReviewQueue : [];
   merged.calendarEvents = Array.isArray(loaded?.calendarEvents) ? loaded.calendarEvents : [];
   merged.calendarCursor = loaded?.calendarCursor || '';
