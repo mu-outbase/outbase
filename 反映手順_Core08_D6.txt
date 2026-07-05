@@ -1,0 +1,4 @@
+1. OUTBASE_Core08_D6_STATUS_MONITOR_完成版.zip を main 直下へアップロード
+2. .github/workflows/unpack-core08-d6.yml を作成
+3. Actions で Unpack Core08-D6 ZIP が成功することを確認
+4. https://mu-outbase.github.io/outbase/?v=core08d6 を確認

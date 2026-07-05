@@ -33,9 +33,14 @@ function withRecordId(record = {}) {
 
 function withDayRecordId(record = {}) {
   if (record.id || record.record_id) return record;
-  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D4で当日フロー実績記録保護IDを付与' };
+  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D6で当日ステータス記録保護IDを付与' };
 }
 
+
+function withDayAutoEventId(event = {}) {
+  if (event.id) return event;
+  return { ...event, id: stableId('dayauto'), dataGuardNote: 'Core08-D6で自動観測候補IDを付与' };
+}
 
 function normalizeDayGpsHints(hints = {}) {
   if (!hints || typeof hints !== 'object' || Array.isArray(hints)) return {};
@@ -47,9 +52,14 @@ function normalizeDayRecords(records = {}) {
   return Object.fromEntries(Object.entries(records).map(([key, list]) => [key, Array.isArray(list) ? list.map(withDayRecordId) : []]));
 }
 
+function normalizeDayAutoEvents(events = {}) {
+  if (!events || typeof events !== 'object' || Array.isArray(events)) return {};
+  return Object.fromEntries(Object.entries(events).map(([key, list]) => [key, Array.isArray(list) ? list.map(withDayAutoEventId).slice(0, 80) : []]));
+}
+
 function normalizeDataGuard(dataGuard = {}) {
   return {
-    version: 'core08-d5',
+    version: 'core08-d6',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: Array.isArray(dataGuard.auditLog) ? dataGuard.auditLog.slice(-MAX_AUDIT) : [],
     deletedItems: Array.isArray(dataGuard.deletedItems) ? dataGuard.deletedItems.slice(-MAX_AUDIT) : [],
@@ -65,6 +75,7 @@ export function normalizeProtectedState(state = {}) {
   if (Array.isArray(next.calendarEvents)) next.calendarEvents = next.calendarEvents.map(withEventId);
   if (Array.isArray(next.recordHistory)) next.recordHistory = next.recordHistory.map(withRecordId);
   next.dayRecords = normalizeDayRecords(state.dayRecords || {});
+  next.dayAutoEvents = normalizeDayAutoEvents(state.dayAutoEvents || {});
   next.dayGpsHints = normalizeDayGpsHints(state.dayGpsHints || {});
   return next;
 }
@@ -151,6 +162,27 @@ function guardDayRecords(previous = {}, incoming = {}, audit = [], deletedItems 
   return result;
 }
 
+
+function guardDayAutoEvents(previous = {}, incoming = {}, audit = [], deletedItems = []) {
+  const previousMap = normalizeDayAutoEvents(previous);
+  const incomingMap = normalizeDayAutoEvents(incoming);
+  const result = { ...incomingMap };
+  Object.entries(previousMap).forEach(([projectKey, previousList]) => {
+    const currentList = Array.isArray(result[projectKey]) ? result[projectKey] : [];
+    const currentIds = new Set(currentList.map((event) => event.id));
+    const protectedBack = [];
+    previousList.forEach((event) => {
+      if (event.id && !currentIds.has(event.id)) {
+        protectedBack.push(event);
+        deletedItems.push({ id: stableId('trash'), kind: 'dayAutoEvents', deletedAt: nowIso(), projectKey, item: event, reason: '自動観測候補がactive listから外れたため復元保護' });
+        audit.push(`自動観測候補を復元保護：${projectKey}/${event.id}`);
+      }
+    });
+    if (protectedBack.length) result[projectKey] = [...currentList, ...protectedBack].slice(0, 80);
+  });
+  return result;
+}
+
 function guardNextProject(previousProject, incomingProject, audit = [], conflicts = []) {
   if (!previousProject || !incomingProject) return incomingProject;
   if (!projectIdentityChanged(previousProject, incomingProject)) return incomingProject;
@@ -181,6 +213,9 @@ export function guardPatch(previousState = {}, patch = {}, options = {}) {
   }
   if (patch.dayRecords && typeof patch.dayRecords === 'object') {
     guardedPatch.dayRecords = guardDayRecords(previousState.dayRecords || {}, patch.dayRecords, audit, deletedItems);
+  }
+  if (patch.dayAutoEvents && typeof patch.dayAutoEvents === 'object') {
+    guardedPatch.dayAutoEvents = guardDayAutoEvents(previousState.dayAutoEvents || {}, patch.dayAutoEvents, audit, deletedItems);
   }
   if (patch.nextProject && !options.allowIdentityOverwrite) {
     guardedPatch.nextProject = guardNextProject(previousState.nextProject, patch.nextProject, audit, conflicts);

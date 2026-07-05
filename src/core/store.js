@@ -1,6 +1,6 @@
-import { loadState, saveState } from './storage.js?v=core08-d5-uifix-day-premium-20260705';
-import { VERSION } from '../config/version.js?v=core08-d5-uifix-day-premium-20260705';
-import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d5-uifix-day-premium-20260705';
+import { loadState, saveState } from './storage.js?v=core08-d6-status-monitor-20260705';
+import { VERSION } from '../config/version.js?v=core08-d6-status-monitor-20260705';
+import { createStateBackup, guardPatch, normalizeProtectedState } from './dataGuard.js?v=core08-d6-status-monitor-20260705';
 
 const initialState = {
   version: VERSION,
@@ -46,8 +46,10 @@ const initialState = {
   recoverySession: null,
   dayRecords: {},
   dayGpsHints: {},
+  dayAutoEvents: {},
   dayFlowState: {},
   activeDayFlowStep: '',
+  activeDayStatusStep: '',
   dayCaptureMode: 'now',
   activeDayTag: 'unclassified',
   dayStartedAt: null,
@@ -68,7 +70,7 @@ const initialState = {
   },
   notes: { shopping: [], packing: [], kota: [], reflection: [] },
   dataGuard: {
-    version: 'core08-d5',
+    version: 'core08-d6',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: [],
     deletedItems: [],
@@ -92,6 +94,8 @@ function normalizeLoadedState(loaded) {
   merged.recordHistory = Array.isArray(loaded?.recordHistory) ? loaded.recordHistory : [];
   merged.reviewQueue = Array.isArray(loaded?.reviewQueue) ? loaded.reviewQueue : [];
   merged.recoverySession = loaded?.recoverySession || null;
+  merged.dayAutoEvents = loaded?.dayAutoEvents && typeof loaded.dayAutoEvents === 'object' ? loaded.dayAutoEvents : {};
+  merged.activeDayStatusStep = loaded?.activeDayStatusStep || '';
   merged.dayRecords = loaded?.dayRecords && typeof loaded.dayRecords === 'object' && !Array.isArray(loaded.dayRecords) ? loaded.dayRecords : {};
   merged.dayGpsHints = loaded?.dayGpsHints && typeof loaded.dayGpsHints === 'object' && !Array.isArray(loaded.dayGpsHints) ? loaded.dayGpsHints : {};
   merged.dayFlowState = loaded?.dayFlowState && typeof loaded.dayFlowState === 'object' && !Array.isArray(loaded.dayFlowState) ? loaded.dayFlowState : {};
