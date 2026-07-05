@@ -2,7 +2,7 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "description": "予定、準備、当日、記録、思い出、次回改善をつなぐアプリ",
-  "start_url": "./?v=restart-4-prep-lock",
+  "start_url": "./?v=restart-6-record-lock",
   "display": "standalone",
   "background_color": "#f5f1e8",
   "theme_color": "#1f2a24",

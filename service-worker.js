@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-5-cockpit-lock';
+const CACHE_NAME = 'outbase-restart-6-record-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-5-cockpit-lock',
-  './style.css?v=restart-5-cockpit-lock',
-  './src/app.js?v=restart-5-cockpit-lock',
-  './manifest.json?v=restart-5-cockpit-lock'
+  './index.html?v=restart-6-record-lock',
+  './style.css?v=restart-6-record-lock',
+  './src/app.js?v=restart-6-record-lock',
+  './manifest.json?v=restart-6-record-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-5-cockpit-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-6-record-lock')))
   );
 });

@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_5_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_6_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,12 +75,14 @@
   ];
 
   const defaultState = {
-    version: 'restart-5',
+    version: 'restart-6',
     screen: 'home',
     activeTab: '予定',
     activeProjectId: 'camp-akagi',
     calendarMonth: '2026-06',
     selectedDate: '2026-06-26',
+    inboxFilter: 'all',
+    captureDate: '',
     toast: '',
     walk: null,
     projects: [
@@ -160,6 +162,7 @@
       }
     ],
     inbox: [],
+    deletedRecords: [],
     memories: [],
     improvements: [],
     calendarItems: [
@@ -189,7 +192,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-5';
+      merged.version = 'restart-6';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -214,6 +217,9 @@
   function normalizeState(target) {
     target.projects = Array.isArray(target.projects) && target.projects.length ? target.projects : clone(defaultState.projects);
     target.inbox = Array.isArray(target.inbox) ? target.inbox : [];
+    target.deletedRecords = Array.isArray(target.deletedRecords) ? target.deletedRecords : [];
+    target.inboxFilter = ['all', 'active', 'delete'].includes(target.inboxFilter) ? target.inboxFilter : 'all';
+    target.captureDate = typeof target.captureDate === 'string' ? target.captureDate : '';
     target.memories = Array.isArray(target.memories) ? target.memories : [];
     target.improvements = Array.isArray(target.improvements) ? target.improvements : [];
     target.calendarItems = Array.isArray(target.calendarItems) ? target.calendarItems : [];
@@ -1038,29 +1044,59 @@
 
   function renderCapture() {
     const project = activeProject();
+    const captureDate = state.captureDate || todayISO();
+    const recent = state.inbox.slice(0, 3);
     const body = `
-      <section class="hero">
+      <section class="hero capture-hero">
         <h1>今これを残す</h1>
-        <p>写真・動画・声・メモ・GPSを残します。保存先は候補だけ出し、確定はムーが決めます。</p>
+        <p>写真・動画・声・メモ・GPSを未確認箱へ残します。保存先は候補だけ。確定・移動・削除はムーが決めます。</p>
       </section>
       <main class="stack">
+        ${card('残す前に確認', '保存先候補と日付', `
+          <div class="metric-row">
+            <div class="metric"><small>保存先候補</small><strong>${escapeHtml(projectLabel(project))}</strong></div>
+            <div class="metric"><small>記録日</small><strong>${escapeHtml(captureDate)}</strong></div>
+            <div class="metric"><small>未確認</small><strong>${state.inbox.length}件</strong></div>
+            <div class="metric"><small>削除候補</small><strong>${state.inbox.filter((record) => record.status === '削除候補').length}件</strong></div>
+          </div>
+          <p class="note">写真・動画・声・GPSは、今は記録カードとして残します。実ファイル連携は後工程で入れます。</p>
+        `)}
         ${card('記録する', 'その場で残す', `
-          <p class="note">今の保存先候補：${escapeHtml(projectLabel(project))}</p>
-          <div class="grid-2">
-            ${['写真', '動画', '声', 'メモ', 'GPS', 'あとで整理'].map((type) => `<button class="btn ${type === 'あとで整理' ? 'warn' : 'primary'}" data-action="addRecord" data-type="${type}" data-project-id="${escapeHtml(project.id)}" data-target="${escapeHtml(projectLabel(project))}" data-text="${type}を残しました">${type}</button>`).join('')}
+          <div class="capture-grid">
+            ${['写真', '動画', '声', 'メモ', 'GPS', 'あとで整理'].map((type) => `<button class="capture-tile ${type === 'あとで整理' ? 'warn-tile' : ''}" data-action="addRecord" data-type="${type}" data-project-id="${escapeHtml(project.id)}" data-target="${escapeHtml(projectLabel(project))}" data-text="${type}を残しました"><span>${typeIcon(type)}</span><strong>${type}</strong><small>未確認箱へ</small></button>`).join('')}
           </div>
           <div class="field">
             <label for="quickMemo">手入力メモ</label>
             <textarea id="quickMemo" placeholder="例：風が強い、設営に時間がかかった、コタが歩きやすそう"></textarea>
           </div>
-        `, `${btn('メモを未確認箱へ', 'saveQuickMemo', { projectId: project.id }, 'primary')}`)}
-        ${card('保存先候補', 'AIとGPSは候補だけ', `
-          <div class="list">
-            ${state.projects.map((candidate) => `<button class="item" data-action="switchProject" data-project-id="${escapeHtml(candidate.id)}"><div class="item-main"><div class="item-title">${escapeHtml(projectLabel(candidate))}</div><div class="item-sub">${escapeHtml(candidate.title)} に残す候補として使います</div></div><span class="tag ${candidate.id === project.id ? '' : 'light'}">候補</span></button>`).join('')}
+        `, `${btn('メモを未確認箱へ', 'saveQuickMemo', { projectId: project.id }, 'primary')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}`)}
+        ${card('保存先候補', '選んでから残す', `
+          <div class="project-target-list">
+            ${state.projects.map((candidate) => `<button class="target-chip ${candidate.id === project.id ? 'active' : ''}" data-action="switchProject" data-project-id="${escapeHtml(candidate.id)}"><strong>${escapeHtml(projectLabel(candidate))}</strong><small>${escapeHtml(candidate.title)}</small></button>`).join('')}
+          </div>
+        `)}
+        ${card('直近の未確認', 'あとで整理', `
+          ${recent.length ? `<div class="list">${recent.map((record) => compactRecordItem(record)).join('')}</div>` : '<div class="empty">まだ未確認の記録はありません。</div>'}
+        `, `${btn('整理する', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
+        ${card('保護ルール', '勝手に決めない', `
+          <div class="guard-list">
+            <span>勝手に確定しない</span><span>勝手に削除しない</span><span>保存先は候補だけ</span><span>削除候補から戻せる</span>
           </div>
         `)}
       </main>`;
     app.innerHTML = layout(body);
+  }
+
+  function typeIcon(type) {
+    return { '写真': '📷', '動画': '🎥', '声': '🎙️', 'メモ': '✍️', 'GPS': '📍', 'あとで整理': '📥' }[type] || '📌';
+  }
+
+  function compactRecordItem(record) {
+    const project = projectById(record.projectId);
+    return `<div class="item compact-record ${record.status === '削除候補' ? 'item-warn' : ''}">
+      <div class="item-main"><div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(projectLabel(project))}</div><div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(recordAge(record) || record.time)}</div></div>
+      <span class="tag light">${escapeHtml(record.status)}</span>
+    </div>`;
   }
 
   function renderMemories() {
@@ -1125,32 +1161,62 @@
   }
 
   function renderInbox() {
+    const records = visibleInboxRecords();
+    const activeCount = state.inbox.filter((record) => record.status !== '削除候補').length;
+    const deleteCount = state.inbox.filter((record) => record.status === '削除候補').length;
     const body = `
-      <section class="hero">
+      <section class="hero inbox-hero">
         <h1>未確認箱</h1>
-        <p>保存先がまだ確定していない記録です。勝手に削除せず、移動・修正・復旧できます。</p>
+        <p>保存先がまだ確定していない記録です。ここで保存先を選び、思い出へ確定し、不要なものだけ削除候補にします。</p>
       </section>
       <main class="stack">
-        ${card('あとで整理', '復旧できる', `
-          ${state.inbox.length ? `<div class="list">${state.inbox.map((record) => inboxItem(record)).join('')}</div>` : '<div class="empty">未確認の記録はありません。＋から残したものがここに入ります。</div>'}
+        ${card('整理状況', '勝手に削除しない', `
+          <div class="metric-row">
+            <div class="metric"><small>未確認</small><strong>${activeCount}件</strong></div>
+            <div class="metric"><small>削除候補</small><strong>${deleteCount}件</strong></div>
+            <div class="metric"><small>思い出</small><strong>${state.memories.length}件</strong></div>
+            <div class="metric"><small>復旧控え</small><strong>${state.deletedRecords.length}件</strong></div>
+          </div>
+          <div class="filter-row">
+            <button class="filter-pill ${state.inboxFilter === 'all' ? 'active' : ''}" data-action="setInboxFilter" data-filter="all">全部</button>
+            <button class="filter-pill ${state.inboxFilter === 'active' ? 'active' : ''}" data-action="setInboxFilter" data-filter="active">未確認だけ</button>
+            <button class="filter-pill ${state.inboxFilter === 'delete' ? 'active' : ''}" data-action="setInboxFilter" data-filter="delete">削除候補</button>
+          </div>
         `)}
+        ${card('保存先を選んで確定', '未確認の記録', `
+          ${records.length ? `<div class="list">${records.map((record) => inboxItem(record)).join('')}</div>` : '<div class="empty">この条件の記録はありません。＋から残したものがここに入ります。</div>'}
+        `)}
+        ${card('復旧の考え方', '間違えても戻せる', `
+          <p class="note">削除候補はまだ消しません。完全に消す時だけ確認を出します。完全削除後も控えに名前と日時を残します。</p>
+        `, `${btn('＋で記録する', 'go', { screen: 'capture', tab: '＋' }, 'primary')}${btn('思い出を見る', 'go', { screen: 'memories', tab: '思い出' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
 
   function inboxItem(record) {
     const project = projectById(record.projectId);
+    const isDelete = record.status === '削除候補';
     return `
-      <div class="item ${record.status === '削除候補' ? 'item-warn' : ''}">
+      <div class="item record-card ${isDelete ? 'item-warn' : ''}">
         <div class="item-main">
           <div class="item-title">${escapeHtml(record.type)} / 候補：${escapeHtml(projectLabel(project))}</div>
-          <div class="item-sub">${escapeHtml(record.target)} · ${escapeHtml(record.text)} · ${escapeHtml(record.time)}${record.status === '削除候補' ? ' · 削除候補。まだ戻せます' : ''}</div>
+          <div class="item-sub">${escapeHtml(record.target)} · ${escapeHtml(record.text)} · ${escapeHtml(record.date || '')} · ${escapeHtml(recordAge(record) || record.time)}</div>
+          <div class="record-meta">
+            <span>${escapeHtml(record.source || '記録')}</span>
+            ${record.stepId ? `<span>工程:${escapeHtml(dayStepById(project, record.stepId)?.title || record.stepId)}</span>` : ''}
+            <span>${record.protect ? '保護中' : '通常'}</span>
+            ${isDelete ? '<span>まだ戻せます</span>' : ''}
+          </div>
+          ${!isDelete ? `<div class="target-picker">
+            ${state.projects.map((candidate) => `<button class="target-mini ${candidate.id === record.projectId ? 'active' : ''}" data-action="setRecordTarget" data-id="${escapeHtml(record.id)}" data-project-id="${escapeHtml(candidate.id)}">${escapeHtml(projectLabel(candidate))}</button>`).join('')}
+          </div>` : ''}
         </div>
-        <div class="actions">
-          ${record.status === '削除候補'
-            ? `<button class="btn primary" data-action="restoreRecord" data-id="${escapeHtml(record.id)}">元に戻す</button>`
-            : `<button class="btn primary" data-action="confirmRecord" data-id="${escapeHtml(record.id)}">確定</button>
-               <button class="btn ghost" data-action="chooseRecordTarget" data-id="${escapeHtml(record.id)}">保存先を選ぶ</button>
+        <div class="actions compact-actions">
+          ${isDelete
+            ? `<button class="btn primary" data-action="restoreRecord" data-id="${escapeHtml(record.id)}">元に戻す</button>
+               <button class="btn danger" data-action="permanentDeleteRecord" data-id="${escapeHtml(record.id)}">完全に削除</button>`
+            : `<button class="btn primary" data-action="confirmRecord" data-id="${escapeHtml(record.id)}">思い出へ確定</button>
+               <button class="btn ghost" data-action="editRecord" data-id="${escapeHtml(record.id)}">修正</button>
                <button class="btn ghost" data-action="deleteCandidate" data-id="${escapeHtml(record.id)}">削除候補</button>`}
         </div>
       </div>
@@ -1159,22 +1225,45 @@
 
   function addRecord(type, projectId, target, text, stepId = '') {
     const project = projectById(projectId) || activeProject();
+    const createdAt = new Date().toISOString();
     const record = {
       id: makeId('rec'),
       projectId: project.id,
       stepId,
       type,
-      target,
-      text,
+      target: target || projectLabel(project),
+      text: text || 'あとで整理する記録',
       time: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       date: state.captureDate || todayISO(),
-      createdAt: new Date().toISOString(),
-      status: '未確認'
+      createdAt,
+      updatedAt: createdAt,
+      status: '未確認',
+      protect: true,
+      source: stepId ? '当日運転席' : (state.screen === 'capture' ? '＋記録' : '画面内記録'),
+      candidateHistory: [{ projectId: project.id, label: projectLabel(project), at: createdAt }],
+      note: '保存先は候補です。確定はムーが行います。'
     };
     state.inbox.unshift(record);
     state.captureDate = '';
     saveState();
     showToast('未確認箱に残しました');
+  }
+
+  function visibleInboxRecords() {
+    if (state.inboxFilter === 'active') return state.inbox.filter((record) => record.status !== '削除候補');
+    if (state.inboxFilter === 'delete') return state.inbox.filter((record) => record.status === '削除候補');
+    return state.inbox;
+  }
+
+  function recordAge(record) {
+    if (!record?.createdAt) return '';
+    const created = new Date(record.createdAt).getTime();
+    if (!Number.isFinite(created)) return '';
+    const minutes = Math.max(0, Math.round((Date.now() - created) / 60000));
+    if (minutes < 60) return `${minutes}分前`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 48) return `${hours}時間前`;
+    return `${Math.round(hours / 24)}日前`;
   }
 
   function makeId(prefix) {
@@ -1607,6 +1696,47 @@
       return;
     }
 
+    if (action === 'setInboxFilter') {
+      state.inboxFilter = button.dataset.filter || 'all';
+      saveState();
+      renderInbox();
+      return;
+    }
+
+    if (action === 'setRecordTarget') {
+      const record = state.inbox.find((entry) => entry.id === button.dataset.id);
+      const project = projectById(button.dataset.projectId);
+      if (!record || !project) return;
+      record.projectId = project.id;
+      record.target = projectLabel(project);
+      record.updatedAt = new Date().toISOString();
+      record.candidateHistory = Array.isArray(record.candidateHistory) ? record.candidateHistory : [];
+      record.candidateHistory.push({ projectId: project.id, label: projectLabel(project), at: record.updatedAt });
+      saveState();
+      renderInbox();
+      showToast('保存先候補を変更しました');
+      return;
+    }
+
+    if (action === 'editRecord') {
+      const record = state.inbox.find((entry) => entry.id === button.dataset.id);
+      if (!record) return;
+      const target = promptText('保存先の中身メモ', record.target);
+      if (target === null) return;
+      const text = promptText('記録内容', record.text);
+      if (text === null) return;
+      const date = promptText('記録日', record.date || todayISO());
+      if (date === null) return;
+      record.target = target || record.target;
+      record.text = text || record.text;
+      record.date = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : record.date;
+      record.updatedAt = new Date().toISOString();
+      saveState();
+      renderInbox();
+      showToast('記録を修正しました');
+      return;
+    }
+
     if (action === 'confirmRecord') {
       const recordIndex = state.inbox.findIndex((record) => record.id === button.dataset.id);
       const [record] = state.inbox.splice(recordIndex, 1);
@@ -1634,6 +1764,9 @@
       }
       record.projectId = project.id;
       record.target = projectLabel(project);
+      record.updatedAt = new Date().toISOString();
+      record.candidateHistory = Array.isArray(record.candidateHistory) ? record.candidateHistory : [];
+      record.candidateHistory.push({ projectId: project.id, label: projectLabel(project), at: record.updatedAt });
       saveState();
       renderInbox();
       showToast('保存先候補を変更しました');
@@ -1644,6 +1777,7 @@
       const record = state.inbox.find((entry) => entry.id === button.dataset.id);
       if (record) {
         record.status = '削除候補';
+        record.deleteCandidateAt = new Date().toISOString();
         saveState();
         renderInbox();
         showToast('削除候補にしました。まだ戻せます');
@@ -1651,10 +1785,26 @@
       return;
     }
 
+    if (action === 'permanentDeleteRecord') {
+      const index = state.inbox.findIndex((entry) => entry.id === button.dataset.id);
+      const record = state.inbox[index];
+      if (!record) return;
+      const ok = window.confirm('この記録を完全に削除します。削除候補から戻せなくなります。よろしいですか？');
+      if (!ok) return;
+      state.inbox.splice(index, 1);
+      state.deletedRecords.unshift({ id: record.id, type: record.type, text: record.text, target: record.target, projectId: record.projectId, deletedAt: new Date().toISOString() });
+      saveState();
+      renderInbox();
+      showToast('完全に削除しました');
+      return;
+    }
+
     if (action === 'restoreRecord') {
       const record = state.inbox.find((entry) => entry.id === button.dataset.id);
       if (record) {
         record.status = '未確認';
+        record.deleteCandidateAt = '';
+        record.updatedAt = new Date().toISOString();
         saveState();
         renderInbox();
         showToast('未確認箱に戻しました');
