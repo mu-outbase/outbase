@@ -33,7 +33,7 @@ function withRecordId(record = {}) {
 
 function withDayRecordId(record = {}) {
   if (record.id || record.record_id) return record;
-  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D3で当日記録保護IDを付与' };
+  return { ...record, id: stableId('dayrec'), dataGuardNote: 'Core08-D4で当日フロー実績記録保護IDを付与' };
 }
 
 
@@ -49,7 +49,7 @@ function normalizeDayRecords(records = {}) {
 
 function normalizeDataGuard(dataGuard = {}) {
   return {
-    version: 'core08-d3',
+    version: 'core08-d4',
     immutableRule: 'ユーザー操作なしに予定・記録・メモを修正/統合/上書き/削除しない',
     auditLog: Array.isArray(dataGuard.auditLog) ? dataGuard.auditLog.slice(-MAX_AUDIT) : [],
     deletedItems: Array.isArray(dataGuard.deletedItems) ? dataGuard.deletedItems.slice(-MAX_AUDIT) : [],

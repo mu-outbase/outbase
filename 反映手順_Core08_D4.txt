@@ -1,0 +1,4 @@
+1. OUTBASE_Core08_D4_DAY_FLOW_ACTUAL_完成版.zip を main へアップロード
+2. .github/workflows/unpack-core08-d4.yml を作成
+3. Actions で Unpack Core08-D4 ZIP を実行/確認
+4. https://mu-outbase.github.io/outbase/?v=core08d4 で確認
