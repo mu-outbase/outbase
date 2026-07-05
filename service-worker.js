@@ -1,3 +1,27 @@
-const CACHE='outbase-mvp-all-in-one-20260705';
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./styles/app.css','./src/app.js','./manifest.json']))));
-self.addEventListener('fetch',event=>event.respondWith(caches.match(event.request).then(r=>r||fetch(event.request))));
+const CACHE_NAME = 'outbase-restart-v1';
+const APP_SHELL = [
+  './',
+  './index.html?v=restart-v1',
+  './style.css?v=restart-v1',
+  './src/app.js?v=restart-v1',
+  './manifest.json?v=restart-v1'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./')))
+  );
+});

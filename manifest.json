@@ -1,9 +1,10 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=mvp-all-in-one",
+  "description": "予定、準備、当日、記録、思い出、次回改善をつなぐアプリ",
+  "start_url": "./?v=restart-v1",
   "display": "standalone",
-  "background_color": "#f4efe4",
-  "theme_color": "#405638",
+  "background_color": "#f5f1e8",
+  "theme_color": "#1f2a24",
   "icons": []
 }
