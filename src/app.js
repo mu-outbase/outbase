@@ -60,14 +60,19 @@
   let state = loadState();
   let saveTimer = null;
 
+  function cloneDefaultState() {
+    if (typeof structuredClone === 'function') return structuredClone(defaultState);
+    return JSON.parse(JSON.stringify(defaultState));
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return structuredClone(defaultState);
+      if (!raw) return cloneDefaultState();
       const parsed = JSON.parse(raw);
-      return mergeState(structuredClone(defaultState), parsed);
+      return mergeState(cloneDefaultState(), parsed);
     } catch (error) {
-      return structuredClone(defaultState);
+      return cloneDefaultState();
     }
   }
 
@@ -138,6 +143,14 @@
     `;
   }
 
+  function homeLayout(content) {
+    return `
+      ${content}
+      ${bottomNav()}
+      ${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}
+    `;
+  }
+
   function bottomNav() {
     const navs = [
       { tab: '予定', icon: '🏕️', screen: 'home' },
@@ -182,9 +195,11 @@
   function renderHome() {
     const trip = state.trip;
     const content = `
-      <section class="hero">
+      <section class="hero home-hero">
+        <div class="home-badge">OUTBASE</div>
         <h1>今日は何する？</h1>
         <p>次のキャンプ、コタとの散歩、今残したい記録をここから始めます。</p>
+        <span class="pill home-pill">${state.inbox.length}件 あとで整理</span>
       </section>
       <main class="stack">
         ${card('次のキャンプ', '予定', `
@@ -211,7 +226,7 @@
         `, `${btn('あとで整理する', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
       </main>
     `;
-    app.innerHTML = layout(content);
+    app.innerHTML = homeLayout(content);
   }
 
   function renderPlan() {
@@ -490,12 +505,14 @@
       <main class="stack">
         ${card('あとで整理', '復旧できる', `
           ${state.inbox.length ? `<div class="list">${state.inbox.map((record, index) => `
-            <div class="item">
-              <div class="item-main"><div class="item-title">${escapeHtml(record.type)} / 候補：${escapeHtml(record.target)}</div><div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(record.time)}</div></div>
+            <div class="item ${record.status === '削除候補' ? 'item-warn' : ''}">
+              <div class="item-main"><div class="item-title">${escapeHtml(record.type)} / 候補：${escapeHtml(record.target)}</div><div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(record.time)}${record.status === '削除候補' ? ' · 削除候補。まだ戻せます' : ''}</div></div>
               <div class="actions">
-                <button class="btn primary" data-action="confirmRecord" data-index="${index}">確定</button>
-                <button class="btn ghost" data-action="moveRecord" data-index="${index}">移動</button>
-                <button class="btn ghost" data-action="deleteCandidate" data-index="${index}">削除候補</button>
+                ${record.status === '削除候補'
+                  ? `<button class="btn primary" data-action="restoreRecord" data-index="${index}">元に戻す</button>`
+                  : `<button class="btn primary" data-action="confirmRecord" data-index="${index}">確定</button>
+                     <button class="btn ghost" data-action="moveRecord" data-index="${index}">移動</button>
+                     <button class="btn ghost" data-action="deleteCandidate" data-index="${index}">削除候補</button>`}
               </div>
             </div>
           `).join('')}</div>` : '<div class="empty">未確認の記録はありません。＋から残したものがここに入ります。</div>'}
@@ -632,7 +649,9 @@
       const index = Number(button.dataset.index);
       const record = state.inbox[index];
       if (record) {
-        record.target = record.target === '未確認箱' ? state.trip.place : '未確認箱';
+        const targets = ['未確認箱', state.trip.place, '設営', '料理', 'コタ散歩', 'キャンプ場散歩', '次回改善'];
+        const current = targets.indexOf(record.target);
+        record.target = targets[(current + 1 + targets.length) % targets.length];
         saveState();
         renderInbox();
         showToast('保存先候補を変更しました');
@@ -648,6 +667,18 @@
         saveState();
         renderInbox();
         showToast('削除候補にしました。まだ戻せます');
+      }
+      return;
+    }
+
+    if (action === 'restoreRecord') {
+      const index = Number(button.dataset.index);
+      const record = state.inbox[index];
+      if (record) {
+        record.status = '未確認';
+        saveState();
+        renderInbox();
+        showToast('未確認箱に戻しました');
       }
       return;
     }

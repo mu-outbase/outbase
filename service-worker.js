@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-v1';
+const CACHE_NAME = 'outbase-restart-v1-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-v1',
-  './style.css?v=restart-v1',
-  './src/app.js?v=restart-v1',
-  './manifest.json?v=restart-v1'
+  './index.html?v=restart-v1-lock',
+  './style.css?v=restart-v1-lock',
+  './src/app.js?v=restart-v1-lock',
+  './manifest.json?v=restart-v1-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-v1-lock')))
   );
 });
