@@ -1,0 +1,7 @@
+Core08-D 反映手順
+
+1. OUTBASE_Core08_D_DAY_RECORD_完成版.zip を main にアップロード
+2. .github/workflows/unpack-core08-d.yml を作成
+3. Actions で Unpack Core08-D ZIP が緑になることを確認
+4. https://mu-outbase.github.io/outbase/?v=core08d を開く
+5. 当日タブで工程切替・写真/動画/音声/メモ追記を確認
