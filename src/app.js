@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_15_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_16_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -147,8 +147,26 @@
     }
   ];
 
+
+  const deviceAuditBase = [
+    { id: 'pages', group: 'GitHub反映', name: 'Actions が成功している', note: 'unpack と pages build の両方が成功してから公開ページを見る。', done: false },
+    { id: 'cache', group: 'GitHub反映', name: '古い表示が残らない', note: '表示更新ボタン、再読み込み、必要ならPWA再起動で確認。', done: false },
+    { id: 'home', group: '一本線', name: 'ホームが「今日は何する？」から始まる', note: '機能一覧ではなく次の行動に入れるか確認。', done: false },
+    { id: 'tabs', group: '一本線', name: '下ナビが固定どおり', note: '予定 / 探す / 準備 / ＋ / 思い出。余計な入口を増やさない。', done: false },
+    { id: 'calendar', group: '予定', name: 'カレンダーから予定を開ける', note: '日付選択、予定作成、未確認・改善表示を確認。', done: false },
+    { id: 'project', group: '予定', name: '予定追加・編集・主役切替ができる', note: '次のキャンプ、過去キャンプ、散歩、探す、外出を確認。', done: false },
+    { id: 'prep', group: '準備', name: '準備・買い物・料理・コタ用品を触れる', note: 'LINEコピーとチェック更新が崩れていないか確認。', done: false },
+    { id: 'cockpit', group: '当日', name: '当日運転席の工程が進む', note: '開始、写真、声メモ、メモ、完了、戻すを停車中前提で確認。', done: false },
+    { id: 'record', group: '記録', name: '写真・動画・声・GPSを未確認箱へ残せる', note: '実データや権限エラー時の挙動も確認。', done: false },
+    { id: 'inbox', group: '整理', name: '未確認箱で保存先選択と復旧ができる', note: '確定、削除候補、元に戻す、完全削除確認を確認。', done: false },
+    { id: 'memory', group: '思い出', name: '思い出から次回改善へ送れる', note: '反映先を選び、準備へ戻るか確認。', done: false },
+    { id: 'guard', group: '保護', name: '控えコピーと読み込み導線がある', note: 'GitHub反映前後に控えを作れるか確認。', done: false },
+    { id: 'external', group: '連携準備', name: '外部連携は準備で止まっている', note: '勝手にGoogle Photos、天気、カレンダー、メールへ本接続しない。', done: false },
+    { id: 'designHold', group: '見た目', name: '見た目は最終刷新に回す', note: 'ここでは操作性と壊れにくさを優先し、最後に丸ごと変える。', done: true }
+  ];
+
   const defaultState = {
-    version: 'restart-15',
+    version: 'restart-16',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -247,7 +265,9 @@
     ],
     integrations: clone(integrationBase),
     syncDrafts: [],
-    integrationNotes: []
+    integrationNotes: [],
+    deviceAuditChecks: clone(deviceAuditBase),
+    deviceAuditNotes: []
   };
 
   let state = loadState();
@@ -271,7 +291,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-15';
+      merged.version = 'restart-16';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -307,6 +327,8 @@
     target.integrations = normalizeIntegrations(target.integrations);
     target.syncDrafts = Array.isArray(target.syncDrafts) ? target.syncDrafts : [];
     target.integrationNotes = Array.isArray(target.integrationNotes) ? target.integrationNotes : [];
+    target.deviceAuditChecks = normalizeDeviceAuditChecks(target.deviceAuditChecks);
+    target.deviceAuditNotes = Array.isArray(target.deviceAuditNotes) ? target.deviceAuditNotes : [];
     const fallbackMonth = target.projects.find((project) => project.startDate)?.startDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
     target.calendarMonth = /^\d{4}-\d{2}$/.test(target.calendarMonth || '') ? target.calendarMonth : fallbackMonth;
     target.selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(target.selectedDate || '') ? target.selectedDate : `${target.calendarMonth}-01`;
@@ -378,6 +400,47 @@
     if (state.integrationNotes.length) {
       lines.push('■連携メモ');
       state.integrationNotes.forEach((note) => lines.push(`・${note.text}（${note.date || ''}）`));
+    }
+    return lines.join('\n');
+  }
+
+
+  function normalizeDeviceAuditChecks(value) {
+    const current = Array.isArray(value) ? value : [];
+    return deviceAuditBase.map((base) => {
+      const saved = current.find((item) => item.id === base.id) || {};
+      return { ...base, ...saved, done: saved.done === undefined ? Boolean(base.done) : Boolean(saved.done) };
+    });
+  }
+
+  function deviceAuditProgress() {
+    if (!state.deviceAuditChecks?.length) return 0;
+    return Math.round((state.deviceAuditChecks.filter((item) => item.done).length / state.deviceAuditChecks.length) * 100);
+  }
+
+  function deviceAuditGroupNames() {
+    return [...new Set((state.deviceAuditChecks || []).map((item) => item.group || '確認'))];
+  }
+
+  function deviceAuditText() {
+    const lines = [
+      'OUTBASE Restart-16 総合実機監査',
+      '',
+      `作成日：${todayISO()}`,
+      `進捗：${state.deviceAuditChecks.filter((item) => item.done).length}/${state.deviceAuditChecks.length}件（${deviceAuditProgress()}%）`,
+      '',
+      '確認項目'
+    ];
+    deviceAuditGroupNames().forEach((group) => {
+      lines.push(`■${group}`);
+      state.deviceAuditChecks.filter((item) => item.group === group).forEach((item) => {
+        lines.push(`${item.done ? '✓' : '□'} ${item.name} - ${item.note}`);
+      });
+      lines.push('');
+    });
+    if (state.deviceAuditNotes.length) {
+      lines.push('実機メモ');
+      state.deviceAuditNotes.forEach((note) => lines.push(`・${note.text}（${note.date || ''}）`));
     }
     return lines.join('\n');
   }
@@ -647,7 +710,9 @@
       improvements: state.improvements.length,
       backups: state.deletedRecords.length,
       integrations: state.integrations.length,
-      externalReady: externalReadyCount()
+      externalReady: externalReadyCount(),
+      deviceAuditDone: (state.deviceAuditChecks || []).filter((item) => item.done).length,
+      deviceAuditTotal: (state.deviceAuditChecks || []).length
     };
   }
 
@@ -684,6 +749,7 @@
       { label: '復旧控え', detail: `${summary.backups}件を戻せる`, ok: hasRecovery },
       { label: '控えと読み込み', detail: 'スマホ更新前に控えを作り、貼り付けて戻せる', ok: true },
       { label: '外部連携準備', detail: `${summary.externalReady}/${summary.integrations}件が準備ライン`, ok: summary.integrations >= 5 },
+      { label: '総合実機監査', detail: `${summary.deviceAuditDone}/${summary.deviceAuditTotal}件をスマホで確認`, ok: summary.deviceAuditTotal >= 10 },
       { label: '次回改善', detail: `${summary.improvements}件を準備へ戻す`, ok: hasImprovements }
     ];
   }
@@ -691,7 +757,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-15 外部連携準備パック確認',
+      'OUTBASE Restart-16 総合実機監査パック確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -701,6 +767,7 @@
       `次回改善：${summary.improvements}件`,
       `復旧控え：${summary.backups}件`,
       `外部連携準備：${summary.externalReady}/${summary.integrations}件`,
+      `総合実機監査：${summary.deviceAuditDone}/${summary.deviceAuditTotal}件`,
       '',
       '確認項目',
       ...finalAuditItems().map((item) => `・${item.ok ? 'OK' : '要確認'} ${item.label}：${item.detail}`),
@@ -718,7 +785,7 @@
 
 
   function preImportBackupKey() {
-    return 'outbase_restart_14_pre_import_backup';
+    return 'outbase_restart_16_pre_import_backup';
   }
 
   function readPreImportBackup() {
@@ -738,7 +805,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-14';
+    next.version = 'restart-16';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -757,7 +824,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-14';
+    state.version = 'restart-16';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1106,6 +1173,15 @@
             ${finalAuditItems().slice(0, 4).map((item) => `<span class="${item.ok ? 'ok' : 'warn'}">${escapeHtml(item.label)}</span>`).join('')}
           </div>
         `, `${btn('総合確認へ', 'go', { screen: 'releaseAudit', tab: '予定' }, 'primary')}${btn('紐づけ補正', 'repairNow', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
+
+        ${card('総合実機監査', 'スマホで最後に触る', `
+          <p class="card-text">GitHub反映、表示更新、予定、準備、当日、実記録、未確認箱、データ保護まで、実機で触る順番をまとめます。</p>
+          <div class="metric-row">
+            <div class="metric"><small>確認</small><strong>${deviceAuditProgress()}%</strong></div>
+            <div class="metric"><small>項目</small><strong>${state.deviceAuditChecks.filter((item) => item.done).length}/${state.deviceAuditChecks.length}</strong></div>
+            <div class="metric"><small>メモ</small><strong>${state.deviceAuditNotes.length}件</strong></div>
+          </div>
+        `, `${btn('実機監査へ', 'go', { screen: 'deviceAudit', tab: '予定' }, 'primary')}${btn('監査をコピー', 'copyDeviceAudit', {}, 'ghost')}`)}
 
         ${card('データを守る', '控え / 読み込み / 復旧', `
           <p class="card-text">スマホ更新や入れ替えの前に、OUTBASEの控えをコピーできます。控えを貼り付けて読み込む導線もここにまとめます。</p>
@@ -1977,10 +2053,10 @@
     const body = `
       <section class="hero audit-hero">
         <h1>本番前総合確認</h1>
-        <p>一本線、下ナビ、複数プロジェクト、記録整理、復旧、次回改善のつながりをまとめて確認します。</p>
+        <p>一本線、下ナビ、複数プロジェクト、実記録、外部連携準備、総合実機監査までまとめて確認します。</p>
       </section>
       <main class="stack">
-        ${card('総合状態', 'Restart-14', `
+        ${card('総合状態', 'Restart-16', `
           <div class="metric-row">
             <div class="metric"><small>確認</small><strong>${okCount}/${checks.length}</strong></div>
             <div class="metric"><small>流れ</small><strong>${summary.projects}件</strong></div>
@@ -2018,7 +2094,7 @@
 
         ${card('控えと復旧', '消さずに守る', `
           <p class="card-text">公開前に控えをコピーしておけば、スマホ側の保存状態を後から確認できます。削除候補はすぐ消さず、復旧控えから未確認箱へ戻せます。</p>
-        `, `${btn('総合確認をコピー', 'copyAuditSummary', {}, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}`)}
+        `, `${btn('総合確認をコピー', 'copyAuditSummary', {}, 'primary')}${btn('実機監査へ', 'go', { screen: 'deviceAudit', tab: '予定' }, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body, { subtitle: '本番前に一本線をまとめて確認' });
   }
@@ -2108,6 +2184,46 @@
         `, `${btn('メモを追加', 'addIntegrationNote', {}, 'primary')}${btn('計画をコピー', 'copyExternalPlan', {}, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body, { subtitle: '外部連携は確認してから' });
+  }
+
+
+  function renderDeviceAudit() {
+    const groups = deviceAuditGroupNames();
+    const progress = deviceAuditProgress();
+    const body = `
+      <section class="hero audit-hero">
+        <h1>総合実機監査</h1>
+        <p>GitHub反映後にスマホで触る順番です。見た目の本格刷新は最後に回し、今は壊れない運用とデータ保護を確認します。</p>
+      </section>
+      <main class="stack">
+        ${card('監査進捗', 'Restart-16', `
+          <div class="metric-row">
+            <div class="metric"><small>進捗</small><strong>${progress}%</strong></div>
+            <div class="metric"><small>完了</small><strong>${state.deviceAuditChecks.filter((item) => item.done).length}/${state.deviceAuditChecks.length}</strong></div>
+            <div class="metric"><small>未整理</small><strong>${state.inbox.length}件</strong></div>
+            <div class="metric"><small>控え</small><strong>${state.savedAt ? 'あり' : 'これから'}</strong></div>
+          </div>
+          <div class="progress"><span style="width:${progress}%"></span></div>
+          <p class="note">Actions成功 → GitHub Pages表示 → 表示更新 → データ控え → 全画面操作の順で確認します。</p>
+        `, `${btn('監査をコピー', 'copyDeviceAudit', {}, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('表示を更新', 'refreshApp', {}, 'ghost')}`)}
+
+        ${groups.map((group) => card(group, 'スマホ確認', `
+          <div class="check-list">
+            ${state.deviceAuditChecks.filter((item) => item.group === group).map((item) => `
+              <button class="check-row ${item.done ? 'done' : ''}" data-action="toggleDeviceAudit" data-id="${escapeHtml(item.id)}">
+                <span>${item.done ? '✓' : '□'}</span>
+                <strong>${escapeHtml(item.name)}</strong>
+                <small>${escapeHtml(item.note)}</small>
+              </button>
+            `).join('')}
+          </div>
+        `)).join('')}
+
+        ${card('実機メモ', '気づいたことを残す', `
+          ${state.deviceAuditNotes.length ? `<div class="list">${state.deviceAuditNotes.map((note) => `<div class="item"><div class="item-main"><div class="item-title">${escapeHtml(note.title || '実機メモ')}</div><div class="item-sub">${escapeHtml(note.text)} · ${escapeHtml(note.date || '')}</div></div></div>`).join('')}</div>` : '<div class="empty">押しにくい、見づらい、戻りにくいところをここに残します。</div>'}
+        `, `${btn('メモを追加', 'addDeviceAuditNote', {}, 'primary')}${btn('本番前総合確認', 'go', { screen: 'releaseAudit', tab: '予定' }, 'ghost')}${btn('データを守る', 'go', { screen: 'dataGuard', tab: '思い出' }, 'ghost')}`)}
+      </main>`;
+    app.innerHTML = layout(body, { subtitle: 'スマホで全体を確認' });
   }
 
   function renderRecordDetail() {
@@ -2498,6 +2614,7 @@
       case 'releaseAudit': renderReleaseAudit(); break;
       case 'dataGuard': renderDataGuard(); break;
       case 'externalConnect': renderExternalConnect(); break;
+      case 'deviceAudit': renderDeviceAudit(); break;
       default: renderHome(); break;
     }
   }
@@ -3182,6 +3299,37 @@
       navigator.clipboard?.writeText(text).then(() => showToast('総合確認をコピーしました')).catch(() => {
         window.prompt('OUTBASE総合確認', text);
         showToast('総合確認を表示しました');
+      });
+      return;
+    }
+
+
+    if (action === 'toggleDeviceAudit') {
+      const item = state.deviceAuditChecks.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      item.done = !item.done;
+      item.checkedAt = item.done ? new Date().toISOString() : '';
+      saveState();
+      renderDeviceAudit();
+      showToast(item.done ? '実機確認を完了にしました' : '実機確認を戻しました');
+      return;
+    }
+
+    if (action === 'addDeviceAuditNote') {
+      const text = promptText('実機メモ', '');
+      if (text === null || !text) return;
+      state.deviceAuditNotes.unshift({ id: makeId('deviceNote'), title: '実機メモ', text, date: todayISO(), createdAt: new Date().toISOString() });
+      saveState();
+      renderDeviceAudit();
+      showToast('実機メモを追加しました');
+      return;
+    }
+
+    if (action === 'copyDeviceAudit') {
+      const text = deviceAuditText();
+      navigator.clipboard?.writeText(text).then(() => showToast('実機監査をコピーしました')).catch(() => {
+        window.prompt('OUTBASE実機監査', text);
+        showToast('実機監査を表示しました');
       });
       return;
     }

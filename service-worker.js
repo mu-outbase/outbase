@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbase-restart-15-integration-prep-lock';
+const CACHE_NAME = 'outbase-restart-16-integration-prep-lock';
 const APP_SHELL = [
   './',
   './index.html?v=restart-15-integration-prep-lock',
