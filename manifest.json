@@ -2,7 +2,7 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "description": "今日は何する？から、準備、当日、記録、思い出、次回改善を一本でつなぐアプリ",
-  "start_url": "./?v=restart-12-visual-refresh-lock",
+  "start_url": "./?v=restart-13-data-operation-lock",
   "display": "standalone",
   "background_color": "#f3eee3",
   "theme_color": "#151b18",

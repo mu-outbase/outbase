@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_12_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_13_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-12',
+    version: 'restart-13',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -193,7 +193,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-12';
+      merged.version = 'restart-13';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -562,7 +562,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-12 見た目刷新確認',
+      'OUTBASE Restart-13 実データ運用確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -588,7 +588,7 @@
 
 
   function preImportBackupKey() {
-    return 'outbase_restart_11_pre_import_backup';
+    return 'outbase_restart_13_pre_import_backup';
   }
 
   function readPreImportBackup() {
@@ -608,7 +608,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-12';
+    next.version = 'restart-13';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -627,7 +627,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-12';
+    state.version = 'restart-13';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -663,7 +663,7 @@
 
   function flowItems() {
     return [
-      { key: '予定', label: '予定', screens: ['home', 'calendar', 'plan', 'search', 'homeWalk', 'campWalk'] },
+      { key: '予定', label: '予定', screens: ['home', 'calendar', 'projectManage', 'plan', 'search', 'homeWalk', 'campWalk'] },
       { key: '準備', label: '準備', screens: ['prep', 'shopping', 'cooking', 'gear', 'kota', 'weatherRoute'] },
       { key: '当日', label: '当日', screens: ['cockpit'] },
       { key: '記録', label: '記録', screens: ['capture'] },
@@ -781,6 +781,142 @@
     </div>`;
   }
 
+
+
+  function projectTypeName(type) {
+    const names = { camp: 'キャンプ', walk: '自宅散歩', campWalk: 'キャンプ場散歩', search: '探す', outing: '外出' };
+    return names[type] || '流れ';
+  }
+
+  function projectDefaultScreen(project) {
+    if (!project) return 'plan';
+    if (project.type === 'walk') return 'homeWalk';
+    if (project.type === 'campWalk') return 'campWalk';
+    if (project.type === 'search') return 'search';
+    if (project.type === 'outing') return 'capture';
+    return 'plan';
+  }
+
+  function projectDefaultTab(project) {
+    if (!project) return '予定';
+    if (project.type === 'search') return '探す';
+    if (project.type === 'outing') return '＋';
+    return '予定';
+  }
+
+  function campProjectTemplate(values = {}) {
+    const title = values.title || values.place || '新しいキャンプ';
+    const startDate = values.startDate || '';
+    const endDate = values.endDate || startDate;
+    return {
+      id: values.id || makeId('camp'),
+      type: 'camp',
+      title,
+      label: values.label || (values.status === '過去キャンプ' ? '過去キャンプ' : '次のキャンプ'),
+      status: values.status || '次の予定',
+      startDate,
+      endDate,
+      place: values.place || title,
+      party: values.party || '夫婦＋コタ',
+      checkin: values.checkin || '13:00',
+      checkout: values.checkout || '11:00',
+      weather: values.weather || '天気を確認',
+      route: values.route || 'ルートを確認',
+      memo: values.memo || '実データとして追加したキャンプ予定です。',
+      prep: clone(prepBase),
+      shopping: clone(shoppingBase),
+      meals: clone(mealsBase),
+      daySteps: clone(dayStepsBase),
+      activeDayStepId: 'before',
+      gear: clone(gearBase),
+      kota: clone(kotaBase),
+      weatherChecks: clone(weatherCheckBase),
+      routeChecks: clone(routeCheckBase)
+    };
+  }
+
+  function createCampProjectFromPrompts(defaults = {}) {
+    const title = promptText('予定名 / キャンプ場名', defaults.title || defaults.place || '新しいキャンプ');
+    if (title === null || !title) return null;
+    const startDate = promptText('開始日', defaults.startDate || state.selectedDate || todayISO());
+    if (startDate === null) return null;
+    const endDate = promptText('終了日', defaults.endDate || startDate);
+    if (endDate === null) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      showToast('日付は 2026-06-26 の形で入力してください');
+      return null;
+    }
+    const party = promptText('同行', defaults.party || '夫婦＋コタ');
+    if (party === null) return null;
+    const checkin = promptText('チェックイン', defaults.checkin || '13:00');
+    if (checkin === null) return null;
+    const checkout = promptText('チェックアウト', defaults.checkout || '11:00');
+    if (checkout === null) return null;
+    const project = campProjectTemplate({
+      title,
+      place: title,
+      startDate,
+      endDate,
+      party,
+      checkin,
+      checkout,
+      status: defaults.status || '次の予定',
+      label: defaults.label || (defaults.status === '過去キャンプ' ? '過去キャンプ' : '次のキャンプ'),
+      memo: defaults.memo || '自分で追加した実データ予定です。'
+    });
+    return project;
+  }
+
+  function editProjectByPrompt(project) {
+    if (!project) return false;
+    const title = promptText('タイトル', project.title);
+    if (title === null) return false;
+    const status = promptText('状態', project.status || '次の予定');
+    if (status === null) return false;
+    const place = promptText('場所', project.place || title);
+    if (place === null) return false;
+    const party = promptText('同行 / 対象', project.party || '夫婦＋コタ');
+    if (party === null) return false;
+    const startDate = promptText('開始日 空欄可', project.startDate || '');
+    if (startDate === null) return false;
+    const endDate = promptText('終了日 空欄可', project.endDate || startDate || '');
+    if (endDate === null) return false;
+    if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      showToast('開始日は 2026-06-26 の形で入力してください');
+      return false;
+    }
+    if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      showToast('終了日は 2026-06-26 の形で入力してください');
+      return false;
+    }
+    project.title = title || project.title;
+    project.label = project.label || projectTypeName(project.type);
+    project.status = status || project.status;
+    project.place = place || project.place;
+    project.party = party || project.party;
+    project.startDate = startDate || '';
+    project.endDate = endDate || startDate || '';
+    if (project.type === 'camp') {
+      const checkin = promptText('チェックイン', project.checkin || '13:00');
+      if (checkin === null) return false;
+      const checkout = promptText('チェックアウト', project.checkout || '11:00');
+      if (checkout === null) return false;
+      const weather = promptText('天気メモ', project.weather || '天気を確認');
+      if (weather === null) return false;
+      const route = promptText('ルートメモ', project.route || 'ルートを確認');
+      if (route === null) return false;
+      const memo = promptText('予定メモ', project.memo || '');
+      if (memo === null) return false;
+      project.checkin = checkin;
+      project.checkout = checkout;
+      project.weather = weather;
+      project.route = route;
+      project.memo = memo;
+      syncProjectCalendar(state, project);
+    }
+    return true;
+  }
+
   function renderHome() {
     const camp = campProject();
     const percent = prepPercent(camp);
@@ -851,6 +987,15 @@
           </div>
         `, `${btn('控えを開く', 'go', { screen: 'dataGuard', tab: '思い出' }, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
 
+        ${card('予定を管理する', '追加 / 編集 / 切替', `
+          <p class="card-text">次のキャンプ、過去キャンプ、散歩、探す流れをここで作ります。カレンダーからも予定にできます。</p>
+          <div class="metric-row">
+            <div class="metric"><small>流れ</small><strong>${state.projects.length}件</strong></div>
+            <div class="metric"><small>キャンプ</small><strong>${state.projects.filter((project) => project.type === 'camp').length}件</strong></div>
+            <div class="metric"><small>選択中</small><strong>${escapeHtml(projectLabel(activeProject()))}</strong></div>
+          </div>
+        `, `${btn('予定管理へ', 'go', { screen: 'projectManage', tab: '予定' }, 'primary')}${btn('新しいキャンプ', 'createCampPlan', {}, 'ghost')}`)}
+
         ${card('予定カレンダー', '日付で見る', `
           <div class="mini-calendar-list">
             ${upcomingEntries(3).map((entry) => `<button class="mini-calendar-item" data-action="openCalendarDate" data-date="${escapeHtml(entry.date)}"><span>${escapeHtml(entry.date.slice(5))}</span><strong>${escapeHtml(entry.label)}</strong><small>${escapeHtml(projectLabel(projectById(entry.projectId)))} / ${escapeHtml(entry.source || '予定')}</small></button>`).join('') || '<div class="empty">予定・未確認・改善が日付に出ます。</div>'}
@@ -883,6 +1028,60 @@
     `;
     app.innerHTML = homeLayout(content);
   }
+
+
+
+  function renderProjectManage() {
+    const active = activeProject();
+    const camps = state.projects.filter((project) => project.type === 'camp');
+    const body = `
+      <section class="hero">
+        <h1>予定を管理する</h1>
+        <p>次のキャンプ、過去キャンプ、散歩、探す流れを実データで追加・編集・切替します。</p>
+      </section>
+      <main class="stack">
+        ${card('今使う流れ', '切替', `
+          <p class="card-text"><strong>${escapeHtml(projectLabel(active))}</strong><br>${escapeHtml(active.title)} / ${escapeHtml(projectDate(active))}</p>
+          ${projectSwitch()}
+        `, `${btn('開く', 'openProject', { projectId: active.id, screen: projectDefaultScreen(active), tab: projectDefaultTab(active) }, 'primary')}${btn('編集する', 'editProject', { projectId: active.id }, 'ghost')}`)}
+
+        ${card('追加する', '実データ運用', `
+          <p class="card-text">カレンダーや予定詳細に出すための元データを作ります。予定だけ増やして、画面は増やしすぎません。</p>
+        `, `${btn('新しいキャンプ予定', 'createCampPlan', {}, 'primary')}${btn('選択日から予定作成', 'createCampFromDate', { date: state.selectedDate || todayISO() }, 'ghost')}${btn('過去キャンプを登録', 'createPastCamp', {}, 'ghost')}${btn('散歩 / 探す / 外出を追加', 'createBasicProject', {}, 'ghost')}`)}
+
+        ${card('キャンプ予定', '次回と過去', `
+          <div class="list">
+            ${camps.map((project) => `
+              <div class="item">
+                <div class="item-main"><div class="item-title">${escapeHtml(project.title)}</div><div class="item-sub">${escapeHtml(project.status)} / ${escapeHtml(projectDate(project))} / ${escapeHtml(project.party || '')}</div></div>
+                <div class="actions compact-actions">
+                  <button class="tag light" data-action="openProject" data-project-id="${escapeHtml(project.id)}" data-screen="plan" data-tab="予定">開く</button>
+                  <button class="tag light" data-action="editProject" data-project-id="${escapeHtml(project.id)}">編集</button>
+                  <button class="tag ${project.id === state.activeProjectId ? '' : 'light'}" data-action="setActiveOnly" data-project-id="${escapeHtml(project.id)}">主役</button>
+                </div>
+              </div>
+            `).join('') || '<div class="empty">キャンプ予定を追加するとここに出ます。</div>'}
+          </div>
+        `)}
+
+        ${card('その他の流れ', '散歩 / 探す / 外出', `
+          <div class="list">
+            ${state.projects.filter((project) => project.type !== 'camp').map((project) => `
+              <div class="item">
+                <div class="item-main"><div class="item-title">${escapeHtml(projectLabel(project))}</div><div class="item-sub">${escapeHtml(projectTypeName(project.type))} / ${escapeHtml(project.title)} / ${escapeHtml(projectDate(project))}</div></div>
+                <div class="actions compact-actions">
+                  <button class="tag light" data-action="openProject" data-project-id="${escapeHtml(project.id)}" data-screen="${escapeHtml(projectDefaultScreen(project))}" data-tab="${escapeHtml(projectDefaultTab(project))}">開く</button>
+                  <button class="tag light" data-action="editProject" data-project-id="${escapeHtml(project.id)}">編集</button>
+                  <button class="tag ${project.id === state.activeProjectId ? '' : 'light'}" data-action="setActiveOnly" data-project-id="${escapeHtml(project.id)}">主役</button>
+                </div>
+              </div>
+            `).join('') || '<div class="empty">散歩や探す流れを追加できます。</div>'}
+          </div>
+        `)}
+      </main>`;
+    app.innerHTML = layout(body);
+  }
+
 
   function renderCalendar() {
     const month = state.calendarMonth;
@@ -929,7 +1128,7 @@
               <span class="tag light">開く</span>
             </button>`;
           }).join('')}</div>` : '<div class="empty">この日にはまだ予定・記録・改善がありません。</div>'}
-        `, `${btn('この日に記録する', 'calendarCapture', { date: selectedDate }, 'primary')}${btn('未確認を片付ける', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
+        `, `${btn('この日に予定を作る', 'createCampFromDate', { date: selectedDate }, 'primary')}${btn('この日に記録する', 'calendarCapture', { date: selectedDate }, 'ghost')}${btn('未確認を片付ける', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
@@ -953,7 +1152,7 @@
             <div class="metric"><small>ルート</small><strong>${escapeHtml(project.route)}</strong></div>
           </div>
           <div class="progress"><span style="width:${percent}%"></span></div>
-        `, `${btn('準備する', 'openProject', { projectId: project.id, screen: 'prep', tab: '準備' })}${btn('当日運転席', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'ghost')}${btn('思い出を見る', 'openProject', { projectId: project.id, screen: 'memories', tab: '思い出' }, 'ghost')}`)}
+        `, `${btn('準備する', 'openProject', { projectId: project.id, screen: 'prep', tab: '準備' })}${btn('当日運転席', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'ghost')}${btn('思い出を見る', 'openProject', { projectId: project.id, screen: 'memories', tab: '思い出' }, 'ghost')}${btn('予定を管理', 'go', { screen: 'projectManage', tab: '予定' }, 'ghost')}`)}
         ${card('予定を整える', '編集できる', `
           <div class="grid-2">
             ${btn('キャンプ場名', 'editCampField', { field: 'place', label: 'キャンプ場名' }, 'ghost')}
@@ -1870,6 +2069,7 @@
   function render() {
     switch (state.screen) {
       case 'calendar': renderCalendar(); break;
+      case 'projectManage': renderProjectManage(); break;
       case 'plan': renderPlan(); break;
       case 'search': renderSearch(); break;
       case 'prep': renderPrep(); break;
@@ -1952,6 +2152,118 @@
 
     if (action === 'openProject') {
       setActiveProject(button.dataset.projectId, button.dataset.screen, button.dataset.tab || null);
+      return;
+    }
+
+
+
+    if (action === 'setActiveOnly') {
+      if (projectById(button.dataset.projectId)) state.activeProjectId = button.dataset.projectId;
+      saveState();
+      renderProjectManage();
+      showToast('主役の流れを切り替えました');
+      return;
+    }
+
+    if (action === 'createCampPlan') {
+      const project = createCampProjectFromPrompts({ status: '次の予定', label: '次のキャンプ' });
+      if (!project) return;
+      state.projects.unshift(project);
+      state.activeProjectId = project.id;
+      syncProjectCalendar(state, project);
+      state.calendarMonth = project.startDate.slice(0, 7);
+      state.selectedDate = project.startDate;
+      state.screen = 'plan';
+      state.activeTab = '予定';
+      saveState();
+      render();
+      showToast('キャンプ予定を追加しました');
+      return;
+    }
+
+    if (action === 'createCampFromDate') {
+      const date = button.dataset.date || state.selectedDate || todayISO();
+      const project = createCampProjectFromPrompts({ startDate: date, endDate: date, status: '次の予定', label: '次のキャンプ' });
+      if (!project) return;
+      state.projects.unshift(project);
+      state.activeProjectId = project.id;
+      syncProjectCalendar(state, project);
+      state.calendarMonth = project.startDate.slice(0, 7);
+      state.selectedDate = project.startDate;
+      state.screen = 'plan';
+      state.activeTab = '予定';
+      saveState();
+      render();
+      showToast('選択日から予定を作りました');
+      return;
+    }
+
+    if (action === 'createPastCamp') {
+      const project = createCampProjectFromPrompts({ startDate: state.selectedDate || todayISO(), endDate: state.selectedDate || todayISO(), status: '過去キャンプ', label: '過去キャンプ', memo: '過去キャンプとして登録しました。思い出と次回改善へつなげます。' });
+      if (!project) return;
+      state.projects.push(project);
+      state.activeProjectId = project.id;
+      syncProjectCalendar(state, project);
+      state.calendarMonth = project.startDate.slice(0, 7);
+      state.selectedDate = project.startDate;
+      state.screen = 'plan';
+      state.activeTab = '予定';
+      saveState();
+      render();
+      showToast('過去キャンプを登録しました');
+      return;
+    }
+
+    if (action === 'createBasicProject') {
+      const answer = window.prompt('種類を番号で選ぶ\n1. 自宅散歩\n2. キャンプ場散歩\n3. 探す\n4. 外出', '1');
+      if (answer === null) return;
+      const types = { '1': 'walk', '2': 'campWalk', '3': 'search', '4': 'outing' };
+      const type = types[answer] || 'walk';
+      const title = promptText('タイトル', projectTypeName(type));
+      if (title === null || !title) return;
+      const place = promptText('場所', type === 'walk' ? '自宅周辺' : '場所はあとで決める');
+      if (place === null) return;
+      const startDate = promptText('日付 空欄可', state.selectedDate || '');
+      if (startDate === null) return;
+      if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+        showToast('日付は 2026-06-26 の形で入力してください');
+        return;
+      }
+      const project = {
+        id: makeId(type),
+        type,
+        title,
+        label: projectTypeName(type),
+        status: type === 'search' ? '候補集め' : 'いつでも',
+        startDate,
+        endDate: startDate,
+        place: place || '',
+        party: type === 'walk' || type === 'campWalk' ? 'コタ' : '夫婦＋コタ',
+        parentProjectId: type === 'campWalk' ? campProject().id : '',
+        memo: '実データとして追加した流れです。'
+      };
+      state.projects.push(project);
+      state.activeProjectId = project.id;
+      if (startDate) state.calendarItems.push({ id: `cal-${project.id}-start`, projectId: project.id, date: startDate, label: projectLabel(project), kind: type });
+      state.screen = projectDefaultScreen(project);
+      state.activeTab = projectDefaultTab(project);
+      saveState();
+      render();
+      showToast('流れを追加しました');
+      return;
+    }
+
+    if (action === 'editProject') {
+      const project = projectById(button.dataset.projectId) || activeProject();
+      if (!project) return;
+      if (!editProjectByPrompt(project)) return;
+      if (project.startDate) {
+        state.calendarMonth = project.startDate.slice(0, 7);
+        state.selectedDate = project.startDate;
+      }
+      saveState();
+      render();
+      showToast('流れを更新しました');
       return;
     }
 
