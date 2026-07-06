@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_9_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_10_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-9',
+    version: 'restart-10',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -193,7 +193,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-9';
+      merged.version = 'restart-10';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -534,6 +534,52 @@
     return notes.length ? notes : ['一本線の紐づけは正常'];
   }
 
+  function finalAuditItems() {
+    const summary = routeSummary();
+    const hasHome = true;
+    const hasFlow = flowItems().length >= 6;
+    const hasProjects = summary.projects >= 5 && Boolean(state.activeProjectId);
+    const hasCampCalendar = state.calendarItems.some((item) => item.kind === 'camp');
+    const hasPrep = Boolean(campProject()?.prep?.length && campProject()?.shopping?.length && campProject()?.meals?.length);
+    const hasDaySteps = Boolean(campProject()?.daySteps?.length);
+    const hasRecovery = Array.isArray(state.deletedRecords);
+    const hasImprovements = Array.isArray(state.improvements);
+    return [
+      { label: '今日は何する？', detail: '起動直後の入口を維持', ok: hasHome },
+      { label: '下ナビ固定', detail: '予定 / 探す / 準備 / ＋ / 思い出', ok: true },
+      { label: '一本線', detail: '予定→準備→当日→記録→整理→改善', ok: hasFlow },
+      { label: '複数プロジェクト', detail: `${summary.projects}件を裏側で分離`, ok: hasProjects },
+      { label: 'カレンダー紐づけ', detail: `${summary.calendar}件`, ok: hasCampCalendar },
+      { label: '準備実用化', detail: '買い物・料理・ギア・コタ・天気・ルート', ok: hasPrep },
+      { label: '当日運転席', detail: '工程ごとの開始・記録・完了・戻す', ok: hasDaySteps },
+      { label: '未確認箱', detail: `${summary.inbox}件を勝手に確定しない`, ok: Array.isArray(state.inbox) },
+      { label: '復旧控え', detail: `${summary.backups}件を戻せる`, ok: hasRecovery },
+      { label: '次回改善', detail: `${summary.improvements}件を準備へ戻す`, ok: hasImprovements }
+    ];
+  }
+
+  function finalAuditSummaryText() {
+    const summary = routeSummary();
+    const lines = [
+      'OUTBASE Restart-10 本番前総合確認',
+      '',
+      `プロジェクト：${summary.projects}件`,
+      `日付紐づけ：${summary.calendar}件`,
+      `未整理：${summary.inbox}件`,
+      `削除候補：${summary.deleteCandidates}件`,
+      `思い出：${summary.memories}件`,
+      `次回改善：${summary.improvements}件`,
+      `復旧控え：${summary.backups}件`,
+      '',
+      '確認項目',
+      ...finalAuditItems().map((item) => `・${item.ok ? 'OK' : '要確認'} ${item.label}：${item.detail}`),
+      '',
+      'メモ',
+      ...healthNotes().map((text) => `・${text}`)
+    ];
+    return lines.join('\n');
+  }
+
   function backupText() {
     const safeState = { ...state, toast: '' };
     return JSON.stringify(safeState, null, 2);
@@ -542,7 +588,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-9';
+    state.version = 'restart-10';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -726,6 +772,13 @@
           <div class="health-list">${healthNotes().map((text) => `<span>${escapeHtml(text)}</span>`).join('')}</div>
           <p class="note">反映後に古い画面が出る時は表示だけ更新します。保存データは消しません。</p>
         `, `${btn('表示を更新', 'refreshApp', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
+
+        ${card('本番前総合確認', '最後にまとめて見る', `
+          <p class="card-text">入口、下ナビ、一本線、複数プロジェクト、カレンダー、記録整理、復旧、次回改善のつながりをまとめて確認します。</p>
+          <div class="audit-mini">
+            ${finalAuditItems().slice(0, 4).map((item) => `<span class="${item.ok ? 'ok' : 'warn'}">${escapeHtml(item.label)}</span>`).join('')}
+          </div>
+        `, `${btn('総合確認へ', 'go', { screen: 'releaseAudit', tab: '予定' }, 'primary')}${btn('紐づけ補正', 'repairNow', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
 
         ${card('予定カレンダー', '日付で見る', `
           <div class="mini-calendar-list">
@@ -1498,6 +1551,59 @@
     app.innerHTML = layout(body);
   }
 
+  function renderReleaseAudit() {
+    const summary = routeSummary();
+    const checks = finalAuditItems();
+    const okCount = checks.filter((item) => item.ok).length;
+    const body = `
+      <section class="hero audit-hero">
+        <h1>本番前総合確認</h1>
+        <p>一本線、下ナビ、複数プロジェクト、記録整理、復旧、次回改善のつながりをまとめて確認します。</p>
+      </section>
+      <main class="stack">
+        ${card('総合状態', 'Restart-10', `
+          <div class="metric-row">
+            <div class="metric"><small>確認</small><strong>${okCount}/${checks.length}</strong></div>
+            <div class="metric"><small>流れ</small><strong>${summary.projects}件</strong></div>
+            <div class="metric"><small>日付</small><strong>${summary.calendar}件</strong></div>
+            <div class="metric"><small>未整理</small><strong>${summary.inbox}件</strong></div>
+          </div>
+          <div class="progress"><span style="width:${Math.round((okCount / checks.length) * 100)}%"></span></div>
+          <div class="health-list">${healthNotes().map((text) => `<span>${escapeHtml(text)}</span>`).join('')}</div>
+        `, `${btn('表示を更新', 'refreshApp', {}, 'ghost')}${btn('紐づけ補正', 'repairNow', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
+
+        ${card('LOCK確認', '崩してはいけないもの', `
+          <div class="audit-list">
+            ${checks.map((item) => `
+              <div class="audit-item ${item.ok ? 'ok' : 'warn'}">
+                <span class="audit-status">${item.ok ? 'OK' : '要確認'}</span>
+                <div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.detail)}</small></div>
+              </div>
+            `).join('')}
+          </div>
+        `)}
+
+        ${card('触る順番', 'スマホ確認', `
+          <p class="note">GitHub反映後は、この順番で押して、古い画面が残っていないかだけ確認します。</p>
+          <div class="grid-2">
+            ${btn('ホーム', 'go', { screen: 'home', tab: '予定' }, 'ghost')}
+            ${btn('カレンダー', 'go', { screen: 'calendar', tab: '予定' }, 'ghost')}
+            ${btn('準備', 'go', { screen: 'prep', tab: '準備' }, 'ghost')}
+            ${btn('当日運転席', 'go', { screen: 'cockpit', tab: '予定' }, 'ghost')}
+            ${btn('＋記録', 'go', { screen: 'capture', tab: '＋' }, 'ghost')}
+            ${btn('未確認箱', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}
+            ${btn('思い出', 'go', { screen: 'memories', tab: '思い出' }, 'ghost')}
+            ${btn('次回改善', 'go', { screen: 'improvements', tab: '思い出' }, 'ghost')}
+          </div>
+        `)}
+
+        ${card('控えと復旧', '消さずに守る', `
+          <p class="card-text">公開前に控えをコピーしておけば、スマホ側の保存状態を後から確認できます。削除候補はすぐ消さず、復旧控えから未確認箱へ戻せます。</p>
+        `, `${btn('総合確認をコピー', 'copyAuditSummary', {}, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}`)}
+      </main>`;
+    app.innerHTML = layout(body, { subtitle: '本番前に一本線をまとめて確認' });
+  }
+
   function renderInbox() {
     const records = visibleInboxRecords();
     const activeCount = state.inbox.filter((record) => record.status !== '削除候補').length;
@@ -1660,6 +1766,7 @@
       case 'memories': renderMemories(); break;
       case 'improvements': renderImprovements(); break;
       case 'inbox': renderInbox(); break;
+      case 'releaseAudit': renderReleaseAudit(); break;
       default: renderHome(); break;
     }
   }
@@ -2179,6 +2286,23 @@
       saveState();
       renderInbox();
       showToast('復旧控えから未確認箱へ戻しました');
+      return;
+    }
+
+    if (action === 'repairNow') {
+      repairLinkedData(state);
+      saveState();
+      render();
+      showToast('紐づけを補正しました');
+      return;
+    }
+
+    if (action === 'copyAuditSummary') {
+      const text = finalAuditSummaryText();
+      navigator.clipboard?.writeText(text).then(() => showToast('総合確認をコピーしました')).catch(() => {
+        window.prompt('OUTBASE総合確認', text);
+        showToast('総合確認を表示しました');
+      });
       return;
     }
 

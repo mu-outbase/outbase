@@ -981,3 +981,72 @@ button, .item, .calendar-day, .capture-tile, .switch-btn, .filter-pill, .target-
 }
 
 .recovery-list { margin-top: 12px; }
+
+
+.audit-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.audit-mini span,
+.audit-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.audit-mini .ok,
+.audit-item.ok .audit-status {
+  color: var(--accent-2);
+  background: rgba(47, 95, 74, 0.12);
+}
+
+.audit-mini .warn,
+.audit-item.warn .audit-status {
+  color: var(--warning);
+  background: rgba(161, 92, 47, 0.12);
+}
+
+.audit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.audit-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.audit-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.audit-item small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.audit-hero {
+  border-radius: 28px;
+  padding: 22px;
+  color: #fff;
+  background: linear-gradient(135deg, #1f2a24 0%, #486c55 100%);
+  box-shadow: var(--shadow);
+}
+
+.audit-hero p { color: rgba(255,255,255,0.8); }
