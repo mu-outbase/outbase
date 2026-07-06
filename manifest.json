@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "OUTBASE Restart-23 文字サイズ微調整LOCK",
-  "start_url": "./?v=restart-23-font-adjust-lock",
+  "description": "OUTBASE Restart-24 実用導線総合監査LOCK",
+  "start_url": "./?v=restart-24-flow-audit-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

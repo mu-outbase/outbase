@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-23-font-adjust-lock';
+const CACHE_NAME = 'outbase-restart-24-flow-audit-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-23-font-adjust-lock',
-  './style.css?v=restart-23-font-adjust-lock',
-  './src/app.js?v=restart-23-font-adjust-lock',
-  './manifest.json?v=restart-23-font-adjust-lock'
+  './index.html?v=restart-24-flow-audit-lock',
+  './style.css?v=restart-24-flow-audit-lock',
+  './src/app.js?v=restart-24-flow-audit-lock',
+  './manifest.json?v=restart-24-flow-audit-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-23-font-adjust-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-24-flow-audit-lock')))
   );
 });

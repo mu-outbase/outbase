@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_18_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_24_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -165,8 +165,24 @@
     { id: 'designHold', group: '見た目', name: '見た目は最終刷新に回す', note: 'ここでは操作性と壊れにくさを優先し、最後に丸ごと変える。', done: true }
   ];
 
+
+  const flowAuditBase = [
+    { id: 'planCreate', group: '予定', name: '予定を追加できる', note: 'キャンプ予定、過去キャンプ、散歩、探す、外出を追加できるか確認。', done: false, screen: 'projectManage', tab: '予定' },
+    { id: 'planEdit', group: '予定', name: '予定を編集できる', note: 'キャンプ場名、日程、同行者、チェックイン、天気、ルートを更新できるか確認。', done: false, screen: 'plan', tab: '予定' },
+    { id: 'calendarCreate', group: '予定', name: 'カレンダーから予定へ進める', note: '日付を選び、予定作成や記録へつながるか確認。', done: false, screen: 'calendar', tab: '予定' },
+    { id: 'searchPromote', group: '探す', name: '候補を予定に育てられる', note: '犬可・温水・景色などの条件から、次の予定候補へ送れるか確認。', done: false, screen: 'search', tab: '探す' },
+    { id: 'prepLoop', group: '準備', name: '準備から買い物・料理・ギア・コタへ進める', note: '準備率、買い物、料理、ギア、コタ、天気、ルートが一周できるか確認。', done: false, screen: 'prep', tab: '準備' },
+    { id: 'shoppingCopy', group: '準備', name: '買い物をLINE用にコピーできる', note: '全体コピー、未購入だけコピー、料理から買い物追加が使えるか確認。', done: false, screen: 'shopping', tab: '準備' },
+    { id: 'cockpitSteps', group: '当日', name: '当日運転席の工程が進む', note: '開始、完了、戻す、工程ごとの写真・声・メモ保存が使えるか確認。', done: false, screen: 'cockpit', tab: '予定' },
+    { id: 'recordReal', group: '記録', name: '写真・動画・声・GPSを残せる', note: '権限エラー時もメモや未確認箱に逃げられるか確認。', done: false, screen: 'capture', tab: '＋' },
+    { id: 'inboxSort', group: '整理', name: '未確認箱で保存先を選べる', note: '保存先候補、修正、削除候補、復旧、完全削除確認が使えるか確認。', done: false, screen: 'inbox', tab: '思い出' },
+    { id: 'memoryImprove', group: '思い出', name: '思い出から次回改善へ送れる', note: '思い出で終わらず、料理・ギア・コタ・天気・ルートへ反映できるか確認。', done: false, screen: 'memories', tab: '思い出' },
+    { id: 'improveReflect', group: '改善', name: '改善を次の準備へ反映できる', note: '反映済み、解除、反映履歴が壊れていないか確認。', done: false, screen: 'improvements', tab: '思い出' },
+    { id: 'dataGuard', group: '保護', name: '控えコピーと読み込みができる', note: 'GitHub反映や端末変更前に控えを作れるか確認。', done: false, screen: 'dataGuard', tab: '思い出' }
+  ];
+
   const defaultState = {
-    version: 'restart-23',
+    version: 'restart-24',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -267,7 +283,9 @@
     syncDrafts: [],
     integrationNotes: [],
     deviceAuditChecks: clone(deviceAuditBase),
-    deviceAuditNotes: []
+    deviceAuditNotes: [],
+    flowAuditChecks: clone(flowAuditBase),
+    flowAuditNotes: []
   };
 
   let state = loadState();
@@ -291,7 +309,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-17';
+      merged.version = 'restart-24';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -805,7 +823,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-23';
+    next.version = 'restart-24';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -824,7 +842,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-23';
+    state.version = 'restart-24';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1121,7 +1139,7 @@
     const openImprovements = state.improvements.filter((item) => !item.done).length;
     const content = `
       <section class="quiet-home">
-        <div class="quiet-kicker">OUTBASE / restart-23</div>
+        <div class="quiet-kicker">OUTBASE / restart-24</div>
         <h1>今日は何する？</h1>
         <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。必要なことだけを、短く見える形で残す。</p>
         <div class="quiet-actions">
@@ -1169,6 +1187,7 @@
           <div class="utility-actions">
             <button class="text-link" data-action="copyBackup">控えをコピー</button>
             <button class="text-link" data-action="go" data-screen="externalConnect" data-tab="探す">連携準備</button>
+            <button class="text-link" data-action="go" data-screen="flowAudit" data-tab="予定">導線監査</button>
             <button class="text-link" data-action="go" data-screen="deviceAudit" data-tab="予定">実機監査</button>
           </div>
         </section>
@@ -1985,6 +2004,79 @@
     app.innerHTML = layout(body);
   }
 
+
+  function flowAuditGroups() {
+    return [...new Set(state.flowAuditChecks.map((item) => item.group))];
+  }
+
+  function flowAuditProgress() {
+    const total = state.flowAuditChecks.length || 1;
+    const done = state.flowAuditChecks.filter((item) => item.done).length;
+    return Math.round((done / total) * 100);
+  }
+
+  function flowAuditText() {
+    const lines = [
+      'OUTBASE Restart-24 実用導線総合監査',
+      '',
+      `進捗：${flowAuditProgress()}%`,
+      `未整理：${state.inbox.length}件`,
+      `思い出：${state.memories.length}件`,
+      `改善：${state.improvements.length}件`,
+      ''
+    ];
+    flowAuditGroups().forEach((group) => {
+      lines.push(`■${group}`);
+      state.flowAuditChecks.filter((item) => item.group === group).forEach((item) => {
+        lines.push(`${item.done ? '✓' : '□'} ${item.name}：${item.note}`);
+      });
+      lines.push('');
+    });
+    if (state.flowAuditNotes.length) {
+      lines.push('■実用メモ');
+      state.flowAuditNotes.forEach((note) => lines.push(`・${note.text}（${note.date || ''}）`));
+    }
+    return lines.join('\n');
+  }
+
+  function renderFlowAudit() {
+    const groups = flowAuditGroups();
+    const progress = flowAuditProgress();
+    const body = `
+      <section class="hero audit-hero">
+        <h1>実用導線総合監査</h1>
+        <p>予定追加から準備、当日、記録、未確認箱、思い出、次回改善、データ保護まで一周できるかを確認します。</p>
+      </section>
+      <main class="stack">
+        ${card('一周確認', 'Restart-24', `
+          <div class="metric-row">
+            <div class="metric"><small>進捗</small><strong>${progress}%</strong></div>
+            <div class="metric"><small>確認</small><strong>${state.flowAuditChecks.filter((item) => item.done).length}/${state.flowAuditChecks.length}</strong></div>
+            <div class="metric"><small>未整理</small><strong>${state.inbox.length}件</strong></div>
+            <div class="metric"><small>改善</small><strong>${state.improvements.filter((item) => !item.done).length}件</strong></div>
+          </div>
+          <div class="progress"><span style="width:${progress}%"></span></div>
+          <p class="note">ここは開発用ではなく、実際に使う導線が詰まっていないかを見るための画面です。</p>
+        `, `${btn('監査をコピー', 'copyFlowAudit', {}, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('表示を更新', 'refreshApp', {}, 'ghost')}`)}
+
+        ${groups.map((group) => card(group, '実用導線', `
+          <div class="check-list">
+            ${state.flowAuditChecks.filter((item) => item.group === group).map((item) => `
+              <div class="check-row ${item.done ? 'done' : ''}">
+                <button class="check-hit" data-action="toggleFlowAudit" data-id="${escapeHtml(item.id)}"><span>${item.done ? '✓' : '□'}</span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.note)}</small></button>
+                <button class="text-link" data-action="go" data-screen="${escapeHtml(item.screen)}" data-tab="${escapeHtml(item.tab)}">開く</button>
+              </div>
+            `).join('')}
+          </div>
+        `)).join('')}
+
+        ${card('実用メモ', '気づいたことを残す', `
+          ${state.flowAuditNotes.length ? `<div class="list">${state.flowAuditNotes.map((note) => `<div class="item"><div class="item-main"><div class="item-title">導線メモ</div><div class="item-sub">${escapeHtml(note.text)} · ${escapeHtml(note.date || '')}</div></div></div>`).join('')}</div>` : '<div class="empty">戻りにくい、押しにくい、使う順番が分かりにくいところをここに残します。</div>'}
+        `, `${btn('メモを追加', 'addFlowAuditNote', {}, 'primary')}${btn('実機監査へ', 'go', { screen: 'deviceAudit', tab: '予定' }, 'ghost')}${btn('本番前総合確認', 'go', { screen: 'releaseAudit', tab: '予定' }, 'ghost')}`)}
+      </main>`;
+    app.innerHTML = layout(body, { subtitle: '実際に使う一周を確認' });
+  }
+
   function renderReleaseAudit() {
     const summary = routeSummary();
     const checks = finalAuditItems();
@@ -2554,6 +2646,7 @@
       case 'dataGuard': renderDataGuard(); break;
       case 'externalConnect': renderExternalConnect(); break;
       case 'deviceAudit': renderDeviceAudit(); break;
+      case 'flowAudit': renderFlowAudit(); break;
       default: renderHome(); break;
     }
   }
@@ -3273,6 +3366,37 @@
       return;
     }
 
+
+
+    if (action === 'toggleFlowAudit') {
+      const item = state.flowAuditChecks.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      item.done = !item.done;
+      item.checkedAt = item.done ? new Date().toISOString() : '';
+      saveState();
+      renderFlowAudit();
+      showToast(item.done ? '導線確認を完了にしました' : '導線確認を戻しました');
+      return;
+    }
+
+    if (action === 'addFlowAuditNote') {
+      const text = promptText('導線メモ', '');
+      if (text === null || !text) return;
+      state.flowAuditNotes.unshift({ id: makeId('flowNote'), text, date: todayISO(), createdAt: new Date().toISOString() });
+      saveState();
+      renderFlowAudit();
+      showToast('導線メモを追加しました');
+      return;
+    }
+
+    if (action === 'copyFlowAudit') {
+      const text = flowAuditText();
+      navigator.clipboard?.writeText(text).then(() => showToast('導線監査をコピーしました')).catch(() => {
+        window.prompt('OUTBASE導線監査', text);
+        showToast('導線監査を表示しました');
+      });
+      return;
+    }
 
     if (action === 'importBackup') {
       const text = window.prompt('OUTBASEの控えを貼り付け', '');
