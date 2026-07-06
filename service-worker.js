@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-16-integration-prep-lock';
+const CACHE_NAME = 'outbase-restart-17-visual-final-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-15-integration-prep-lock',
-  './style.css?v=restart-15-integration-prep-lock',
-  './src/app.js?v=restart-15-integration-prep-lock',
-  './manifest.json?v=restart-15-integration-prep-lock'
+  './index.html?v=restart-17-visual-final-lock',
+  './style.css?v=restart-17-visual-final-lock',
+  './src/app.js?v=restart-17-visual-final-lock',
+  './manifest.json?v=restart-17-visual-final-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-15-integration-prep-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-17-visual-final-lock')))
   );
 });

@@ -2,9 +2,9 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "description": "今日は何する？から、記録、思い出、次回改善、外部連携準備まで一本でつなぐアプリ",
-  "start_url": "./?v=restart-15-integration-prep-lock",
+  "start_url": "./?v=restart-17-visual-final-lock",
   "display": "standalone",
-  "background_color": "#f3eee3",
-  "theme_color": "#151b18",
+  "background_color": "#e9dfcc",
+  "theme_color": "#0e1411",
   "icons": []
 }

@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_16_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_17_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -166,7 +166,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-16',
+    version: 'restart-17',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -291,7 +291,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-16';
+      merged.version = 'restart-17';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -424,7 +424,7 @@
 
   function deviceAuditText() {
     const lines = [
-      'OUTBASE Restart-16 総合実機監査',
+      'OUTBASE Restart-17 見た目丸ごと刷新',
       '',
       `作成日：${todayISO()}`,
       `進捗：${state.deviceAuditChecks.filter((item) => item.done).length}/${state.deviceAuditChecks.length}件（${deviceAuditProgress()}%）`,
@@ -757,7 +757,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-16 総合実機監査パック確認',
+      'OUTBASE Restart-17 見た目丸ごと刷新パック確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -767,7 +767,7 @@
       `次回改善：${summary.improvements}件`,
       `復旧控え：${summary.backups}件`,
       `外部連携準備：${summary.externalReady}/${summary.integrations}件`,
-      `総合実機監査：${summary.deviceAuditDone}/${summary.deviceAuditTotal}件`,
+      `見た目刷新後の実機監査：${summary.deviceAuditDone}/${summary.deviceAuditTotal}件`,
       '',
       '確認項目',
       ...finalAuditItems().map((item) => `・${item.ok ? 'OK' : '要確認'} ${item.label}：${item.detail}`),
@@ -805,7 +805,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-16';
+    next.version = 'restart-17';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -824,7 +824,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-16';
+    state.version = 'restart-17';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1147,6 +1147,13 @@
             <span>予定</span><i></i><span>準備</span><i></i><span>当日</span><i></i><span>記録</span><i></i><span>改善</span>
           </div>
         </section>
+
+        ${card('見た目丸ごと刷新', 'FINAL DESIGN', `
+          <p class="card-text">今までの操作とデータ構造は残したまま、ホーム、カード、カレンダー、記録、思い出の見え方を丸ごと整えました。</p>
+          <div class="design-tokens">
+            <span>黒</span><span>生成り</span><span>オリーブ</span><span>ブロンズ</span>
+          </div>
+        `, `${btn('今日は何する？', 'go', { screen: 'home', tab: '予定' }, 'primary')}${btn('見た目は最後に再調整', 'go', { screen: 'deviceAudit', tab: '予定' }, 'ghost')}`, '<span class="tag light">刷新</span>')}
 
         ${card('進行中の流れ', '同時に動かせる', `
           ${projectSwitch()}
