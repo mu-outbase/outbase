@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_32_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_33_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_32_state', 'outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -76,6 +76,24 @@
     { id: 'conv', name: 'コンビニ / 買い出し', note: '通り道で寄る場所を決める', done: false },
     { id: 'gas', name: '給油 / 充電', note: '往復と寄り道に備える', done: false },
     { id: 'return', name: '帰路', note: '撤収後に無理なく帰れる道を確認', done: false }
+  ];
+
+  const feeCheckBase = [
+    { id: 'siteFee', name: 'サイト料金', amount: '未入力', note: '予約金額・現地支払い・追加料金を確認', done: false },
+    { id: 'payment', name: '支払い方法', amount: '未確認', note: '現金 / カード / 事前決済を確認', done: false },
+    { id: 'optionFee', name: '追加料金', amount: '犬・電源・薪など', note: '現地で増える費用をメモ', done: false },
+    { id: 'cancel', name: 'キャンセル規定', amount: '未確認', note: '雨予報や体調不良時の判断材料', done: false }
+  ];
+
+  const timelineBase = [
+    { id: 'wake', time: '06:00', title: '起床・最終確認', note: 'コタ用品・保冷・充電を確認', done: false },
+    { id: 'load', time: '06:45', title: '積込み', note: '重いもの・濡れ物・冷蔵を分ける', done: false },
+    { id: 'leave', time: '07:15', title: '出発', note: '渋滞前提で無理なく出る', done: false },
+    { id: 'shop', time: '09:30', title: '買い出し / 休憩', note: '不足分だけ買う。買いすぎない', done: false },
+    { id: 'checkin', time: '13:00', title: '到着・受付', note: 'チェックイン、サイト番号、地面を確認', done: false },
+    { id: 'setup', time: '14:00', title: '設営', note: '雨風・コタの居場所・寝室を先に決める', done: false },
+    { id: 'dinner', time: '18:00', title: '夜ごはん', note: '量を増やしすぎない', done: false },
+    { id: 'checkout', time: '翌 11:00', title: '撤収・帰宅', note: '乾燥・忘れ物・帰宅後整理へ', done: false }
   ];
 
 
@@ -182,7 +200,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-32',
+    version: 'restart-33',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -222,7 +240,10 @@
         gear: clone(gearBase),
         kota: clone(kotaBase),
         weatherChecks: clone(weatherCheckBase),
-        routeChecks: clone(routeCheckBase)
+        routeChecks: clone(routeCheckBase),
+        feeChecks: clone(feeCheckBase),
+        timeline: clone(timelineBase),
+        planNotes: []
       },
       {
         id: 'walk-home-kota',
@@ -312,7 +333,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-32';
+      merged.version = 'restart-33';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -379,6 +400,9 @@
         project.kota = Array.isArray(project.kota) ? project.kota : clone(kotaBase);
         project.weatherChecks = Array.isArray(project.weatherChecks) ? project.weatherChecks : clone(weatherCheckBase);
         project.routeChecks = Array.isArray(project.routeChecks) ? project.routeChecks : clone(routeCheckBase);
+        project.feeChecks = Array.isArray(project.feeChecks) ? project.feeChecks : clone(feeCheckBase);
+        project.timeline = Array.isArray(project.timeline) ? project.timeline : clone(timelineBase);
+        project.planNotes = Array.isArray(project.planNotes) ? project.planNotes : [];
       }
     });
     repairLinkedData(target);
@@ -1023,7 +1047,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-28';
+    next.version = 'restart-33';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -1252,7 +1276,10 @@
       gear: clone(gearBase),
       kota: clone(kotaBase),
       weatherChecks: clone(weatherCheckBase),
-      routeChecks: clone(routeCheckBase)
+      routeChecks: clone(routeCheckBase),
+      feeChecks: clone(feeCheckBase),
+      timeline: clone(timelineBase),
+      planNotes: []
     };
   }
 
@@ -1344,8 +1371,8 @@
       { id: 'activityHub', title: '活動から選ぶ', group: '入口', note: 'キャンプ・散歩・ドライブなど', screen: 'activityHub', tab: '予定' },
       { id: 'capture', title: '今これを残す', group: '記録', note: '写真・声・メモを未確認箱へ', screen: 'capture', tab: '＋' },
       { id: 'inbox', title: 'あとで片付ける', group: '整理', note: '未確認を確認する', screen: 'inbox', tab: '思い出' },
-      { id: 'planPhase', title: 'プラン', group: 'プラン', note: '天気・料金・料理・ルート・時間割', screen: 'prep', tab: '準備' },
-      { id: 'prep', title: '準備する', group: 'プラン', note: '今日見るものだけ確認', screen: 'prep', tab: '準備' },
+      { id: 'planPhase', title: 'キャンププラン', group: 'プラン', note: '予約後に一番使う。天気・料金・料理・ルート・時間割', screen: 'prep', tab: '準備' },
+      { id: 'prep', title: '予約後の準備', group: 'プラン', note: 'プラン全体を見て今日だけ確認', screen: 'prep', tab: '準備' },
       { id: 'shopping', title: '買い物', group: '実行', note: '買うものを確認', screen: 'shopping', tab: '準備' },
       { id: 'cooking', title: '料理', group: 'プラン', note: '量とメニューを確認', screen: 'cooking', tab: '準備' },
       { id: 'gear', title: 'ギア登録', group: 'ギア', note: '予定がなくても登録できる', screen: 'gear', tab: '準備' },
@@ -1384,7 +1411,7 @@
     if (type === 'camp') {
       return [
         { key: 'search', title: '探す', note: 'キャンプ場探しから始める時だけ', screen: 'search', tab: '探す' },
-        { key: 'plan', title: 'プラン', note: '予約後の準備。天気・料金・料理・ルート・時間割・ギア', screen: 'prep', tab: '準備' },
+        { key: 'plan', title: 'プラン', note: '予約後に一番使う。天気・料金・料理・ルート・時間割・ギア・コタ', screen: 'prep', tab: '準備' },
         { key: 'run', title: '実行', note: '買出し・積込み・移動・到着・撤収・帰宅', screen: 'cockpit', tab: '予定' },
         { key: 'record', title: '記録', note: '写真・声・メモ・GPS。あとで整理でOK', screen: 'capture', tab: '＋' },
         { key: 'result', title: '実績登録', note: '帰ってからでも、日付だけでも残す', screen: 'memories', tab: '思い出' },
@@ -1449,9 +1476,9 @@
     const body = `
       <header class="daily-top">
         <div>
-          <div class="simple-kicker">OUTBASE / RESTART-32</div>
+          <div class="simple-kicker">OUTBASE / RESTART-33</div>
           <h1>今日は何する？</h1>
-          <p>予定・準備・記録・未整理は、まずカレンダーで見ます。日付から入れば迷いません。</p>
+          <p>カレンダーを入口にしつつ、予約後はキャンププランで天気・料金・料理・ルート・時間割・ギアをまとめます。</p>
         </div>
         <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
       </header>
@@ -1733,31 +1760,167 @@
     app.innerHTML = layout(body);
   }
 
+  function planChecklistProgress(list) {
+    if (!Array.isArray(list) || !list.length) return { done: 0, total: 0, percent: 0 };
+    const done = list.filter((item) => item.done || item.state === '買った' || item.status === '確認済み').length;
+    return { done, total: list.length, percent: Math.round((done / list.length) * 100) };
+  }
+
+  function daysUntilProject(project) {
+    const start = parseISODate(project?.startDate || '');
+    if (!start) return '日付未定';
+    const today = parseISODate(todayISO());
+    const delta = Math.ceil((start.getTime() - today.getTime()) / 86400000);
+    if (delta === 0) return '今日出発';
+    if (delta === 1) return '明日出発';
+    if (delta > 1) return `あと${delta}日`;
+    return `${Math.abs(delta)}日前`;
+  }
+
+  function planCategoryRows(project) {
+    const weather = planChecklistProgress(project.weatherChecks);
+    const route = planChecklistProgress(project.routeChecks);
+    const fees = planChecklistProgress(project.feeChecks);
+    const timeline = planChecklistProgress(project.timeline);
+    const gear = planChecklistProgress(project.gear);
+    const kota = planChecklistProgress(project.kota);
+    const shoppingNeed = project.shopping.filter((item) => item.group !== '今回は買わないもの');
+    const shoppingDone = shoppingNeed.filter((item) => item.state === '買った').length;
+    const basicDone = [project.place, project.startDate, project.endDate, project.checkin, project.checkout].filter(Boolean).length;
+    return [
+      { id: 'basic', title: '基本情報', note: `${projectDate(project)} / IN ${project.checkin || '未定'} / OUT ${project.checkout || '未定'}`, progress: `${basicDone}/5`, screen: 'plan', tab: '予定' },
+      { id: 'weather', title: '天気', note: project.weather || '雨・風・気温を確認', progress: `${weather.done}/${weather.total}`, screen: 'weatherRoute', tab: '準備' },
+      { id: 'fees', title: '料金', note: 'サイト料金・支払い・追加料金・キャンセル規定', progress: `${fees.done}/${fees.total}`, anchor: 'fees' },
+      { id: 'cooking', title: '料理', note: 'メニュー・量・買い物への反映', progress: `${project.meals.length}枠`, screen: 'cooking', tab: '準備' },
+      { id: 'shopping', title: '買い物', note: '必要なものだけ。買いすぎ防止', progress: `${shoppingDone}/${shoppingNeed.length}`, screen: 'shopping', tab: '準備' },
+      { id: 'route', title: 'ルート', note: project.route || '出発・買い出し・帰路を確認', progress: `${route.done}/${route.total}`, screen: 'weatherRoute', tab: '準備' },
+      { id: 'timeline', title: '時間割', note: '買出し・積込み・移動・到着・撤収', progress: `${timeline.done}/${timeline.total}`, anchor: 'timeline' },
+      { id: 'gear', title: 'ギア', note: '持つもの、使った結果、乾燥まで', progress: `${gear.done}/${gear.total}`, screen: 'gear', tab: '準備' },
+      { id: 'kota', title: 'コタ用品', note: 'ごはん・水・移動・暑さ寒さ', progress: `${kota.done}/${kota.total}`, screen: 'kota', tab: '準備' }
+    ];
+  }
+
+  function planOverallPercent(project) {
+    const rows = planCategoryRows(project);
+    let done = 0;
+    let total = 0;
+    rows.forEach((row) => {
+      const match = String(row.progress).match(/^(\d+)\/(\d+)/);
+      if (match) { done += Number(match[1]); total += Number(match[2]); }
+      else { done += 1; total += 1; }
+    });
+    return total ? Math.round((done / total) * 100) : 0;
+  }
+
+  function planRowButton(row) {
+    if (row.screen) {
+      return `<button class="plan-row" data-action="go" data-screen="${escapeHtml(row.screen)}" data-tab="${escapeHtml(row.tab || '準備')}"><span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.note)}</small></span><b>${escapeHtml(row.progress)}</b></button>`;
+    }
+    return `<button class="plan-row" data-action="scrollToSection" data-target-id="${escapeHtml(row.anchor)}"><span><strong>${escapeHtml(row.title)}</strong><small>${escapeHtml(row.note)}</small></span><b>${escapeHtml(row.progress)}</b></button>`;
+  }
+
+  function campPlanText(project) {
+    const lines = [
+      `OUTBASE キャンププラン`,
+      '',
+      `■予定`,
+      `${project.place || project.title}`,
+      `${projectDate(project)} / ${project.party || ''}`,
+      `チェックイン：${project.checkin || ''} / チェックアウト：${project.checkout || ''}`,
+      '',
+      `■料金・予約`
+    ];
+    (project.feeChecks || []).forEach((item) => lines.push(`${item.done ? '✓' : '□'} ${item.name}：${item.amount} / ${item.note}`));
+    lines.push('', '■時間割');
+    (project.timeline || []).forEach((item) => lines.push(`${item.done ? '✓' : '□'} ${item.time} ${item.title}：${item.note}`));
+    lines.push('', '■料理');
+    (project.meals || []).forEach((item) => lines.push(`・${item.slot}：${item.menu}（${item.caution}）`));
+    lines.push('', '■買い物');
+    (project.shopping || []).filter((item) => item.group !== '今回は買わないもの').forEach((item) => lines.push(`${item.state === '買った' ? '✓' : '□'} ${item.name}（${item.qty} / ${item.owner}）`));
+    lines.push('', '■ギア・コタ');
+    (project.gear || []).slice(0, 12).forEach((item) => lines.push(`${item.done ? '✓' : '□'} ${item.name}`));
+    (project.kota || []).forEach((item) => lines.push(`${item.done ? '✓' : '□'} コタ：${item.name}`));
+    return lines.join('\n');
+  }
+
   function renderPrep() {
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
-    const percent = prepPercent(project);
-    const openPrep = project.prep.filter((item) => item.status !== '確認済み');
-    const focusPrep = (openPrep.length ? openPrep : project.prep).slice(0, 3);
+    const percent = planOverallPercent(project);
+    const prepPercentValue = prepPercent(project);
+    const rows = planCategoryRows(project);
     const openImproves = state.improvements.filter((item) => item.projectId === project.id && !item.done).slice(0, 3);
+    const todayItems = rows.filter((row) => {
+      const match = String(row.progress).match(/^(\d+)\/(\d+)/);
+      return match ? Number(match[1]) < Number(match[2]) : false;
+    }).slice(0, 3);
     const body = `
-      <section class="hero">
-        <h1>準備</h1>
-        <p>全部入力しなくてOK。今日は見るべきものだけ確認します。</p>
+      <section class="hero plan-hero">
+        <h1>キャンププラン</h1>
+        <p>予約後に一番使う場所。天気・料金・料理・ルート・時間割・ギア・コタ用品を、出発までの計画としてまとめます。</p>
       </section>
-      <main class="stack">
-        ${card('今日見るもの', '全部やらなくていい', `
+      <main class="stack plan-stack">
+        ${card('プラン全体', daysUntilProject(project), `
+          <p class="card-text"><strong>${escapeHtml(project.place || project.title)}</strong><br>${escapeHtml(projectDate(project))} / ${escapeHtml(project.party || '')}</p>
           <div class="metric-row compact-status-row">
-            <div class="metric"><small>準備</small><strong>${percent}%</strong></div>
+            <div class="metric"><small>プラン</small><strong>${percent}%</strong></div>
+            <div class="metric"><small>準備</small><strong>${prepPercentValue}%</strong></div>
             <div class="metric"><small>未確認</small><strong>${state.inbox.length}件</strong></div>
             <div class="metric"><small>改善</small><strong>${openImproves.length}件</strong></div>
           </div>
+          <div class="progress"><span style="width:${percent}%"></span></div>
+        `, `${btn('プランをコピー', 'copyCampPlan', {}, 'primary')}${btn('実行フェーズへ', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'ghost')}${btn('今これを残す', 'go', { screen: 'capture', tab: '＋' }, 'ghost')}`)}
+
+        ${card('今日見るもの', '全部やらなくていい', `
           <div class="thin-list">
-            ${focusPrep.map((item) => `<button class="thin-item" data-action="openPrepItem" data-key="${escapeHtml(item.key)}"><span>${escapeHtml(item.key)}</span><small>${escapeHtml(item.note)} / ${escapeHtml(item.status)}</small></button>`).join('')}
+            ${(todayItems.length ? todayItems : rows.slice(0, 3)).map((row) => `<button class="thin-item" data-action="${row.screen ? 'go' : 'scrollToSection'}" data-screen="${escapeHtml(row.screen || '')}" data-tab="${escapeHtml(row.tab || '準備')}" data-target-id="${escapeHtml(row.anchor || '')}"><span>${escapeHtml(row.title)}</span><small>${escapeHtml(row.note)} / ${escapeHtml(row.progress)}</small></button>`).join('')}
           </div>
-        `, `${btn('当日運転席へ', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'primary')}${btn('買い物', 'go', { screen: 'shopping', tab: '準備' }, 'ghost')}`)}
-        ${card('忘れそうなことだけ', '前回改善とコタ', `
-          ${openImproves.length ? `<div class="thin-list">${openImproves.map((item) => `<button class="thin-item" data-action="reflectImprovement" data-id="${escapeHtml(item.id)}"><span>${escapeHtml(item.target || '次の準備')}</span><small>${escapeHtml(item.text)}</small></button>`).join('')}</div>` : '<div class="empty flat-empty">前回改善はありません。必要な時だけ追加します。</div>'}
-        `, `${btn('コタ用品', 'go', { screen: 'kota', tab: '準備' }, 'ghost')}${btn('天気とルート', 'go', { screen: 'weatherRoute', tab: '準備' }, 'ghost')}${btn('忘れ物メモ', 'addRecord', { type: 'メモ', projectId: project.id, target: '準備', text: '忘れ物候補' }, 'ghost')}`)}
+        `, `${btn('買い物', 'go', { screen: 'shopping', tab: '準備' }, 'ghost')}${btn('料理', 'go', { screen: 'cooking', tab: '準備' }, 'ghost')}${btn('天気とルート', 'go', { screen: 'weatherRoute', tab: '準備' }, 'ghost')}`)}
+
+        <section class="card plan-index-card">
+          <div class="card-inner">
+            <div class="card-header"><div><div class="eyebrow">PLAN INDEX</div><h2 class="card-title">プラン項目</h2></div></div>
+            <div class="plan-index">
+              ${rows.map((row) => planRowButton(row)).join('')}
+            </div>
+          </div>
+        </section>
+
+        <section class="card" id="fees">
+          <div class="card-inner">
+            <div class="card-header"><div><div class="eyebrow">MONEY</div><h2 class="card-title">料金・予約</h2></div></div>
+            <div class="list">
+              ${(project.feeChecks || []).map((item) => `
+                <div class="item">
+                  <div class="item-main"><div class="item-title">${escapeHtml(item.name)}：${escapeHtml(item.amount)}</div><div class="item-sub">${escapeHtml(item.note)}</div></div>
+                  <div class="actions compact-actions">
+                    <button class="tag light" data-action="editPlanFee" data-id="${escapeHtml(item.id)}">編集</button>
+                    <button class="tag ${item.done ? '' : 'light'}" data-action="togglePlanFee" data-id="${escapeHtml(item.id)}">${item.done ? '確認済み' : '確認'}</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="actions">${btn('料金項目を追加', 'addPlanFee', {}, 'ghost')}${btn('料金メモを残す', 'addRecord', { type: 'メモ', projectId: project.id, target: '料金', text: '料金・予約メモ' }, 'ghost')}</div>
+          </div>
+        </section>
+
+        <section class="card" id="timeline">
+          <div class="card-inner">
+            <div class="card-header"><div><div class="eyebrow">TIMELINE</div><h2 class="card-title">時間割</h2></div></div>
+            <div class="timeline-list">
+              ${(project.timeline || []).map((item) => `
+                <div class="timeline-row ${item.done ? 'done' : ''}">
+                  <button class="timeline-main" data-action="editTimelineItem" data-id="${escapeHtml(item.id)}"><b>${escapeHtml(item.time)}</b><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.note)}</small></span></button>
+                  <button class="tag ${item.done ? '' : 'light'}" data-action="toggleTimeline" data-id="${escapeHtml(item.id)}">${item.done ? '済' : '確認'}</button>
+                </div>
+              `).join('')}
+            </div>
+            <div class="actions">${btn('時間割を追加', 'addTimelineItem', {}, 'ghost')}${btn('買出しへ', 'go', { screen: 'shopping', tab: '準備' }, 'ghost')}${btn('実行フェーズへ', 'go', { screen: 'cockpit', tab: '予定' }, 'primary')}</div>
+          </div>
+        </section>
+
+        ${card('バラバラに出たチェック・改善', '都度残してOK', `
+          ${openImproves.length ? `<div class="thin-list">${openImproves.map((item) => `<button class="thin-item" data-action="reflectImprovement" data-id="${escapeHtml(item.id)}"><span>${escapeHtml(item.target || '次の準備')}</span><small>${escapeHtml(item.text)}</small></button>`).join('')}</div>` : '<div class="empty flat-empty">まだ改善メモはありません。準備中・移動中・帰宅後、どのタイミングでも追加できます。</div>'}
+        `, `${btn('改善を追加', 'addImprovement', { text: '次回に活かすメモ', projectId: project.id, target: 'プラン' }, 'ghost')}${btn('あとで片付ける', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
@@ -3539,6 +3702,108 @@
       saveState();
       renderWeatherRoute();
       showToast('ルート確認を更新しました');
+      return;
+    }
+
+    if (action === 'scrollToSection') {
+      const targetId = button.dataset.targetId;
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    if (action === 'copyCampPlan') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const text = campPlanText(project);
+      navigator.clipboard?.writeText(text).then(() => showToast('キャンププランをコピーしました')).catch(() => showToast('キャンププラン文を作りました'));
+      return;
+    }
+
+    if (action === 'togglePlanFee') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.feeChecks.find((entry) => entry.id === button.dataset.id);
+      if (item) item.done = !item.done;
+      saveState();
+      renderPrep();
+      showToast('料金・予約を更新しました');
+      return;
+    }
+
+    if (action === 'editPlanFee') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.feeChecks.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      const name = promptText('項目名', item.name);
+      if (name === null) return;
+      const amount = promptText('金額・内容', item.amount);
+      if (amount === null) return;
+      const note = promptText('メモ', item.note);
+      if (note === null) return;
+      item.name = name;
+      item.amount = amount;
+      item.note = note;
+      saveState();
+      renderPrep();
+      showToast('料金・予約を編集しました');
+      return;
+    }
+
+    if (action === 'addPlanFee') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const name = promptText('料金・予約項目', '追加費用');
+      if (name === null || !name) return;
+      const amount = promptText('金額・内容', '未確認');
+      if (amount === null) return;
+      const note = promptText('メモ', '');
+      if (note === null) return;
+      project.feeChecks.push({ id: makeId('fee'), name, amount, note, done: false });
+      saveState();
+      renderPrep();
+      showToast('料金・予約に追加しました');
+      return;
+    }
+
+    if (action === 'toggleTimeline') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.timeline.find((entry) => entry.id === button.dataset.id);
+      if (item) item.done = !item.done;
+      saveState();
+      renderPrep();
+      showToast('時間割を更新しました');
+      return;
+    }
+
+    if (action === 'editTimelineItem') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const item = project.timeline.find((entry) => entry.id === button.dataset.id);
+      if (!item) return;
+      const time = promptText('時刻・目安', item.time);
+      if (time === null) return;
+      const title = promptText('内容', item.title);
+      if (title === null) return;
+      const note = promptText('メモ', item.note);
+      if (note === null) return;
+      item.time = time;
+      item.title = title;
+      item.note = note;
+      saveState();
+      renderPrep();
+      showToast('時間割を編集しました');
+      return;
+    }
+
+    if (action === 'addTimelineItem') {
+      const project = activeProject().type === 'camp' ? activeProject() : campProject();
+      const time = promptText('時刻・目安', '');
+      if (time === null) return;
+      const title = promptText('内容', '追加予定');
+      if (title === null || !title) return;
+      const note = promptText('メモ', '');
+      if (note === null) return;
+      project.timeline.push({ id: makeId('time'), time: time || '未定', title, note, done: false });
+      saveState();
+      renderPrep();
+      showToast('時間割に追加しました');
       return;
     }
 
