@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_17_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_18_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -166,7 +166,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-17',
+    version: 'restart-18',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -785,7 +785,7 @@
 
 
   function preImportBackupKey() {
-    return 'outbase_restart_16_pre_import_backup';
+    return 'outbase_restart_18_pre_import_backup';
   }
 
   function readPreImportBackup() {
@@ -805,7 +805,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-17';
+    next.version = 'restart-18';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -824,7 +824,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-17';
+    state.version = 'restart-18';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -926,16 +926,15 @@
 
   function bottomNav() {
     const navs = [
-      { tab: '予定', icon: '🏕️', screen: 'home' },
-      { tab: '探す', icon: '🔎', screen: 'search' },
-      { tab: '準備', icon: '🎒', screen: 'prep' },
-      { tab: '＋', icon: '＋', screen: 'capture' },
-      { tab: '思い出', icon: '📚', screen: 'memories' }
+      { tab: '予定', screen: 'home' },
+      { tab: '探す', screen: 'search' },
+      { tab: '準備', screen: 'prep' },
+      { tab: '＋', screen: 'capture' },
+      { tab: '思い出', screen: 'memories' }
     ];
     return `<nav class="bottom-nav" aria-label="OUTBASE下ナビ">
       ${navs.map((nav) => `
         <button class="nav-btn ${state.activeTab === nav.tab ? 'active' : ''}" data-action="go" data-screen="${nav.screen}" data-tab="${nav.tab}">
-          <span class="icon">${nav.icon}</span>
           <span>${nav.tab}</span>
         </button>
       `).join('')}
@@ -1117,136 +1116,67 @@
   function renderHome() {
     const camp = campProject();
     const percent = prepPercent(camp);
+    const nextDate = projectDate(camp);
+    const openImprovements = state.improvements.filter((item) => !item.done).length;
     const content = `
-      <section class="hero home-hero visual-cover">
-        <div class="cover-topline">
-          <div class="home-badge">OUTBASE</div>
-          <span class="cover-date">${escapeHtml(todayISO())}</span>
-        </div>
+      <section class="quiet-home">
+        <div class="quiet-kicker">OUTBASE / restart-18</div>
         <h1>今日は何する？</h1>
-        <p>次のキャンプ、コタとの散歩、今残したい記録をここから始めます。</p>
-        <div class="cover-metrics">
-          <span><strong>${percent}%</strong><small>準備</small></span>
-          <span><strong>${state.inbox.length}</strong><small>未整理</small></span>
-          <span><strong>${state.improvements.filter((item) => !item.done).length}</strong><small>改善</small></span>
-        </div>
-        <div class="cover-actions">
-          <button class="btn cover-primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">次の準備へ</button>
-          <button class="btn cover-ghost" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
+        <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。余計なカードとアイコンは出しすぎない。</p>
+        <div class="quiet-actions">
+          <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">準備する</button>
+          <button class="btn ghost" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
         </div>
       </section>
-      ${flowRail(true)}
-      <main class="stack home-board">
-        <section class="feature-panel">
-          <div class="feature-copy">
-            <div class="eyebrow">一本線の現在地</div>
-            <h2>予定から、次回の準備まで。</h2>
-            <p>カードをただ並べるのではなく、次の行動が自然に見えるホームへ寄せました。</p>
+
+      <main class="paper-stack">
+        <section class="paper-section primary-line">
+          <div class="paper-head">
+            <span>次のキャンプ</span>
+            <button class="text-link" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="plan" data-tab="予定">詳細</button>
           </div>
-          <div class="feature-route">
-            <span>予定</span><i></i><span>準備</span><i></i><span>当日</span><i></i><span>記録</span><i></i><span>改善</span>
+          <div class="paper-title">${escapeHtml(camp.place)}</div>
+          <div class="paper-sub">${escapeHtml(nextDate)} / ${escapeHtml(camp.party)} / 準備 ${percent}%</div>
+          <div class="thin-progress"><span style="width:${percent}%"></span></div>
+          <div class="row-actions">
+            <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">準備</button>
+            <button class="btn ghost" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="cockpit" data-tab="予定">当日</button>
+            <button class="btn ghost" data-action="go" data-screen="calendar" data-tab="予定">カレンダー</button>
           </div>
         </section>
 
-        ${card('見た目丸ごと刷新', 'FINAL DESIGN', `
-          <p class="card-text">今までの操作とデータ構造は残したまま、ホーム、カード、カレンダー、記録、思い出の見え方を丸ごと整えました。</p>
-          <div class="design-tokens">
-            <span>黒</span><span>生成り</span><span>オリーブ</span><span>ブロンズ</span>
+        <section class="paper-section compact-home-grid">
+          <button class="paper-row" data-action="openProject" data-project-id="walk-home-kota" data-screen="homeWalk" data-tab="予定">
+            <span>コタと散歩</span><small>自宅散歩を残す</small>
+          </button>
+          <button class="paper-row" data-action="openProject" data-project-id="search-next-camp" data-screen="search" data-tab="探す">
+            <span>探す</span><small>次の候補を育てる</small>
+          </button>
+          <button class="paper-row" data-action="go" data-screen="inbox" data-tab="思い出">
+            <span>未整理</span><small>${state.inbox.length}件</small>
+          </button>
+          <button class="paper-row" data-action="go" data-screen="improvements" data-tab="思い出">
+            <span>改善</span><small>${openImprovements}件</small>
+          </button>
+        </section>
+
+        <section class="paper-section">
+          <div class="paper-head">
+            <span>技術採用ガードレール</span>
+            <span class="paper-badge">PWA優先</span>
           </div>
-        `, `${btn('今日は何する？', 'go', { screen: 'home', tab: '予定' }, 'primary')}${btn('見た目は最後に再調整', 'go', { screen: 'deviceAudit', tab: '予定' }, 'ghost')}`, '<span class="tag light">刷新</span>')}
-
-        ${card('進行中の流れ', '同時に動かせる', `
-          ${projectSwitch()}
-          <p class="note">キャンプ、散歩、探している候補、外出を裏側で分けて保存します。画面は増やしすぎず、入口はこのまま保ちます。</p>
-        `, '', '<span class="tag light">切替</span>')}
-
-        ${card('実機確認', '抜け漏れを先に見る', `
-          ${(() => {
-            const summary = routeSummary();
-            return `<div class="metric-row">
-              <div class="metric"><small>流れ</small><strong>${summary.projects}件</strong></div>
-              <div class="metric"><small>日付紐づけ</small><strong>${summary.calendar}件</strong></div>
-              <div class="metric"><small>未整理</small><strong>${summary.inbox}件</strong></div>
-              <div class="metric"><small>改善</small><strong>${summary.improvements}件</strong></div>
-            </div>`;
-          })()}
-          <div class="health-list">${healthNotes().map((text) => `<span>${escapeHtml(text)}</span>`).join('')}</div>
-          <p class="note">反映後に古い画面が出る時は表示だけ更新します。保存データは消しません。</p>
-        `, `${btn('表示を更新', 'refreshApp', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
-
-        ${card('本番前総合確認', '最後にまとめて見る', `
-          <p class="card-text">入口、下ナビ、一本線、複数プロジェクト、カレンダー、記録整理、復旧、次回改善のつながりをまとめて確認します。</p>
-          <div class="audit-mini">
-            ${finalAuditItems().slice(0, 4).map((item) => `<span class="${item.ok ? 'ok' : 'warn'}">${escapeHtml(item.label)}</span>`).join('')}
+          <ul class="guard-list">
+            <li>GitHub Pages / PWAで壊れない技術だけ採用</li>
+            <li>将来Capacitorで包める構造を維持</li>
+            <li>新技術は代替導線があるものだけ試す</li>
+            <li>見た目のためだけに重くしない</li>
+          </ul>
+          <div class="row-actions">
+            <button class="btn ghost" data-action="go" data-screen="externalConnect" data-tab="探す">連携準備</button>
+            <button class="btn ghost" data-action="go" data-screen="deviceAudit" data-tab="予定">実機監査</button>
+            <button class="btn ghost" data-action="copyBackup">控え</button>
           </div>
-        `, `${btn('総合確認へ', 'go', { screen: 'releaseAudit', tab: '予定' }, 'primary')}${btn('紐づけ補正', 'repairNow', {}, 'ghost')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
-
-        ${card('総合実機監査', 'スマホで最後に触る', `
-          <p class="card-text">GitHub反映、表示更新、予定、準備、当日、実記録、未確認箱、データ保護まで、実機で触る順番をまとめます。</p>
-          <div class="metric-row">
-            <div class="metric"><small>確認</small><strong>${deviceAuditProgress()}%</strong></div>
-            <div class="metric"><small>項目</small><strong>${state.deviceAuditChecks.filter((item) => item.done).length}/${state.deviceAuditChecks.length}</strong></div>
-            <div class="metric"><small>メモ</small><strong>${state.deviceAuditNotes.length}件</strong></div>
-          </div>
-        `, `${btn('実機監査へ', 'go', { screen: 'deviceAudit', tab: '予定' }, 'primary')}${btn('監査をコピー', 'copyDeviceAudit', {}, 'ghost')}`)}
-
-        ${card('データを守る', '控え / 読み込み / 復旧', `
-          <p class="card-text">スマホ更新や入れ替えの前に、OUTBASEの控えをコピーできます。控えを貼り付けて読み込む導線もここにまとめます。</p>
-          <div class="metric-row">
-            <div class="metric"><small>流れ</small><strong>${state.projects.length}件</strong></div>
-            <div class="metric"><small>未整理</small><strong>${state.inbox.length}件</strong></div>
-            <div class="metric"><small>復旧控え</small><strong>${state.deletedRecords.length}件</strong></div>
-            <div class="metric"><small>保存</small><strong>${state.savedAt ? 'あり' : 'これから'}</strong></div>
-          </div>
-        `, `${btn('控えを開く', 'go', { screen: 'dataGuard', tab: '思い出' }, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
-
-
-        ${card('外部連携準備', '本接続の前に整える', `
-          <p class="card-text">Google Photos、天気、Googleカレンダー、予約メール、バックアップの接続準備をまとめます。まだ勝手に外部送信しません。</p>
-          <div class="metric-row">
-            <div class="metric"><small>連携枠</small><strong>${state.integrations.length}件</strong></div>
-            <div class="metric"><small>準備ライン</small><strong>${externalReadyCount()}件</strong></div>
-            <div class="metric"><small>控え</small><strong>${state.savedAt ? 'あり' : 'これから'}</strong></div>
-          </div>
-        `, `${btn('連携準備へ', 'go', { screen: 'externalConnect', tab: '探す' }, 'primary')}${btn('連携メモをコピー', 'copyExternalPlan', {}, 'ghost')}`)}
-
-        ${card('予定を管理する', '追加 / 編集 / 切替', `
-          <p class="card-text">次のキャンプ、過去キャンプ、散歩、探す流れをここで作ります。カレンダーからも予定にできます。</p>
-          <div class="metric-row">
-            <div class="metric"><small>流れ</small><strong>${state.projects.length}件</strong></div>
-            <div class="metric"><small>キャンプ</small><strong>${state.projects.filter((project) => project.type === 'camp').length}件</strong></div>
-            <div class="metric"><small>選択中</small><strong>${escapeHtml(projectLabel(activeProject()))}</strong></div>
-          </div>
-        `, `${btn('予定管理へ', 'go', { screen: 'projectManage', tab: '予定' }, 'primary')}${btn('新しいキャンプ', 'createCampPlan', {}, 'ghost')}`)}
-
-        ${card('予定カレンダー', '日付で見る', `
-          <div class="mini-calendar-list">
-            ${upcomingEntries(3).map((entry) => `<button class="mini-calendar-item" data-action="openCalendarDate" data-date="${escapeHtml(entry.date)}"><span>${escapeHtml(entry.date.slice(5))}</span><strong>${escapeHtml(entry.label)}</strong><small>${escapeHtml(projectLabel(projectById(entry.projectId)))} / ${escapeHtml(entry.source || '予定')}</small></button>`).join('') || '<div class="empty">予定・未確認・改善が日付に出ます。</div>'}
-          </div>
-        `, `${btn('カレンダーを見る', 'go', { screen: 'calendar', tab: '予定' }, 'primary')}`)}
-
-        ${card('次のキャンプ', '予定', `
-          <p class="card-text"><strong>${escapeHtml(camp.place)}</strong><br>${escapeHtml(projectDate(camp))} / <span class="tag light">${escapeHtml(camp.party)}</span></p>
-          <div class="metric-row">
-            <div class="metric"><small>準備</small><strong>${percent}%</strong></div>
-            <div class="metric"><small>天気</small><strong>${escapeHtml(camp.weather)}</strong></div>
-            <div class="metric"><small>ルート</small><strong>${escapeHtml(camp.route)}</strong></div>
-            <div class="metric"><small>記録</small><strong>${countByProject(state.memories, camp.id)}件</strong></div>
-          </div>
-          <div class="progress"><span style="width:${percent}%"></span></div>
-        `, `${btn('準備する', 'openProject', { projectId: camp.id, screen: 'prep', tab: '準備' })}${btn('当日運転席', 'openProject', { projectId: camp.id, screen: 'cockpit', tab: '予定' }, 'ghost')}${btn('予定詳細', 'openProject', { projectId: camp.id, screen: 'plan', tab: '予定' }, 'ghost')}`)}
-
-        ${card('コタと散歩', '散歩', `
-          <p class="card-text">自宅散歩とキャンプ場散歩を分けて残します。キャンプ場散歩はキャンプの子記録としてつなげます。</p>
-        `, `${btn('自宅散歩を始める', 'openProject', { projectId: 'walk-home-kota', screen: 'homeWalk', tab: '予定' })}${btn('キャンプ場散歩', 'openProject', { projectId: 'campwalk-akagi', screen: 'campWalk', tab: '予定' }, 'ghost')}`)}
-
-        ${card('キャンプ場を探す', '探す', `
-          <p class="card-text">犬可・温水・景色・距離・コタ向きで候補を残します。候補は次の予定に育てます。</p>
-        `, `${btn('候補を見る', 'openProject', { projectId: 'search-next-camp', screen: 'search', tab: '探す' })}${btn('今すぐ記録', 'go', { screen: 'capture', tab: '＋' }, 'ghost')}`)}
-
-        ${card('未整理を片付ける', 'あとで整理', `
-          <p class="card-text">写真 ${state.inbox.filter((r) => r.type === '写真').length}件 / 声メモ ${state.inbox.filter((r) => r.type === '声').length}件 / 保存先候補 ${state.inbox.length}件</p>
-        `, `${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
+        </section>
       </main>
     `;
     app.innerHTML = homeLayout(content);
@@ -1313,21 +1243,24 @@
     const selectedEntries = calendarEntriesForDate(selectedDate);
     const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
     const body = `
-      <section class="hero">
-        <h1>予定カレンダー</h1>
-        <p>キャンプ予定、散歩、未確認、思い出、次回改善を日付で見ます。日付を押すと、その日の流れに入れます。</p>
+      <section class="quiet-page-head">
+        <div>
+          <span class="quiet-kicker">予定</span>
+          <h1>カレンダー</h1>
+        </div>
+        <button class="btn ghost" data-action="go" data-screen="projectManage" data-tab="予定">予定管理</button>
       </section>
-      <main class="stack">
-        ${card(monthTitle(month), '予定 / 記録 / 改善', `
-          <div class="calendar-toolbar">
-            ${btn('前の月', 'changeCalendarMonth', { delta: -1 }, 'ghost')}
-            <div class="calendar-summary"><strong>${monthEntries.length}件</strong><span>この月に紐づくもの</span></div>
-            ${btn('次の月', 'changeCalendarMonth', { delta: 1 }, 'ghost')}
+      <main class="paper-stack">
+        <section class="paper-section calendar-paper">
+          <div class="calendar-toolbar minimal">
+            ${btn('前', 'changeCalendarMonth', { delta: -1 }, 'ghost')}
+            <div class="calendar-summary"><strong>${monthTitle(month)}</strong><span>${monthEntries.length}件</span></div>
+            ${btn('次', 'changeCalendarMonth', { delta: 1 }, 'ghost')}
           </div>
           <div class="calendar-weekdays">
             ${weekLabels.map((label) => `<span>${label}</span>`).join('')}
           </div>
-          <div class="calendar-grid">
+          <div class="calendar-grid compact-calendar">
             ${daysForCalendar(month).map((date) => {
               if (!date) return '<div class="calendar-day empty-day" aria-hidden="true"></div>';
               const entries = calendarEntriesForDate(date);
@@ -1338,20 +1271,26 @@
                 <span class="day-dots">
                   ${entries.slice(0, 3).map((entry) => `<i class="dot-${escapeHtml(entry.kind)}"></i>`).join('')}
                 </span>
-                ${entries.length > 3 ? `<small>+${entries.length - 3}</small>` : ''}
               </button>`;
             }).join('')}
           </div>
-        `)}
-        ${card(selectedDate, 'この日に入っているもの', `
-          ${selectedEntries.length ? `<div class="list">${selectedEntries.map((entry) => {
+        </section>
+        <section class="paper-section selected-day-panel">
+          <div class="paper-head">
+            <span>${escapeHtml(selectedDate)}</span>
+            <button class="text-link" data-action="createCampFromDate" data-date="${escapeHtml(selectedDate)}">予定を作る</button>
+          </div>
+          ${selectedEntries.length ? `<div class="thin-list">${selectedEntries.map((entry) => {
             const project = projectById(entry.projectId);
-            return `<button class="item" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
-              <div class="item-main"><div class="item-title">${escapeHtml(entry.label)}</div><div class="item-sub">${escapeHtml(projectLabel(project))} / ${escapeHtml(entry.source)}</div></div>
-              <span class="tag light">開く</span>
+            return `<button class="thin-item" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
+              <span>${escapeHtml(entry.label)}</span><small>${escapeHtml(projectLabel(project))} / ${escapeHtml(entry.source)}</small>
             </button>`;
-          }).join('')}</div>` : '<div class="empty">この日にはまだ予定・記録・改善がありません。</div>'}
-        `, `${btn('この日に予定を作る', 'createCampFromDate', { date: selectedDate }, 'primary')}${btn('この日に記録する', 'calendarCapture', { date: selectedDate }, 'ghost')}${btn('未確認を片付ける', 'go', { screen: 'inbox', tab: '思い出' }, state.inbox.length ? 'warn' : 'ghost')}`)}
+          }).join('')}</div>` : '<div class="empty flat-empty">この日にはまだ予定・記録・改善がありません。</div>'}
+          <div class="row-actions">
+            <button class="btn ghost" data-action="calendarCapture" data-date="${escapeHtml(selectedDate)}">この日に記録</button>
+            <button class="btn ghost" data-action="go" data-screen="inbox" data-tab="思い出">未整理</button>
+          </div>
+        </section>
       </main>`;
     app.innerHTML = layout(body);
   }
