@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "今日は何する？から、記録、思い出、次回改善、外部連携準備まで一本でつなぐ、密度と操作干渉を整えたキャンプ手帳アプリ",
-  "start_url": "./?v=restart-20-density-nav-lock",
+  "description": "OUTBASE Restart-21 下ナビ干渉完全解消 / 画面下部操作再配置LOCK",
+  "start_url": "./?v=restart-21-bottom-safe-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

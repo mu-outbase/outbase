@@ -166,7 +166,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-20',
+    version: 'restart-21',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -805,7 +805,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-20';
+    next.version = 'restart-21';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -824,7 +824,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-20';
+    state.version = 'restart-21';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -915,13 +915,14 @@
       </header>
       ${flowRail()}
       ${content}
+      <div class="bottom-safe-space" aria-hidden="true"></div>
       ${bottomNav()}
       ${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}
     `;
   }
 
   function homeLayout(content) {
-    return `${content}${bottomNav()}${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}`;
+    return `${content}<div class="bottom-safe-space" aria-hidden="true"></div>${bottomNav()}${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}`;
   }
 
   function bottomNav() {
@@ -1120,7 +1121,7 @@
     const openImprovements = state.improvements.filter((item) => !item.done).length;
     const content = `
       <section class="quiet-home">
-        <div class="quiet-kicker">OUTBASE / restart-20</div>
+        <div class="quiet-kicker">OUTBASE / restart-21</div>
         <h1>今日は何する？</h1>
         <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。必要なことだけを、短く見える形で残す。</p>
         <div class="quiet-actions">
