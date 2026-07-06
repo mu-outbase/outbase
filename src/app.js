@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_30_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_31_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-30',
+    version: 'restart-31',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -311,7 +311,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-30';
+      merged.version = 'restart-31';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -498,7 +498,7 @@
       return record;
     });
     target.calendarItems = target.calendarItems.filter((item) => item && item.date && (!item.projectId || projectIds.has(item.projectId)));
-    target.projects.filter((project) => project.type === 'camp').forEach((project) => syncProjectCalendar(target, project));
+    target.projects.forEach((project) => syncProjectCalendar(target, project));
   }
 
   function projectLabelFromTarget(target, projectId) {
@@ -507,16 +507,26 @@
   }
 
   function syncProjectCalendar(target, project) {
-    if (!project || project.type !== 'camp' || !project.startDate) return;
-    target.calendarItems = target.calendarItems.filter((item) => {
-      if (item.projectId !== project.id) return true;
-      if (item.kind !== 'camp') return true;
-      return !['キャンプ出発', '撤収・帰宅'].includes(item.label);
-    });
-    target.calendarItems.push({ id: `cal-${project.id}-start`, projectId: project.id, date: project.startDate, label: 'キャンプ出発', kind: 'camp' });
-    if (project.endDate && project.endDate !== project.startDate) {
-      target.calendarItems.push({ id: `cal-${project.id}-end`, projectId: project.id, date: project.endDate, label: '撤収・帰宅', kind: 'camp' });
+    if (!project || !project.startDate) return;
+    const autoPrefix = `cal-${project.id}-`;
+    target.calendarItems = target.calendarItems.filter((item) => !(item.id || '').startsWith(autoPrefix));
+    const addAutoItem = (suffix, date, label, kind) => {
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      target.calendarItems.push({ id: `${autoPrefix}${suffix}`, projectId: project.id, date, label, kind });
+    };
+    const type = project.type || 'outing';
+    if (type === 'camp') {
+      const start = project.startDate;
+      const end = project.endDate || project.startDate;
+      addAutoItem('plan', addDaysISO(start, -7), 'プラン確認', 'plan');
+      addAutoItem('shop', addDaysISO(start, -1), '買い物・積込み', 'prep');
+      addAutoItem('start', start, 'キャンプ出発', 'camp');
+      if (end && end !== start) addAutoItem('end', end, '撤収・帰宅', 'camp');
+      addAutoItem('review', addDaysISO(end || start, 1), '帰宅後整理', 'review');
+      return;
     }
+    addAutoItem('start', project.startDate, projectLabelFromTarget(target, project.id), type);
+    if (project.endDate && project.endDate !== project.startDate) addAutoItem('end', project.endDate, `${projectLabelFromTarget(target, project.id)} 終了`, type);
   }
 
   function mergeDaySteps(steps) {
@@ -606,6 +616,24 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  function parseISODate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  function addDaysISO(value, delta) {
+    const date = parseISODate(value);
+    if (!date) return value || todayISO();
+    date.setDate(date.getDate() + delta);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  function shortDateLabel(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return '日付なし';
+    return `${Number(value.slice(5, 7))}/${Number(value.slice(8, 10))}`;
+  }
+
   function monthStartDate(month) {
     const [year, monthIndex] = month.split('-').map(Number);
     return new Date(year, monthIndex - 1, 1);
@@ -671,14 +699,64 @@
       .slice(0, limit);
   }
 
+  function calendarFocusEntries() {
+    const today = todayISO();
+    const todayEntries = calendarEntriesForDate(today).map((entry) => ({ ...entry, date: today }));
+    const nextSeven = [];
+    for (let i = 0; i < 7; i += 1) {
+      const date = addDaysISO(today, i);
+      calendarEntriesForDate(date).forEach((entry) => nextSeven.push({ ...entry, date }));
+    }
+    const upcoming = upcomingEntries(12).filter((entry) => entry.date >= today);
+    return {
+      today: todayEntries.slice(0, 3),
+      week: nextSeven.filter((entry) => entry.date !== today).slice(0, 4),
+      next: upcoming[0] || null
+    };
+  }
+
+  function calendarMiniItem(entry, fallback = '予定なし') {
+    if (!entry) return `<span class="mini-empty">${escapeHtml(fallback)}</span>`;
+    const project = projectById(entry.projectId);
+    return `<button class="calendar-mini-item" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
+      <span>${escapeHtml(shortDateLabel(entry.date || ''))}</span>
+      <strong>${escapeHtml(entry.label || projectLabel(project))}</strong>
+      <small>${escapeHtml(projectLabel(project))}</small>
+    </button>`;
+  }
+
+  function homeCalendarMarkup() {
+    const focus = calendarFocusEntries();
+    return `<section class="daily-section home-calendar-link">
+      <div class="section-line-title">カレンダーから今日</div>
+      <div class="calendar-focus-grid">
+        <div>
+          <small>今日</small>
+          <div class="calendar-mini-list">${focus.today.length ? focus.today.map((entry) => calendarMiniItem(entry)).join('') : '<span class="mini-empty">今日の予定はなし</span>'}</div>
+        </div>
+        <div>
+          <small>次に近い予定</small>
+          <div class="calendar-mini-list">${calendarMiniItem(focus.next, '次の予定なし')}</div>
+        </div>
+      </div>
+      <div class="micro-actions compact-actions">
+        <button data-action="go" data-screen="calendar" data-tab="予定">カレンダーを見る</button>
+        <button data-action="createLoosePlan">日付だけ予定</button>
+      </div>
+    </section>`;
+  }
+
   function calendarTargetScreen(entry) {
     if (entry.kind === 'inbox') return 'inbox';
     if (entry.kind === 'memory') return 'memories';
-    if (entry.kind === 'improvement') return 'improvements';
+    if (entry.kind === 'improvement' || entry.kind === 'review') return 'improvements';
+    if (entry.kind === 'plan' || entry.kind === 'prep') return 'prep';
+    if (entry.kind === 'camp') return 'cockpit';
     const project = projectById(entry.projectId);
     if (project?.type === 'walk') return 'homeWalk';
     if (project?.type === 'campWalk') return 'campWalk';
     if (project?.type === 'search') return 'search';
+    if (project?.type === 'drive') return 'weatherRoute';
     return 'plan';
   }
 
@@ -1252,14 +1330,16 @@
     const body = `
       <header class="daily-top">
         <div>
-          <div class="simple-kicker">OUTBASE / RESTART-30</div>
+          <div class="simple-kicker">OUTBASE / RESTART-31</div>
           <h1>今日は何する？</h1>
-          <p>キャンプ場探しからでも、予約後のプランからでも、いきなり当日からでも大丈夫。</p>
+          <p>予定や記録はカレンダーから拾います。今日は、近いものだけ見れば大丈夫。</p>
         </div>
         <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
       </header>
 
       <main class="daily-home" aria-label="OUTBASEの入口">
+        ${homeCalendarMarkup()}
+
         <section class="daily-section next-block">
           <div class="section-line-title">今の活動</div>
           <button class="lead-action" data-action="goActivity" data-activity-type="${escapeHtml(currentActivity)}">
@@ -1440,12 +1520,14 @@
     const selectedDate = state.selectedDate;
     const monthEntries = calendarEntriesInMonth(month);
     const selectedEntries = calendarEntriesForDate(selectedDate);
+    const focus = calendarFocusEntries();
     const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
     const body = `
       <section class="quiet-page-head">
         <div>
           <span class="quiet-kicker">予定</span>
           <h1>カレンダー</h1>
+          <p>日付を軸に、プラン・実行・記録・整理をつなぎます。</p>
         </div>
         <button class="btn ghost" data-action="go" data-screen="projectManage" data-tab="予定">予定管理</button>
       </section>
@@ -1473,11 +1555,23 @@
               </button>`;
             }).join('')}
           </div>
+          <div class="calendar-legend">
+            <span><i class="dot-plan"></i>プラン</span><span><i class="dot-prep"></i>準備</span><span><i class="dot-camp"></i>実行</span><span><i class="dot-review"></i>整理</span>
+          </div>
         </section>
+
+        <section class="paper-section calendar-focus-panel">
+          <div class="section-line-title">ホームに出す予定</div>
+          <div class="calendar-focus-grid">
+            <div><small>今日</small><div class="calendar-mini-list">${focus.today.length ? focus.today.map((entry) => calendarMiniItem(entry)).join('') : '<span class="mini-empty">今日の予定はなし</span>'}</div></div>
+            <div><small>今週</small><div class="calendar-mini-list">${focus.week.length ? focus.week.slice(0, 2).map((entry) => calendarMiniItem(entry)).join('') : '<span class="mini-empty">今週の追加なし</span>'}</div></div>
+          </div>
+        </section>
+
         <section class="paper-section selected-day-panel">
           <div class="paper-head">
             <span>${escapeHtml(selectedDate)}</span>
-            <button class="text-link" data-action="createCampFromDate" data-date="${escapeHtml(selectedDate)}">予定を作る</button>
+            <button class="text-link" data-action="createLoosePlan">日付だけ予定</button>
           </div>
           ${selectedEntries.length ? `<div class="thin-list">${selectedEntries.map((entry) => {
             const project = projectById(entry.projectId);
@@ -1487,7 +1581,8 @@
           }).join('')}</div>` : '<div class="empty flat-empty">この日にはまだ予定・記録・改善がありません。</div>'}
           <div class="row-actions">
             <button class="btn ghost" data-action="calendarCapture" data-date="${escapeHtml(selectedDate)}">この日に記録</button>
-            <button class="btn ghost" data-action="go" data-screen="inbox" data-tab="思い出">未整理</button>
+            <button class="btn ghost" data-action="createCampFromDate" data-date="${escapeHtml(selectedDate)}">キャンプ予定</button>
+            <button class="btn ghost" data-action="createBasicProject">散歩/ドライブ等</button>
           </div>
         </section>
       </main>`;
