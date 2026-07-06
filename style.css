@@ -3313,3 +3313,178 @@ select {
   .simple-copy small { font-size: 13px; }
   .simple-note p { font-size: 12.8px; }
 }
+
+
+/* Restart-28 入口再設計 / お気に入り / 設定LOCK
+   方針：ホームはタブへのジャンプ集ではなく、状況から選ぶ入口。道具箱と設定は奥。 */
+.daily-top {
+  padding: 16px 18px 6px;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.daily-top h1 {
+  margin: 0;
+  font-size: clamp(30px, 8.6vw, 44px);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+.daily-top p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.daily-settings {
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.daily-home {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 18px calc(82px + env(safe-area-inset-bottom));
+}
+.daily-section {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.daily-section:first-child { border-top: 0; }
+.section-line-title {
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: .08em;
+  margin-bottom: 9px;
+}
+.lead-action {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid rgba(31,42,36,.22);
+  border-radius: 16px;
+  padding: 14px 14px;
+  display: grid;
+  gap: 4px;
+  color: var(--ink);
+}
+.lead-action strong {
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+.lead-action span {
+  color: var(--muted);
+  font-size: 13.4px;
+  line-height: 1.45;
+}
+.micro-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.micro-actions button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 9px;
+  color: var(--ink);
+  font-size: 13.2px;
+  font-weight: 700;
+}
+.tool-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.tool-row {
+  width: 100%;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-align: left;
+  padding: 11px 0;
+}
+.tool-row span,
+.tool-row {
+  display: grid;
+  gap: 2px;
+}
+.tool-row strong {
+  font-size: 15px;
+  line-height: 1.32;
+  letter-spacing: -0.015em;
+}
+.tool-row small {
+  font-size: 12.8px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.compact-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+.compact-tools .tool-row {
+  border-top: 1px solid var(--line);
+}
+.daily-shortcuts {
+  padding-top: 12px;
+  margin-top: 0;
+}
+.paper-section {
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+}
+.toolbox-stack {
+  padding-bottom: 86px;
+}
+.settings-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.setting-row {
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 6px 8px;
+  align-items: center;
+  text-align: left;
+  padding: 10px 0;
+}
+.setting-row span {
+  grid-row: span 2;
+  color: var(--muted);
+  font-weight: 800;
+}
+.setting-row strong {
+  font-size: 14.8px;
+}
+.setting-row small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.setting-row.active span { color: var(--accent-2); }
+.muted-section {
+  opacity: .96;
+}
+.compact-hero h1 {
+  font-size: clamp(25px, 7vw, 36px);
+}
+@media (max-width: 430px) {
+  .daily-top { padding: 15px 16px 4px; }
+  .daily-home { padding-left: 16px; padding-right: 16px; }
+  .micro-actions { grid-template-columns: 1fr; }
+  .compact-tools { grid-template-columns: 1fr; gap: 0; }
+}

@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_27_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_28_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-27',
+    version: 'restart-28',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -194,6 +194,7 @@
     recordDetailId: '',
     voiceRecording: false,
     toast: '',
+    favorites: ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'],
     walk: null,
     projects: [
       {
@@ -309,7 +310,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-27';
+      merged.version = 'restart-28';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -347,6 +348,7 @@
     target.integrationNotes = Array.isArray(target.integrationNotes) ? target.integrationNotes : [];
     target.deviceAuditChecks = normalizeDeviceAuditChecks(target.deviceAuditChecks);
     target.deviceAuditNotes = Array.isArray(target.deviceAuditNotes) ? target.deviceAuditNotes : [];
+    target.favorites = Array.isArray(target.favorites) && target.favorites.length ? target.favorites : ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'];
     const fallbackMonth = target.projects.find((project) => project.startDate)?.startDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
     target.calendarMonth = /^\d{4}-\d{2}$/.test(target.calendarMonth || '') ? target.calendarMonth : fallbackMonth;
     target.selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(target.selectedDate || '') ? target.selectedDate : `${target.calendarMonth}-01`;
@@ -823,7 +825,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-27';
+    next.version = 'restart-28';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -842,7 +844,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-27';
+    state.version = 'restart-28';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -878,7 +880,7 @@
 
   function flowItems() {
     return [
-      { key: '予定', label: '予定', screens: ['home', 'calendar', 'projectManage', 'plan', 'search', 'homeWalk', 'campWalk'] },
+      { key: '予定', label: '予定', screens: ['home', 'calendar', 'projectManage', 'plan', 'search', 'homeWalk', 'campWalk', 'toolbox', 'settings'] },
       { key: '準備', label: '準備', screens: ['prep', 'shopping', 'cooking', 'gear', 'kota', 'weatherRoute'] },
       { key: '当日', label: '当日', screens: ['cockpit'] },
       { key: '記録', label: '記録', screens: ['capture'] },
@@ -942,6 +944,11 @@
 
   function homeLayout(content) {
     return `${content}<div class="bottom-safe-space" aria-hidden="true"></div>${bottomNav()}${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ''}`;
+  }
+
+
+  function layoutHero(title, note) {
+    return `<section class="hero compact-hero"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(note)}</p></section>`;
   }
 
   function bottomNav() {
@@ -1139,54 +1146,107 @@
     const nextDate = projectDate(camp) || '日付はあとで';
     const inboxCount = state.inbox.length;
     const place = camp.place || '場所はあとで決める';
-    const openImprovements = state.improvements.filter((item) => !item.done).length;
+    const favorites = favoriteFeatures();
     const body = `
-      <section class="simple-home">
-        <div class="simple-kicker">OUTBASE</div>
-        <h1>今日は何する？</h1>
-        <p>迷ったら、上から1つだけ押せば大丈夫。</p>
-      </section>
+      <header class="daily-top">
+        <div>
+          <div class="simple-kicker">OUTBASE</div>
+          <h1>今日は何する？</h1>
+          <p>始まり方は自由。決まっていなくても、入力しなくても大丈夫。</p>
+        </div>
+        <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
+      </header>
 
-      <main class="simple-stack" aria-label="OUTBASEの入口">
-        <button class="simple-action main" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">
-          <span class="simple-number">1</span>
-          <span class="simple-copy">
-            <strong>次にやることを見る</strong>
-            <small>${escapeHtml(place)} / ${escapeHtml(nextDate)} / 準備 ${percent}%</small>
-          </span>
-        </button>
-
-        <button class="simple-action" data-action="go" data-screen="capture" data-tab="＋">
-          <span class="simple-number">2</span>
-          <span class="simple-copy">
-            <strong>今これを残す</strong>
-            <small>写真だけ、声だけ、メモなしでもOK</small>
-          </span>
-        </button>
-
-        <button class="simple-action" data-action="go" data-screen="inbox" data-tab="思い出">
-          <span class="simple-number">3</span>
-          <span class="simple-copy">
-            <strong>あとで片付ける</strong>
-            <small>未整理 ${inboxCount}件。全部やらなくていい</small>
-          </span>
-        </button>
-
-        <section class="quiet-shortcuts" aria-label="必要な時だけ使う入口">
-          <button class="text-link" data-action="createLoosePlan">日付だけ予定</button>
-          <button class="text-link" data-action="openProject" data-project-id="walk-home-kota" data-screen="homeWalk" data-tab="予定">コタと散歩</button>
-          <button class="text-link" data-action="openProject" data-project-id="search-next-camp" data-screen="search" data-tab="探す">探す</button>
-          <button class="text-link" data-action="go" data-screen="dataGuard" data-tab="思い出">控え</button>
+      <main class="daily-home" aria-label="OUTBASEの入口">
+        <section class="daily-section next-block">
+          <div class="section-line-title">今日の入口</div>
+          <button class="lead-action" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">
+            <strong>次にやること</strong>
+            <span>${escapeHtml(place)} / ${escapeHtml(nextDate)} / 準備 ${percent}%</span>
+          </button>
+          <div class="micro-actions">
+            <button data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
+            <button data-action="go" data-screen="inbox" data-tab="思い出">あとで片付ける ${inboxCount}件</button>
+          </div>
         </section>
 
-        <section class="simple-note">
-          <p>予定・準備・思い出・改善は、必要な時だけ奥でつながります。毎回ぜんぶ理解しなくて大丈夫。</p>
-          ${openImprovements ? `<p>次回に活かすこと：${openImprovements}件</p>` : ''}
+        <section class="daily-section">
+          <div class="section-line-title">よく使う</div>
+          <div class="tool-list favorite-list">
+            ${favorites.map((feature) => featureButton(feature)).join('')}
+          </div>
+        </section>
+
+        <section class="daily-section start-patterns">
+          <div class="section-line-title">キャンプの始め方</div>
+          <div class="compact-tools">
+            ${featureButton(featureById('search'))}
+            ${featureButton(featureById('campPlan'))}
+            ${featureButton(featureById('loosePlan'))}
+            ${featureButton(featureById('cockpit'))}
+          </div>
+        </section>
+
+        <section class="quiet-shortcuts daily-shortcuts" aria-label="迷った時の入口">
+          <button class="text-link" data-action="go" data-screen="toolbox" data-tab="予定">道具箱</button>
+          <button class="text-link" data-action="go" data-screen="projectManage" data-tab="予定">予定管理</button>
+          <button class="text-link" data-action="go" data-screen="gear" data-tab="準備">ギア登録</button>
+          <button class="text-link" data-action="go" data-screen="settings" data-tab="予定">よく使うを変える</button>
         </section>
       </main>
     `;
     app.innerHTML = homeLayout(body);
   }
+
+  function renderToolbox() {
+    const groups = groupedFeatures();
+    const body = `
+      ${layoutHero('道具箱', '迷った時だけ開く索引。普段はホームの「よく使う」だけで十分です。')}
+      <section class="stack toolbox-stack">
+        ${Object.entries(groups).map(([group, features]) => `
+          <section class="paper-section">
+            <div class="section-line-title">${escapeHtml(group)}</div>
+            <div class="tool-list">
+              ${features.map((feature) => featureButton(feature)).join('')}
+            </div>
+          </section>
+        `).join('')}
+      </section>
+    `;
+    app.innerHTML = layout(body, { subtitle: '道具箱' });
+  }
+
+  function renderSettings() {
+    const catalog = featureCatalog();
+    const favoriteIds = new Set(state.favorites || []);
+    const body = `
+      ${layoutHero('設定', 'ホームに出す「よく使う」を選びます。開発用の確認はここから奥へ。')}
+      <section class="paper-section">
+        <div class="section-line-title">よく使うに出すもの</div>
+        <div class="settings-list">
+          ${catalog.filter((feature) => !['settings'].includes(feature.id)).map((feature) => `
+            <button class="setting-row ${favoriteIds.has(feature.id) ? 'active' : ''}" data-action="toggleFavorite" data-feature-id="${escapeHtml(feature.id)}">
+              <span>${favoriteIds.has(feature.id) ? '✓' : '□'}</span>
+              <strong>${escapeHtml(feature.title)}</strong>
+              <small>${escapeHtml(feature.group)} / ${escapeHtml(feature.note)}</small>
+            </button>
+          `).join('')}
+        </div>
+        <div class="actions"><button class="btn ghost" data-action="resetFavorites">おすすめに戻す</button></div>
+      </section>
+      <section class="paper-section muted-section">
+        <div class="section-line-title">奥にしまったもの</div>
+        <div class="tool-list">
+          ${featureButton(featureById('dataGuard'))}
+          <button class="tool-row" data-action="go" data-screen="externalConnect" data-tab="思い出"><span><strong>連携準備</strong><small>Google Photos / 天気 / カレンダーは本接続前の確認だけ</small></span></button>
+          <button class="tool-row" data-action="go" data-screen="deviceAudit" data-tab="思い出"><span><strong>実機監査</strong><small>開発用。普段は見なくてOK</small></span></button>
+          <button class="tool-row" data-action="go" data-screen="flowAudit" data-tab="思い出"><span><strong>導線監査</strong><small>開発用。必要な時だけ</small></span></button>
+        </div>
+      </section>
+    `;
+    app.innerHTML = layout(body, { subtitle: '設定' });
+  }
+
 
 
 
@@ -2616,6 +2676,8 @@
 
   function render() {
     switch (state.screen) {
+      case 'toolbox': renderToolbox(); break;
+      case 'settings': renderSettings(); break;
       case 'calendar': renderCalendar(); break;
       case 'projectManage': renderProjectManage(); break;
       case 'plan': renderPlan(); break;
@@ -2709,6 +2771,26 @@
 
     if (action === 'openProject') {
       setActiveProject(button.dataset.projectId, button.dataset.screen, button.dataset.tab || null);
+      return;
+    }
+
+
+    if (action === 'toggleFavorite') {
+      const id = button.dataset.featureId;
+      const current = new Set(state.favorites || []);
+      if (current.has(id)) current.delete(id);
+      else current.add(id);
+      state.favorites = [...current];
+      saveState();
+      renderSettings();
+      return;
+    }
+
+    if (action === 'resetFavorites') {
+      state.favorites = ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'];
+      saveState();
+      renderSettings();
+      showToast('よく使うをおすすめに戻しました');
       return;
     }
 
