@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "OUTBASE Restart-31 カレンダー連動 LOCK",
-  "start_url": "./?v=restart-31-calendar-link-lock",
+  "description": "OUTBASE Restart-32 高機能カレンダー主役 LOCK",
+  "start_url": "./?v=restart-32-smart-calendar-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

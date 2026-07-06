@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-31-calendar-link-lock';
+const CACHE_NAME = 'outbase-restart-32-smart-calendar-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-31-calendar-link-lock',
-  './style.css?v=restart-31-calendar-link-lock',
-  './src/app.js?v=restart-31-calendar-link-lock',
-  './manifest.json?v=restart-31-calendar-link-lock'
+  './index.html?v=restart-32-smart-calendar-lock',
+  './style.css?v=restart-32-smart-calendar-lock',
+  './src/app.js?v=restart-32-smart-calendar-lock',
+  './manifest.json?v=restart-32-smart-calendar-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-31-calendar-link-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-32-smart-calendar-lock')))
   );
 });

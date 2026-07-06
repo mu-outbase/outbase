@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_31_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_32_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-31',
+    version: 'restart-32',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -190,6 +190,7 @@
     activeProjectId: 'camp-akagi',
     calendarMonth: '2026-06',
     selectedDate: '2026-06-26',
+    calendarView: 'month',
     inboxFilter: 'all',
     captureDate: '',
     recordDetailId: '',
@@ -311,7 +312,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-31';
+      merged.version = 'restart-32';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -338,6 +339,7 @@
     target.inbox = Array.isArray(target.inbox) ? target.inbox : [];
     target.deletedRecords = Array.isArray(target.deletedRecords) ? target.deletedRecords : [];
     target.inboxFilter = ['all', 'active', 'delete'].includes(target.inboxFilter) ? target.inboxFilter : 'all';
+    target.calendarView = ['month', 'week', 'today'].includes(target.calendarView) ? target.calendarView : 'month';
     target.captureDate = typeof target.captureDate === 'string' ? target.captureDate : '';
     target.recordDetailId = typeof target.recordDetailId === 'string' ? target.recordDetailId : '';
     target.voiceRecording = false;
@@ -680,7 +682,141 @@
     state.improvements.filter((item) => item.date === date).forEach((item) => {
       entries.push({ id: item.id, kind: 'improvement', label: item.done ? '反映済み改善' : '次回改善', projectId: item.projectId, source: '改善' });
     });
-    return entries;
+    return dedupeCalendarEntries(entries);
+  }
+
+  function dedupeCalendarEntries(entries) {
+    const seen = new Map();
+    entries.forEach((entry) => {
+      const key = [entry.kind, entry.label, entry.projectId || '', entry.source || ''].join('|');
+      if (!seen.has(key)) {
+        seen.set(key, { ...entry, count: 1 });
+      } else {
+        const current = seen.get(key);
+        current.count += 1;
+      }
+    });
+    return [...seen.values()];
+  }
+
+  function calendarKindMeta(kind) {
+    const map = {
+      plan: { label: 'プラン', className: 'plan' },
+      prep: { label: '準備', className: 'prep' },
+      camp: { label: '実行', className: 'camp' },
+      review: { label: '整理', className: 'review' },
+      inbox: { label: '未確認', className: 'inbox' },
+      memory: { label: '記録', className: 'memory' },
+      improvement: { label: '改善', className: 'improvement' },
+      walk: { label: '散歩', className: 'walk' },
+      campWalk: { label: '散歩', className: 'walk' },
+      drive: { label: 'ドライブ', className: 'drive' },
+      picnic: { label: 'ピクニック', className: 'picnic' },
+      event: { label: 'イベント', className: 'event' },
+      outing: { label: '外出', className: 'outing' },
+      search: { label: '探す', className: 'search' }
+    };
+    return map[kind] || { label: '予定', className: 'plan' };
+  }
+
+  function calendarEntryChip(entry, compact = false) {
+    const meta = calendarKindMeta(entry.kind);
+    const label = entry.count && entry.count > 1 ? `${entry.label} ×${entry.count}` : entry.label;
+    return `<button class="calendar-event-chip ${escapeHtml(meta.className)} ${compact ? 'compact' : ''}" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
+      <span>${escapeHtml(meta.label)}</span><strong>${escapeHtml(label || '予定')}</strong>
+    </button>`;
+  }
+
+  function calendarDayPanel(date) {
+    const entries = calendarEntriesForDate(date);
+    const isSelected = date === state.selectedDate;
+    const isToday = date === todayISO();
+    const visibleEntries = entries.slice(0, 3);
+    return `<button class="smart-calendar-day ${entries.length ? 'has-items' : ''} ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" data-action="selectCalendarDate" data-date="${escapeHtml(date)}">
+      <span class="smart-day-head"><b>${Number(date.slice(-2))}</b>${isToday ? '<em>今日</em>' : ''}</span>
+      <span class="smart-day-events">
+        ${visibleEntries.map((entry) => {
+          const meta = calendarKindMeta(entry.kind);
+          const label = entry.count && entry.count > 1 ? `${entry.label} ×${entry.count}` : entry.label;
+          return `<i class="smart-day-label ${escapeHtml(meta.className)}">${escapeHtml(meta.label)} ${escapeHtml(label || '')}</i>`;
+        }).join('')}
+        ${entries.length > 3 ? `<i class="smart-more">他 ${entries.length - 3}件</i>` : ''}
+      </span>
+    </button>`;
+  }
+
+  function daysAroundSelected(count = 7) {
+    const base = parseISODate(state.selectedDate || todayISO());
+    const start = new Date(base);
+    start.setDate(base.getDate() - start.getDay());
+    return Array.from({ length: count }, (_, index) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + index);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+  }
+
+  function selectedDayDetailMarkup() {
+    const selectedDate = state.selectedDate || todayISO();
+    const entries = calendarEntriesForDate(selectedDate);
+    const title = selectedDate === todayISO() ? `${selectedDate} 今日` : selectedDate;
+    return `<section class="smart-day-detail">
+      <div class="smart-detail-head">
+        <div><small>選択日</small><strong>${escapeHtml(title)}</strong></div>
+        <button class="text-link" data-action="createLoosePlan">日付だけ予定</button>
+      </div>
+      ${entries.length ? `<div class="smart-detail-list">${entries.map((entry) => {
+        const project = projectById(entry.projectId);
+        const meta = calendarKindMeta(entry.kind);
+        const label = entry.count && entry.count > 1 ? `${entry.label} ×${entry.count}` : entry.label;
+        return `<button class="smart-detail-row ${escapeHtml(meta.className)}" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
+          <span>${escapeHtml(meta.label)}</span>
+          <strong>${escapeHtml(label || projectLabel(project))}</strong>
+          <small>${escapeHtml(projectLabel(project))} / ${escapeHtml(entry.source || '予定')}</small>
+        </button>`;
+      }).join('')}</div>` : '<div class="empty flat-empty">この日はまだ何もありません。日付だけでも作れます。</div>'}
+      <div class="smart-detail-actions">
+        <button class="btn ghost" data-action="calendarCapture" data-date="${escapeHtml(selectedDate)}">この日に記録</button>
+        <button class="btn ghost" data-action="createCampFromDate" data-date="${escapeHtml(selectedDate)}">キャンプ予定</button>
+        <button class="btn ghost" data-action="createBasicProject">散歩/ドライブ等</button>
+      </div>
+    </section>`;
+  }
+
+  function smartCalendarMarkup({ home = false } = {}) {
+    const month = state.calendarMonth;
+    const view = state.calendarView || 'month';
+    const monthEntries = calendarEntriesInMonth(month);
+    const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekDays = daysAroundSelected(7);
+    const selectedDate = state.selectedDate || todayISO();
+    const selectedEntries = calendarEntriesForDate(selectedDate);
+    const headerTitle = home ? '高機能カレンダー' : 'OUTBASEカレンダー';
+    const subtitle = home ? '予定・準備・記録・未整理を日付で見る' : '月・週・今日を切り替えて、外出の流れを日付で確認します。';
+    return `<section class="smart-calendar ${home ? 'home-smart-calendar' : ''}">
+      <div class="smart-calendar-top">
+        <div>
+          <span class="section-line-title">${escapeHtml(headerTitle)}</span>
+          <p>${escapeHtml(subtitle)}</p>
+        </div>
+        <div class="smart-calendar-count"><strong>${monthEntries.length}</strong><small>今月</small></div>
+      </div>
+      <div class="smart-toolbar">
+        <button class="ghost mini-btn" data-action="changeCalendarMonth" data-delta="-1">前</button>
+        <button class="smart-month-title" data-action="changeCalendarView" data-view="month"><strong>${escapeHtml(monthTitle(month))}</strong><span>${escapeHtml(shortDateLabel(selectedDate))}</span></button>
+        <button class="ghost mini-btn" data-action="changeCalendarMonth" data-delta="1">次</button>
+      </div>
+      <div class="calendar-view-switch">
+        ${['month', 'week', 'today'].map((mode) => `<button class="${view === mode ? 'active' : ''}" data-action="changeCalendarView" data-view="${mode}">${mode === 'month' ? '月' : mode === 'week' ? '週' : '今日'}</button>`).join('')}
+      </div>
+      ${view === 'month' ? `<div class="smart-weekdays">${weekLabels.map((label) => `<span>${label}</span>`).join('')}</div><div class="smart-month-grid">${daysForCalendar(month).map((date) => date ? calendarDayPanel(date) : '<div class="smart-calendar-day empty"></div>').join('')}</div>` : ''}
+      ${view === 'week' ? `<div class="smart-week-list">${weekDays.map((date) => `<button class="smart-week-row ${date === selectedDate ? 'selected' : ''}" data-action="selectCalendarDate" data-date="${escapeHtml(date)}"><span><strong>${escapeHtml(shortDateLabel(date))}</strong><small>${date === todayISO() ? '今日' : ''}</small></span><div>${calendarEntriesForDate(date).length ? calendarEntriesForDate(date).slice(0, 4).map((entry) => calendarEntryChip(entry, true)).join('') : '<em>予定なし</em>'}</div></button>`).join('')}</div>` : ''}
+      ${view === 'today' ? `<div class="smart-today-panel"><h2>${escapeHtml(selectedDate === todayISO() ? '今日やること' : shortDateLabel(selectedDate))}</h2>${selectedEntries.length ? selectedEntries.map((entry) => calendarEntryChip(entry)).join('') : '<p>今日は予定なし。記録だけ残すこともできます。</p>'}</div>` : ''}
+      <div class="smart-legend">
+        ${['plan', 'prep', 'camp', 'inbox', 'memory', 'improvement', 'drive'].map((kind) => { const meta = calendarKindMeta(kind); return `<span><i class="${escapeHtml(meta.className)}"></i>${escapeHtml(meta.label)}</span>`; }).join('')}
+      </div>
+      ${selectedDayDetailMarkup()}
+    </section>`;
   }
 
   function calendarEntriesInMonth(month) {
@@ -726,24 +862,7 @@
   }
 
   function homeCalendarMarkup() {
-    const focus = calendarFocusEntries();
-    return `<section class="daily-section home-calendar-link">
-      <div class="section-line-title">カレンダーから今日</div>
-      <div class="calendar-focus-grid">
-        <div>
-          <small>今日</small>
-          <div class="calendar-mini-list">${focus.today.length ? focus.today.map((entry) => calendarMiniItem(entry)).join('') : '<span class="mini-empty">今日の予定はなし</span>'}</div>
-        </div>
-        <div>
-          <small>次に近い予定</small>
-          <div class="calendar-mini-list">${calendarMiniItem(focus.next, '次の予定なし')}</div>
-        </div>
-      </div>
-      <div class="micro-actions compact-actions">
-        <button data-action="go" data-screen="calendar" data-tab="予定">カレンダーを見る</button>
-        <button data-action="createLoosePlan">日付だけ予定</button>
-      </div>
-    </section>`;
+    return smartCalendarMarkup({ home: true });
   }
 
   function calendarTargetScreen(entry) {
@@ -1330,9 +1449,9 @@
     const body = `
       <header class="daily-top">
         <div>
-          <div class="simple-kicker">OUTBASE / RESTART-31</div>
+          <div class="simple-kicker">OUTBASE / RESTART-32</div>
           <h1>今日は何する？</h1>
-          <p>予定や記録はカレンダーから拾います。今日は、近いものだけ見れば大丈夫。</p>
+          <p>予定・準備・記録・未整理は、まずカレンダーで見ます。日付から入れば迷いません。</p>
         </div>
         <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
       </header>
@@ -1516,73 +1635,24 @@
 
 
   function renderCalendar() {
-    const month = state.calendarMonth;
-    const selectedDate = state.selectedDate;
-    const monthEntries = calendarEntriesInMonth(month);
-    const selectedEntries = calendarEntriesForDate(selectedDate);
-    const focus = calendarFocusEntries();
-    const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
     const body = `
       <section class="quiet-page-head">
         <div>
-          <span class="quiet-kicker">予定</span>
-          <h1>カレンダー</h1>
-          <p>日付を軸に、プラン・実行・記録・整理をつなぎます。</p>
+          <span class="quiet-kicker">予定 / Restart-32</span>
+          <h1>高機能カレンダー</h1>
+          <p>日付を押すだけで、プラン・実行・記録・整理へ入ります。</p>
         </div>
         <button class="btn ghost" data-action="go" data-screen="projectManage" data-tab="予定">予定管理</button>
       </section>
       <main class="paper-stack">
-        <section class="paper-section calendar-paper">
-          <div class="calendar-toolbar minimal">
-            ${btn('前', 'changeCalendarMonth', { delta: -1 }, 'ghost')}
-            <div class="calendar-summary"><strong>${monthTitle(month)}</strong><span>${monthEntries.length}件</span></div>
-            ${btn('次', 'changeCalendarMonth', { delta: 1 }, 'ghost')}
-          </div>
-          <div class="calendar-weekdays">
-            ${weekLabels.map((label) => `<span>${label}</span>`).join('')}
-          </div>
-          <div class="calendar-grid compact-calendar">
-            ${daysForCalendar(month).map((date) => {
-              if (!date) return '<div class="calendar-day empty-day" aria-hidden="true"></div>';
-              const entries = calendarEntriesForDate(date);
-              const isSelected = date === selectedDate;
-              const isToday = date === todayISO();
-              return `<button class="calendar-day ${entries.length ? 'has-items' : ''} ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" data-action="selectCalendarDate" data-date="${escapeHtml(date)}">
-                <span class="day-number">${Number(date.slice(-2))}</span>
-                <span class="day-dots">
-                  ${entries.slice(0, 3).map((entry) => `<i class="dot-${escapeHtml(entry.kind)}"></i>`).join('')}
-                </span>
-              </button>`;
-            }).join('')}
-          </div>
-          <div class="calendar-legend">
-            <span><i class="dot-plan"></i>プラン</span><span><i class="dot-prep"></i>準備</span><span><i class="dot-camp"></i>実行</span><span><i class="dot-review"></i>整理</span>
-          </div>
-        </section>
-
-        <section class="paper-section calendar-focus-panel">
-          <div class="section-line-title">ホームに出す予定</div>
-          <div class="calendar-focus-grid">
-            <div><small>今日</small><div class="calendar-mini-list">${focus.today.length ? focus.today.map((entry) => calendarMiniItem(entry)).join('') : '<span class="mini-empty">今日の予定はなし</span>'}</div></div>
-            <div><small>今週</small><div class="calendar-mini-list">${focus.week.length ? focus.week.slice(0, 2).map((entry) => calendarMiniItem(entry)).join('') : '<span class="mini-empty">今週の追加なし</span>'}</div></div>
-          </div>
-        </section>
-
-        <section class="paper-section selected-day-panel">
-          <div class="paper-head">
-            <span>${escapeHtml(selectedDate)}</span>
-            <button class="text-link" data-action="createLoosePlan">日付だけ予定</button>
-          </div>
-          ${selectedEntries.length ? `<div class="thin-list">${selectedEntries.map((entry) => {
-            const project = projectById(entry.projectId);
-            return `<button class="thin-item" data-action="openCalendarEntry" data-project-id="${escapeHtml(entry.projectId || '')}" data-screen="${escapeHtml(calendarTargetScreen(entry))}">
-              <span>${escapeHtml(entry.label)}</span><small>${escapeHtml(projectLabel(project))} / ${escapeHtml(entry.source)}</small>
-            </button>`;
-          }).join('')}</div>` : '<div class="empty flat-empty">この日にはまだ予定・記録・改善がありません。</div>'}
-          <div class="row-actions">
-            <button class="btn ghost" data-action="calendarCapture" data-date="${escapeHtml(selectedDate)}">この日に記録</button>
-            <button class="btn ghost" data-action="createCampFromDate" data-date="${escapeHtml(selectedDate)}">キャンプ予定</button>
-            <button class="btn ghost" data-action="createBasicProject">散歩/ドライブ等</button>
+        ${smartCalendarMarkup()}
+        <section class="paper-section muted-section">
+          <div class="section-line-title">よく使う入口</div>
+          <div class="smart-quick-actions">
+            <button data-action="go" data-screen="prep" data-tab="準備"><strong>プラン</strong><small>天気・料金・料理・ギア</small></button>
+            <button data-action="go" data-screen="cockpit" data-tab="＋"><strong>実行</strong><small>買出し・積込み・移動</small></button>
+            <button data-action="go" data-screen="capture" data-tab="＋"><strong>記録</strong><small>今これを残す</small></button>
+            <button data-action="go" data-screen="inbox" data-tab="思い出"><strong>整理</strong><small>未確認を片付ける</small></button>
           </div>
         </section>
       </main>`;
@@ -2974,14 +3044,22 @@
       state.calendarMonth = addMonths(state.calendarMonth, Number(button.dataset.delta || 0));
       state.selectedDate = `${state.calendarMonth}-01`;
       saveState();
-      renderCalendar();
+      render();
+      return;
+    }
+
+    if (action === 'changeCalendarView') {
+      state.calendarView = button.dataset.view || 'month';
+      saveState();
+      render();
       return;
     }
 
     if (action === 'selectCalendarDate') {
       state.selectedDate = button.dataset.date;
+      state.calendarMonth = button.dataset.date.slice(0, 7);
       saveState();
-      renderCalendar();
+      render();
       return;
     }
 
