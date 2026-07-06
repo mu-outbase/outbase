@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "OUTBASE Restart-27 迷わないUI LOCK",
-  "start_url": "./?v=restart-29-display-recovery-lock",
+  "description": "OUTBASE Restart-30 活動タイプ / フェーズ再設計 LOCK",
+  "start_url": "./?v=restart-30-activity-phase-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

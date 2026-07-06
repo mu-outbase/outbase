@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_29_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_30_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,10 +182,11 @@
   ];
 
   const defaultState = {
-    version: 'restart-29',
+    version: 'restart-30',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
+    activeActivityType: 'camp',
     activeProjectId: 'camp-akagi',
     calendarMonth: '2026-06',
     selectedDate: '2026-06-26',
@@ -310,7 +311,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-29';
+      merged.version = 'restart-30';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -1143,24 +1144,77 @@
 
   function featureCatalog() {
     return [
+      { id: 'activityHub', title: '活動から選ぶ', group: '入口', note: 'キャンプ・散歩・ドライブなど', screen: 'activityHub', tab: '予定' },
       { id: 'capture', title: '今これを残す', group: '記録', note: '写真・声・メモを未確認箱へ', screen: 'capture', tab: '＋' },
       { id: 'inbox', title: 'あとで片付ける', group: '整理', note: '未確認を確認する', screen: 'inbox', tab: '思い出' },
-      { id: 'prep', title: '準備する', group: '準備', note: '今日見るものだけ確認', screen: 'prep', tab: '準備' },
-      { id: 'shopping', title: '買い物', group: '準備', note: '買うものを確認', screen: 'shopping', tab: '準備' },
-      { id: 'cooking', title: '料理', group: '準備', note: '量とメニューを確認', screen: 'cooking', tab: '準備' },
-      { id: 'gear', title: 'ギア登録', group: 'ギア', note: '持ち物と使用結果を残す', screen: 'gear', tab: '準備' },
-      { id: 'kota', title: 'コタ用品', group: 'コタ', note: 'ごはん・水・暑さ寒さ', screen: 'kota', tab: '準備' },
-      { id: 'weatherRoute', title: '天気とルート', group: '準備', note: '雨風・道・買い出し', screen: 'weatherRoute', tab: '準備' },
-      { id: 'cockpit', title: '当日運転席', group: '当日', note: '出発から帰宅まで', screen: 'cockpit', tab: '予定' },
-      { id: 'search', title: 'キャンプ場を探す', group: '探す', note: '候補を育てる', screen: 'search', tab: '探す' },
-      { id: 'campPlan', title: '予約済みを登録', group: '予定', note: '予定管理で追加', screen: 'projectManage', tab: '予定' },
+      { id: 'planPhase', title: 'プラン', group: 'プラン', note: '天気・料金・料理・ルート・時間割', screen: 'prep', tab: '準備' },
+      { id: 'prep', title: '準備する', group: 'プラン', note: '今日見るものだけ確認', screen: 'prep', tab: '準備' },
+      { id: 'shopping', title: '買い物', group: '実行', note: '買うものを確認', screen: 'shopping', tab: '準備' },
+      { id: 'cooking', title: '料理', group: 'プラン', note: '量とメニューを確認', screen: 'cooking', tab: '準備' },
+      { id: 'gear', title: 'ギア登録', group: 'ギア', note: '予定がなくても登録できる', screen: 'gear', tab: '準備' },
+      { id: 'kota', title: 'コタ用品', group: 'プラン', note: 'ごはん・水・暑さ寒さ', screen: 'kota', tab: '準備' },
+      { id: 'weatherRoute', title: '天気とルート', group: 'ドライブ', note: '雨風・道・買い出し・駐車場', screen: 'weatherRoute', tab: '準備' },
+      { id: 'cockpit', title: '実行フェーズ', group: '実行', note: '買出し・積込み・移動・帰宅まで', screen: 'cockpit', tab: '予定' },
+      { id: 'search', title: 'キャンプ場を探す', group: '探す', note: '必要な時だけ候補を育てる', screen: 'search', tab: '探す' },
+      { id: 'campPlan', title: '予約済みを登録', group: '予定', note: '探さずプランから始める', screen: 'projectManage', tab: '予定' },
       { id: 'loosePlan', title: '日付だけ予定', group: '予定', note: '決まってなくても作る', screen: 'projectManage', tab: '予定' },
       { id: 'calendar', title: 'カレンダー', group: '予定', note: '日付から見る', screen: 'calendar', tab: '予定' },
-      { id: 'projectManage', title: '予定管理', group: '予定', note: '流れの追加・切替', screen: 'projectManage', tab: '予定' },
-      { id: 'memories', title: '思い出', group: '思い出', note: '確定した記録を見る', screen: 'memories', tab: '思い出' },
-      { id: 'improvements', title: '次回改善', group: '改善', note: '次の準備へ戻す', screen: 'improvements', tab: '思い出' },
+      { id: 'projectManage', title: '予定管理', group: '予定', note: '活動・予定の追加・切替', screen: 'projectManage', tab: '予定' },
+      { id: 'memories', title: '実績登録・思い出', group: '整理', note: '帰ってからでも登録する', screen: 'memories', tab: '思い出' },
+      { id: 'improvements', title: 'チェック・改善', group: '改善', note: 'どのタイミングでも残す', screen: 'improvements', tab: '思い出' },
       { id: 'dataGuard', title: '控えと設定', group: '保護', note: 'データを守る', screen: 'dataGuard', tab: '思い出' },
       { id: 'settings', title: '設定', group: '設定', note: 'よく使うを変える', screen: 'settings', tab: '予定' }
+    ];
+  }
+
+  function activityCatalog() {
+    return [
+      { type: 'camp', title: 'キャンプ', note: '探す・プラン・実行・実績登録' },
+      { type: 'walk', title: '散歩', note: 'コタ散歩・記録・振り返り' },
+      { type: 'drive', title: 'ドライブ', note: 'ルート・渋滞・時間・駐車場' },
+      { type: 'picnic', title: 'ピクニック', note: '場所・持ち物・天気・記録' },
+      { type: 'event', title: 'イベント', note: '時間計画・移動・持ち物' },
+      { type: 'outing', title: 'その他', note: '外出メモ・あとで整理' }
+    ];
+  }
+
+  function activityTypeName(type) {
+    const item = activityCatalog().find((entry) => entry.type === type);
+    return item ? item.title : '活動';
+  }
+
+  function phaseCatalog(type) {
+    if (type === 'camp') {
+      return [
+        { key: 'search', title: '探す', note: 'キャンプ場探しから始める時だけ', screen: 'search', tab: '探す' },
+        { key: 'plan', title: 'プラン', note: '予約後の準備。天気・料金・料理・ルート・時間割・ギア', screen: 'prep', tab: '準備' },
+        { key: 'run', title: '実行', note: '買出し・積込み・移動・到着・撤収・帰宅', screen: 'cockpit', tab: '予定' },
+        { key: 'record', title: '記録', note: '写真・声・メモ・GPS。あとで整理でOK', screen: 'capture', tab: '＋' },
+        { key: 'result', title: '実績登録', note: '帰ってからでも、日付だけでも残す', screen: 'memories', tab: '思い出' },
+        { key: 'improve', title: 'チェック・改善', note: '準備中でも当日でも後日でも残せる', screen: 'improvements', tab: '思い出' }
+      ];
+    }
+    if (type === 'drive') {
+      return [
+        { key: 'plan', title: '時間計画', note: '出発・到着・寄り道・帰宅の目安', screen: 'weatherRoute', tab: '準備' },
+        { key: 'route', title: 'ルート', note: 'おすすめルート・渋滞予測・休憩地', screen: 'weatherRoute', tab: '準備' },
+        { key: 'parking', title: '駐車場', note: '候補・料金・混雑・徒歩距離', screen: 'capture', tab: '＋' },
+        { key: 'run', title: '実行', note: '移動中は触らず、停車中に残す', screen: 'cockpit', tab: '予定' },
+        { key: 'record', title: '記録', note: '寄り道・良かった道・避けたい道', screen: 'capture', tab: '＋' }
+      ];
+    }
+    if (type === 'walk') {
+      return [
+        { key: 'start', title: '散歩する', note: 'コタと自宅散歩 / キャンプ場散歩', screen: 'homeWalk', tab: '予定' },
+        { key: 'record', title: '今これを残す', note: '写真・声・メモ・GPS', screen: 'capture', tab: '＋' },
+        { key: 'result', title: '散歩履歴', note: 'あとで見返す', screen: 'memories', tab: '思い出' }
+      ];
+    }
+    return [
+      { key: 'plan', title: 'プラン', note: '日時・場所・持ち物・移動', screen: 'projectManage', tab: '予定' },
+      { key: 'run', title: '実行', note: '出発から帰宅まで', screen: 'cockpit', tab: '予定' },
+      { key: 'record', title: '記録', note: '写真・声・メモを残す', screen: 'capture', tab: '＋' },
+      { key: 'result', title: '整理', note: 'あとで片付ける', screen: 'inbox', tab: '思い出' }
     ];
   }
 
@@ -1194,22 +1248,23 @@
     const inboxCount = state.inbox.length;
     const place = camp.place || '場所はあとで決める';
     const favorites = favoriteFeatures();
+    const currentActivity = state.activeActivityType || 'camp';
     const body = `
       <header class="daily-top">
         <div>
-          <div class="simple-kicker">OUTBASE</div>
+          <div class="simple-kicker">OUTBASE / RESTART-30</div>
           <h1>今日は何する？</h1>
-          <p>始まり方は自由。決まっていなくても、入力しなくても大丈夫。</p>
+          <p>キャンプ場探しからでも、予約後のプランからでも、いきなり当日からでも大丈夫。</p>
         </div>
         <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
       </header>
 
       <main class="daily-home" aria-label="OUTBASEの入口">
         <section class="daily-section next-block">
-          <div class="section-line-title">今日の入口</div>
-          <button class="lead-action" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">
-            <strong>次にやること</strong>
-            <span>${escapeHtml(place)} / ${escapeHtml(nextDate)} / 準備 ${percent}%</span>
+          <div class="section-line-title">今の活動</div>
+          <button class="lead-action" data-action="goActivity" data-activity-type="${escapeHtml(currentActivity)}">
+            <strong>${escapeHtml(activityTypeName(currentActivity))}を進める</strong>
+            <span>${escapeHtml(place)} / ${escapeHtml(nextDate)} / プラン ${percent}%</span>
           </button>
           <div class="micro-actions">
             <button data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
@@ -1218,19 +1273,23 @@
         </section>
 
         <section class="daily-section">
-          <div class="section-line-title">よく使う</div>
-          <div class="tool-list favorite-list">
-            ${favorites.map((feature) => featureButton(feature)).join('')}
+          <div class="section-line-title">活動を選ぶ</div>
+          <div class="activity-grid">
+            ${activityCatalog().map((activity) => `<button class="activity-choice ${activity.type === currentActivity ? 'active' : ''}" data-action="goActivity" data-activity-type="${escapeHtml(activity.type)}"><strong>${escapeHtml(activity.title)}</strong><small>${escapeHtml(activity.note)}</small></button>`).join('')}
           </div>
         </section>
 
-        <section class="daily-section start-patterns">
-          <div class="section-line-title">キャンプの始め方</div>
-          <div class="compact-tools">
-            ${featureButton(featureById('search'))}
-            ${featureButton(featureById('campPlan'))}
-            ${featureButton(featureById('loosePlan'))}
-            ${featureButton(featureById('cockpit'))}
+        <section class="daily-section camp-starts">
+          <div class="section-line-title">キャンプはどこからでも始める</div>
+          <div class="phase-strip">
+            ${phaseCatalog('camp').slice(0, 4).map((phase) => `<button data-action="go" data-screen="${escapeHtml(phase.screen)}" data-tab="${escapeHtml(phase.tab)}"><strong>${escapeHtml(phase.title)}</strong><small>${escapeHtml(phase.note)}</small></button>`).join('')}
+          </div>
+        </section>
+
+        <section class="daily-section">
+          <div class="section-line-title">よく使う</div>
+          <div class="tool-list favorite-list">
+            ${favorites.map((feature) => featureButton(feature)).join('')}
           </div>
         </section>
 
@@ -1243,6 +1302,32 @@
       </main>
     `;
     app.innerHTML = homeLayout(body);
+  }
+
+  function renderActivityHub() {
+    const type = state.activeActivityType || 'camp';
+    const activity = activityCatalog().find((entry) => entry.type === type) || activityCatalog()[0];
+    const phases = phaseCatalog(type);
+    const body = `
+      ${layoutHero(`${escapeHtml(activity.title)}で何する？`, `${escapeHtml(activity.note)}。入口は固定しません。今の状態から選べます。`)}
+      <main class="paper-stack activity-hub">
+        <section class="paper-section">
+          <div class="section-line-title">フェーズを選ぶ</div>
+          <div class="phase-list">
+            ${phases.map((phase) => `<button class="phase-row" data-action="go" data-screen="${escapeHtml(phase.screen)}" data-tab="${escapeHtml(phase.tab)}"><span><strong>${escapeHtml(phase.title)}</strong><small>${escapeHtml(phase.note)}</small></span></button>`).join('')}
+          </div>
+        </section>
+        <section class="paper-section muted-section">
+          <div class="section-line-title">どのタイミングでも使える</div>
+          <div class="tool-list">
+            ${featureButton(featureById('capture'))}
+            ${featureButton(featureById('inbox'))}
+            ${featureButton(featureById('improvements'))}
+          </div>
+        </section>
+      </main>
+    `;
+    app.innerHTML = layout(body, { subtitle: activity.title });
   }
 
   function renderToolbox() {
@@ -2112,7 +2197,7 @@
 
   function flowAuditText() {
     const lines = [
-      'OUTBASE Restart-27 迷わないUI',
+      'OUTBASE Restart-30 活動タイプ / フェーズ再設計',
       '',
       `進捗：${flowAuditProgress()}%`,
       `未整理：${state.inbox.length}件`,
@@ -2723,6 +2808,7 @@
 
   function render() {
     switch (state.screen) {
+      case 'activityHub': renderActivityHub(); break;
       case 'toolbox': renderToolbox(); break;
       case 'settings': renderSettings(); break;
       case 'calendar': renderCalendar(); break;
@@ -2770,6 +2856,15 @@
 
     if (action === 'go') {
       setScreen(button.dataset.screen, button.dataset.tab || null);
+      return;
+    }
+
+    if (action === 'goActivity') {
+      state.activeActivityType = button.dataset.activityType || 'camp';
+      state.screen = 'activityHub';
+      state.activeTab = state.activeActivityType === 'drive' ? '探す' : '予定';
+      saveState();
+      render();
       return;
     }
 
