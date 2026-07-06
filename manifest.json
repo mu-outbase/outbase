@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "OUTBASE Restart-34 複数プラン同時進行 実行フェーズ統合 LOCK",
-  "start_url": "./?v=restart-34-multi-plan-execution-lock",
+  "description": "OUTBASE Restart-35 全画面プラン切替バー LOCK",
+  "start_url": "./?v=restart-35-global-plan-switch-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

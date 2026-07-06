@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-34-multi-plan-execution-lock';
+const CACHE_NAME = 'outbase-restart-35-global-plan-switch-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-34-multi-plan-execution-lock',
-  './style.css?v=restart-34-multi-plan-execution-lock',
-  './src/app.js?v=restart-34-multi-plan-execution-lock',
-  './manifest.json?v=restart-34-multi-plan-execution-lock'
+  './index.html?v=restart-35-global-plan-switch-lock',
+  './style.css?v=restart-35-global-plan-switch-lock',
+  './src/app.js?v=restart-35-global-plan-switch-lock',
+  './manifest.json?v=restart-35-global-plan-switch-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-34-multi-plan-execution-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-35-global-plan-switch-lock')))
   );
 });

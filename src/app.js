@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_34_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_33_state', 'outbase_restart_32_state', 'outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_35_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_34_state', 'outbase_restart_33_state', 'outbase_restart_32_state', 'outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -236,7 +236,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-34',
+    version: 'restart-35',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -421,7 +421,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-34';
+      merged.version = 'restart-35';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -1109,7 +1109,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-17 見た目丸ごと刷新パック確認',
+      'OUTBASE Restart-35 全画面プラン切替バー確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -1137,7 +1137,7 @@
 
 
   function preImportBackupKey() {
-    return 'outbase_restart_34_pre_import_backup';
+    return 'outbase_restart_35_pre_import_backup';
   }
 
   function readPreImportBackup() {
@@ -1157,7 +1157,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-34';
+    next.version = 'restart-35';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -1176,7 +1176,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-34';
+    state.version = 'restart-35';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1267,6 +1267,7 @@
         <button class="pill header-pill" data-action="go" data-screen="inbox" data-tab="思い出">${state.inbox.length}件 あとで整理</button>
       </header>
       ${flowRail()}
+      ${planSwitchBar('page')}
       ${content}
       <div class="bottom-safe-space" aria-hidden="true"></div>
       ${bottomNav()}
@@ -1329,14 +1330,70 @@
   function projectSwitch() {
     return `<div class="project-switch" aria-label="進行中の流れ">
       ${state.projects.map((project) => `
-        <button class="switch-btn ${project.id === state.activeProjectId ? 'active' : ''}" data-action="switchProject" data-project-id="${escapeHtml(project.id)}">
+        <button class="switch-btn ${project.id === state.activeProjectId ? 'active' : ''}" data-action="switchProjectSmart" data-project-id="${escapeHtml(project.id)}">
           ${escapeHtml(projectLabel(project))}
         </button>
       `).join('')}
     </div>`;
   }
 
+  function planSwitchCandidates(limit = 4) {
+    const active = activeProject();
+    const all = activePlanProjects();
+    const ordered = [active, ...all.filter((project) => project.id !== active.id)];
+    return ordered.slice(0, limit);
+  }
 
+  function planSwitchBar(mode = 'page') {
+    const active = activeProject();
+    if (!active) return '';
+    const target = projectPlanTarget(active);
+    const chips = planSwitchCandidates(mode === 'home' ? 3 : 4);
+    const extraCount = Math.max(0, activePlanProjects().length - chips.length);
+    return `<section class="global-plan-switch ${mode === 'home' ? 'home-mode' : ''}" aria-label="プラン切替バー">
+      <div class="global-plan-current">
+        <small>現在のプラン</small>
+        <strong>${escapeHtml(projectLabel(active))}</strong>
+        <span>${escapeHtml(projectTypeName(active.type))} / ${escapeHtml(projectDate(active))}</span>
+      </div>
+      <div class="global-plan-actions">
+        <button data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="${escapeHtml(target.screen)}" data-tab="${escapeHtml(target.tab)}">プラン</button>
+        <button data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="cockpit" data-tab="予定">実行</button>
+        <button data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="capture" data-tab="＋">記録</button>
+        <button class="emphasis" data-action="go" data-screen="planBoard" data-tab="予定">切替</button>
+      </div>
+      <div class="global-plan-chips" aria-label="同時進行プラン">
+        ${chips.map((project) => `<button class="global-plan-chip ${project.id === active.id ? 'active' : ''}" data-action="switchProjectSmart" data-project-id="${escapeHtml(project.id)}"><b>${escapeHtml(projectLabel(project))}</b><small>${escapeHtml(projectTypeName(project.type))}</small></button>`).join('')}
+        ${extraCount ? `<button class="global-plan-chip more" data-action="go" data-screen="planBoard" data-tab="予定"><b>他 ${extraCount}件</b><small>一覧</small></button>` : ''}
+      </div>
+    </section>`;
+  }
+
+  function smartSwitchProject(projectId) {
+    const project = projectById(projectId);
+    if (!project) return;
+    state.activeProjectId = project.id;
+    const flow = currentFlowKey();
+    if (flow === '準備') {
+      const target = projectPlanTarget(project);
+      state.screen = target.screen;
+      state.activeTab = target.tab;
+    }
+    if (flow === '当日') {
+      state.screen = 'cockpit';
+      state.activeTab = '予定';
+    }
+    if (flow === '記録') {
+      state.screen = 'capture';
+      state.activeTab = '＋';
+    }
+    if (flow === '整理' && ['inbox', 'memories', 'improvements'].includes(state.screen)) {
+      state.activeTab = '思い出';
+    }
+    saveState();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   function activePlanProjects() {
     const typeRank = { camp: 1, drive: 2, picnic: 3, event: 4, walk: 5, campWalk: 6, search: 7, outing: 8 };
@@ -1572,7 +1629,7 @@
   function featureCatalog() {
     return [
       { id: 'activityHub', title: '活動から選ぶ', group: '入口', note: 'キャンプ・散歩・ドライブなど', screen: 'activityHub', tab: '予定' },
-      { id: 'planBoard', title: '複数プラン', group: '入口', note: '同時進行の予定を切り替える', screen: 'planBoard', tab: '予定' },
+      { id: 'planBoard', title: '複数プラン切替', group: '入口', note: '同時進行の予定を切り替える', screen: 'planBoard', tab: '予定' },
       { id: 'capture', title: '今これを残す', group: '記録', note: '写真・声・メモを未確認箱へ', screen: 'capture', tab: '＋' },
       { id: 'inbox', title: 'あとで片付ける', group: '整理', note: '未確認を確認する', screen: 'inbox', tab: '思い出' },
       { id: 'planPhase', title: 'キャンププラン', group: 'プラン', note: '予約後に一番使う。天気・料金・料理・ルート・時間割', screen: 'prep', tab: '準備' },
@@ -1680,12 +1737,14 @@
     const body = `
       <header class="daily-top">
         <div>
-          <div class="simple-kicker">OUTBASE / RESTART-34</div>
+          <div class="simple-kicker">OUTBASE / RESTART-35</div>
           <h1>今日は何する？</h1>
-          <p>カレンダーと複数プランを入口にして、プラン・実行・記録を切り替えます。</p>
+          <p>カレンダーを見ながら、どの画面でもプランを切り替えます。</p>
         </div>
         <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
       </header>
+
+      ${planSwitchBar('home')}
 
       <main class="daily-home" aria-label="OUTBASEの入口">
         ${homeCalendarMarkup()}
@@ -3490,8 +3549,9 @@
       return;
     }
 
-    if (action === 'switchProject') {
-      setActiveProject(button.dataset.projectId);
+    if (action === 'switchProject' || action === 'switchProjectSmart') {
+      smartSwitchProject(button.dataset.projectId);
+      showToast('表示中のプランを切り替えました');
       return;
     }
 
@@ -3523,9 +3583,7 @@
 
 
     if (action === 'setActiveOnly') {
-      if (projectById(button.dataset.projectId)) state.activeProjectId = button.dataset.projectId;
-      saveState();
-      renderProjectManage();
+      smartSwitchProject(button.dataset.projectId);
       showToast('主役の流れを切り替えました');
       return;
     }
