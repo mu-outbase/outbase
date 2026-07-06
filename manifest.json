@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "OUTBASE Restart-26 日常UI簡素化LOCK",
-  "start_url": "./?v=restart-26-daily-ui-lock",
+  "description": "OUTBASE Restart-27 迷わないUI LOCK",
+  "start_url": "./?v=restart-27-no迷い-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

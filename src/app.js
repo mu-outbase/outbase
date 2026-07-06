@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_25_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_27_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-26',
+    version: 'restart-27',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -309,7 +309,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-26';
+      merged.version = 'restart-27';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -823,7 +823,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-26';
+    next.version = 'restart-27';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -842,7 +842,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-26';
+    state.version = 'restart-27';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -894,8 +894,9 @@
 
   function flowRail(compact = false) {
     const current = currentFlowKey();
-    return `<div class="flow-rail ${compact ? 'compact' : ''}" aria-label="OUTBASEの流れ">
-      ${flowItems().map((item) => `<button class="flow-step ${item.key === current ? 'active' : ''}" data-action="flowJump" data-key="${escapeHtml(item.key)}"><span>${escapeHtml(item.label)}</span></button>`).join('')}
+    return `<div class="flow-rail simple-flow ${compact ? 'compact' : ''}" aria-label="現在地">
+      <button class="flow-step home-step" data-action="go" data-screen="home" data-tab="予定"><span>ホーム</span></button>
+      <span class="flow-now">今は ${escapeHtml(current)}</span>
     </div>`;
   }
 
@@ -1135,57 +1136,52 @@
   function renderHome() {
     const camp = campProject();
     const percent = prepPercent(camp);
-    const nextDate = projectDate(camp);
+    const nextDate = projectDate(camp) || '日付はあとで';
+    const inboxCount = state.inbox.length;
+    const place = camp.place || '場所はあとで決める';
     const openImprovements = state.improvements.filter((item) => !item.done).length;
     const body = `
-      <section class="quiet-home no-input-home">
-        <div class="quiet-kicker">OUTBASE</div>
+      <section class="simple-home">
+        <div class="simple-kicker">OUTBASE</div>
         <h1>今日は何する？</h1>
-        <p>入力しなくても大丈夫。写真だけ、声だけ、あとで整理だけでも残ります。</p>
-        <div class="quiet-actions">
-          <button class="btn primary" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
-          <button class="btn ghost" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">次の準備へ</button>
-        </div>
+        <p>迷ったら、上から1つだけ押せば大丈夫。</p>
       </section>
 
-      <main class="paper-stack">
-        <section class="paper-section primary-line no-input-line">
-          <div class="paper-head">
-            <span>次のキャンプ</span>
-            <button class="text-link" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="plan" data-tab="予定">詳細</button>
-          </div>
-          <div class="paper-title">${escapeHtml(camp.place || '場所はあとで決める')}</div>
-          <div class="paper-sub">${escapeHtml(nextDate || '日付はあとで')} / ${escapeHtml(camp.party || '同行はあとで')} / 準備 ${percent}%</div>
-          <div class="thin-progress"><span style="width:${percent}%"></span></div>
-          <div class="row-actions compact-row-actions">
-            <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">今日見る</button>
-            <button class="btn ghost" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="cockpit" data-tab="予定">当日</button>
-            <button class="btn ghost" data-action="createLoosePlan">日付だけ予定</button>
-          </div>
+      <main class="simple-stack" aria-label="OUTBASEの入口">
+        <button class="simple-action main" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">
+          <span class="simple-number">1</span>
+          <span class="simple-copy">
+            <strong>次にやることを見る</strong>
+            <small>${escapeHtml(place)} / ${escapeHtml(nextDate)} / 準備 ${percent}%</small>
+          </span>
+        </button>
+
+        <button class="simple-action" data-action="go" data-screen="capture" data-tab="＋">
+          <span class="simple-number">2</span>
+          <span class="simple-copy">
+            <strong>今これを残す</strong>
+            <small>写真だけ、声だけ、メモなしでもOK</small>
+          </span>
+        </button>
+
+        <button class="simple-action" data-action="go" data-screen="inbox" data-tab="思い出">
+          <span class="simple-number">3</span>
+          <span class="simple-copy">
+            <strong>あとで片付ける</strong>
+            <small>未整理 ${inboxCount}件。全部やらなくていい</small>
+          </span>
+        </button>
+
+        <section class="quiet-shortcuts" aria-label="必要な時だけ使う入口">
+          <button class="text-link" data-action="createLoosePlan">日付だけ予定</button>
+          <button class="text-link" data-action="openProject" data-project-id="walk-home-kota" data-screen="homeWalk" data-tab="予定">コタと散歩</button>
+          <button class="text-link" data-action="openProject" data-project-id="search-next-camp" data-screen="search" data-tab="探す">探す</button>
+          <button class="text-link" data-action="go" data-screen="dataGuard" data-tab="思い出">控え</button>
         </section>
 
-        <section class="paper-section no-input-strip">
-          <div class="paper-head"><span>入力しない前提</span><span class="paper-badge">忘れても残る</span></div>
-          <div class="thin-list">
-            <button class="thin-item" data-action="addRecord" data-type="あとで整理" data-project-id="${escapeHtml(camp.id)}" data-target="未確認箱" data-text="何も入力しなかった日の控え"><span>何も入力しなかった</span><small>1タップで未確認箱へ</small></button>
-            <button class="thin-item" data-action="go" data-screen="inbox" data-tab="思い出"><span>未整理を片付ける</span><small>${state.inbox.length}件。全部やらなくていい</small></button>
-            <button class="thin-item" data-action="go" data-screen="memories" data-tab="思い出"><span>思い出を見る</span><small>確定したものだけ</small></button>
-          </div>
-        </section>
-
-        <section class="paper-section compact-home-grid">
-          <button class="paper-row" data-action="openProject" data-project-id="walk-home-kota" data-screen="homeWalk" data-tab="予定">
-            <span>コタと散歩</span><small>散歩も簡単に残す</small>
-          </button>
-          <button class="paper-row" data-action="openProject" data-project-id="search-next-camp" data-screen="search" data-tab="探す">
-            <span>探す</span><small>候補だけでもOK</small>
-          </button>
-          <button class="paper-row" data-action="go" data-screen="improvements" data-tab="思い出">
-            <span>改善</span><small>${openImprovements}件</small>
-          </button>
-          <button class="paper-row" data-action="go" data-screen="dataGuard" data-tab="思い出">
-            <span>控え</span><small>必要な時だけ</small>
-          </button>
+        <section class="simple-note">
+          <p>予定・準備・思い出・改善は、必要な時だけ奥でつながります。毎回ぜんぶ理解しなくて大丈夫。</p>
+          ${openImprovements ? `<p>次回に活かすこと：${openImprovements}件</p>` : ''}
         </section>
       </main>
     `;
@@ -2009,7 +2005,7 @@
 
   function flowAuditText() {
     const lines = [
-      'OUTBASE Restart-26 入力しない前提',
+      'OUTBASE Restart-27 迷わないUI',
       '',
       `進捗：${flowAuditProgress()}%`,
       `未整理：${state.inbox.length}件`,

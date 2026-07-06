@@ -3172,3 +3172,144 @@ select {
   border-radius: 999px;
   padding: 3px 8px;
 }
+
+
+/* Restart-27 迷わないUI LOCK
+   方針：使う人は流れを理解しなくてよい。ホームは3択だけ。複雑な導線は奥へ退避。 */
+.simple-home {
+  padding: 18px 18px 8px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.simple-kicker {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.simple-home h1 {
+  margin: 0;
+  font-size: clamp(30px, 8.8vw, 44px);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+  color: var(--ink);
+}
+.simple-home p {
+  margin: 10px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.simple-stack {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 18px calc(84px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 0;
+}
+.simple-action {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 18px 0;
+  text-align: left;
+}
+.simple-action:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+.simple-action.main {
+  padding-top: 20px;
+}
+.simple-action:active {
+  transform: translateY(1px);
+}
+.simple-number {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line-dark, rgba(21,31,26,.25));
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.simple-copy {
+  display: grid;
+  gap: 3px;
+}
+.simple-copy strong {
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.simple-copy small {
+  font-size: 13.2px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.quiet-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 14px 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+.quiet-shortcuts .text-link {
+  font-size: 13.4px !important;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.simple-note {
+  padding: 12px 0 0;
+  color: var(--muted);
+}
+.simple-note p {
+  margin: 0 0 6px;
+  font-size: 13.2px;
+  line-height: 1.45;
+}
+.simple-flow {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px !important;
+  overflow: visible !important;
+}
+.simple-flow .flow-step {
+  min-width: auto !important;
+  padding: 5px 10px !important;
+  border-radius: 999px;
+}
+.simple-flow .flow-step:not(.home-step) {
+  display: none;
+}
+.flow-now {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.topbar .brand-sub {
+  display: none;
+}
+.topbar {
+  min-height: 46px !important;
+}
+@media (max-width: 430px) {
+  .simple-home { padding: 16px 16px 6px; }
+  .simple-stack { padding-left: 16px; padding-right: 16px; }
+  .simple-action { padding: 16px 0; grid-template-columns: 30px 1fr; gap: 10px; }
+  .simple-copy strong { font-size: 16.4px; }
+  .simple-copy small { font-size: 13px; }
+  .simple-note p { font-size: 12.8px; }
+}
