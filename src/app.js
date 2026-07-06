@@ -166,7 +166,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-18',
+    version: 'restart-19',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -805,7 +805,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-18';
+    next.version = 'restart-19';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -824,7 +824,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-18';
+    state.version = 'restart-19';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1120,7 +1120,7 @@
     const openImprovements = state.improvements.filter((item) => !item.done).length;
     const content = `
       <section class="quiet-home">
-        <div class="quiet-kicker">OUTBASE / restart-18</div>
+        <div class="quiet-kicker">OUTBASE / restart-19</div>
         <h1>今日は何する？</h1>
         <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。余計なカードとアイコンは出しすぎない。</p>
         <div class="quiet-actions">
@@ -1688,12 +1688,12 @@
         `)}
         ${card('記録する', '実データを未確認箱へ', `
           <div class="capture-grid">
-            <button class="capture-tile" data-action="pickMedia" data-kind="photo" data-project-id="${escapeHtml(project.id)}"><span>📷</span><strong>写真選択</strong><small>画像を保存</small></button>
-            <button class="capture-tile" data-action="pickMedia" data-kind="camera" data-project-id="${escapeHtml(project.id)}"><span>📸</span><strong>カメラ</strong><small>撮って残す</small></button>
-            <button class="capture-tile" data-action="pickMedia" data-kind="video" data-project-id="${escapeHtml(project.id)}"><span>🎥</span><strong>動画選択</strong><small>動画メモ</small></button>
-            <button class="capture-tile" data-action="${state.voiceRecording ? 'stopVoice' : 'startVoice'}" data-project-id="${escapeHtml(project.id)}"><span>🎙️</span><strong>${state.voiceRecording ? '録音停止' : '声メモ録音'}</strong><small>${state.voiceRecording ? '未確認箱へ保存' : 'その場で録音'}</small></button>
-            <button class="capture-tile" data-action="getGPS" data-project-id="${escapeHtml(project.id)}"><span>📍</span><strong>GPS取得</strong><small>現在地を残す</small></button>
-            <button class="capture-tile warn-tile" data-action="addRecord" data-type="あとで整理" data-project-id="${escapeHtml(project.id)}" data-target="${escapeHtml(projectLabel(project))}" data-text="あとで整理する記録"><span>📥</span><strong>あとで整理</strong><small>未確認箱へ</small></button>
+            <button class="capture-tile" data-action="pickMedia" data-kind="photo" data-project-id="${escapeHtml(project.id)}"><span class="line-icon icon-photo" aria-hidden="true"></span><strong>写真選択</strong><small>画像を保存</small></button>
+            <button class="capture-tile" data-action="pickMedia" data-kind="camera" data-project-id="${escapeHtml(project.id)}"><span class="line-icon icon-camera" aria-hidden="true"></span><strong>カメラ</strong><small>撮って残す</small></button>
+            <button class="capture-tile" data-action="pickMedia" data-kind="video" data-project-id="${escapeHtml(project.id)}"><span class="line-icon icon-video" aria-hidden="true"></span><strong>動画選択</strong><small>動画メモ</small></button>
+            <button class="capture-tile" data-action="${state.voiceRecording ? 'stopVoice' : 'startVoice'}" data-project-id="${escapeHtml(project.id)}"><span class="line-icon icon-voice" aria-hidden="true"></span><strong>${state.voiceRecording ? '録音停止' : '声メモ録音'}</strong><small>${state.voiceRecording ? '未確認箱へ保存' : 'その場で録音'}</small></button>
+            <button class="capture-tile" data-action="getGPS" data-project-id="${escapeHtml(project.id)}"><span class="line-icon icon-gps" aria-hidden="true"></span><strong>GPS取得</strong><small>現在地を残す</small></button>
+            <button class="capture-tile warn-tile" data-action="addRecord" data-type="あとで整理" data-project-id="${escapeHtml(project.id)}" data-target="${escapeHtml(projectLabel(project))}" data-text="あとで整理する記録"><span class="line-icon icon-inbox" aria-hidden="true"></span><strong>あとで整理</strong><small>未確認箱へ</small></button>
           </div>
           <input class="visually-hidden" id="photoInput" type="file" accept="image/*" data-media-kind="photo" />
           <input class="visually-hidden" id="cameraInput" type="file" accept="image/*" capture="environment" data-media-kind="camera" />
@@ -1721,7 +1721,7 @@
   }
 
   function typeIcon(type) {
-    return { '写真': '📷', '動画': '🎥', '声': '🎙️', 'メモ': '✍️', 'GPS': '📍', 'あとで整理': '📥' }[type] || '📌';
+    return { '写真': 'PHOTO', '動画': 'MOV', '声': 'VOICE', 'メモ': 'MEMO', 'GPS': 'GPS', 'あとで整理': 'INBOX' }[type] || 'REC';
   }
 
   function compactRecordItem(record) {
@@ -2243,7 +2243,7 @@
       const lat = Number(media.coords.latitude);
       const lng = Number(media.coords.longitude);
       const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-      return `<div class="${cls} gps-preview"><strong>📍 GPS</strong><span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span><a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener">地図で見る</a></div>`;
+      return `<div class="${cls} gps-preview"><strong>GPS</strong><span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span><a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener">地図で見る</a></div>`;
     }
     return `<div class="${cls} file-preview"><strong>${escapeHtml(media.kindLabel || '添付')}</strong><span>${escapeHtml(media.name || '')}</span><small>${escapeHtml(media.note || '端末内ファイルの記録を残しました')}</small></div>`;
   }

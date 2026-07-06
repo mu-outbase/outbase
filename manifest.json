@@ -2,7 +2,7 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "description": "今日は何する？から、記録、思い出、次回改善、外部連携準備まで一本でつなぐ、静かなキャンプ手帳アプリ",
-  "start_url": "./?v=restart-18-ui-structure-tech-lock",
+  "start_url": "./?v=restart-19-icon-header-ui-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",

@@ -1761,7 +1761,7 @@ body::before {
 }
 
 
-/* Restart-18 UI構造リセット / 技術採用ガードレールLOCK
+/* Restart-19 UI構造リセット / 技術採用ガードレールLOCK
    方針：カードを減らす、アイコンを出さない、文字サイズを抑える、紙面UIへ寄せる。 */
 :root {
   --bg: #f4efe4;
@@ -2146,4 +2146,244 @@ body {
   .bottom-nav { width: calc(100% - 16px); }
   .nav-btn { font-size: 10px; }
   .calendar-grid.compact-calendar .calendar-day { min-height: 42px; }
+}
+
+/* Restart-19 実機UI確認 / 圧縮UI微修正LOCK
+   方針：アイコンのトーン統一、上部バーの視認性改善、記録UIのカード感削減。 */
+:root {
+  --icon: #2b302b;
+  --header-bg: rgba(246, 240, 229, 0.96);
+  --header-line: rgba(32, 36, 31, 0.18);
+}
+
+.topbar {
+  margin: 0 -18px 0 !important;
+  padding: 10px 18px 9px !important;
+  border-radius: 0 !important;
+  background: var(--header-bg) !important;
+  border-bottom: 1px solid var(--header-line) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px) saturate(1.04);
+  color: var(--ink) !important;
+}
+
+.brand-button {
+  min-width: 0;
+  color: var(--ink) !important;
+}
+
+.logo {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 0 !important;
+  border: 1.3px solid var(--ink) !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+  line-height: 1;
+}
+
+.brand-title {
+  color: var(--ink) !important;
+  font-size: 13px !important;
+  letter-spacing: .16em !important;
+  font-weight: 800 !important;
+}
+
+.brand-sub {
+  color: var(--muted) !important;
+  font-size: 10px !important;
+  max-width: 210px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.header-pill {
+  min-height: 28px !important;
+  padding: 4px 9px !important;
+  color: var(--ink) !important;
+  background: rgba(255, 250, 242, .52) !important;
+  border: 1px solid var(--header-line) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.flow-rail {
+  position: sticky;
+  top: 52px;
+  z-index: 4;
+  margin: 0 -18px 16px !important;
+  padding: 0 18px !important;
+  background: rgba(246, 240, 229, 0.94) !important;
+  border-bottom: 1px solid var(--header-line) !important;
+  backdrop-filter: blur(10px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.flow-rail::-webkit-scrollbar { display: none; }
+
+.flow-step {
+  flex: 0 0 auto;
+  min-width: 48px;
+  padding: 9px 12px 10px !important;
+  color: #676a62 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: .02em;
+}
+
+.flow-step.active {
+  color: var(--ink) !important;
+  box-shadow: inset 0 -2px 0 var(--ink) !important;
+}
+
+.capture-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+  border-top: 1px solid var(--line);
+}
+
+.capture-tile {
+  min-height: 58px !important;
+  padding: 11px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-align: left !important;
+  display: grid !important;
+  grid-template-columns: 34px 1fr !important;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  color: var(--ink) !important;
+}
+.capture-tile:last-child { border-bottom: 0 !important; }
+.capture-tile:hover,
+.capture-tile:active { background: rgba(32,36,31,.035) !important; }
+.capture-tile.warn-tile { background: transparent !important; }
+.capture-tile strong {
+  grid-column: 2;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  line-height: 1.2;
+}
+.capture-tile small {
+  grid-column: 2;
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+
+.line-icon {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  position: relative;
+  color: var(--icon);
+}
+.line-icon::before,
+.line-icon::after {
+  content: "";
+  position: absolute;
+  box-sizing: border-box;
+}
+.icon-photo::before {
+  left: 2px; top: 6px; width: 20px; height: 14px;
+  border: 1.8px solid currentColor;
+}
+.icon-photo::after {
+  left: 8px; top: 9px; width: 8px; height: 8px;
+  border: 1.8px solid currentColor;
+  border-radius: 50%;
+}
+.icon-camera::before {
+  left: 2px; top: 7px; width: 20px; height: 13px;
+  border: 1.8px solid currentColor;
+}
+.icon-camera::after {
+  left: 7px; top: 4px; width: 10px; height: 5px;
+  border: 1.8px solid currentColor;
+  border-bottom: 0;
+}
+.icon-video::before {
+  left: 2px; top: 7px; width: 14px; height: 12px;
+  border: 1.8px solid currentColor;
+}
+.icon-video::after {
+  right: 2px; top: 9px; width: 8px; height: 8px;
+  border-left: 8px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.icon-voice::before {
+  left: 8px; top: 2px; width: 8px; height: 14px;
+  border: 1.8px solid currentColor;
+  border-radius: 8px;
+}
+.icon-voice::after {
+  left: 5px; top: 14px; width: 14px; height: 7px;
+  border: 1.8px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+}
+.icon-gps::before {
+  left: 6px; top: 2px; width: 12px; height: 12px;
+  border: 1.8px solid currentColor;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+.icon-gps::after {
+  left: 10px; top: 6px; width: 4px; height: 4px;
+  background: currentColor;
+  border-radius: 50%;
+}
+.icon-inbox::before {
+  left: 3px; top: 7px; width: 18px; height: 12px;
+  border: 1.8px solid currentColor;
+}
+.icon-inbox::after {
+  left: 6px; top: 4px; width: 12px; height: 8px;
+  border-left: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.memory-icon {
+  width: auto !important;
+  min-width: 38px;
+  height: 22px !important;
+  border: 1px solid var(--line);
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  color: var(--ink);
+  background: transparent !important;
+  font-size: 9px !important;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.hero h1,
+.quiet-home h1,
+.quiet-page-head h1 {
+  font-size: clamp(24px, 6.6vw, 34px) !important;
+}
+.card-title { font-size: 16px !important; }
+.metric strong { font-size: 15px !important; }
+
+@media (max-width: 430px) {
+  .topbar { padding-inline: 14px !important; margin-inline: -14px !important; }
+  .brand { gap: 8px; }
+  .brand-sub { max-width: 156px; }
+  .header-pill { font-size: 10px !important; padding-inline: 8px !important; }
+  .flow-rail { margin-inline: -14px !important; padding-inline: 14px !important; top: 50px; }
 }

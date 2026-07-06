@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-18-ui-structure-tech-lock';
+const CACHE_NAME = 'outbase-restart-19-icon-header-ui-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-18-ui-structure-tech-lock',
-  './style.css?v=restart-18-ui-structure-tech-lock',
-  './src/app.js?v=restart-18-ui-structure-tech-lock',
-  './manifest.json?v=restart-18-ui-structure-tech-lock'
+  './index.html?v=restart-19-icon-header-ui-lock',
+  './style.css?v=restart-19-icon-header-ui-lock',
+  './src/app.js?v=restart-19-icon-header-ui-lock',
+  './manifest.json?v=restart-19-icon-header-ui-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-18-ui-structure-tech-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-19-icon-header-ui-lock')))
   );
 });
