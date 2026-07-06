@@ -2387,3 +2387,302 @@ body {
   .header-pill { font-size: 10px !important; padding-inline: 8px !important; }
   .flow-rail { margin-inline: -14px !important; padding-inline: 14px !important; top: 50px; }
 }
+
+
+/* Restart-20 実機UI密度調整 / 下ナビ干渉修正LOCK
+   方針：余白を締める。下ナビと本文を干渉させない。日常UIから開発情報を退避する。 */
+:root {
+  --bottom: calc(116px + env(safe-area-inset-bottom));
+}
+
+.app {
+  padding-bottom: calc(118px + env(safe-area-inset-bottom)) !important;
+}
+
+.topbar {
+  padding-top: 8px !important;
+  padding-bottom: 7px !important;
+}
+
+.logo {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.header-pill {
+  min-height: 26px !important;
+  padding: 3px 8px !important;
+}
+
+.flow-rail {
+  top: 46px !important;
+  margin-bottom: 10px !important;
+}
+
+.flow-step {
+  min-height: 32px !important;
+  padding-top: 7px !important;
+  padding-bottom: 8px !important;
+}
+
+.quiet-home {
+  padding: 18px 0 16px !important;
+}
+
+.quiet-home p,
+.hero p,
+.card-text,
+.note {
+  font-size: 12.5px !important;
+  line-height: 1.55 !important;
+}
+
+.hero {
+  margin: 8px 0 12px !important;
+}
+
+.hero h1,
+.quiet-home h1,
+.quiet-page-head h1 {
+  font-size: clamp(23px, 6.2vw, 32px) !important;
+  line-height: 1.08 !important;
+}
+
+.quiet-page-head {
+  padding: 14px 0 9px !important;
+}
+
+.paper-section {
+  padding: 12px 0 !important;
+}
+
+.primary-line {
+  padding-top: 16px !important;
+}
+
+.paper-head {
+  margin-bottom: 6px !important;
+}
+
+.paper-title {
+  font-size: clamp(19px, 5.5vw, 26px) !important;
+}
+
+.paper-sub {
+  margin-top: 5px !important;
+  font-size: 12px !important;
+}
+
+.thin-progress {
+  margin: 11px 0 10px !important;
+}
+
+.row-actions,
+.actions,
+.quiet-actions {
+  margin-top: 10px !important;
+  gap: 7px !important;
+}
+
+.btn {
+  min-height: 36px !important;
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+}
+
+.card-inner {
+  padding: 12px 0 !important;
+}
+
+.card-header {
+  margin-bottom: 5px !important;
+}
+
+.card-title {
+  margin-top: 2px !important;
+  font-size: 15px !important;
+}
+
+.metric-row {
+  gap: 0 !important;
+  margin-top: 8px !important;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.metric {
+  min-width: 0 !important;
+  flex: 1 1 50% !important;
+  padding: 7px 8px !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid var(--line) !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.metric small {
+  font-size: 10px !important;
+}
+
+.metric strong {
+  font-size: 14px !important;
+  margin-top: 2px !important;
+}
+
+.compact-status-row .metric {
+  flex-basis: 50% !important;
+}
+
+.capture-grid {
+  margin-top: 2px !important;
+}
+
+.capture-tile {
+  min-height: 48px !important;
+  padding: 8px 0 !important;
+  grid-template-columns: 28px 1fr !important;
+  column-gap: 10px !important;
+}
+
+.capture-tile strong {
+  font-size: 14px !important;
+}
+
+.capture-tile small {
+  font-size: 10.5px !important;
+}
+
+.line-icon {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+.field {
+  margin-top: 9px !important;
+  gap: 5px !important;
+}
+
+.field label {
+  font-size: 11px !important;
+}
+
+textarea {
+  min-height: 74px !important;
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+}
+
+.item,
+.thin-item,
+.paper-row {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.item-title,
+.paper-row span,
+.thin-item span {
+  font-size: 13.5px !important;
+}
+
+.item-sub,
+.paper-row small,
+.thin-item small {
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+}
+
+.project-switch,
+.filter-row,
+.target-picker {
+  gap: 6px !important;
+}
+
+.switch-btn,
+.filter-pill,
+.target-mini {
+  min-height: 32px !important;
+  padding: 6px 9px !important;
+  font-size: 11.5px !important;
+}
+
+.target-chip {
+  min-width: 0 !important;
+  padding: 8px 10px !important;
+}
+
+.calendar-grid.compact-calendar .calendar-day {
+  min-height: 38px !important;
+  padding: 5px 4px !important;
+}
+
+.day-number {
+  font-size: 12px !important;
+}
+
+.day-dots i {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+.utility-line {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.utility-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.guard-list {
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+}
+
+.bottom-nav {
+  bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  padding: 4px !important;
+  width: min(calc(100% - 18px), 596px) !important;
+}
+
+.nav-btn {
+  min-height: 36px !important;
+  padding: 6px 4px !important;
+  font-size: 10.5px !important;
+}
+
+.toast {
+  bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+}
+
+@media (max-width: 430px) {
+  .app {
+    padding-inline: 14px !important;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom)) !important;
+  }
+  .topbar {
+    margin-inline: -14px !important;
+    padding-inline: 14px !important;
+  }
+  .brand-sub {
+    max-width: 150px;
+  }
+  .flow-rail {
+    margin-inline: -14px !important;
+    padding-inline: 14px !important;
+    top: 47px !important;
+  }
+  .quiet-home {
+    padding-top: 16px !important;
+  }
+  .paper-section {
+    padding: 10px 0 !important;
+  }
+  .bottom-nav {
+    width: calc(100% - 18px) !important;
+  }
+}

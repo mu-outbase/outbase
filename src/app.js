@@ -166,7 +166,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-19',
+    version: 'restart-20',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -805,7 +805,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-19';
+    next.version = 'restart-20';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -824,7 +824,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-19';
+    state.version = 'restart-20';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1120,9 +1120,9 @@
     const openImprovements = state.improvements.filter((item) => !item.done).length;
     const content = `
       <section class="quiet-home">
-        <div class="quiet-kicker">OUTBASE / restart-19</div>
+        <div class="quiet-kicker">OUTBASE / restart-20</div>
         <h1>今日は何する？</h1>
-        <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。余計なカードとアイコンは出しすぎない。</p>
+        <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。必要なことだけを、短く見える形で残す。</p>
         <div class="quiet-actions">
           <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">準備する</button>
           <button class="btn ghost" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
@@ -1160,21 +1160,15 @@
           </button>
         </section>
 
-        <section class="paper-section">
+        <section class="paper-section utility-line">
           <div class="paper-head">
-            <span>技術採用ガードレール</span>
-            <span class="paper-badge">PWA優先</span>
+            <span>運用</span>
+            <span class="paper-badge">控えあり</span>
           </div>
-          <ul class="guard-list">
-            <li>GitHub Pages / PWAで壊れない技術だけ採用</li>
-            <li>将来Capacitorで包める構造を維持</li>
-            <li>新技術は代替導線があるものだけ試す</li>
-            <li>見た目のためだけに重くしない</li>
-          </ul>
-          <div class="row-actions">
-            <button class="btn ghost" data-action="go" data-screen="externalConnect" data-tab="探す">連携準備</button>
-            <button class="btn ghost" data-action="go" data-screen="deviceAudit" data-tab="予定">実機監査</button>
-            <button class="btn ghost" data-action="copyBackup">控え</button>
+          <div class="utility-actions">
+            <button class="text-link" data-action="copyBackup">控えをコピー</button>
+            <button class="text-link" data-action="go" data-screen="externalConnect" data-tab="探す">連携準備</button>
+            <button class="text-link" data-action="go" data-screen="deviceAudit" data-tab="予定">実機監査</button>
           </div>
         </section>
       </main>
@@ -1674,17 +1668,15 @@
     const body = `
       <section class="hero capture-hero">
         <h1>今これを残す</h1>
-        <p>写真・動画・声・メモ・GPSを未確認箱へ残します。保存先は候補だけ。確定・移動・削除はムーが決めます。</p>
+        <p>写真・動画・声・GPSを未確認箱へ。確定はムーが決めます。</p>
       </section>
       <main class="stack">
-        ${card('残す前に確認', '保存先候補と日付', `
-          <div class="metric-row">
+        ${card('残す前に確認', '保存先候補', `
+          <div class="metric-row compact-status-row">
             <div class="metric"><small>保存先候補</small><strong>${escapeHtml(projectLabel(project))}</strong></div>
-            <div class="metric"><small>記録日</small><strong>${escapeHtml(captureDate)}</strong></div>
             <div class="metric"><small>未確認</small><strong>${state.inbox.length}件</strong></div>
-            <div class="metric"><small>削除候補</small><strong>${state.inbox.filter((record) => record.status === '削除候補').length}件</strong></div>
           </div>
-          <p class="note">写真は端末から選択またはカメラ起動、動画は選択、声は録音、GPSは現在地取得に対応します。保存先は候補のまま、確定はムーが行います。</p>
+          <p class="note">保存先は候補。確定・移動・削除はムーが決めます。</p>
         `)}
         ${card('記録する', '実データを未確認箱へ', `
           <div class="capture-grid">
