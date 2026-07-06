@@ -2988,7 +2988,7 @@ textarea {
   }
 }
 
-/* Restart-24 実用導線総合監査LOCK
+/* Restart-25 日常UI簡素化LOCK
    方針：Restart-22の紙面UI・下ナビ安全余白は維持し、小さすぎた文字だけ読みやすくする。 */
 :root {
   --text-scale-note: 13.5px;
@@ -3102,7 +3102,7 @@ select {
 }
 
 
-/* Restart-24 実用導線総合監査 */
+/* Restart-25 日常UI簡素化 */
 .check-row .check-hit {
   appearance: none;
   border: 0;
@@ -3121,4 +3121,20 @@ select {
 .check-row > .text-link {
   align-self: center;
   white-space: nowrap;
+}
+
+
+/* Restart-25 日常UI簡素化LOCK */
+.daily-utility {
+  opacity: 0.92;
+}
+.daily-utility .paper-head span:first-child {
+  font-weight: 650;
+}
+.daily-utility .utility-actions {
+  justify-content: flex-start;
+  gap: 14px;
+}
+.daily-utility .text-link {
+  font-size: 0.92rem;
 }

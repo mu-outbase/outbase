@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_24_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_25_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-24',
+    version: 'restart-25',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -309,7 +309,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-24';
+      merged.version = 'restart-25';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -823,7 +823,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-24';
+    next.version = 'restart-25';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -842,7 +842,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-24';
+    state.version = 'restart-25';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1139,7 +1139,7 @@
     const openImprovements = state.improvements.filter((item) => !item.done).length;
     const content = `
       <section class="quiet-home">
-        <div class="quiet-kicker">OUTBASE / restart-24</div>
+        <div class="quiet-kicker">OUTBASE</div>
         <h1>今日は何する？</h1>
         <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。必要なことだけを、短く見える形で残す。</p>
         <div class="quiet-actions">
@@ -1179,16 +1179,14 @@
           </button>
         </section>
 
-        <section class="paper-section utility-line">
+        <section class="paper-section utility-line daily-utility">
           <div class="paper-head">
-            <span>運用</span>
-            <span class="paper-badge">控えあり</span>
+            <span>控えと設定</span>
+            <span class="paper-badge">必要な時だけ</span>
           </div>
           <div class="utility-actions">
             <button class="text-link" data-action="copyBackup">控えをコピー</button>
-            <button class="text-link" data-action="go" data-screen="externalConnect" data-tab="探す">連携準備</button>
-            <button class="text-link" data-action="go" data-screen="flowAudit" data-tab="予定">導線監査</button>
-            <button class="text-link" data-action="go" data-screen="deviceAudit" data-tab="予定">実機監査</button>
+            <button class="text-link" data-action="go" data-screen="dataGuard" data-tab="思い出">開く</button>
           </div>
         </section>
       </main>
@@ -2017,7 +2015,7 @@
 
   function flowAuditText() {
     const lines = [
-      'OUTBASE Restart-24 実用導線総合監査',
+      'OUTBASE Restart-25 日常UI簡素化',
       '',
       `進捗：${flowAuditProgress()}%`,
       `未整理：${state.inbox.length}件`,
@@ -2048,7 +2046,7 @@
         <p>予定追加から準備、当日、記録、未確認箱、思い出、次回改善、データ保護まで一周できるかを確認します。</p>
       </section>
       <main class="stack">
-        ${card('一周確認', 'Restart-24', `
+        ${card('一周確認', '開発用', `
           <div class="metric-row">
             <div class="metric"><small>進捗</small><strong>${progress}%</strong></div>
             <div class="metric"><small>確認</small><strong>${state.flowAuditChecks.filter((item) => item.done).length}/${state.flowAuditChecks.length}</strong></div>
@@ -2173,7 +2171,11 @@
         ${card('表示と紐づけ', '古い表示を直す', `
           <p class="card-text">古い画面が残る時は表示を更新します。保存先や日付の抜けは、紐づけ補正で直します。</p>
           <div class="health-list">${healthNotes().map((text) => `<span>${escapeHtml(text)}</span>`).join('')}</div>
-        `, `${btn('表示を更新', 'refreshApp', {}, 'ghost')}${btn('紐づけ補正', 'repairNow', {}, 'ghost')}${btn('本番前総合確認', 'go', { screen: 'releaseAudit', tab: '予定' }, 'ghost')}`)}
+        `, `${btn('表示を更新', 'refreshApp', {}, 'ghost')}${btn('紐づけ補正', 'repairNow', {}, 'ghost')}`)}
+
+        ${card('開発用確認', '奥にまとめる', `
+          <p class="card-text">日常画面には出さず、必要な時だけ確認します。</p>
+        `, `${btn('連携準備', 'go', { screen: 'externalConnect', tab: '探す' }, 'ghost')}${btn('導線監査', 'go', { screen: 'flowAudit', tab: '予定' }, 'ghost')}${btn('実機監査', 'go', { screen: 'deviceAudit', tab: '予定' }, 'ghost')}${btn('本番前総合確認', 'go', { screen: 'releaseAudit', tab: '予定' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body, { subtitle: '控えと復旧をまとめて守る' });
   }
