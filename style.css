@@ -2987,3 +2987,116 @@ textarea {
     padding-top: 14px !important;
   }
 }
+
+/* Restart-23 文字サイズ微調整LOCK
+   方針：Restart-22の紙面UI・下ナビ安全余白は維持し、小さすぎた文字だけ読みやすくする。 */
+:root {
+  --text-scale-note: 13.5px;
+  --text-scale-small: 11.8px;
+  --text-scale-body: 14px;
+}
+
+body {
+  font-size: 15px;
+}
+
+.brand-sub {
+  font-size: 10.8px !important;
+}
+
+.header-pill {
+  font-size: 11.8px !important;
+}
+
+.flow-step,
+.nav-btn {
+  font-size: 11.4px !important;
+}
+
+.quiet-home p,
+.quiet-page-head p,
+.hero p,
+.card-text,
+.note,
+.paper-sub {
+  font-size: var(--text-scale-note) !important;
+  line-height: 1.54 !important;
+}
+
+.paper-head,
+.eyebrow,
+.quiet-kicker,
+.field label {
+  font-size: 11.8px !important;
+}
+
+.paper-row span,
+.thin-item span,
+.item-title,
+.capture-tile strong,
+.card-title {
+  font-size: 15px !important;
+}
+
+.paper-row small,
+.thin-item small,
+.item-sub,
+.capture-tile small,
+.mini-calendar-item small,
+.calendar-summary span,
+.guard-list,
+.text-link {
+  font-size: 12px !important;
+  line-height: 1.42 !important;
+}
+
+.metric small {
+  font-size: 11.4px !important;
+}
+
+.metric strong {
+  font-size: 15.5px !important;
+}
+
+.switch-btn,
+.filter-pill,
+.target-mini,
+.grid-2 .btn.ghost,
+.grid-2 .btn.primary,
+.btn {
+  font-size: 13px !important;
+}
+
+textarea,
+input,
+select {
+  font-size: 14px !important;
+}
+
+.memory-icon {
+  font-size: 10px !important;
+}
+
+.day-number {
+  font-size: 12.8px !important;
+}
+
+@media (max-width: 430px) {
+  .flow-step,
+  .nav-btn { font-size: 11px !important; }
+  .quiet-home p,
+  .quiet-page-head p,
+  .hero p,
+  .card-text,
+  .note,
+  .paper-sub { font-size: 13.2px !important; }
+  .paper-row span,
+  .thin-item span,
+  .item-title,
+  .capture-tile strong,
+  .card-title { font-size: 14.7px !important; }
+  .paper-row small,
+  .thin-item small,
+  .item-sub,
+  .capture-tile small { font-size: 11.8px !important; }
+}
