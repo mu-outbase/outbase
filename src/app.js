@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_11_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_12_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
 
   const prepBase = [
@@ -75,7 +75,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-11',
+    version: 'restart-12',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -193,7 +193,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-11';
+      merged.version = 'restart-12';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -562,7 +562,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-11 データ引継ぎ確認',
+      'OUTBASE Restart-12 見た目刷新確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -608,7 +608,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-11';
+    next.version = 'restart-12';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -627,7 +627,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-11';
+    state.version = 'restart-12';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -785,18 +785,40 @@
     const camp = campProject();
     const percent = prepPercent(camp);
     const content = `
-      <section class="hero home-hero">
-        <div class="home-badge">OUTBASE</div>
+      <section class="hero home-hero visual-cover">
+        <div class="cover-topline">
+          <div class="home-badge">OUTBASE</div>
+          <span class="cover-date">${escapeHtml(todayISO())}</span>
+        </div>
         <h1>今日は何する？</h1>
         <p>次のキャンプ、コタとの散歩、今残したい記録をここから始めます。</p>
-        <span class="pill home-pill">${state.inbox.length}件 あとで整理</span>
+        <div class="cover-metrics">
+          <span><strong>${percent}%</strong><small>準備</small></span>
+          <span><strong>${state.inbox.length}</strong><small>未整理</small></span>
+          <span><strong>${state.improvements.filter((item) => !item.done).length}</strong><small>改善</small></span>
+        </div>
+        <div class="cover-actions">
+          <button class="btn cover-primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">次の準備へ</button>
+          <button class="btn cover-ghost" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
+        </div>
       </section>
       ${flowRail(true)}
-      <main class="stack">
+      <main class="stack home-board">
+        <section class="feature-panel">
+          <div class="feature-copy">
+            <div class="eyebrow">一本線の現在地</div>
+            <h2>予定から、次回の準備まで。</h2>
+            <p>カードをただ並べるのではなく、次の行動が自然に見えるホームへ寄せました。</p>
+          </div>
+          <div class="feature-route">
+            <span>予定</span><i></i><span>準備</span><i></i><span>当日</span><i></i><span>記録</span><i></i><span>改善</span>
+          </div>
+        </section>
+
         ${card('進行中の流れ', '同時に動かせる', `
           ${projectSwitch()}
           <p class="note">キャンプ、散歩、探している候補、外出を裏側で分けて保存します。画面は増やしすぎず、入口はこのまま保ちます。</p>
-        `)}
+        `, '', '<span class="tag light">切替</span>')}
 
         ${card('実機確認', '抜け漏れを先に見る', `
           ${(() => {

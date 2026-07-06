@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-11-data-guard-lock';
+const CACHE_NAME = 'outbase-restart-12-visual-refresh-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-11-data-guard-lock',
-  './style.css?v=restart-11-data-guard-lock',
-  './src/app.js?v=restart-11-data-guard-lock',
-  './manifest.json?v=restart-11-data-guard-lock'
+  './index.html?v=restart-12-visual-refresh-lock',
+  './style.css?v=restart-12-visual-refresh-lock',
+  './src/app.js?v=restart-12-visual-refresh-lock',
+  './manifest.json?v=restart-12-visual-refresh-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-11-data-guard-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-12-visual-refresh-lock')))
   );
 });
