@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-25',
+    version: 'restart-26',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -309,7 +309,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-25';
+      merged.version = 'restart-26';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -823,7 +823,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-25';
+    next.version = 'restart-26';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -842,7 +842,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-25';
+    state.version = 'restart-26';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1137,62 +1137,61 @@
     const percent = prepPercent(camp);
     const nextDate = projectDate(camp);
     const openImprovements = state.improvements.filter((item) => !item.done).length;
-    const content = `
-      <section class="quiet-home">
+    const body = `
+      <section class="quiet-home no-input-home">
         <div class="quiet-kicker">OUTBASE</div>
         <h1>今日は何する？</h1>
-        <p>予定、準備、当日の記録、思い出、次回改善を一本でつなぐ。必要なことだけを、短く見える形で残す。</p>
+        <p>入力しなくても大丈夫。写真だけ、声だけ、あとで整理だけでも残ります。</p>
         <div class="quiet-actions">
-          <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">準備する</button>
-          <button class="btn ghost" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
+          <button class="btn primary" data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
+          <button class="btn ghost" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">次の準備へ</button>
         </div>
       </section>
 
       <main class="paper-stack">
-        <section class="paper-section primary-line">
+        <section class="paper-section primary-line no-input-line">
           <div class="paper-head">
             <span>次のキャンプ</span>
             <button class="text-link" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="plan" data-tab="予定">詳細</button>
           </div>
-          <div class="paper-title">${escapeHtml(camp.place)}</div>
-          <div class="paper-sub">${escapeHtml(nextDate)} / ${escapeHtml(camp.party)} / 準備 ${percent}%</div>
+          <div class="paper-title">${escapeHtml(camp.place || '場所はあとで決める')}</div>
+          <div class="paper-sub">${escapeHtml(nextDate || '日付はあとで')} / ${escapeHtml(camp.party || '同行はあとで')} / 準備 ${percent}%</div>
           <div class="thin-progress"><span style="width:${percent}%"></span></div>
-          <div class="row-actions">
-            <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">準備</button>
+          <div class="row-actions compact-row-actions">
+            <button class="btn primary" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="prep" data-tab="準備">今日見る</button>
             <button class="btn ghost" data-action="openProject" data-project-id="${escapeHtml(camp.id)}" data-screen="cockpit" data-tab="予定">当日</button>
-            <button class="btn ghost" data-action="go" data-screen="calendar" data-tab="予定">カレンダー</button>
+            <button class="btn ghost" data-action="createLoosePlan">日付だけ予定</button>
+          </div>
+        </section>
+
+        <section class="paper-section no-input-strip">
+          <div class="paper-head"><span>入力しない前提</span><span class="paper-badge">忘れても残る</span></div>
+          <div class="thin-list">
+            <button class="thin-item" data-action="addRecord" data-type="あとで整理" data-project-id="${escapeHtml(camp.id)}" data-target="未確認箱" data-text="何も入力しなかった日の控え"><span>何も入力しなかった</span><small>1タップで未確認箱へ</small></button>
+            <button class="thin-item" data-action="go" data-screen="inbox" data-tab="思い出"><span>未整理を片付ける</span><small>${state.inbox.length}件。全部やらなくていい</small></button>
+            <button class="thin-item" data-action="go" data-screen="memories" data-tab="思い出"><span>思い出を見る</span><small>確定したものだけ</small></button>
           </div>
         </section>
 
         <section class="paper-section compact-home-grid">
           <button class="paper-row" data-action="openProject" data-project-id="walk-home-kota" data-screen="homeWalk" data-tab="予定">
-            <span>コタと散歩</span><small>自宅散歩を残す</small>
+            <span>コタと散歩</span><small>散歩も簡単に残す</small>
           </button>
           <button class="paper-row" data-action="openProject" data-project-id="search-next-camp" data-screen="search" data-tab="探す">
-            <span>探す</span><small>次の候補を育てる</small>
-          </button>
-          <button class="paper-row" data-action="go" data-screen="inbox" data-tab="思い出">
-            <span>未整理</span><small>${state.inbox.length}件</small>
+            <span>探す</span><small>候補だけでもOK</small>
           </button>
           <button class="paper-row" data-action="go" data-screen="improvements" data-tab="思い出">
             <span>改善</span><small>${openImprovements}件</small>
           </button>
-        </section>
-
-        <section class="paper-section utility-line daily-utility">
-          <div class="paper-head">
-            <span>控えと設定</span>
-            <span class="paper-badge">必要な時だけ</span>
-          </div>
-          <div class="utility-actions">
-            <button class="text-link" data-action="copyBackup">控えをコピー</button>
-            <button class="text-link" data-action="go" data-screen="dataGuard" data-tab="思い出">開く</button>
-          </div>
+          <button class="paper-row" data-action="go" data-screen="dataGuard" data-tab="思い出">
+            <span>控え</span><small>必要な時だけ</small>
+          </button>
         </section>
       </main>
     `;
-    app.innerHTML = homeLayout(content);
+    app.innerHTML = homeLayout(body);
   }
+
 
 
 
@@ -1202,7 +1201,7 @@
     const body = `
       <section class="hero">
         <h1>予定を管理する</h1>
-        <p>次のキャンプ、過去キャンプ、散歩、探す流れを実データで追加・編集・切替します。</p>
+        <p>場所や日程が全部決まっていなくても作れます。あとで直せます。</p>
       </section>
       <main class="stack">
         ${card('今使う流れ', '切替', `
@@ -1212,7 +1211,7 @@
 
         ${card('追加する', '実データ運用', `
           <p class="card-text">カレンダーや予定詳細に出すための元データを作ります。予定だけ増やして、画面は増やしすぎません。</p>
-        `, `${btn('新しいキャンプ予定', 'createCampPlan', {}, 'primary')}${btn('選択日から予定作成', 'createCampFromDate', { date: state.selectedDate || todayISO() }, 'ghost')}${btn('過去キャンプを登録', 'createPastCamp', {}, 'ghost')}${btn('散歩 / 探す / 外出を追加', 'createBasicProject', {}, 'ghost')}`)}
+        `, `${btn('日付だけ予定', 'createLoosePlan', {}, 'primary')}${btn('しっかり入力して作る', 'createCampPlan', {}, 'ghost')}${btn('過去キャンプを登録', 'createPastCamp', {}, 'ghost')}${btn('散歩 / 探す / 外出を追加', 'createBasicProject', {}, 'ghost')}`)}
 
         ${card('キャンプ予定', '次回と過去', `
           <div class="list">
@@ -1384,37 +1383,32 @@
   function renderPrep() {
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
     const percent = prepPercent(project);
+    const openPrep = project.prep.filter((item) => item.status !== '確認済み');
+    const focusPrep = (openPrep.length ? openPrep : project.prep).slice(0, 3);
+    const openImproves = state.improvements.filter((item) => item.projectId === project.id && !item.done).slice(0, 3);
     const body = `
       <section class="hero">
         <h1>準備</h1>
-        <p>${escapeHtml(project.place)} の準備を、買い物・料理・ギア・コタ・天気・ルートでつなげます。</p>
+        <p>全部入力しなくてOK。今日は見るべきものだけ確認します。</p>
       </section>
       <main class="stack">
-        ${card('準備率', '出発前の状態', `
-          <div class="metric-row">
-            <div class="metric"><small>全体</small><strong>${percent}%</strong></div>
-            <div class="metric"><small>ギア</small><strong>${escapeHtml(checklistText(project.gear))}</strong></div>
-            <div class="metric"><small>コタ</small><strong>${escapeHtml(checklistText(project.kota))}</strong></div>
-            <div class="metric"><small>天気/ルート</small><strong>${checkedCount(project.weatherChecks) + checkedCount(project.routeChecks)}/${project.weatherChecks.length + project.routeChecks.length}</strong></div>
+        ${card('今日見るもの', '全部やらなくていい', `
+          <div class="metric-row compact-status-row">
+            <div class="metric"><small>準備</small><strong>${percent}%</strong></div>
+            <div class="metric"><small>未確認</small><strong>${state.inbox.length}件</strong></div>
+            <div class="metric"><small>改善</small><strong>${openImproves.length}件</strong></div>
           </div>
-          <div class="progress"><span style="width:${percent}%"></span></div>
-        `, `${btn('当日運転席へ', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'primary')}${btn('予定詳細', 'openProject', { projectId: project.id, screen: 'plan', tab: '予定' }, 'ghost')}`)}
-        ${card('今日やること', '準備する', `
-          <div class="list">
-            ${project.prep.map((item) => `
-              <button class="item" data-action="openPrepItem" data-key="${escapeHtml(item.key)}">
-                <div class="item-main"><div class="item-title">${escapeHtml(item.key)}を確認</div><div class="item-sub">${escapeHtml(item.note)}</div></div>
-                <span class="tag ${item.status === '確認済み' ? '' : 'light'}">${escapeHtml(item.status)}</span>
-              </button>
-            `).join('')}
+          <div class="thin-list">
+            ${focusPrep.map((item) => `<button class="thin-item" data-action="openPrepItem" data-key="${escapeHtml(item.key)}"><span>${escapeHtml(item.key)}</span><small>${escapeHtml(item.note)} / ${escapeHtml(item.status)}</small></button>`).join('')}
           </div>
-        `)}
-        ${card('準備を残す', '未確認箱へ', `
-          <p class="card-text">迷ったもの、足りなかったもの、次回減らすものは、準備中でも未確認箱に残します。</p>
-        `, `${btn('忘れ物メモ', 'addRecord', { type: 'メモ', projectId: project.id, target: '準備', text: '忘れ物候補' }, 'ghost')}${btn('次回減らすもの', 'addImprovement', { projectId: project.id, text: '次回は持ち物を減らす', target: 'ギア' }, 'ghost')}`)}
+        `, `${btn('当日運転席へ', 'openProject', { projectId: project.id, screen: 'cockpit', tab: '予定' }, 'primary')}${btn('買い物', 'go', { screen: 'shopping', tab: '準備' }, 'ghost')}`)}
+        ${card('忘れそうなことだけ', '前回改善とコタ', `
+          ${openImproves.length ? `<div class="thin-list">${openImproves.map((item) => `<button class="thin-item" data-action="reflectImprovement" data-id="${escapeHtml(item.id)}"><span>${escapeHtml(item.target || '次の準備')}</span><small>${escapeHtml(item.text)}</small></button>`).join('')}</div>` : '<div class="empty flat-empty">前回改善はありません。必要な時だけ追加します。</div>'}
+        `, `${btn('コタ用品', 'go', { screen: 'kota', tab: '準備' }, 'ghost')}${btn('天気とルート', 'go', { screen: 'weatherRoute', tab: '準備' }, 'ghost')}${btn('忘れ物メモ', 'addRecord', { type: 'メモ', projectId: project.id, target: '準備', text: '忘れ物候補' }, 'ghost')}`)}
       </main>`;
     app.innerHTML = layout(body);
   }
+
 
   function renderShopping() {
     const project = activeProject().type === 'camp' ? activeProject() : campProject();
@@ -1686,15 +1680,15 @@
     const body = `
       <section class="hero capture-hero">
         <h1>今これを残す</h1>
-        <p>写真・動画・声・GPSを未確認箱へ。確定はムーが決めます。</p>
+        <p>写真だけ、声だけ、メモなしでもOK。分からないものは未確認箱へ入ります。</p>
       </section>
       <main class="stack">
-        ${card('残す前に確認', '保存先候補', `
+        ${card('残す前に確認', '候補だけでOK', `
           <div class="metric-row compact-status-row">
             <div class="metric"><small>保存先候補</small><strong>${escapeHtml(projectLabel(project))}</strong></div>
             <div class="metric"><small>未確認</small><strong>${state.inbox.length}件</strong></div>
           </div>
-          <p class="note">保存先は候補。確定・移動・削除はムーが決めます。</p>
+          <p class="note">保存先は仮で大丈夫。あとで変えられます。</p>
         `)}
         ${card('記録する', '実データを未確認箱へ', `
           <div class="capture-grid">
@@ -2015,7 +2009,7 @@
 
   function flowAuditText() {
     const lines = [
-      'OUTBASE Restart-25 日常UI簡素化',
+      'OUTBASE Restart-26 入力しない前提',
       '',
       `進捗：${flowAuditProgress()}%`,
       `未整理：${state.inbox.length}件`,
@@ -2346,7 +2340,7 @@
     const body = `
       <section class="hero inbox-hero">
         <h1>未確認箱</h1>
-        <p>保存先がまだ確定していない記録です。ここで保存先を選び、思い出へ確定し、不要なものだけ削除候補にします。</p>
+        <p>あとでで大丈夫。分からない記録を一時的に置いておく場所です。</p>
       </section>
       <main class="stack">
         ${card('整理状況', '勝手に削除しない', `
@@ -2729,6 +2723,31 @@
       saveState();
       renderProjectManage();
       showToast('主役の流れを切り替えました');
+      return;
+    }
+
+    if (action === 'createLoosePlan') {
+      const date = state.selectedDate || todayISO();
+      const project = campProjectTemplate({
+        title: '場所はあとで決めるキャンプ',
+        place: '場所はあとで決める',
+        startDate: date,
+        endDate: date,
+        party: '夫婦＋コタ',
+        status: '仮予定',
+        label: '次のキャンプ',
+        memo: '最低限の仮予定です。場所、日程、同行、チェックインはあとで直せます。'
+      });
+      state.projects.unshift(project);
+      state.activeProjectId = project.id;
+      syncProjectCalendar(state, project);
+      state.calendarMonth = project.startDate.slice(0, 7);
+      state.selectedDate = project.startDate;
+      state.screen = 'prep';
+      state.activeTab = '準備';
+      saveState();
+      render();
+      showToast('入力なしで仮予定を作りました');
       return;
     }
 
