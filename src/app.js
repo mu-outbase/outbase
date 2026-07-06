@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_33_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_32_state', 'outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_34_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_33_state', 'outbase_restart_32_state', 'outbase_restart_31_state', 'outbase_restart_30_state', 'outbase_restart_29_state', 'outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -44,6 +44,42 @@
     { id: 'cleanup', title: '撤収', note: '濡れ物・乾燥・忘れ物を確認', state: '待ち' },
     { id: 'driveHome', title: '帰路', note: '寄り道・帰宅時間・片付けへ', state: '待ち' }
   ];
+
+
+  function executionStepsForType(type) {
+    if (type === 'camp') return clone(dayStepsBase);
+    if (type === 'drive') return [
+      { id: 'routePlan', title: 'ルート確認', note: 'おすすめルート・渋滞・休憩地を確認', state: '次' },
+      { id: 'load', title: '積込み', note: '飲み物・コタ用品・充電を確認', state: '待ち' },
+      { id: 'depart', title: '出発', note: '出発時刻と到着目安を残す', state: '待ち' },
+      { id: 'drive', title: '移動', note: '運転中は操作しない。停車中に記録', state: '待ち' },
+      { id: 'parking', title: '駐車場', note: '料金・混雑・徒歩距離を残す', state: '待ち' },
+      { id: 'stopover', title: '寄り道', note: '良かった場所・避けたい場所を残す', state: '待ち' },
+      { id: 'returnHome', title: '帰宅', note: '帰宅時間と次回改善へ', state: '待ち' }
+    ];
+    if (type === 'walk' || type === 'campWalk') return [
+      { id: 'start', title: '開始', note: '場所とコタの様子を残す', state: '次' },
+      { id: 'photo', title: '記録', note: '写真・声・GPSを残す', state: '待ち' },
+      { id: 'finish', title: '終了', note: '距離・時間・気づきを残す', state: '待ち' }
+    ];
+    if (type === 'picnic') return [
+      { id: 'pack', title: '持ち物確認', note: '食事・敷物・コタ用品・暑さ寒さ', state: '次' },
+      { id: 'depart', title: '出発', note: '駐車場・混雑・到着目安', state: '待ち' },
+      { id: 'stay', title: '滞在', note: '場所・食事・コタの様子を記録', state: '待ち' },
+      { id: 'cleanup', title: '片付け', note: 'ゴミ・忘れ物・次回改善', state: '待ち' }
+    ];
+    if (type === 'event') return [
+      { id: 'schedule', title: '時間確認', note: '開始時間・集合・移動・駐車場', state: '次' },
+      { id: 'prepare', title: '持ち物', note: 'チケット・充電・服装・コタ対応', state: '待ち' },
+      { id: 'move', title: '移動', note: 'ルート・渋滞・到着時間', state: '待ち' },
+      { id: 'after', title: '帰宅後', note: '写真整理・実績・改善', state: '待ち' }
+    ];
+    return [
+      { id: 'plan', title: '準備', note: '日時・場所・持ち物を確認', state: '次' },
+      { id: 'run', title: '実行', note: '出発から帰宅まで', state: '待ち' },
+      { id: 'review', title: '整理', note: '記録と改善へ', state: '待ち' }
+    ];
+  }
 
 
   const gearBase = [
@@ -200,7 +236,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-33',
+    version: 'restart-34',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -214,7 +250,7 @@
     recordDetailId: '',
     voiceRecording: false,
     toast: '',
-    favorites: ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'],
+    favorites: ['planBoard', 'prep', 'cockpit', 'capture', 'shopping', 'gear', 'inbox', 'search'],
     walk: null,
     projects: [
       {
@@ -283,6 +319,58 @@
         memo: '犬可、温水、景色、距離、季節で候補を残し、予定に育てます。'
       },
       {
+        id: 'camp-next-sample',
+        type: 'camp',
+        title: '次の候補キャンプ',
+        label: '別キャンプ候補',
+        status: '候補',
+        startDate: '2026-07-12',
+        endDate: '2026-07-13',
+        place: '場所はあとで決める',
+        party: '夫婦＋コタ',
+        checkin: '13:00',
+        checkout: '11:00',
+        weather: '天気を確認',
+        route: 'ルートを確認',
+        memo: '複数プラン同時進行の確認用。予約前でもプランにできます。',
+        prep: clone(prepBase),
+        shopping: clone(shoppingBase),
+        meals: clone(mealsBase),
+        daySteps: clone(dayStepsBase),
+        activeDayStepId: 'before',
+        gear: clone(gearBase),
+        kota: clone(kotaBase),
+        weatherChecks: clone(weatherCheckBase),
+        routeChecks: clone(routeCheckBase),
+        feeChecks: clone(feeCheckBase),
+        timeline: clone(timelineBase),
+        planNotes: []
+      },
+      {
+        id: 'drive-lake-sample',
+        type: 'drive',
+        title: '山中湖方面ドライブ',
+        label: 'ドライブ',
+        status: '計画中',
+        startDate: '2026-07-05',
+        endDate: '2026-07-05',
+        place: '山中湖方面',
+        party: '夫婦＋コタ',
+        memo: 'おすすめルート、渋滞予測、時間計画、駐車場情報を組み合わせるドライブ例です。'
+      },
+      {
+        id: 'picnic-sample',
+        type: 'picnic',
+        title: '近場ピクニック',
+        label: 'ピクニック',
+        status: '仮予定',
+        startDate: '2026-07-19',
+        endDate: '2026-07-19',
+        place: '場所はあとで決める',
+        party: '夫婦＋コタ',
+        memo: 'キャンプ以外の外出も日付・持ち物・記録・改善につなげます。'
+      },
+      {
         id: 'outing-free',
         type: 'outing',
         title: '外出メモ',
@@ -333,7 +421,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-33';
+      merged.version = 'restart-34';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -372,7 +460,7 @@
     target.integrationNotes = Array.isArray(target.integrationNotes) ? target.integrationNotes : [];
     target.deviceAuditChecks = normalizeDeviceAuditChecks(target.deviceAuditChecks);
     target.deviceAuditNotes = Array.isArray(target.deviceAuditNotes) ? target.deviceAuditNotes : [];
-    target.favorites = Array.isArray(target.favorites) && target.favorites.length ? target.favorites : ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'];
+    target.favorites = Array.isArray(target.favorites) && target.favorites.length ? target.favorites : ['planBoard', 'prep', 'cockpit', 'capture', 'shopping', 'gear', 'inbox', 'search'];
     const fallbackMonth = target.projects.find((project) => project.startDate)?.startDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
     target.calendarMonth = /^\d{4}-\d{2}$/.test(target.calendarMonth || '') ? target.calendarMonth : fallbackMonth;
     target.selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(target.selectedDate || '') ? target.selectedDate : `${target.calendarMonth}-01`;
@@ -386,6 +474,7 @@
     });
     if (!projectById(target.activeProjectId, target)) target.activeProjectId = target.projects[0].id;
     target.projects.forEach((project) => {
+      normalizeProjectExecution(project);
       if (project.type === 'camp') {
         project.prep = Array.isArray(project.prep) ? project.prep : clone(prepBase);
         project.shopping = Array.isArray(project.shopping) ? project.shopping : clone(shoppingBase);
@@ -553,6 +642,27 @@
     }
     addAutoItem('start', project.startDate, projectLabelFromTarget(target, project.id), type);
     if (project.endDate && project.endDate !== project.startDate) addAutoItem('end', project.endDate, `${projectLabelFromTarget(target, project.id)} 終了`, type);
+  }
+
+  function normalizeProjectExecution(project) {
+    if (!project) return;
+    const baseSteps = executionStepsForType(project.type || 'outing');
+    const current = Array.isArray(project.daySteps) ? project.daySteps : [];
+    project.daySteps = baseSteps.map((baseStep, index) => {
+      const existing = current.find((step) => step.id === baseStep.id) || {};
+      const stateValue = existing.state || baseStep.state || (index === 0 ? '次' : '待ち');
+      return {
+        ...baseStep,
+        ...existing,
+        state: ['待ち', '次', '進行中', '完了', '戻し'].includes(stateValue) ? stateValue : (index === 0 ? '次' : '待ち'),
+        startedAt: existing.startedAt || '',
+        finishedAt: existing.finishedAt || ''
+      };
+    });
+    if (!project.activeDayStepId || !project.daySteps.some((step) => step.id === project.activeDayStepId)) {
+      const nextStep = project.daySteps.find((step) => step.state === '進行中' || step.state === '次') || project.daySteps[0];
+      project.activeDayStepId = nextStep?.id || '';
+    }
   }
 
   function mergeDaySteps(steps) {
@@ -1027,7 +1137,7 @@
 
 
   function preImportBackupKey() {
-    return 'outbase_restart_18_pre_import_backup';
+    return 'outbase_restart_34_pre_import_backup';
   }
 
   function readPreImportBackup() {
@@ -1047,7 +1157,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-33';
+    next.version = 'restart-34';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -1066,7 +1176,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-28';
+    state.version = 'restart-34';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1102,7 +1212,7 @@
 
   function flowItems() {
     return [
-      { key: '予定', label: '予定', screens: ['home', 'calendar', 'projectManage', 'plan', 'search', 'homeWalk', 'campWalk', 'toolbox', 'settings'] },
+      { key: '予定', label: '予定', screens: ['home', 'planBoard', 'calendar', 'projectManage', 'plan', 'search', 'homeWalk', 'campWalk', 'toolbox', 'settings'] },
       { key: '準備', label: '準備', screens: ['prep', 'shopping', 'cooking', 'gear', 'kota', 'weatherRoute'] },
       { key: '当日', label: '当日', screens: ['cockpit'] },
       { key: '記録', label: '記録', screens: ['capture'] },
@@ -1228,8 +1338,99 @@
 
 
 
+  function activePlanProjects() {
+    const typeRank = { camp: 1, drive: 2, picnic: 3, event: 4, walk: 5, campWalk: 6, search: 7, outing: 8 };
+    return [...state.projects].sort((a, b) => {
+      const dateA = a.startDate || '9999-12-31';
+      const dateB = b.startDate || '9999-12-31';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return (typeRank[a.type] || 9) - (typeRank[b.type] || 9);
+    });
+  }
+
+  function projectPhaseLabel(project) {
+    if (!project) return '未設定';
+    if (project.type === 'search') return '探す';
+    if ((project.status || '').includes('過去')) return '整理';
+    if (project.type === 'camp') {
+      const stepCounts = dayStepCounts(project);
+      if (stepCounts.done > 0 && stepCounts.done < stepCounts.total) return '実行中';
+      if (stepCounts.done >= stepCounts.total && stepCounts.total) return '整理';
+      return 'プラン';
+    }
+    if (project.type === 'drive') return 'ルート計画';
+    if (project.type === 'picnic' || project.type === 'event') return 'プラン';
+    if (project.type === 'walk' || project.type === 'campWalk') return '実行';
+    return '記録';
+  }
+
+  function projectProgressPercent(project) {
+    if (!project) return 0;
+    if (project.type === 'camp') return planOverallPercent(project);
+    const counts = dayStepCounts(project);
+    return counts.total ? Math.round((counts.done / counts.total) * 100) : 0;
+  }
+
+  function projectPlanTarget(project) {
+    if (!project) return { screen: 'home', tab: '予定' };
+    if (project.type === 'camp') return { screen: 'prep', tab: '準備' };
+    if (project.type === 'drive') return { screen: 'weatherRoute', tab: '準備' };
+    if (project.type === 'search') return { screen: 'search', tab: '探す' };
+    return { screen: projectDefaultScreen(project), tab: projectDefaultTab(project) };
+  }
+
+  function projectActionButtons(project) {
+    const target = projectPlanTarget(project);
+    return `
+      <button class="tag ${project.id === state.activeProjectId ? '' : 'light'}" data-action="setActiveOnly" data-project-id="${escapeHtml(project.id)}">主役</button>
+      <button class="tag light" data-action="openProject" data-project-id="${escapeHtml(project.id)}" data-screen="${escapeHtml(target.screen)}" data-tab="${escapeHtml(target.tab)}">プラン</button>
+      <button class="tag light" data-action="openProject" data-project-id="${escapeHtml(project.id)}" data-screen="cockpit" data-tab="予定">実行</button>
+      <button class="tag light" data-action="openProject" data-project-id="${escapeHtml(project.id)}" data-screen="capture" data-tab="＋">記録</button>
+    `;
+  }
+
+  function planCard(project, compact = false) {
+    const percent = projectProgressPercent(project);
+    const phase = projectPhaseLabel(project);
+    const inbox = countByProject(state.inbox, project.id);
+    const improve = countByProject(state.improvements.filter((item) => !item.done), project.id);
+    return `<section class="plan-card ${project.id === state.activeProjectId ? 'active-plan' : ''} ${compact ? 'compact' : ''}">
+      <button class="plan-card-main" data-action="openProject" data-project-id="${escapeHtml(project.id)}" data-screen="${escapeHtml(projectDefaultScreen(project))}" data-tab="${escapeHtml(projectDefaultTab(project))}">
+        <span class="plan-card-label">${escapeHtml(projectTypeName(project.type))} / ${escapeHtml(phase)}</span>
+        <strong>${escapeHtml(projectLabel(project))}</strong>
+        <small>${escapeHtml(project.title)} / ${escapeHtml(projectDate(project))}</small>
+      </button>
+      <div class="plan-card-meta">
+        <span>進捗 ${percent}%</span><span>未確認 ${inbox}件</span><span>改善 ${improve}件</span>
+      </div>
+      <div class="progress tiny-progress"><span style="width:${percent}%"></span></div>
+      <div class="actions compact-actions">${projectActionButtons(project)}</div>
+    </section>`;
+  }
+
+  function planBoardMarkup(limit = 6) {
+    const plans = activePlanProjects();
+    const active = activeProject();
+    const shown = plans.slice(0, limit);
+    return `<section class="daily-section plan-board-section">
+      <div class="section-line-title">同時進行プラン</div>
+      <div class="now-plan-box">
+        <small>今触っているプラン</small>
+        <strong>${escapeHtml(projectLabel(active))}</strong>
+        <span>${escapeHtml(projectTypeName(active.type))} / ${escapeHtml(projectPhaseLabel(active))} / ${escapeHtml(projectDate(active))}</span>
+      </div>
+      <div class="plan-card-list">${shown.map((project) => planCard(project, true)).join('')}</div>
+      <div class="actions compact-actions">
+        <button class="btn ghost" data-action="go" data-screen="planBoard" data-tab="予定">複数プランを見る</button>
+        <button class="btn ghost" data-action="go" data-screen="projectManage" data-tab="予定">プランを追加</button>
+      </div>
+    </section>`;
+  }
+
+
+
   function projectTypeName(type) {
-    const names = { camp: 'キャンプ', walk: '自宅散歩', campWalk: 'キャンプ場散歩', search: '探す', outing: '外出' };
+    const names = { camp: 'キャンプ', walk: '自宅散歩', campWalk: 'キャンプ場散歩', search: '探す', drive: 'ドライブ', picnic: 'ピクニック', event: 'イベント', outing: '外出' };
     return names[type] || '流れ';
   }
 
@@ -1238,14 +1439,16 @@
     if (project.type === 'walk') return 'homeWalk';
     if (project.type === 'campWalk') return 'campWalk';
     if (project.type === 'search') return 'search';
-    if (project.type === 'outing') return 'capture';
+    if (project.type === 'drive') return 'weatherRoute';
+    if (project.type === 'picnic' || project.type === 'event' || project.type === 'outing') return 'capture';
     return 'plan';
   }
 
   function projectDefaultTab(project) {
     if (!project) return '予定';
     if (project.type === 'search') return '探す';
-    if (project.type === 'outing') return '＋';
+    if (project.type === 'drive') return '準備';
+    if (project.type === 'picnic' || project.type === 'event' || project.type === 'outing') return '＋';
     return '予定';
   }
 
@@ -1369,6 +1572,7 @@
   function featureCatalog() {
     return [
       { id: 'activityHub', title: '活動から選ぶ', group: '入口', note: 'キャンプ・散歩・ドライブなど', screen: 'activityHub', tab: '予定' },
+      { id: 'planBoard', title: '複数プラン', group: '入口', note: '同時進行の予定を切り替える', screen: 'planBoard', tab: '予定' },
       { id: 'capture', title: '今これを残す', group: '記録', note: '写真・声・メモを未確認箱へ', screen: 'capture', tab: '＋' },
       { id: 'inbox', title: 'あとで片付ける', group: '整理', note: '未確認を確認する', screen: 'inbox', tab: '思い出' },
       { id: 'planPhase', title: 'キャンププラン', group: 'プラン', note: '予約後に一番使う。天気・料金・料理・ルート・時間割', screen: 'prep', tab: '準備' },
@@ -1447,7 +1651,7 @@
   }
 
   function favoriteFeatures() {
-    const ids = Array.isArray(state.favorites) && state.favorites.length ? state.favorites : ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'];
+    const ids = Array.isArray(state.favorites) && state.favorites.length ? state.favorites : ['planBoard', 'prep', 'cockpit', 'capture', 'shopping', 'gear', 'inbox', 'search'];
     return ids.map((id) => featureById(id)).filter(Boolean);
   }
 
@@ -1466,19 +1670,19 @@
   }
 
   function renderHome() {
-    const camp = campProject();
-    const percent = prepPercent(camp);
-    const nextDate = projectDate(camp) || '日付はあとで';
+    const active = activeProject();
+    const percent = projectProgressPercent(active);
+    const nextDate = projectDate(active) || '日付はあとで';
     const inboxCount = state.inbox.length;
-    const place = camp.place || '場所はあとで決める';
+    const place = active.place || active.title || '場所はあとで決める';
     const favorites = favoriteFeatures();
     const currentActivity = state.activeActivityType || 'camp';
     const body = `
       <header class="daily-top">
         <div>
-          <div class="simple-kicker">OUTBASE / RESTART-33</div>
+          <div class="simple-kicker">OUTBASE / RESTART-34</div>
           <h1>今日は何する？</h1>
-          <p>カレンダーを入口にしつつ、予約後はキャンププランで天気・料金・料理・ルート・時間割・ギアをまとめます。</p>
+          <p>カレンダーと複数プランを入口にして、プラン・実行・記録を切り替えます。</p>
         </div>
         <button class="text-link daily-settings" data-action="go" data-screen="settings" data-tab="予定">設定</button>
       </header>
@@ -1486,11 +1690,13 @@
       <main class="daily-home" aria-label="OUTBASEの入口">
         ${homeCalendarMarkup()}
 
+        ${planBoardMarkup(4)}
+
         <section class="daily-section next-block">
           <div class="section-line-title">今の活動</div>
-          <button class="lead-action" data-action="goActivity" data-activity-type="${escapeHtml(currentActivity)}">
-            <strong>${escapeHtml(activityTypeName(currentActivity))}を進める</strong>
-            <span>${escapeHtml(place)} / ${escapeHtml(nextDate)} / プラン ${percent}%</span>
+          <button class="lead-action" data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="${escapeHtml(projectDefaultScreen(active))}" data-tab="${escapeHtml(projectDefaultTab(active))}">
+            <strong>${escapeHtml(projectLabel(active))}を進める</strong>
+            <span>${escapeHtml(projectTypeName(active.type))} / ${escapeHtml(place)} / ${escapeHtml(nextDate)} / 進捗 ${percent}%</span>
           </button>
           <div class="micro-actions">
             <button data-action="go" data-screen="capture" data-tab="＋">今これを残す</button>
@@ -1528,6 +1734,45 @@
       </main>
     `;
     app.innerHTML = homeLayout(body);
+  }
+
+  function renderPlanBoard() {
+    const plans = activePlanProjects();
+    const active = activeProject();
+    const body = `
+      ${layoutHero('複数プラン', 'キャンプ、ドライブ、散歩、ピクニックを同時に持って、今触るものを切り替えます。')}
+      <main class="paper-stack plan-board-page">
+        <section class="paper-section current-plan-panel">
+          <div class="section-line-title">今ここ</div>
+          <div class="now-plan-box large">
+            <small>現在の主役プラン</small>
+            <strong>${escapeHtml(projectLabel(active))}</strong>
+            <span>${escapeHtml(projectTypeName(active.type))} / ${escapeHtml(projectPhaseLabel(active))} / ${escapeHtml(projectDate(active))}</span>
+          </div>
+          <div class="smart-quick-actions">
+            <button data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="${escapeHtml(projectPlanTarget(active).screen)}" data-tab="${escapeHtml(projectPlanTarget(active).tab)}"><strong>プラン</strong><small>準備・ルート・持ち物</small></button>
+            <button data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="cockpit" data-tab="予定"><strong>実行</strong><small>出発から帰宅まで</small></button>
+            <button data-action="openProject" data-project-id="${escapeHtml(active.id)}" data-screen="capture" data-tab="＋"><strong>記録</strong><small>写真・声・メモ</small></button>
+            <button data-action="go" data-screen="inbox" data-tab="思い出"><strong>整理</strong><small>未確認 ${state.inbox.length}件</small></button>
+          </div>
+        </section>
+        <section class="paper-section">
+          <div class="section-line-title">進行中のプラン</div>
+          <div class="plan-card-list full-list">
+            ${plans.map((project) => planCard(project)).join('')}
+          </div>
+        </section>
+        <section class="paper-section muted-section">
+          <div class="section-line-title">追加</div>
+          <div class="smart-quick-actions">
+            <button data-action="createLoosePlan"><strong>日付だけキャンプ</strong><small>入力なしで仮作成</small></button>
+            <button data-action="createCampPlan"><strong>キャンプ予定</strong><small>予約済み・候補</small></button>
+            <button data-action="createBasicProject"><strong>散歩/ドライブ等</strong><small>キャンプ以外</small></button>
+            <button data-action="go" data-screen="calendar" data-tab="予定"><strong>カレンダー</strong><small>日付から探す</small></button>
+          </div>
+        </section>
+      </main>`;
+    app.innerHTML = layout(body, { subtitle: '複数プラン同時進行' });
   }
 
   function renderActivityHub() {
@@ -1614,8 +1859,8 @@
     const camps = state.projects.filter((project) => project.type === 'camp');
     const body = `
       <section class="hero">
-        <h1>予定を管理する</h1>
-        <p>場所や日程が全部決まっていなくても作れます。あとで直せます。</p>
+        <h1>プランを管理する</h1>
+        <p>キャンプ・散歩・ドライブ・イベントを同時に持てます。今触るプランを切り替えます。</p>
       </section>
       <main class="stack">
         ${card('今使う流れ', '切替', `
@@ -1665,7 +1910,7 @@
     const body = `
       <section class="quiet-page-head">
         <div>
-          <span class="quiet-kicker">予定 / Restart-32</span>
+          <span class="quiet-kicker">予定 / Restart-34</span>
           <h1>高機能カレンダー</h1>
           <p>日付を押すだけで、プラン・実行・記録・整理へ入ります。</p>
         </div>
@@ -2092,16 +2337,18 @@
   }
 
   function renderCockpit() {
-    const project = activeProject().type === 'camp' ? activeProject() : campProject();
+    const project = activeProject();
+    normalizeProjectExecution(project);
     const current = activeDayStep(project);
     const counts = dayStepCounts(project);
     const currentRecords = current ? stepRecords(project.id, current.id) : [];
     const body = `
       <section class="hero cockpit-hero">
-        <h1>当日運転席</h1>
-        <p>停車中に見る画面です。次にやること、工程ごとの写真・声メモ・メモ、間違えた時の戻しをここにまとめます。</p>
+        <h1>実行フェーズ</h1>
+        <p>買出し・積込み・移動・到着・帰宅まで。キャンプ以外のドライブやイベントも同じ考え方で進めます。</p>
       </section>
       <main class="stack">
+        <section class="paper-section muted-section"><div class="section-line-title">対象プラン</div>${planCard(project, true)}</section>
         ${card('今やること', current?.title || '当日の流れ', `
           <p class="card-text"><strong>${escapeHtml(project.place)}</strong><br>${escapeHtml(projectDate(project))} / ${escapeHtml(project.party)}</p>
           <div class="metric-row">
@@ -3136,6 +3383,7 @@
 
   function render() {
     switch (state.screen) {
+      case 'planBoard': renderPlanBoard(); break;
       case 'activityHub': renderActivityHub(); break;
       case 'toolbox': renderToolbox(); break;
       case 'settings': renderSettings(); break;
@@ -3265,7 +3513,7 @@
     }
 
     if (action === 'resetFavorites') {
-      state.favorites = ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'];
+      state.favorites = ['planBoard', 'prep', 'cockpit', 'capture', 'shopping', 'gear', 'inbox', 'search'];
       saveState();
       renderSettings();
       showToast('よく使うをおすすめに戻しました');
@@ -3357,9 +3605,9 @@
     }
 
     if (action === 'createBasicProject') {
-      const answer = window.prompt('種類を番号で選ぶ\n1. 自宅散歩\n2. キャンプ場散歩\n3. 探す\n4. 外出', '1');
+      const answer = window.prompt('種類を番号で選ぶ\n1. 自宅散歩\n2. キャンプ場散歩\n3. 探す\n4. ドライブ\n5. ピクニック\n6. イベント\n7. 外出', '1');
       if (answer === null) return;
-      const types = { '1': 'walk', '2': 'campWalk', '3': 'search', '4': 'outing' };
+      const types = { '1': 'walk', '2': 'campWalk', '3': 'search', '4': 'drive', '5': 'picnic', '6': 'event', '7': 'outing' };
       const type = types[answer] || 'walk';
       const title = promptText('タイトル', projectTypeName(type));
       if (title === null || !title) return;
@@ -3376,13 +3624,15 @@
         type,
         title,
         label: projectTypeName(type),
-        status: type === 'search' ? '候補集め' : 'いつでも',
+        status: type === 'search' ? '候補集め' : (type === 'drive' || type === 'picnic' || type === 'event' ? '計画中' : 'いつでも'),
         startDate,
         endDate: startDate,
         place: place || '',
         party: type === 'walk' || type === 'campWalk' ? 'コタ' : '夫婦＋コタ',
         parentProjectId: type === 'campWalk' ? campProject().id : '',
-        memo: '実データとして追加した流れです。'
+        memo: '実データとして追加した流れです。',
+        daySteps: executionStepsForType(type),
+        activeDayStepId: executionStepsForType(type)[0]?.id || ''
       };
       state.projects.push(project);
       state.activeProjectId = project.id;
@@ -4210,7 +4460,10 @@
         gear: clone(gearBase),
         kota: clone(kotaBase),
         weatherChecks: clone(weatherCheckBase),
-        routeChecks: clone(routeCheckBase)
+        routeChecks: clone(routeCheckBase),
+        feeChecks: clone(feeCheckBase),
+        timeline: clone(timelineBase),
+        planNotes: []
       };
       state.projects.unshift(newProject);
       state.activeProjectId = newProject.id;

@@ -3983,3 +3983,50 @@ select {
   .plan-row b { width: fit-content; }
   .timeline-main { grid-template-columns: 54px 1fr; }
 }
+
+
+/* Restart-34 複数プラン同時進行 / 実行フェーズ統合LOCK */
+.plan-board-section { margin-top: 14px; }
+.now-plan-box {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid rgba(42, 35, 26, .12);
+  border-radius: 18px;
+  background: rgba(255, 252, 245, .76);
+}
+.now-plan-box small { color: var(--muted, #746a5d); font-size: .78rem; }
+.now-plan-box strong { color: var(--ink, #1e211c); font-size: 1.05rem; }
+.now-plan-box span { color: var(--muted, #746a5d); font-size: .86rem; }
+.now-plan-box.large { padding: 18px; }
+.plan-card-list { display: grid; gap: 10px; }
+.plan-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(42, 35, 26, .12);
+  border-radius: 18px;
+  background: rgba(255, 252, 245, .82);
+}
+.plan-card.active-plan { border-color: rgba(111, 78, 42, .38); box-shadow: 0 8px 22px rgba(74, 52, 28, .08); }
+.plan-card.compact { padding: 10px; }
+.plan-card-main {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+.plan-card-main strong { font-size: .98rem; }
+.plan-card-main small { color: var(--muted, #746a5d); font-size: .8rem; line-height: 1.45; }
+.plan-card-label { color: #6b5434; font-size: .74rem; letter-spacing: .06em; }
+.plan-card-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-card-meta span { font-size: .72rem; padding: 4px 8px; border-radius: 999px; background: rgba(32, 38, 31, .06); color: var(--muted, #746a5d); }
+.tiny-progress { height: 4px; }
+.plan-board-page .full-list { gap: 12px; }
+.current-plan-panel .smart-quick-actions { margin-top: 12px; }
+@media (min-width: 720px) {
+  .plan-card-list.full-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
