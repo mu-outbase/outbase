@@ -1,0 +1,44 @@
+name: OUTBASE Restart-35 Unpack
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "OUTBASE_Restart-35*.zip"
+      - ".github/workflows/unpack-restart-35.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show files
+        run: |
+          ls -la
+
+      - name: Unpack OUTBASE Restart-35 ZIP
+        run: |
+          ZIP_FILE=$(ls OUTBASE_Restart-35*.zip | head -n 1)
+          echo "Using ZIP: $ZIP_FILE"
+          unzip -o "$ZIP_FILE" -d .
+
+      - name: Remove ZIP after unpack
+        run: |
+          rm -f OUTBASE_Restart-35*.zip
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add index.html style.css src/app.js manifest.json service-worker.js
+          git add -u
+          git commit -m "Apply OUTBASE Restart-35 global plan switch files" || echo "No changes to commit"
+          git push
