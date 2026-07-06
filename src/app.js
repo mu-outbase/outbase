@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_28_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_29_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_28_state', 'outbase_restart_27_state', 'outbase_restart_26_state', 'outbase_restart_25_state', 'outbase_restart_24_state', 'outbase_restart_23_state', 'outbase_restart_22_state', 'outbase_restart_21_state', 'outbase_restart_20_state', 'outbase_restart_19_state', 'outbase_restart_18_state', 'outbase_restart_17_state', 'outbase_restart_16_state', 'outbase_restart_15_state', 'outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -182,7 +182,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-28',
+    version: 'restart-29',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -310,7 +310,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-28';
+      merged.version = 'restart-29';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -1138,6 +1138,53 @@
       syncProjectCalendar(state, project);
     }
     return true;
+  }
+
+
+  function featureCatalog() {
+    return [
+      { id: 'capture', title: '今これを残す', group: '記録', note: '写真・声・メモを未確認箱へ', screen: 'capture', tab: '＋' },
+      { id: 'inbox', title: 'あとで片付ける', group: '整理', note: '未確認を確認する', screen: 'inbox', tab: '思い出' },
+      { id: 'prep', title: '準備する', group: '準備', note: '今日見るものだけ確認', screen: 'prep', tab: '準備' },
+      { id: 'shopping', title: '買い物', group: '準備', note: '買うものを確認', screen: 'shopping', tab: '準備' },
+      { id: 'cooking', title: '料理', group: '準備', note: '量とメニューを確認', screen: 'cooking', tab: '準備' },
+      { id: 'gear', title: 'ギア登録', group: 'ギア', note: '持ち物と使用結果を残す', screen: 'gear', tab: '準備' },
+      { id: 'kota', title: 'コタ用品', group: 'コタ', note: 'ごはん・水・暑さ寒さ', screen: 'kota', tab: '準備' },
+      { id: 'weatherRoute', title: '天気とルート', group: '準備', note: '雨風・道・買い出し', screen: 'weatherRoute', tab: '準備' },
+      { id: 'cockpit', title: '当日運転席', group: '当日', note: '出発から帰宅まで', screen: 'cockpit', tab: '予定' },
+      { id: 'search', title: 'キャンプ場を探す', group: '探す', note: '候補を育てる', screen: 'search', tab: '探す' },
+      { id: 'campPlan', title: '予約済みを登録', group: '予定', note: '予定管理で追加', screen: 'projectManage', tab: '予定' },
+      { id: 'loosePlan', title: '日付だけ予定', group: '予定', note: '決まってなくても作る', screen: 'projectManage', tab: '予定' },
+      { id: 'calendar', title: 'カレンダー', group: '予定', note: '日付から見る', screen: 'calendar', tab: '予定' },
+      { id: 'projectManage', title: '予定管理', group: '予定', note: '流れの追加・切替', screen: 'projectManage', tab: '予定' },
+      { id: 'memories', title: '思い出', group: '思い出', note: '確定した記録を見る', screen: 'memories', tab: '思い出' },
+      { id: 'improvements', title: '次回改善', group: '改善', note: '次の準備へ戻す', screen: 'improvements', tab: '思い出' },
+      { id: 'dataGuard', title: '控えと設定', group: '保護', note: 'データを守る', screen: 'dataGuard', tab: '思い出' },
+      { id: 'settings', title: '設定', group: '設定', note: 'よく使うを変える', screen: 'settings', tab: '予定' }
+    ];
+  }
+
+  function featureById(id) {
+    return featureCatalog().find((feature) => feature.id === id) || featureCatalog()[0];
+  }
+
+  function favoriteFeatures() {
+    const ids = Array.isArray(state.favorites) && state.favorites.length ? state.favorites : ['capture', 'prep', 'shopping', 'gear', 'inbox', 'search'];
+    return ids.map((id) => featureById(id)).filter(Boolean);
+  }
+
+  function groupedFeatures() {
+    return featureCatalog().reduce((groups, feature) => {
+      const key = feature.group || 'その他';
+      groups[key] = groups[key] || [];
+      groups[key].push(feature);
+      return groups;
+    }, {});
+  }
+
+  function featureButton(feature) {
+    const item = feature || featureCatalog()[0];
+    return `<button class="tool-row" data-action="go" data-screen="${escapeHtml(item.screen || 'home')}" data-tab="${escapeHtml(item.tab || '予定')}"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.note || '')}</small></span></button>`;
   }
 
   function renderHome() {

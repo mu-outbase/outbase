@@ -2,7 +2,7 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "description": "OUTBASE Restart-27 迷わないUI LOCK",
-  "start_url": "./?v=restart-28-entry-fav-settings-lock",
+  "start_url": "./?v=restart-29-display-recovery-lock",
   "display": "standalone",
   "background_color": "#f4efe4",
   "theme_color": "#f4efe4",
