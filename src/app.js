@@ -1,7 +1,11 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_13_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_14_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
+  const MAX_EMBED_BYTES = 1800000;
+  let voiceRecorder = null;
+  let voiceChunks = [];
+  let voiceStartedAt = 0;
 
   const prepBase = [
     { id: 'shop', key: '買い物', note: '料理から必要なものを確認します', status: '未完了' },
@@ -75,7 +79,7 @@
   ];
 
   const defaultState = {
-    version: 'restart-13',
+    version: 'restart-14',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -84,6 +88,8 @@
     selectedDate: '2026-06-26',
     inboxFilter: 'all',
     captureDate: '',
+    recordDetailId: '',
+    voiceRecording: false,
     toast: '',
     walk: null,
     projects: [
@@ -193,7 +199,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-13';
+      merged.version = 'restart-14';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -221,6 +227,8 @@
     target.deletedRecords = Array.isArray(target.deletedRecords) ? target.deletedRecords : [];
     target.inboxFilter = ['all', 'active', 'delete'].includes(target.inboxFilter) ? target.inboxFilter : 'all';
     target.captureDate = typeof target.captureDate === 'string' ? target.captureDate : '';
+    target.recordDetailId = typeof target.recordDetailId === 'string' ? target.recordDetailId : '';
+    target.voiceRecording = false;
     target.memories = Array.isArray(target.memories) ? target.memories : [];
     target.improvements = Array.isArray(target.improvements) ? target.improvements : [];
     target.calendarItems = Array.isArray(target.calendarItems) ? target.calendarItems : [];
@@ -562,7 +570,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-13 実データ運用確認',
+      'OUTBASE Restart-14 実記録パック確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -588,7 +596,7 @@
 
 
   function preImportBackupKey() {
-    return 'outbase_restart_13_pre_import_backup';
+    return 'outbase_restart_14_pre_import_backup';
   }
 
   function readPreImportBackup() {
@@ -608,7 +616,7 @@
       return false;
     }
     const next = mergeState(cloneDefaultState(), parsed);
-    next.version = 'restart-13';
+    next.version = 'restart-14';
     next.screen = 'dataGuard';
     next.activeTab = '思い出';
     next.toast = '';
@@ -627,7 +635,7 @@
   function saveState() {
     clearTimeout(saveTimer);
     state.savedAt = new Date().toISOString();
-    state.version = 'restart-13';
+    state.version = 'restart-14';
     repairLinkedData(state);
     saveTimer = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, toast: '' }));
@@ -1522,12 +1530,20 @@
             <div class="metric"><small>未確認</small><strong>${state.inbox.length}件</strong></div>
             <div class="metric"><small>削除候補</small><strong>${state.inbox.filter((record) => record.status === '削除候補').length}件</strong></div>
           </div>
-          <p class="note">写真・動画・声・GPSは、今は記録カードとして残します。実ファイル連携は後工程で入れます。</p>
+          <p class="note">写真は端末から選択またはカメラ起動、動画は選択、声は録音、GPSは現在地取得に対応します。保存先は候補のまま、確定はムーが行います。</p>
         `)}
-        ${card('記録する', 'その場で残す', `
+        ${card('記録する', '実データを未確認箱へ', `
           <div class="capture-grid">
-            ${['写真', '動画', '声', 'メモ', 'GPS', 'あとで整理'].map((type) => `<button class="capture-tile ${type === 'あとで整理' ? 'warn-tile' : ''}" data-action="addRecord" data-type="${type}" data-project-id="${escapeHtml(project.id)}" data-target="${escapeHtml(projectLabel(project))}" data-text="${type}を残しました"><span>${typeIcon(type)}</span><strong>${type}</strong><small>未確認箱へ</small></button>`).join('')}
+            <button class="capture-tile" data-action="pickMedia" data-kind="photo" data-project-id="${escapeHtml(project.id)}"><span>📷</span><strong>写真選択</strong><small>画像を保存</small></button>
+            <button class="capture-tile" data-action="pickMedia" data-kind="camera" data-project-id="${escapeHtml(project.id)}"><span>📸</span><strong>カメラ</strong><small>撮って残す</small></button>
+            <button class="capture-tile" data-action="pickMedia" data-kind="video" data-project-id="${escapeHtml(project.id)}"><span>🎥</span><strong>動画選択</strong><small>動画メモ</small></button>
+            <button class="capture-tile" data-action="${state.voiceRecording ? 'stopVoice' : 'startVoice'}" data-project-id="${escapeHtml(project.id)}"><span>🎙️</span><strong>${state.voiceRecording ? '録音停止' : '声メモ録音'}</strong><small>${state.voiceRecording ? '未確認箱へ保存' : 'その場で録音'}</small></button>
+            <button class="capture-tile" data-action="getGPS" data-project-id="${escapeHtml(project.id)}"><span>📍</span><strong>GPS取得</strong><small>現在地を残す</small></button>
+            <button class="capture-tile warn-tile" data-action="addRecord" data-type="あとで整理" data-project-id="${escapeHtml(project.id)}" data-target="${escapeHtml(projectLabel(project))}" data-text="あとで整理する記録"><span>📥</span><strong>あとで整理</strong><small>未確認箱へ</small></button>
           </div>
+          <input class="visually-hidden" id="photoInput" type="file" accept="image/*" data-media-kind="photo" />
+          <input class="visually-hidden" id="cameraInput" type="file" accept="image/*" capture="environment" data-media-kind="camera" />
+          <input class="visually-hidden" id="videoInput" type="file" accept="video/*" data-media-kind="video" />
           <div class="field">
             <label for="quickMemo">手入力メモ</label>
             <textarea id="quickMemo" placeholder="例：風が強い、設営に時間がかかった、コタが歩きやすそう"></textarea>
@@ -1557,7 +1573,7 @@
   function compactRecordItem(record) {
     const project = projectById(record.projectId);
     return `<div class="item compact-record ${record.status === '削除候補' ? 'item-warn' : ''}">
-      <div class="item-main"><div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(projectLabel(project))}</div><div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(recordAge(record) || record.time)}</div></div>
+      <div class="item-main"><div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(projectLabel(project))}</div><div class="item-sub">${escapeHtml(record.text)} · ${escapeHtml(recordAge(record) || record.time)}</div>${record.media ? `<div class="record-meta"><span>${escapeHtml(mediaSummary(record))}</span></div>` : ''}</div>
       <span class="tag light">${escapeHtml(record.status)}</span>
     </div>`;
   }
@@ -1755,6 +1771,7 @@
         <div class="item-main">
           <div class="item-title">${escapeHtml(record.type)} / ${escapeHtml(memoryCategory(record))}</div>
           <div class="item-sub">${escapeHtml(record.target)} · ${escapeHtml(record.text)} · ${escapeHtml(formatShortDate(record.date))} · ${escapeHtml(record.time)}</div>
+          ${record.media ? mediaPreview(record, 'thumb') : ''}
           <div class="record-meta">
             <span>${escapeHtml(record.source || '記録')}</span>
             ${record.stepId ? `<span>${escapeHtml(dayStepById(projectById(record.projectId), record.stepId)?.title || record.stepId)}</span>` : ''}
@@ -1831,7 +1848,7 @@
         <p>一本線、下ナビ、複数プロジェクト、記録整理、復旧、次回改善のつながりをまとめて確認します。</p>
       </section>
       <main class="stack">
-        ${card('総合状態', 'Restart-11', `
+        ${card('総合状態', 'Restart-14', `
           <div class="metric-row">
             <div class="metric"><small>確認</small><strong>${okCount}/${checks.length}</strong></div>
             <div class="metric"><small>流れ</small><strong>${summary.projects}件</strong></div>
@@ -1922,6 +1939,87 @@
     app.innerHTML = layout(body, { subtitle: '控えと復旧をまとめて守る' });
   }
 
+
+  function renderRecordDetail() {
+    const found = findRecordById(state.recordDetailId);
+    const record = found?.record;
+    if (!record) {
+      state.screen = 'inbox';
+      state.recordDetailId = '';
+      renderInbox();
+      return;
+    }
+    const project = projectById(record.projectId);
+    const body = `
+      <section class="hero inbox-hero">
+        <h1>記録詳細</h1>
+        <p>実データ、保存先候補、記録日、復旧状態をここで確認します。勝手に確定・削除はしません。</p>
+      </section>
+      <main class="stack">
+        ${card('記録内容', record.type || '記録', `
+          <div class="metric-row">
+            <div class="metric"><small>保存先候補</small><strong>${escapeHtml(projectLabel(project))}</strong></div>
+            <div class="metric"><small>状態</small><strong>${escapeHtml(record.status || found.area)}</strong></div>
+            <div class="metric"><small>記録日</small><strong>${escapeHtml(record.date || '')}</strong></div>
+            <div class="metric"><small>種類</small><strong>${escapeHtml(record.type || '')}</strong></div>
+          </div>
+          ${record.media ? mediaPreview(record, 'large') : '<div class="empty">添付データはありません。</div>'}
+          <p class="card-text">${escapeHtml(record.text || '')}</p>
+          <div class="record-meta">
+            <span>${escapeHtml(record.source || '記録')}</span>
+            ${record.stepId ? `<span>工程:${escapeHtml(dayStepById(project, record.stepId)?.title || record.stepId)}</span>` : ''}
+            <span>${escapeHtml(mediaSummary(record))}</span>
+          </div>
+        `, `${found.area === 'inbox' && record.status !== '削除候補' ? btn('思い出へ確定', 'confirmRecord', { id: record.id }, 'primary') : ''}${btn('修正', 'editRecord', { id: record.id }, 'ghost')}${btn('未確認箱へ', 'go', { screen: 'inbox', tab: '思い出' }, 'ghost')}${btn('思い出へ', 'go', { screen: 'memories', tab: '思い出' }, 'ghost')}`)}
+
+        ${card('保存先候補', '必要なら変更', `
+          <div class="project-target-list">
+            ${state.projects.map((candidate) => `<button class="target-chip ${candidate.id === record.projectId ? 'active' : ''}" data-action="setRecordTarget" data-id="${escapeHtml(record.id)}" data-project-id="${escapeHtml(candidate.id)}"><strong>${escapeHtml(projectLabel(candidate))}</strong><small>${escapeHtml(candidate.title)}</small></button>`).join('')}
+          </div>
+        `)}
+      </main>`;
+    app.innerHTML = layout(body, { subtitle: '写真・声・GPSを記録単位で確認' });
+  }
+
+  function findRecordById(id) {
+    const inbox = state.inbox.find((record) => record.id === id);
+    if (inbox) return { record: inbox, area: 'inbox' };
+    const memory = state.memories.find((record) => record.id === id);
+    if (memory) return { record: memory, area: 'memories' };
+    const deleted = state.deletedRecords.find((record) => record.id === id);
+    if (deleted) return { record: deleted, area: 'deleted' };
+    return null;
+  }
+
+  function mediaSummary(record) {
+    const media = record?.media;
+    if (!media) return '添付なし';
+    if (media.kind === 'gps') return media.coords ? `${Number(media.coords.latitude).toFixed(5)}, ${Number(media.coords.longitude).toFixed(5)}` : 'GPS';
+    if (media.durationMs) return `${media.kindLabel || media.kind} ${Math.round(media.durationMs / 1000)}秒`;
+    const size = media.size ? `${Math.ceil(media.size / 1024)}KB` : '';
+    return [media.kindLabel || media.kind, media.name, size].filter(Boolean).join(' / ');
+  }
+
+  function mediaPreview(record, mode = 'thumb') {
+    const media = record?.media;
+    if (!media) return '';
+    const cls = mode === 'large' ? 'media-preview large' : 'media-preview';
+    if (media.kind === 'image' && media.dataUrl) return `<div class="${cls}"><img src="${escapeAttr(media.dataUrl)}" alt="${escapeAttr(media.name || '写真')}" loading="lazy"></div>`;
+    if (media.kind === 'video' && media.dataUrl) return `<div class="${cls}"><video src="${escapeAttr(media.dataUrl)}" controls playsinline></video></div>`;
+    if (media.kind === 'audio' && media.dataUrl) return `<div class="${cls}"><audio src="${escapeAttr(media.dataUrl)}" controls></audio></div>`;
+    if (media.kind === 'gps' && media.coords) {
+      const lat = Number(media.coords.latitude);
+      const lng = Number(media.coords.longitude);
+      const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+      return `<div class="${cls} gps-preview"><strong>📍 GPS</strong><span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span><a href="${escapeAttr(mapUrl)}" target="_blank" rel="noopener">地図で見る</a></div>`;
+    }
+    return `<div class="${cls} file-preview"><strong>${escapeHtml(media.kindLabel || '添付')}</strong><span>${escapeHtml(media.name || '')}</span><small>${escapeHtml(media.note || '端末内ファイルの記録を残しました')}</small></div>`;
+  }
+
+  function escapeAttr(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   function renderInbox() {
     const records = visibleInboxRecords();
     const activeCount = state.inbox.filter((record) => record.status !== '削除候補').length;
@@ -1969,6 +2067,7 @@
         <div class="item-main">
           <div class="item-title">${escapeHtml(record.type)} / 候補：${escapeHtml(projectLabel(project))}</div>
           <div class="item-sub">${escapeHtml(record.target)} · ${escapeHtml(record.text)} · ${escapeHtml(record.date || '')} · ${escapeHtml(recordAge(record) || record.time)}</div>
+          ${record.media ? mediaPreview(record, 'thumb') : ''}
           <div class="record-meta">
             <span>${escapeHtml(record.source || '記録')}</span>
             ${record.stepId ? `<span>工程:${escapeHtml(dayStepById(project, record.stepId)?.title || record.stepId)}</span>` : ''}
@@ -1984,6 +2083,7 @@
             ? `<button class="btn primary" data-action="restoreRecord" data-id="${escapeHtml(record.id)}">元に戻す</button>
                <button class="btn danger" data-action="permanentDeleteRecord" data-id="${escapeHtml(record.id)}">完全に削除</button>`
             : `<button class="btn primary" data-action="confirmRecord" data-id="${escapeHtml(record.id)}">思い出へ確定</button>
+               <button class="btn ghost" data-action="openRecordDetail" data-id="${escapeHtml(record.id)}">詳細</button>
                <button class="btn ghost" data-action="editRecord" data-id="${escapeHtml(record.id)}">修正</button>
                <button class="btn ghost" data-action="deleteCandidate" data-id="${escapeHtml(record.id)}">削除候補</button>`}
         </div>
@@ -1991,10 +2091,10 @@
     `;
   }
 
-  function addRecord(type, projectId, target, text, stepId = '') {
+  function createRecord(type, projectId, target, text, stepId = '', extras = {}) {
     const project = projectById(projectId) || activeProject();
     const createdAt = new Date().toISOString();
-    const record = {
+    return {
       id: makeId('rec'),
       projectId: project.id,
       stepId,
@@ -2009,12 +2109,151 @@
       protect: true,
       source: stepId ? '当日運転席' : (state.screen === 'capture' ? '＋記録' : '画面内記録'),
       candidateHistory: [{ projectId: project.id, label: projectLabel(project), at: createdAt }],
-      note: '保存先は候補です。確定はムーが行います。'
+      note: '保存先は候補です。確定はムーが行います。',
+      ...extras
     };
+  }
+
+  function addRecord(type, projectId, target, text, stepId = '', extras = {}) {
+    const record = createRecord(type, projectId, target, text, stepId, extras);
     state.inbox.unshift(record);
     state.captureDate = '';
     saveState();
     showToast('未確認箱に残しました');
+    if (state.screen === 'capture' || state.screen === 'inbox' || state.screen === 'recordDetail') render();
+  }
+
+  function addMediaRecord(kind, projectId, media, text = '') {
+    const project = projectById(projectId) || activeProject();
+    const type = kind === 'image' ? '写真' : kind === 'video' ? '動画' : kind === 'audio' ? '声' : kind === 'gps' ? 'GPS' : 'メモ';
+    const label = { image: '写真', video: '動画', audio: '声メモ', gps: 'GPS' }[kind] || '記録';
+    addRecord(type, project.id, projectLabel(project), text || `${label}を残しました`, '', { media: { kind, kindLabel: label, ...media } });
+  }
+
+  function handlePickedFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const kind = input.dataset.mediaKind === 'video' ? 'video' : 'image';
+    const project = activeProject();
+    const baseMedia = { name: file.name, size: file.size, mime: file.type, capturedAt: new Date().toISOString() };
+    const tooLarge = file.size > MAX_EMBED_BYTES;
+    if (tooLarge && kind === 'video') {
+      addMediaRecord(kind, project.id, { ...baseMedia, note: '動画は容量が大きいため、ファイル名とメモだけ保存しました。必要な動画は端末側に残してください。' }, `${kind === 'video' ? '動画' : '写真'}：${file.name}`);
+      input.value = '';
+      return;
+    }
+    if (tooLarge && kind === 'image') {
+      readImageAsCompressedDataUrl(file).then((dataUrl) => {
+        addMediaRecord(kind, project.id, { ...baseMedia, dataUrl, compressed: true, note: '画像を圧縮して保存しました。' }, `写真：${file.name}`);
+        input.value = '';
+      }).catch(() => {
+        addMediaRecord(kind, project.id, { ...baseMedia, note: '画像が大きいため、ファイル名だけ保存しました。' }, `写真：${file.name}`);
+        input.value = '';
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      addMediaRecord(kind, project.id, { ...baseMedia, dataUrl: reader.result }, `${kind === 'video' ? '動画' : '写真'}：${file.name}`);
+      input.value = '';
+    };
+    reader.onerror = () => {
+      addMediaRecord(kind, project.id, { ...baseMedia, note: '読み込みに失敗したため、ファイル名だけ保存しました。' }, `${kind === 'video' ? '動画' : '写真'}：${file.name}`);
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function readImageAsCompressedDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          const max = 1400;
+          const scale = Math.min(1, max / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        image.onerror = reject;
+        image.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function startVoiceMemo(projectId) {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      const text = promptText('声メモの内容', '声メモ：');
+      if (text !== null) addRecord('声', projectId || state.activeProjectId, projectLabel(projectById(projectId) || activeProject()), text || '声メモを残しました', '', { media: { kind: 'audio', kindLabel: '声メモ', note: 'この端末では録音できないため、文字メモで残しました。' } });
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceChunks = [];
+      voiceRecorder = new MediaRecorder(stream);
+      voiceStartedAt = Date.now();
+      voiceRecorder.ondataavailable = (event) => { if (event.data && event.data.size) voiceChunks.push(event.data); };
+      voiceRecorder.onstop = () => {
+        const blob = new Blob(voiceChunks, { type: voiceRecorder?.mimeType || 'audio/webm' });
+        const durationMs = Date.now() - voiceStartedAt;
+        const reader = new FileReader();
+        reader.onload = () => {
+          addMediaRecord('audio', projectId || state.activeProjectId, { name: `voice-${Date.now()}.webm`, size: blob.size, mime: blob.type, dataUrl: reader.result, durationMs }, `声メモ ${Math.round(durationMs / 1000)}秒`);
+          state.voiceRecording = false;
+          saveState();
+          renderCapture();
+        };
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach((track) => track.stop());
+        voiceRecorder = null;
+      };
+      voiceRecorder.start();
+      state.voiceRecording = true;
+      saveState();
+      renderCapture();
+      showToast('録音を開始しました');
+    } catch (error) {
+      showToast('録音を開始できませんでした');
+    }
+  }
+
+  function stopVoiceMemo() {
+    if (voiceRecorder && voiceRecorder.state !== 'inactive') {
+      voiceRecorder.stop();
+      showToast('録音を保存します');
+    } else {
+      state.voiceRecording = false;
+      saveState();
+      renderCapture();
+    }
+  }
+
+  function getCurrentGPS(projectId) {
+    if (!navigator.geolocation) {
+      const text = promptText('GPSメモ', '現在地を取得できないため手入力');
+      if (text !== null) addRecord('GPS', projectId || state.activeProjectId, projectLabel(projectById(projectId) || activeProject()), text || 'GPSメモ', '', { media: { kind: 'gps', kindLabel: 'GPS', note: 'この端末では現在地を取得できませんでした。' } });
+      return;
+    }
+    showToast('現在地を取得しています');
+    navigator.geolocation.getCurrentPosition((position) => {
+      const coords = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        altitude: position.coords.altitude,
+        heading: position.coords.heading,
+        speed: position.coords.speed
+      };
+      addMediaRecord('gps', projectId || state.activeProjectId, { coords, capturedAt: new Date().toISOString() }, `GPS：精度 約${Math.round(position.coords.accuracy || 0)}m`);
+    }, () => {
+      showToast('現在地を取得できませんでした');
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
   }
 
   function visibleInboxRecords() {
@@ -2082,6 +2321,7 @@
       case 'homeWalk': renderWalk('home'); break;
       case 'campWalk': renderWalk('camp'); break;
       case 'capture': renderCapture(); break;
+      case 'recordDetail': renderRecordDetail(); break;
       case 'memories': renderMemories(); break;
       case 'improvements': renderImprovements(); break;
       case 'inbox': renderInbox(); break;
@@ -2090,6 +2330,11 @@
       default: renderHome(); break;
     }
   }
+
+  app.addEventListener('change', (event) => {
+    const input = event.target.closest('input[type=\"file\"][data-media-kind]');
+    if (input) handlePickedFile(input);
+  });
 
   app.addEventListener('click', (event) => {
     const button = event.target.closest('[data-action]');
@@ -2560,6 +2805,38 @@
       saveState();
       renderWeatherRoute();
       showToast('ルート確認を更新しました');
+      return;
+    }
+
+
+    if (action === 'pickMedia') {
+      const kind = button.dataset.kind;
+      const inputId = kind === 'video' ? 'videoInput' : kind === 'camera' ? 'cameraInput' : 'photoInput';
+      document.getElementById(inputId)?.click();
+      return;
+    }
+
+    if (action === 'startVoice') {
+      startVoiceMemo(button.dataset.projectId || state.activeProjectId);
+      return;
+    }
+
+    if (action === 'stopVoice') {
+      stopVoiceMemo();
+      return;
+    }
+
+    if (action === 'getGPS') {
+      getCurrentGPS(button.dataset.projectId || state.activeProjectId);
+      return;
+    }
+
+    if (action === 'openRecordDetail') {
+      state.recordDetailId = button.dataset.id || '';
+      state.screen = 'recordDetail';
+      state.activeTab = '思い出';
+      saveState();
+      renderRecordDetail();
       return;
     }
 

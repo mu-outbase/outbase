@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-13-data-operation-lock';
+const CACHE_NAME = 'outbase-restart-14-record-pack-lock';
 const APP_SHELL = [
   './',
-  './index.html?v=restart-13-data-operation-lock',
-  './style.css?v=restart-13-data-operation-lock',
-  './src/app.js?v=restart-13-data-operation-lock',
-  './manifest.json?v=restart-13-data-operation-lock'
+  './index.html?v=restart-14-record-pack-lock',
+  './style.css?v=restart-14-record-pack-lock',
+  './src/app.js?v=restart-14-record-pack-lock',
+  './manifest.json?v=restart-14-record-pack-lock'
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-13-data-operation-lock')))
+    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html?v=restart-14-record-pack-lock')))
   );
 });
