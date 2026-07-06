@@ -1,8 +1,8 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "description": "今日は何する？から、準備、当日、記録、思い出、次回改善を一本でつなぐアプリ",
-  "start_url": "./?v=restart-14-record-pack-lock",
+  "description": "今日は何する？から、記録、思い出、次回改善、外部連携準備まで一本でつなぐアプリ",
+  "start_url": "./?v=restart-15-integration-prep-lock",
   "display": "standalone",
   "background_color": "#f3eee3",
   "theme_color": "#151b18",

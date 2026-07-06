@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'outbase_restart_14_state';
-  const LEGACY_STORAGE_KEYS = ['outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
+  const STORAGE_KEY = 'outbase_restart_15_state';
+  const LEGACY_STORAGE_KEYS = ['outbase_restart_14_state', 'outbase_restart_13_state', 'outbase_restart_12_state', 'outbase_restart_11_state', 'outbase_restart_10_state', 'outbase_restart_9_state', 'outbase_restart_8_state', 'outbase_restart_7_state', 'outbase_restart_6_state', 'outbase_restart_5_state', 'outbase_restart_4_state', 'outbase_restart_3_state', 'outbase_restart_2_state', 'outbase_restart_1_state'];
   const app = document.getElementById('app');
   const MAX_EMBED_BYTES = 1800000;
   let voiceRecorder = null;
@@ -78,8 +78,77 @@
     { id: 'return', name: '帰路', note: '撤収後に無理なく帰れる道を確認', done: false }
   ];
 
+
+  const integrationBase = [
+    {
+      id: 'photos',
+      name: 'Google Photos',
+      label: '写真の本保存',
+      status: '準備中',
+      summary: '端末内の写真・動画をOUTBASEの記録と紐づけ、共有アルバムへ逃がす前提を整理します。',
+      steps: [
+        { id: 'scope', text: '共有アルバム / 端末保存 / OUTBASE控えの役割を分ける', done: false },
+        { id: 'link', text: '記録ID・projectId・日付を写真メモに残せる形を維持', done: true },
+        { id: 'manual', text: '本接続前は手動アップロードと控えコピーで運用', done: false }
+      ],
+      note: '実API連携はまだしません。まず保存方針と紐づけ項目を固定します。'
+    },
+    {
+      id: 'weather',
+      name: '天気API',
+      label: '雨・風・気温',
+      status: '準備中',
+      summary: 'キャンプ予定・当日運転席・コタ対策へ天気情報を反映する入口を整えます。',
+      steps: [
+        { id: 'fields', text: '気温 / 降水 / 風速 / 標高 / 警戒メモを受け取る枠を用意', done: true },
+        { id: 'provider', text: '参照元候補を整理して本接続の判断を残す', done: false },
+        { id: 'reflect', text: '準備の天気・ルート確認へ反映する', done: false }
+      ],
+      note: '本接続前は手入力メモとして扱います。'
+    },
+    {
+      id: 'calendar',
+      name: 'Googleカレンダー',
+      label: '予定同期',
+      status: '準備中',
+      summary: 'OUTBASE内カレンダーを主軸に、将来Googleカレンダーへ出し入れできる構造を保ちます。',
+      steps: [
+        { id: 'internal', text: 'OUTBASE内の予定カレンダーを主として維持', done: true },
+        { id: 'mapping', text: 'projectId / startDate / endDate / place / party の対応を固定', done: true },
+        { id: 'sync', text: '外部同期は本番前に手動確認を挟む', done: false }
+      ],
+      note: '勝手に予定を作成・削除しない方針を維持します。'
+    },
+    {
+      id: 'mail',
+      name: '予約メール',
+      label: '予約情報取込',
+      status: '準備中',
+      summary: '予約メールやメモから、キャンプ場名・日程・チェックインを予定にできる準備をします。',
+      steps: [
+        { id: 'items', text: '取り込み対象項目を決める', done: true },
+        { id: 'manual', text: '本接続前はコピー貼り付けで予定作成に反映', done: false },
+        { id: 'confirm', text: 'AIや自動処理が勝手に確定しない確認画面を挟む', done: true }
+      ],
+      note: 'メール実連携はまだせず、まず確認型の設計だけ固定します。'
+    },
+    {
+      id: 'backup',
+      name: 'バックアップ',
+      label: 'データ保護',
+      status: '一部運用中',
+      summary: '控えコピー・読み込み・一時控えを外部連携前の安全網として使います。',
+      steps: [
+        { id: 'copy', text: 'OUTBASE控えコピー', done: true },
+        { id: 'import', text: '控え貼り付け読み込み', done: true },
+        { id: 'export', text: '将来のクラウド保存方式を選定', done: false }
+      ],
+      note: '外部連携を入れる前に、必ず手元控えを作れる状態を保ちます。'
+    }
+  ];
+
   const defaultState = {
-    version: 'restart-14',
+    version: 'restart-15',
     savedAt: '',
     screen: 'home',
     activeTab: '予定',
@@ -175,7 +244,10 @@
     calendarItems: [
       { id: 'cal-camp-akagi-start', projectId: 'camp-akagi', date: '2026-06-26', label: 'キャンプ出発', kind: 'camp' },
       { id: 'cal-camp-akagi-end', projectId: 'camp-akagi', date: '2026-06-27', label: '撤収・帰宅', kind: 'camp' }
-    ]
+    ],
+    integrations: clone(integrationBase),
+    syncDrafts: [],
+    integrationNotes: []
   };
 
   let state = loadState();
@@ -199,7 +271,7 @@
       }
       if (!raw) return cloneDefaultState();
       const merged = mergeState(cloneDefaultState(), JSON.parse(raw));
-      merged.version = 'restart-14';
+      merged.version = 'restart-15';
       return merged;
     } catch (error) {
       return cloneDefaultState();
@@ -232,6 +304,9 @@
     target.memories = Array.isArray(target.memories) ? target.memories : [];
     target.improvements = Array.isArray(target.improvements) ? target.improvements : [];
     target.calendarItems = Array.isArray(target.calendarItems) ? target.calendarItems : [];
+    target.integrations = normalizeIntegrations(target.integrations);
+    target.syncDrafts = Array.isArray(target.syncDrafts) ? target.syncDrafts : [];
+    target.integrationNotes = Array.isArray(target.integrationNotes) ? target.integrationNotes : [];
     const fallbackMonth = target.projects.find((project) => project.startDate)?.startDate?.slice(0, 7) || new Date().toISOString().slice(0, 7);
     target.calendarMonth = /^\d{4}-\d{2}$/.test(target.calendarMonth || '') ? target.calendarMonth : fallbackMonth;
     target.selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(target.selectedDate || '') ? target.selectedDate : `${target.calendarMonth}-01`;
@@ -262,6 +337,49 @@
       }
     });
     repairLinkedData(target);
+  }
+
+
+  function normalizeIntegrations(value) {
+    const current = Array.isArray(value) ? value : [];
+    return integrationBase.map((base) => {
+      const saved = current.find((item) => item.id === base.id) || {};
+      const steps = base.steps.map((step) => {
+        const savedStep = Array.isArray(saved.steps) ? saved.steps.find((entry) => entry.id === step.id) : null;
+        return { ...step, done: savedStep ? Boolean(savedStep.done) : Boolean(step.done) };
+      });
+      return { ...base, ...saved, steps };
+    });
+  }
+
+  function integrationById(id) {
+    return state.integrations.find((item) => item.id === id) || state.integrations[0];
+  }
+
+  function integrationProgress(item) {
+    if (!item || !Array.isArray(item.steps) || !item.steps.length) return 0;
+    return Math.round((item.steps.filter((step) => step.done).length / item.steps.length) * 100);
+  }
+
+  function externalReadyCount() {
+    return state.integrations.filter((item) => integrationProgress(item) >= 60).length;
+  }
+
+  function externalPlanText() {
+    const lines = ['OUTBASE 外部連携準備メモ', '', `作成日：${todayISO()}`, ''];
+    state.integrations.forEach((item) => {
+      lines.push(`■${item.name} / ${item.label}`);
+      lines.push(`状態：${item.status} / 準備率：${integrationProgress(item)}%`);
+      lines.push(item.summary);
+      item.steps.forEach((step) => lines.push(`${step.done ? '✓' : '□'} ${step.text}`));
+      if (item.note) lines.push(`メモ：${item.note}`);
+      lines.push('');
+    });
+    if (state.integrationNotes.length) {
+      lines.push('■連携メモ');
+      state.integrationNotes.forEach((note) => lines.push(`・${note.text}（${note.date || ''}）`));
+    }
+    return lines.join('\n');
   }
 
   function repairLinkedData(target) {
@@ -527,7 +645,9 @@
       deleteCandidates: state.inbox.filter((record) => record.status === '削除候補').length,
       memories: state.memories.length,
       improvements: state.improvements.length,
-      backups: state.deletedRecords.length
+      backups: state.deletedRecords.length,
+      integrations: state.integrations.length,
+      externalReady: externalReadyCount()
     };
   }
 
@@ -563,6 +683,7 @@
       { label: '未確認箱', detail: `${summary.inbox}件を勝手に確定しない`, ok: Array.isArray(state.inbox) },
       { label: '復旧控え', detail: `${summary.backups}件を戻せる`, ok: hasRecovery },
       { label: '控えと読み込み', detail: 'スマホ更新前に控えを作り、貼り付けて戻せる', ok: true },
+      { label: '外部連携準備', detail: `${summary.externalReady}/${summary.integrations}件が準備ライン`, ok: summary.integrations >= 5 },
       { label: '次回改善', detail: `${summary.improvements}件を準備へ戻す`, ok: hasImprovements }
     ];
   }
@@ -570,7 +691,7 @@
   function finalAuditSummaryText() {
     const summary = routeSummary();
     const lines = [
-      'OUTBASE Restart-14 実記録パック確認',
+      'OUTBASE Restart-15 外部連携準備パック確認',
       '',
       `プロジェクト：${summary.projects}件`,
       `日付紐づけ：${summary.calendar}件`,
@@ -579,6 +700,7 @@
       `思い出：${summary.memories}件`,
       `次回改善：${summary.improvements}件`,
       `復旧控え：${summary.backups}件`,
+      `外部連携準備：${summary.externalReady}/${summary.integrations}件`,
       '',
       '確認項目',
       ...finalAuditItems().map((item) => `・${item.ok ? 'OK' : '要確認'} ${item.label}：${item.detail}`),
@@ -994,6 +1116,16 @@
             <div class="metric"><small>保存</small><strong>${state.savedAt ? 'あり' : 'これから'}</strong></div>
           </div>
         `, `${btn('控えを開く', 'go', { screen: 'dataGuard', tab: '思い出' }, 'primary')}${btn('控えをコピー', 'copyBackup', {}, 'ghost')}`)}
+
+
+        ${card('外部連携準備', '本接続の前に整える', `
+          <p class="card-text">Google Photos、天気、Googleカレンダー、予約メール、バックアップの接続準備をまとめます。まだ勝手に外部送信しません。</p>
+          <div class="metric-row">
+            <div class="metric"><small>連携枠</small><strong>${state.integrations.length}件</strong></div>
+            <div class="metric"><small>準備ライン</small><strong>${externalReadyCount()}件</strong></div>
+            <div class="metric"><small>控え</small><strong>${state.savedAt ? 'あり' : 'これから'}</strong></div>
+          </div>
+        `, `${btn('連携準備へ', 'go', { screen: 'externalConnect', tab: '探す' }, 'primary')}${btn('連携メモをコピー', 'copyExternalPlan', {}, 'ghost')}`)}
 
         ${card('予定を管理する', '追加 / 編集 / 切替', `
           <p class="card-text">次のキャンプ、過去キャンプ、散歩、探す流れをここで作ります。カレンダーからも予定にできます。</p>
@@ -1940,6 +2072,44 @@
   }
 
 
+
+  function renderExternalConnect() {
+    const body = `
+      <section class="hero">
+        <h1>外部連携準備</h1>
+        <p>本接続の前に、何を外へ出すか、何をOUTBASE内で守るかを整理します。勝手に同期・確定・削除はしません。</p>
+      </section>
+      <main class="stack">
+        ${card('連携準備の全体像', 'まだ本接続しない', `
+          <div class="metric-row">
+            <div class="metric"><small>連携枠</small><strong>${state.integrations.length}件</strong></div>
+            <div class="metric"><small>準備ライン</small><strong>${externalReadyCount()}件</strong></div>
+            <div class="metric"><small>未整理</small><strong>${state.inbox.length}件</strong></div>
+            <div class="metric"><small>控え</small><strong>${state.savedAt ? 'あり' : 'これから'}</strong></div>
+          </div>
+          <p class="note">写真・天気・予定・予約情報は、まずOUTBASE内のIDと日付に紐づけます。外部へ送る前に必ずムーが確認します。</p>
+        `, `${btn('控えをコピー', 'copyBackup', {}, 'primary')}${btn('計画をコピー', 'copyExternalPlan', {}, 'ghost')}${btn('データを守る', 'go', { screen: 'dataGuard', tab: '思い出' }, 'ghost')}`)}
+
+        ${state.integrations.map((item) => card(item.name, item.label, `
+          <p class="card-text">${escapeHtml(item.summary)}</p>
+          <div class="metric-row compact-metrics">
+            <div class="metric"><small>状態</small><strong>${escapeHtml(item.status)}</strong></div>
+            <div class="metric"><small>準備率</small><strong>${integrationProgress(item)}%</strong></div>
+          </div>
+          <div class="progress"><span style="width:${integrationProgress(item)}%"></span></div>
+          <div class="check-list">
+            ${item.steps.map((step) => `<button class="check-row ${step.done ? 'done' : ''}" data-action="toggleIntegrationStep" data-integration-id="${escapeHtml(item.id)}" data-step-id="${escapeHtml(step.id)}"><span>${step.done ? '✓' : '□'}</span><strong>${escapeHtml(step.text)}</strong></button>`).join('')}
+          </div>
+          <p class="note">${escapeHtml(item.note || '')}</p>
+        `, `${btn('状態を変更', 'changeIntegrationStatus', { integrationId: item.id }, 'ghost')}${btn('メモを追加', 'addIntegrationNote', { integrationId: item.id }, 'ghost')}`)).join('')}
+
+        ${card('連携メモ', '外に出す前の確認', `
+          ${state.integrationNotes.length ? `<div class="list">${state.integrationNotes.map((note) => `<div class="item"><div class="item-main"><div class="item-title">${escapeHtml(note.title || '連携メモ')}</div><div class="item-sub">${escapeHtml(note.text)} · ${escapeHtml(note.date || '')}</div></div></div>`).join('')}</div>` : '<div class="empty">連携前に気づいたことを残します。</div>'}
+        `, `${btn('メモを追加', 'addIntegrationNote', {}, 'primary')}${btn('計画をコピー', 'copyExternalPlan', {}, 'ghost')}`)}
+      </main>`;
+    app.innerHTML = layout(body, { subtitle: '外部連携は確認してから' });
+  }
+
   function renderRecordDetail() {
     const found = findRecordById(state.recordDetailId);
     const record = found?.record;
@@ -2327,6 +2497,7 @@
       case 'inbox': renderInbox(); break;
       case 'releaseAudit': renderReleaseAudit(); break;
       case 'dataGuard': renderDataGuard(); break;
+      case 'externalConnect': renderExternalConnect(); break;
       default: renderHome(); break;
     }
   }

@@ -1427,3 +1427,7 @@ body {
 }
 .gps-preview a { color: var(--accent); font-weight: 900; }
 .capture-tile:active { transform: translateY(1px) scale(0.99); }
+
+
+/* Restart-15 external integration prep */
+.check-list{display:grid;gap:10px;margin-top:14px}.check-row{width:100%;border:1px solid rgba(28,47,39,.14);background:rgba(255,255,255,.72);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;text-align:left;color:var(--ink);font:inherit}.check-row span{font-weight:900;color:var(--olive)}.check-row.done{background:rgba(35,79,60,.10);border-color:rgba(35,79,60,.24)}.compact-metrics{margin-bottom:10px}
