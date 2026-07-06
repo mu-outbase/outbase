@@ -1,0 +1,38 @@
+name: OUTBASE Restart-33 Unpack
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "OUTBASE_Restart-33_キャンププラン詳細LOCK_完成版.zip"
+      - ".github/workflows/unpack-restart-33.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack OUTBASE Restart-33 ZIP
+        run: |
+          unzip -o "OUTBASE_Restart-33_キャンププラン詳細LOCK_完成版.zip" -d .
+
+      - name: Remove ZIP after unpack
+        run: |
+          rm -f "OUTBASE_Restart-33_キャンププラン詳細LOCK_完成版.zip"
+
+      - name: Commit unpacked files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add index.html style.css src/app.js manifest.json service-worker.js
+          git add -u
+          git commit -m "Apply OUTBASE Restart-33 camp plan files" || echo "No changes to commit"
+          git push
