@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-42-mvp-line-lock';
+const CACHE_NAME = 'outbase-restart-43-record-first-lock';
 const ASSETS = [
   './',
-  './index.html?v=restart-42-mvp-line-lock',
-  './style.css?v=restart-42-mvp-line-lock',
-  './src/app.js?v=restart-42-mvp-line-lock',
-  './manifest.json?v=restart-42-mvp-line-lock'
+  './index.html?v=restart-43-record-first-lock',
+  './style.css?v=restart-43-record-first-lock',
+  './src/app.js?v=restart-43-record-first-lock',
+  './manifest.json?v=restart-43-record-first-lock'
 ];
 
 self.addEventListener('install', (event) => {
