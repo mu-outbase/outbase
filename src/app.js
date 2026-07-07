@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-connectpro-20260707';
+  const VERSION = 'outbase-genius-ui-startpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-connectpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-startpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', drawer:null, toast:null, importMode:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -98,7 +98,24 @@
 
   let state=load();
   let voiceRecorder=null, voiceChunks=[], voiceStartedAt=0;
-  function load(){try{const raw=localStorage.getItem(KEY); if(raw)return {...seed(),...JSON.parse(raw)}}catch(e){} return seed()}
+  function migrateState(s){
+    const base=seed();
+    s={...base,...(s||{})};
+    s.settings={...base.settings,...(s.settings||{})};
+    s.walk={...base.walk,...(s.walk||{})};
+    s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
+    s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
+    s.weatherPlan.forecast=s.weatherPlan.forecast||[];
+    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
+    if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
+    if(!s.boxes.length)s.boxes=base.boxes;
+    const fallbackBox=s.boxes[0]?.id||'';
+    s.gear=s.gear.map(g=>({...g,id:g.id||uid('gear'),qty:g.qty||1,boxId:g.boxId||fallbackBox,status:g.status||'home'}));
+    s.events=s.events.map(e=>({...e,id:e.id||uid('evt'),end:e.end||e.start||'',repeat:e.repeat||'none'}));
+    s.records=s.records.map(r=>/うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`)?{...r,private:true}:r);
+    return s;
+  }
+  function load(){try{const raw=localStorage.getItem(KEY); if(raw)return migrateState(JSON.parse(raw))}catch(e){} return migrateState(seed())}
   function save(){localStorage.setItem(KEY,JSON.stringify(state))}
   function toast(msg){state.toast=msg;render();setTimeout(()=>{if(state.toast===msg){state.toast=null;render()}},1600)}
   function current(){return state.events.find(e=>e.id===state.currentPlanId)||state.events.find(e=>e.type==='camp')||state.events[0]}
@@ -238,6 +255,28 @@
   }
 
 
+
+  function starterProgress(){
+    const st=prepStats(), gs=gearStats(), ps=petPrepStats(), ms=memoryStats();
+    const items=[
+      ['予定',state.events.some(e=>e.start)],
+      ['準備',st.score>=40],
+      ['ギア',gs.total>0 && state.boxes.length>0],
+      ['ペット',ps.all.length>0],
+      ['記録',publicRecords().length>0],
+      ['保全',ms.reviews>0 || state.notes.length>0]
+    ];
+    const done=items.filter(x=>x[1]).length;
+    return {items,done,score:Math.round(done/items.length*100)};
+  }
+  function starterPanelHtml(){
+    const sp=starterProgress();
+    return `<section class="section"><div class="startPanel"><div class="startHead"><span><b>はじめる</b><small>迷ったらテンプレートから作る。細かい入力は後でいい。</small></span><span class="pill ${sp.score>=70?'dark':'wood'}">${sp.score}%</span></div><div class="startSteps">${sp.items.slice(0,4).map(x=>`<div class="startStep"><b>${x[1]?'✓':'□'} ${x[0]}</b><span>${x[1]?'準備済み':'あとでOK'}</span></div>`).join('')}</div><div class="startOps"><button class="primary" data-act="createCampTemplate">次のキャンプ作成</button><button data-act="createWalkTemplate">散歩だけ開始</button><button data-act="freshStart">本番データへ切替</button><button data-act="starterBackup">作業前バックアップ</button></div></div></section>`;
+  }
+  function buildStarterPack(){
+    return `【OUTBASE スターター】\\n主役:${current().title}\\nホーム:${state.settings?.home||'未設定'} / 移動:${state.settings?.drive||'未設定'}\\n次にやる:${prepNextTarget()[1]}\\n監査:${appAudit().score}\\n連携:${connectScore()}\\n\\nテンプレート：キャンプ / 散歩 / 本番データ切替 / バックアップ`;
+  }
+
   function centerItems(){
     const items=[];
     state.events.forEach(e=>items.push({type:'event',id:e.id,icon:'予',title:e.title,sub:`${typeName[e.type]||e.type} / ${e.start?`${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''}`:'日付未設定'} / ${e.place||'場所未設定'}`,text:`${e.memo||''} ${e.place||''}`}));
@@ -308,6 +347,7 @@
     if(!state.boxes.length)issues.push(['BOXなし','ギア収納先がない']);
     if(!state.candidates||!state.candidates.length)warn.push(['候補なし','探す候補を追加']);
     if(connectScore()<60)warn.push(['連携未確認','ICS/CSV/共有/バックアップ']);
+    if(!state.settings?.starterDone && state.settings?.mode==='sample')warn.push(['スターター未完','本番データ切替/テンプレート作成']);
     const dataSize=JSON.stringify(state).length;
     if(dataSize>850000)warn.push(['データ肥大','バックアップ推奨']);
     const score=Math.max(0,100-issues.length*18-warn.length*5);
@@ -366,7 +406,19 @@
       <div class="flowRail">
         ${[['before','予定'],['prep','準備'],['field','現地'],['after','整理']].map(([id,label])=>`<button class="flowStep ${state.stage===id?'active':''}" data-stage="${id}">${label}</button>`).join('')}
       </div>
-      ${planFlowHtml()}
+${starterPanelHtml()}
+
+      <section class="section">
+        <div class="head"><div><h2>テンプレート</h2><p>考えずに型から作る。あとで変更できる。</p></div></div>
+        <div class="templateGrid">
+          <button class="templateCard primary" data-act="createCampTemplate"><b>キャンプ</b><small>予定・準備・天気・ペットをまとめて開始</small></button>
+          <button class="templateCard" data-act="createWalkTemplate"><b>散歩</b><small>通常散歩/キャンプ場散歩をすぐ開始</small></button>
+          <button class="templateCard" data-act="createPaymentTemplate"><b>支払い</b><small>繰り返し予定を作成</small></button>
+          <button class="templateCard" data-act="starterBackup"><b>保全</b><small>バックアップと監査をまとめる</small></button>
+        </div>
+      </section>
+
+            ${planFlowHtml()}
       <div class="commandDock">
         <button class="btn primary" data-act="copyPlanSummary">準備まとめコピー</button>
         <button class="btn" data-act="autoNext">次に進める</button>
@@ -1265,7 +1317,7 @@
     }
 
     if(state.memoryTab==='data'){
-      return `<section class="section">${auditPanelHtml()}</section><section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="versionStrip">VERSION: ${VERSION}<br>保存サイズ: ${Math.round(JSON.stringify(state).length/1024)}KB</div><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
+      return `<section class="section">${auditPanelHtml()}</section><section class="section"><div class="migrationBox"><b>STARTPRO_MIGRATION</b><p>${esc(buildStarterPack())}</p><div class="migrationOps"><button class="primary" data-act="migrateNow">移行補修</button><button data-act="copyStarterPack">スターターコピー</button></div></div></section><section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="versionStrip">VERSION: ${VERSION}<br>保存サイズ: ${Math.round(JSON.stringify(state).length/1024)}KB</div><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
     }
 
     return `<section class="section"><div class="reportPanel"><div class="reportHead"><span><b>自動レビュー</b><small>公開記録・場所・改善だけで作る。非公開体調メモは除外。</small></span><span class="pill dark">生成</span></div><div class="reportBody">${esc(buildTripReport())}</div><div class="memoryOps"><button class="primary" data-act="saveTripReport">保存</button><button data-act="copyTripReport">コピー</button></div></div></section>`;
@@ -1327,6 +1379,14 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='createCampTemplate')return createCampTemplate();
+    if(a==='createWalkTemplate')return createWalkTemplate();
+    if(a==='createPaymentTemplate')return createPaymentTemplate();
+    if(a==='starterBackup')return starterBackup();
+    if(a==='freshStart')return freshStart();
+    if(a==='migrateNow')return migrateNow();
+    if(a==='copyStarterPack')return copyStarterPack();
 
     if(a==='exportIcs')return exportIcs();
     if(a==='openGoogleCalendar')return openGoogleCalendar();
@@ -1747,6 +1807,72 @@
   }
 
 
+
+
+  function createCampTemplate(){
+    const title=prompt('キャンプ名','次のキャンプ')||'次のキャンプ';
+    const start=prompt('開始日 YYYY-MM-DD', state.selectedDate||today())||state.selectedDate||today();
+    const nights=+(prompt('何泊？','1')||1);
+    const ev={id:uid('evt'),title,type:'camp',start,end:addDays(start,nights),repeat:'none',place:prompt('場所','')||'',memo:'テンプレートから作成。犬可/天気/ギア/買い物を確認。',level:4};
+    state.events.push(ev);
+    state.currentPlanId=ev.id;
+    state.selectedDate=start;
+    state.currentMonth=start.slice(0,7);
+    state.stage='prep';
+    state.route='prep';
+    state.prepTab='overview';
+    state.settings.mode='production';
+    state.weather=state.weather.map(w=>({...w,done:false}));
+    state.petPrep=state.petPrep.map(p=>({...p,done:false}));
+    ['コタ用水・フード予備','ゴミ袋','キッチンペーパー'].forEach(name=>{
+      if(!state.shopping.some(s=>s.name===name))state.shopping.push({id:uid('shop'),name,qty:'要確認',group:name.includes('コタ')?'コタ':'消耗品',source:'キャンプテンプレート',done:false});
+    });
+    save();render();toast('キャンプ作成');
+  }
+  function createWalkTemplate(){
+    const title=prompt('散歩名','コタ散歩')||'コタ散歩';
+    const date=prompt('日付 YYYY-MM-DD', state.selectedDate||today())||state.selectedDate||today();
+    const ev={id:uid('evt'),title,type:'walk',start:date,end:date,repeat:'none',place:prompt('場所','')||'',memo:'散歩テンプレート。体調メモは非公開。',level:2};
+    state.events.push(ev);
+    state.currentPlanId=ev.id;
+    state.selectedDate=date;state.currentMonth=date.slice(0,7);
+    state.route='field';state.stage='field';state.walkMode='normal';
+    save();render();toast('散歩作成');
+  }
+  function createPaymentTemplate(){
+    const title=prompt('支払い名','カード支払い確認')||'支払い確認';
+    const date=prompt('初回日 YYYY-MM-DD', state.selectedDate||today())||state.selectedDate||today();
+    const ev={id:uid('evt'),title,type:'payment',start:date,end:date,repeat:'monthly',place:'',memo:'毎月確認。',level:1};
+    state.events.push(ev);
+    state.selectedDate=date;state.currentMonth=date.slice(0,7);
+    state.route='calendar';
+    save();render();toast('支払い作成');
+  }
+  function starterBackup(){
+    backup();
+    setTimeout(()=>copyStarterPack(),300);
+  }
+  function freshStart(){
+    if(!confirm('サンプルを減らして本番用に切り替える？ 先にバックアップ推奨。'))return;
+    const keepPets=state.pets, keepFamily=state.family, keepPetPrep=state.petPrep, keepBoxes=state.boxes, keepGear=state.gear;
+    state=migrateState(seed());
+    state.pets=keepPets;state.family=keepFamily;state.petPrep=keepPetPrep;state.boxes=keepBoxes;state.gear=keepGear;
+    state.events=[];state.shopping=[];state.records=[];state.reviews=[];state.notes=[];state.shares=[];
+    state.currentPlanId='';
+    state.settings.mode='production';
+    state.settings.starterDone=true;
+    save();render();toast('本番データへ切替');
+  }
+  function migrateNow(){
+    state=migrateState(state);
+    repairData();
+    state.settings.starterDone=true;
+    save();render();toast('移行補修完了');
+  }
+  async function copyStarterPack(){
+    const text=buildStarterPack();
+    try{await navigator.clipboard.writeText(text);toast('スターターコピー')}catch(e){prompt('コピー',text)}
+  }
 
   function exportIcs(){
     downloadText(`outbase_events_${today()}.ics`,buildIcs(),'text/calendar');
