@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc3-20260707';
+  const VERSION = 'outbase-finalrc4-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc3-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc4-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1701,12 +1701,35 @@ ${starterPanelHtml()}
     });
   }
 
+
+  function fieldFirstPanelHtml(){
+    const nt=timerNext(), tid=nt[3]||'';
+    return `<section class="fieldFirstPanel">
+      <div class="fieldFirstHead">
+        <span><b>現地で押す場所</b><small>探さない。現在地・写真・音声・タイマーはここに固定。</small></span>
+        <span class="fieldFirstBadge">FIELD</span>
+      </div>
+      <div class="fieldFirstGrid">
+        <button class="fieldFirstBtn primary" data-act="gps"><b>現在地</b><small>GPSを1点保存</small></button>
+        <button class="fieldFirstBtn" data-act="captureMedia" data-kind="photo"><b>写真</b><small>画像を選んで記録</small></button>
+        <button class="fieldFirstBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中。もう一度押す':'その場で録音'}</small></button>
+        <button class="fieldFirstBtn" data-act="${tid?'startTimer':'addTimerTemplate'}" data-id="${tid}" data-kind="meal"><b>タイマー</b><small>${tid?'次のタイマーを開始':'料理タイマーを追加'}</small></button>
+      </div>
+      <div class="fieldFirstMini">
+        <button data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
+        <button data-act="quickRecord" data-kind="memo">メモ</button>
+      </div>
+      <div class="fieldFirstHint">この下は詳細確認用。現地で急いでいる時は、この枠だけ使えばいい。</div>
+    </section>`;
+  }
+
   function field(){
     const fs=fieldStats();
     return shell(`
+      ${fieldFirstPanelHtml()}
       <section class="fieldHero2">
         <div class="fieldHeroTop2">
-          <span><b>${state.walk.active?'記録中':'現地は3秒。'}</b><small>${fieldModeName()}。考えずに押す。公開する記録と非公開の体調メモは分ける。</small></span>
+          <span><b>${state.walk.active?'記録中':'現地詳細'}</b><small>${fieldModeName()}。上の固定ボタンで記録して、この下は確認用。</small></span>
           <span class="liveBadge ${state.walk.active?'on':''}">${state.walk.active?'LIVE':'READY'}</span>
         </div>
         <div class="fieldCommand2">
