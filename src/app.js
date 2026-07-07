@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-startpro-20260707';
+  const VERSION = 'outbase-genius-ui-mealpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-startpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-mealpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', drawer:null, toast:null, importMode:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -346,6 +346,7 @@
     if(leak.length)issues.push(['非公開メモ混入',`${leak.length}件`]);
     if(!state.boxes.length)issues.push(['BOXなし','ギア収納先がない']);
     if(!state.candidates||!state.candidates.length)warn.push(['候補なし','探す候補を追加']);
+    const ms=mealStats(); if(ms.risks)warn.push(['料理注意',`${ms.risks}件 アレルギー/苦手確認`]);
     if(connectScore()<60)warn.push(['連携未確認','ICS/CSV/共有/バックアップ']);
     if(!state.settings?.starterDone && state.settings?.mode==='sample')warn.push(['スターター未完','本番データ切替/テンプレート作成']);
     const dataSize=JSON.stringify(state).length;
@@ -738,6 +739,66 @@ ${starterPanelHtml()}
     if(st.wdone<state.weather.length)return ['weather','天気で判断する',`${state.weather.length-st.wdone}件残り`];
     return ['overview','現地へ行ける','準備はほぼ完了'];
   }
+
+  function mealStats(){
+    const meals=state.meals||[];
+    const ingredients=meals.reduce((n,m)=>n+(m.ingredients?.length||0),0);
+    const gear=meals.reduce((n,m)=>n+(m.gear?.length||0),0);
+    const risks=meals.filter(mealRisk).length;
+    const inShop=meals.reduce((n,m)=>n+(m.ingredients||[]).filter(i=>state.shopping.some(s=>s.name===i)).length,0);
+    const score=Math.round((meals.length*20 + Math.min(30,inShop*4) + Math.min(20,gear*3) + (risks?0:20))/Math.max(1,meals.length?1:2));
+    return {meals:meals.length,ingredients,gear,risks,inShop,score:Math.min(100,score)};
+  }
+  function mealRisk(m){
+    const t=`${m.name||''} ${(m.ingredients||[]).join(' ')} ${m.note||''}`;
+    const ng=['貝','あさり','アサリ','牡蠣','カキ','ホタテ','帆立','しじみ','シジミ','いくら','イクラ','たらこ','明太子','魚卵'];
+    return ng.find(x=>t.includes(x))||'';
+  }
+  function mealNextTarget(){
+    const ms=mealStats();
+    if(!ms.meals)return ['template','献立を1つ入れる','テンプレートから始める'];
+    if(ms.risks)return ['safe','アレルギー確認','貝・魚卵の可能性を確認'];
+    if(ms.inShop<ms.ingredients)return ['shop','材料を買い物へ','不足食材を買い物に送る'];
+    return ['timeline','調理順を確認','現地で迷わない順番にする'];
+  }
+  function mealTimeOrder(slot){
+    const s=String(slot||'').toLowerCase();
+    if(s.includes('朝'))return 10;
+    if(s.includes('昼'))return 20;
+    if(s.includes('夜'))return 30;
+    if(s.includes('つまみ')||s.includes('前菜'))return 25;
+    return 50;
+  }
+  function sortedMeals(){
+    return (state.meals||[]).slice().sort((a,b)=>mealTimeOrder(a.slot)-mealTimeOrder(b.slot));
+  }
+  function mealLine(m){
+    const risk=mealRisk(m);
+    return `・${m.slot||'未定'} ${m.name}${risk?` ⚠${risk}`:''}\\n  材料:${(m.ingredients||[]).join(' / ')||'未設定'}\\n  ギア:${(m.gear||[]).join(' / ')||'未設定'}\\n  メモ:${m.note||''}`;
+  }
+  function buildMealShare(){
+    const ms=mealStats();
+    return `【OUTBASE 献立】\\n${current().title}\\n人数:${state.settings?.servings||'未設定'}\\n注意:${state.settings?.allergy||'未設定'}\\n\\n■メニュー ${ms.meals}品\\n${sortedMeals().map(mealLine).join('\\n\\n')||'未設定'}\\n\\n■買い物未反映\\n${sortedMeals().flatMap(m=>(m.ingredients||[]).filter(i=>!state.shopping.some(s=>s.name===i)).map(i=>`□ ${i}（${m.name}）`)).join('\\n')||'なし'}\\n\\n■現地調理順\\n${buildCookTimelineText()}`;
+  }
+  function buildCookTimelineText(){
+    const list=sortedMeals();
+    if(!list.length)return '未設定';
+    return list.map((m,i)=>`${i+1}. ${m.slot||'未定'}：${m.name} / 先に出すもの:${(m.ingredients||[]).slice(0,3).join('・')||'確認'} / 使う:${(m.gear||[]).slice(0,3).join('・')||'確認'}`).join('\\n');
+  }
+  function mealTemplates(){
+    return {
+      shrimp:{name:'ガーリックシュリンプ',slot:'夜',ingredients:['ブラックタイガー','にんにく','オリーブオイル','バター','塩','黒こしょう','レモン'],gear:['大スキレット','包丁','まな板','トング'],note:'殻付きなら背わた処理。バケットなしでも量を抑える。'},
+      pizza:{name:'手作りピザ',slot:'夜',ingredients:['強力粉','薄力粉','ドライイースト','塩','砂糖','オリーブオイル','ピザソース','チーズ'],gear:['フライパン','クッカー','まな板','包丁'],note:'ピザ生地は作る。具材は買いすぎ注意。'},
+      hotdog:{name:'ローストビーフホットドッグ',slot:'昼',ingredients:['ホットドッグパン','ローストビーフ','レタス','チーズ','マスタード'],gear:['ホットサンドメーカー','トング'],note:'昼に軽く食べる用。'},
+      cucumber:{name:'たたききゅうり',slot:'つまみ',ingredients:['きゅうり','塩','ごま油','にんにく','白ごま'],gear:['包丁','袋'],note:'設営後すぐ出せる。'},
+      soup:{name:'豚しゃぶ',slot:'夜',ingredients:['豚肉','レタス','長ねぎ','ポン酢','ごまだれ'],gear:['鍋','バーナー','箸'],note:'寒い日や雨の日向き。'}
+    }
+  }
+  function mealHeroHtml(){
+    const ms=mealStats(), next=mealNextTarget();
+    return `<div class="mealHero2"><div class="mealHeroTop2"><span><b>${next[1]}</b><small>${next[2]}。料理は、買い物・ギア・調理順までつなげる。</small></span><span class="mealScore2" style="--score:${ms.score}">${ms.score}</span></div><div class="mealCommand2"><button class="mainCmd" data-act="${next[0]==='template'?'addMealTemplate':'mealToShopAll'}" data-kind="shrimp">${next[0]==='template'?'おすすめ追加':'材料を買い物へ'}</button><button class="subCmd" data-act="copyMealShare">献立コピー</button></div></div><div class="mealRail2"><button class="${ms.meals?'good':'warn'}" data-meal-tab="plan"><b>${ms.meals}</b><span>料理</span></button><button class="${ms.risks?'warn':'good'}" data-meal-tab="safe"><b>${ms.risks}</b><span>注意</span></button><button data-meal-tab="timeline"><b>${ms.ingredients}</b><span>材料</span></button><button data-meal-tab="templates"><b>型</b><span>追加</span></button></div>`;
+  }
+
   function mealMissing(m){
     const shopNames=new Set(state.shopping.map(s=>s.name));
     const gearNames=new Set(state.gear.map(g=>g.name));
@@ -835,15 +896,7 @@ ${starterPanelHtml()}
 
   function prepBody(){
     const st=prepStats();
-    if(state.prepTab==='meals')return `<section class="section">
-      <div class="head"><div><h2>料理</h2><p>献立から買い物とギアへ自動でつなげる。</p></div><button class="btn primary" data-act="addMeal">追加</button></div>
-      ${state.meals.map(m=>{const miss=mealMissing(m);return `<div class="mealBundle">
-        <div class="mealBundleTop"><span><h3>${esc(m.name)}</h3><p>${esc(m.slot)} / ${esc(m.note)}</p></span><button class="btn" data-act="editMeal" data-id="${m.id}">編集</button></div>
-        <div class="miniTags">${m.ingredients.slice(0,6).map(i=>`<span>${esc(i)}</span>`).join('')}${m.ingredients.length>6?`<span>+${m.ingredients.length-6}</span>`:''}</div>
-        <div class="commandDock"><button class="btn primary" data-act="mealToShop" data-id="${m.id}">材料を買い物へ</button><button class="btn" data-act="mealGearCheck" data-id="${m.id}">必要ギア確認</button></div>
-        ${(miss.ingredients.length||miss.gear.length)?`<div class="warnLine">不足候補：${[...miss.ingredients,...miss.gear].map(esc).join(' / ')}</div>`:''}
-      </div>`}).join('') || `<div class="row"><span><strong>料理なし</strong><small>まず1つ入れる。材料とギアへつながる。</small></span><button class="btn primary" data-act="addMeal">追加</button></div>`}
-    </section>`;
+    if(state.prepTab==='meals')return `${mealHeroHtml()}<section class="section"><div class="tabs">${['plan:献立','timeline:調理順','templates:テンプレ','safe:注意','share:共有'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.mealTab===id?'active':''}" data-meal-tab="${id}">${l}</button>`}).join('')}</div></section>${mealBody()}`;
 
     if(state.prepTab==='shopping'){const groups=groupedShopping();return `<section class="section">
       <div class="head"><div><h2>買い物</h2><p>店で迷わない。グループごとに消す。</p></div><button class="btn primary" data-act="addShop">追加</button></div>
@@ -862,6 +915,36 @@ ${starterPanelHtml()}
       ${planFlowHtml()}
       <div class="finishPanel" style="margin-top:12px"><div class="finishHead"><span><b>準備を終わらせる</b><small>次にやることだけを上から潰す。</small></span><span class="pill ${st.score>=80?'dark':'wood'}">${st.score}%</span></div><div class="finishBody">${smartPrepRows()}</div></div>
       <div class="commandDock"><button class="btn primary" data-act="autoNext">次に進める</button><button class="btn" data-act="copyPlanSummary">準備まとめコピー</button></div>
+    </section>`;
+  }
+
+
+
+  function mealBody(){
+    const ms=mealStats();
+    if(state.mealTab==='templates')return `<section class="section"><div class="head"><div><h2>料理テンプレート</h2><p>考えずに追加。材料とギアも一緒に入る。</p></div><button class="btn primary" data-act="addMeal">手入力</button></div><div class="mealTemplateGrid">
+      <button class="mealTemplate primary" data-act="addMealTemplate" data-kind="shrimp"><b>ガーリックシュリンプ</b><small>大スキレット用。夜メニュー候補。</small></button>
+      <button class="mealTemplate" data-act="addMealTemplate" data-kind="pizza"><b>手作りピザ</b><small>ピザ生地作成。具材買いすぎ注意。</small></button>
+      <button class="mealTemplate" data-act="addMealTemplate" data-kind="hotdog"><b>ホットドッグ</b><small>昼に軽く食べる。</small></button>
+      <button class="mealTemplate" data-act="addMealTemplate" data-kind="cucumber"><b>たたききゅうり</b><small>設営後すぐ出せる。</small></button>
+      <button class="mealTemplate" data-act="addMealTemplate" data-kind="soup"><b>豚しゃぶ</b><small>雨・寒い日向き。</small></button>
+    </div></section>`;
+
+    if(state.mealTab==='timeline')return `<section class="section"><div class="head"><div><h2>現地調理順</h2><p>現地で迷わない順番。完璧に作らず、出す順だけ見る。</p></div><button class="btn primary" data-act="copyMealShare">コピー</button></div><div class="cookTimeline">${sortedMeals().map((m,i)=>`<div class="cookStep"><div class="cookStepTop"><span><b>${i+1}. ${esc(m.slot||'未定')} / ${esc(m.name)}</b><small>材料:${(m.ingredients||[]).slice(0,4).map(esc).join(' / ')||'未設定'}<br>ギア:${(m.gear||[]).slice(0,4).map(esc).join(' / ')||'未設定'}</small></span><span class="pill ${mealRisk(m)?'wood':''}">${mealRisk(m)?'注意':'OK'}</span></div><div class="cookOps"><button data-act="mealToShop" data-id="${m.id}">買い物へ</button><button data-act="mealGearCheck" data-id="${m.id}">ギアへ</button><button data-act="quickRecordMeal" data-id="${m.id}">現地記録</button></div></div>`).join('')||`<div class="allergyBox"><b>料理なし</b><p>テンプレートから1つ追加する。</p></div>`}</div></section>`;
+
+    if(state.mealTab==='safe')return `<section class="section"><div class="allergyBox"><b>アレルギー・苦手確認</b><p>設定：${esc(state.settings?.allergy||'未設定')}\\n\\n${sortedMeals().map(m=>`${mealRisk(m)?'⚠':'✓'} ${m.name}：${mealRisk(m)||'OK'}`).join('\\n')||'料理なし'}</p><div class="mealShareOps"><button class="primary" data-act="editAllergy">設定変更</button><button data-act="copyMealShare">献立コピー</button></div></div></section>`;
+
+    if(state.mealTab==='share')return `<section class="section"><div class="allergyBox"><b>リンに送る献立</b><p>${esc(buildMealShare())}</p><div class="mealShareOps"><button class="primary" data-act="copyMealShare">LINE用コピー</button><button data-act="mealToShopAll">材料を買い物へ</button></div></div></section>`;
+
+    return `<section class="section">
+      <div class="head"><div><h2>料理</h2><p>献立から買い物・ギア・調理順へ自動でつなげる。</p></div><button class="btn primary" data-act="addMeal">追加</button></div>
+      ${state.meals.map(m=>{const miss=mealMissing(m), risk=mealRisk(m);return `<div class="mealBundle">
+        <div class="mealBundleTop"><span><h3>${esc(m.name)}</h3><p>${esc(m.slot)} / ${esc(m.note)}</p></span><span class="pill ${risk?'wood':''}">${risk?`注意:${esc(risk)}`:'OK'}</span></div>
+        <div class="miniTags">${m.ingredients.slice(0,8).map(i=>`<span>${esc(i)}</span>`).join('')}${m.ingredients.length>8?`<span>+${m.ingredients.length-8}</span>`:''}</div>
+        <div class="commandDock"><button class="btn primary" data-act="mealToShop" data-id="${m.id}">材料を買い物へ</button><button class="btn" data-act="mealGearCheck" data-id="${m.id}">必要ギア確認</button><button class="btn" data-act="editMeal" data-id="${m.id}">編集</button></div>
+        ${(miss.ingredients.length||miss.gear.length)?`<div class="warnLine">不足候補：${[...miss.ingredients,...miss.gear].map(esc).join(' / ')}</div>`:''}
+      </div>`}).join('') || `<div class="row"><span><strong>料理なし</strong><small>テンプレートから1つ入れる。</small></span><button class="btn primary" data-meal-tab="templates">テンプレート</button></div>`}
+      <div class="commandDock"><button class="btn primary" data-act="mealToShopAll">全材料を買い物へ</button><button class="btn" data-act="copyMealShare">献立コピー</button></div>
     </section>`;
   }
 
@@ -1353,6 +1436,7 @@ ${starterPanelHtml()}
     document.querySelectorAll('[data-discover]').forEach(el=>el.onclick=()=>{state.route='discover';state.discoverTab=el.dataset.discover;save();render()});
     document.querySelectorAll('[data-family]').forEach(el=>el.onclick=()=>{state.familyTab=el.dataset.family;if(state.route!=='prep'&&state.route!=='memory')state.route='prep';state.prepTab='pets';save();render()});
     document.querySelectorAll('[data-connect]').forEach(el=>el.onclick=()=>{state.connectTab=el.dataset.connect;state.route='memory';state.memoryTab='connect';save();render()});
+    document.querySelectorAll('[data-meal-tab]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepTab='meals';state.mealTab=el.dataset.mealTab;save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -1379,6 +1463,12 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='addMealTemplate')return addMealTemplate(el.dataset.kind||'shrimp');
+    if(a==='mealToShopAll')return mealToShopAll();
+    if(a==='copyMealShare')return copyMealShare();
+    if(a==='editAllergy')return editAllergy();
+    if(a==='quickRecordMeal')return quickRecordMeal(el.dataset.id);
 
     if(a==='createCampTemplate')return createCampTemplate();
     if(a==='createWalkTemplate')return createWalkTemplate();
@@ -1506,7 +1596,11 @@ ${starterPanelHtml()}
   function genShop(){const ex=new Set(state.shopping.map(s=>s.name));state.meals.forEach(m=>m.ingredients.forEach(i=>{if(!ex.has(i)){state.shopping.push({id:uid('shop'),name:i,qty:'要確認',group:'食材',source:m.name,done:false});ex.add(i)}}));save();render();toast('買い物反映')}
   function addShop(){const name=prompt('買い物名');if(!name)return;state.shopping.push({id:uid('shop'),name,qty:prompt('数量','1')||'1',group:'手入力',source:'手入力',done:false});save();render()}
   function toggleShop(id){state.shopping=state.shopping.map(s=>s.id===id?{...s,done:!s.done}:s);save();render()}
-  async function copyShop(){const text=state.shopping.map(s=>`${s.done?'☑':'□'} ${s.name}：${s.qty}`).join('\n');try{await navigator.clipboard.writeText(text);toast('コピー')}catch(e){prompt('コピー',text)}}
+  async function copyShop(){
+    const groups=groupedShopping();
+    const text=Object.entries(groups).map(([g,items])=>`■${g}\n${items.map(s=>`${s.done?'☑':'□'} ${s.name}：${s.qty}`).join('\n')}`).join('\n\n');
+    try{await navigator.clipboard.writeText(text);toast('買い物コピー')}catch(e){prompt('コピー',text)}
+  }
   function toggleBox(id){const gs=state.gear.filter(g=>g.boxId===id),all=gs.length&&gs.every(g=>g.status==='loaded');state.gear=state.gear.map(g=>g.boxId===id?{...g,status:all?'home':'loaded'}:g);save();render()}
   function toggleWalk(){state.walk.active=!state.walk.active;toast(state.walk.active?'散歩開始':'散歩終了');save();render()}
   function gps(){const push=(lat,lng)=>{state.walk.track.push({lat,lng,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});addPublicRecord('site','現在地を記録','現在地');save();render();toast('現在地記録')}; if(!navigator.geolocation)return push(35.867+Math.random()/1000,139.975+Math.random()/1000); navigator.geolocation.getCurrentPosition(p=>push(p.coords.latitude,p.coords.longitude),()=>push(35.867+Math.random()/1000,139.975+Math.random()/1000),{enableHighAccuracy:true,timeout:4000})}
@@ -1777,7 +1871,38 @@ ${starterPanelHtml()}
     save();render();toast('状態更新');
   }
 
-  function mealToShop(id){
+
+  function addMealTemplate(kind){
+    const t=mealTemplates()[kind]||mealTemplates().shrimp;
+    const exists=state.meals.some(m=>m.name===t.name);
+    const obj={id:uid('meal'),...t,name:exists?`${t.name} 追加`:t.name};
+    state.meals.push(obj);
+    state.mealTab='plan';
+    save();render();toast('料理追加');
+  }
+  function mealToShopAll(){
+    const before=state.shopping.length;
+    state.meals.forEach(m=>mealToShop(m.id,true));
+    save();render();toast(`${state.shopping.length-before}件追加`);
+  }
+  async function copyMealShare(){
+    const text=buildMealShare();
+    try{await navigator.clipboard.writeText(text);toast('献立コピー')}catch(e){prompt('コピー',text)}
+  }
+  function editAllergy(){
+    state.settings=state.settings||{};
+    state.settings.allergy=prompt('アレルギー・苦手',state.settings.allergy||'貝アレルギー / 魚卵苦手')||state.settings.allergy||'';
+    state.settings.servings=prompt('人数',state.settings.servings||'大人2人+コタ')||state.settings.servings||'';
+    save();render();toast('設定更新');
+  }
+  function quickRecordMeal(id){
+    const m=state.meals.find(x=>x.id===id); if(!m)return;
+    addPublicRecord('meal',`${m.name}：${m.note||''}`,'料理');
+    state.route='field';
+    save();render();toast('現地記録へ追加');
+  }
+
+  function mealToShop(id,silent=false){
     const m=state.meals.find(x=>x.id===id); if(!m)return;
     const names=new Set(state.shopping.map(s=>s.name));
     let added=0;
@@ -1787,7 +1912,7 @@ ${starterPanelHtml()}
         names.add(i); added++;
       }
     });
-    save();render();toast(added?`${added}件追加`:'追加なし');
+    if(!silent){save();render();toast(added?`${added}件追加`:'追加なし');}
   }
   function mealGearCheck(id){
     const m=state.meals.find(x=>x.id===id); if(!m)return;
