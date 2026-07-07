@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc4-20260707';
+  const VERSION = 'outbase-finalrc5-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc4-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc5-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1631,7 +1631,7 @@ ${starterPanelHtml()}
     stopGpsAuto(false);
     if(navigator.geolocation && navigator.geolocation.watchPosition){
       gpsWatchId=navigator.geolocation.watchPosition(pos=>{
-        if(pushGpsPoint(pos.coords.latitude,pos.coords.longitude,'watch')){save(); if(state.route==='field')render();}
+        if(pushGpsPoint(pos.coords.latitude,pos.coords.longitude,'watch'))save();
       },()=>{}, {enableHighAccuracy:true,timeout:8000,maximumAge:5000});
     }
     gpsAutoTimer=setInterval(()=>{ if(state.walk.active) gps(true); }, GPS_INTERVAL_MS);
@@ -1719,7 +1719,7 @@ ${starterPanelHtml()}
         <button data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
         <button data-act="quickRecord" data-kind="memo">メモ</button>
       </div>
-      <div class="fieldFirstHint">この下は詳細確認用。現地で急いでいる時は、この枠だけ使えばいい。</div>
+      <div class="fieldFirstHint">この下は詳細確認用。現地で急いでいる時は、この枠だけ使えばいい。<div class="scrollFixNote">散歩中のGPS自動更新では画面位置を動かさない。</div></div>
     </section>`;
   }
 
@@ -2037,12 +2037,14 @@ ${starterPanelHtml()}
     return '';
   }
 
-  function render(){
+  function render(keepScroll=true){
+    const sx=window.scrollX||0, sy=window.scrollY||0;
     try{
       app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
       bind();
       if(state.route==='field')drawMap();
       bindSwipe();
+      if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
     }catch(err){
       console.error(err);
       state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};
