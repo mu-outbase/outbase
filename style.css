@@ -4744,3 +4744,232 @@ body{
 @media(max-width:430px){
   .modeSaveFlow{grid-template-columns:1fr}
 }
+
+
+/* ===== OUTBASE FINAL RC13 =====
+   現地セッション版。モード一覧ではなく、記録主導。
+*/
+.sessionHero{
+  border-radius:30px;
+  padding:16px;
+  margin:0 0 14px;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(185,154,102,.25), transparent 30%),
+    linear-gradient(135deg, rgba(17,19,15,.98), rgba(39,58,48,.95));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.sessionHeroTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.sessionHeroTop b{
+  display:block;
+  font-size:25px;
+  letter-spacing:-.05em;
+  line-height:1.15;
+}
+.sessionHeroTop small{
+  display:block;
+  margin-top:6px;
+  color:rgba(255,248,237,.72);
+  font-size:12px;
+  line-height:1.55;
+  font-weight:850;
+}
+.sessionBadge{
+  min-width:58px;
+  height:58px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+  font-size:11px;
+  font-weight:950;
+  text-align:center;
+}
+.sessionSuggest{
+  margin-top:12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.sessionSuggest span{
+  border-radius:999px;
+  padding:7px 9px;
+  background:rgba(255,248,237,.10);
+  color:rgba(255,248,237,.75);
+  border:1px solid rgba(255,248,237,.10);
+  font-size:11px;
+  font-weight:900;
+}
+.sessionMainGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin:0 0 14px;
+}
+.sessionMainBtn{
+  min-height:92px;
+  border-radius:26px;
+  padding:15px;
+  text-align:left;
+  background:rgba(255,248,237,.76);
+  border:1px solid rgba(17,19,15,.08);
+  box-shadow:var(--softShadow);
+}
+.sessionMainBtn.primary{
+  background:linear-gradient(135deg,var(--black),var(--green2));
+  color:var(--milk);
+}
+.sessionMainBtn b{
+  display:block;
+  font-size:23px;
+  letter-spacing:-.05em;
+}
+.sessionMainBtn small{
+  display:block;
+  margin-top:7px;
+  color:var(--muted);
+  font-size:11.5px;
+  line-height:1.45;
+  font-weight:850;
+}
+.sessionMainBtn.primary small{color:rgba(255,248,237,.68)}
+.sessionSection{
+  margin:0 0 14px;
+}
+.sessionSectionHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 2px 8px;
+}
+.sessionSectionHead b{
+  font-size:18px;
+  letter-spacing:-.04em;
+}
+.sessionSectionHead small{
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.4;
+  font-weight:850;
+}
+.sessionQuickGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.sessionQuickBtn{
+  min-height:62px;
+  border-radius:20px;
+  padding:12px;
+  text-align:left;
+  background:rgba(255,248,237,.74);
+  border:1px solid rgba(17,19,15,.08);
+  box-shadow:var(--softShadow);
+}
+.sessionQuickBtn b{
+  display:block;
+  font-size:15.5px;
+  letter-spacing:-.03em;
+}
+.sessionQuickBtn small{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:10.5px;
+  line-height:1.35;
+  font-weight:850;
+}
+.sessionQuickBtn.privateSave{
+  background:rgba(245,230,222,.82);
+}
+.sessionQuickBtn.placeSave{
+  background:rgba(228,239,229,.82);
+}
+.sessionQuickBtn.returnSave{
+  background:rgba(244,235,215,.84);
+}
+.sessionQuickBtn.driveSave{
+  background:rgba(224,232,239,.84);
+}
+.sessionGroup{
+  border-radius:26px;
+  overflow:hidden;
+  background:rgba(255,248,237,.70);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+  margin:0 0 10px;
+}
+.sessionGroup summary{
+  min-height:60px;
+  padding:16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  cursor:pointer;
+  list-style:none;
+  font-weight:950;
+}
+.sessionGroup summary::-webkit-details-marker{display:none}
+.sessionGroup summary span small{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.35;
+  font-weight:850;
+}
+.sessionGroup summary::after{
+  content:"開く";
+  min-width:50px;
+  text-align:center;
+  padding:7px 9px;
+  border-radius:999px;
+  background:rgba(17,19,15,.07);
+  color:var(--muted);
+  font-size:11px;
+}
+.sessionGroup[open] summary::after{content:"閉じる"}
+.sessionGroupBody{
+  padding:0 14px 14px;
+}
+.sessionRecentCard{
+  border-radius:22px;
+  padding:13px;
+  background:rgba(255,248,237,.72);
+  border:1px solid rgba(17,19,15,.08);
+  box-shadow:var(--softShadow);
+}
+.sessionRecentCard b{font-size:15px}
+.sessionRecentCard small{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+  font-weight:800;
+}
+.sessionTags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:8px;
+}
+.sessionTags span{
+  border-radius:999px;
+  padding:5px 7px;
+  background:rgba(17,19,15,.07);
+  color:var(--muted);
+  font-size:10px;
+  font-weight:900;
+}
+@media(max-width:430px){
+  .sessionMainGrid,.sessionQuickGrid{grid-template-columns:1fr 1fr}
+}

@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc12-20260707';
+  const VERSION = 'outbase-finalrc13-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc12-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc13-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1680,7 +1680,7 @@ ${starterPanelHtml()}
   }
   function buildFieldSummary(){
     const fs=fieldStats();
-    const recent=planRecords().slice(-6).map(r=>`・${r.time} ${r.kind}：${r.text||r.title}`).join('\\n') || '公開記録なし';
+    const recent=planRecords().slice(-6).map(r=>`・${r.time} ${r.title||r.kind}：${r.text||''} → ${r.target||'現地メモ'}`).join('\\n') || '公開記録なし';
     const spots=state.walk.spots.map(s=>`・${s.time||''} ${s.type||'スポット'}：${s.name}`).join('\\n') || 'スポットなし';
     const friends=state.walk.friends.map(f=>`・${f.time||''} ${f.name}`).join('\\n') || '犬友達なし';
     return `【OUTBASE 現地まとめ】\\n${current().title}\\n${fieldModeName()} / GPS:${fs.gps} / スポット:${fs.spots} / 犬友達:${fs.friends}\\n\\n■記録\\n${recent}\\n\\n■スポット\\n${spots}\\n\\n■犬友達\\n${friends}\\n\\n※体調メモは非公開`;
@@ -2192,13 +2192,216 @@ ${starterPanelHtml()}
     }
   }
 
+
+  function sessionContextHints(){
+    const hints=[];
+    const rec=(state.records||[]).slice(-8).map(r=>`${r.title||''} ${r.text||''} ${(r.tags||[]).join(' ')}`).join(' ');
+    const plan=current();
+    const h=new Date().getHours();
+    const add=(label,reason)=>hints.push({label,reason});
+    if(state.walk.active) add(state.walkMode==='camp'?'サイト調査っぽい':'コタ散歩っぽい','散歩記録中');
+    if(/うんち|おしっこ|体調|コタ|犬友達/.test(rec)) add('コタ散歩っぽい','コタ記録あり');
+    if(/サイト候補|木陰|水場|炊事場|景色/.test(rec)) add('サイト調査っぽい','場所メモあり');
+    if(/設営|配置|足りない|使わなかった|ペグ/.test(rec)) add('設営中っぽい','設営メモあり');
+    if(/撤収|乾燥|忘れ物|積込|壊れた|汚れた/.test(rec)) add('撤収中っぽい','撤収メモあり');
+    if(/出発|休憩|給油|渋滞|到着|道の駅|コンビニ/.test(rec)) add('ドライブ中っぽい','移動ログあり');
+    if((plan.type==='camp'||/キャンプ|赤城|サイト|泊/.test(`${plan.title||''} ${plan.place||''}`)) && !hints.length) add('キャンプ中っぽい','主役プランがキャンプ');
+    if(!hints.length){
+      add('現地記録中','音声・写真・場所を残す');
+      add('コタ同伴かも','体調/排泄は非公開');
+      add('サイト調査かも','場所カード候補を残せる');
+    }
+    const seen=new Set();
+    return hints.filter(x=>!seen.has(x.label)&&seen.add(x.label)).slice(0,4);
+  }
+  function sessionShortcutGroups(){
+    return [
+      {id:'kota',title:'コタ',desc:'体調・排泄・危険・犬友達。非公開は混ぜない。',items:[
+        {label:'うんち',help:'非公開健康メモ',do:'private',kind:'うんち',target:'非公開コタ健康メモ'},
+        {label:'おしっこ',help:'非公開健康メモ',do:'private',kind:'おしっこ',target:'非公開コタ健康メモ'},
+        {label:'体調',help:'暑い/寒い/疲れなど',do:'private',kind:'体調',target:'非公開コタ健康メモ'},
+        {label:'危険',help:'段差・車・拾い食い注意',do:'place',kind:'危険ポイント',target:'危険ポイント'},
+        {label:'犬友達',help:'会った犬・飼い主',do:'friend',kind:'犬友達',target:'犬友達メモ'}
+      ]},
+      {id:'site',title:'サイト調査',desc:'次回使う場所カード。キャンプ場散歩の中身。',items:[
+        {label:'サイト候補',help:'次に泊まりたい場所',do:'place',kind:'サイト候補',target:'場所カード / 次回サイト候補'},
+        {label:'木陰',help:'コタの休憩場所',do:'place',kind:'木陰',target:'場所カード / コタ向け候補'},
+        {label:'水場',help:'洗い物・給水の距離',do:'place',kind:'水場',target:'場所カード / 設営動線'},
+        {label:'トイレ',help:'位置と距離',do:'place',kind:'トイレ',target:'設備メモ'},
+        {label:'炊事場',help:'使いやすさ確認',do:'place',kind:'炊事場',target:'設備メモ'},
+        {label:'景色',help:'眺めが良い場所',do:'place',kind:'景色',target:'レビュー候補'},
+        {label:'危険',help:'段差・ぬかるみ・車',do:'place',kind:'危険',target:'危険ポイント'}
+      ]},
+      {id:'setup',title:'設営',desc:'次回の配置・準備・改善へ戻す。',items:[
+        {label:'設営開始',help:'開始時刻',do:'record',kind:'設営開始',target:'設営ログ'},
+        {label:'配置写真',help:'次回レイアウト',do:'camera',kind:'配置写真',target:'次回レイアウト'},
+        {label:'足りないギア',help:'準備/買い物へ戻す',do:'return',kind:'足りないギア',target:'ギア / 買い物 / 準備'},
+        {label:'使わなかったギア',help:'次回積むか判断',do:'return',kind:'使わなかったギア',target:'ギア見直し'},
+        {label:'困ったこと',help:'改善へ送る',do:'return',kind:'設営で困ったこと',target:'改善メモ'},
+        {label:'次回改善',help:'次回設営へ使う',do:'return',kind:'設営改善',target:'改善メモ'},
+        {label:'設営完了',help:'完了時刻',do:'record',kind:'設営完了',target:'設営ログ'}
+      ]},
+      {id:'withdraw',title:'撤収',desc:'帰宅後やること・ギアケアへ戻す。',items:[
+        {label:'撤収開始',help:'開始時刻',do:'record',kind:'撤収開始',target:'撤収ログ'},
+        {label:'乾燥',help:'幕・ロープ・マット',do:'return',kind:'乾燥',target:'帰宅後やること / ギアケア'},
+        {label:'忘れ物',help:'次回チェックへ',do:'return',kind:'忘れ物',target:'忘れ物チェック'},
+        {label:'ゴミ',help:'持ち帰り/処分',do:'record',kind:'ゴミ',target:'撤収ログ'},
+        {label:'積込',help:'車載・BOX位置',do:'return',kind:'積込',target:'車載改善'},
+        {label:'壊れた/汚れた',help:'修理・洗浄へ',do:'return',kind:'壊れた/汚れた',target:'ギアケア / 修理 / 洗浄'},
+        {label:'撤収完了',help:'完了時刻',do:'record',kind:'撤収完了',target:'撤収ログ'}
+      ]},
+      {id:'drive',title:'ドライブ',desc:'次回の出発時間・寄り道・渋滞判断へ使う。',items:[
+        {label:'出発',help:'出発時刻',do:'drive',kind:'出発',target:'移動ログ'},
+        {label:'休憩',help:'SA/PA/道の駅',do:'drive',kind:'休憩',target:'休憩候補'},
+        {label:'給油',help:'給油場所とタイミング',do:'drive',kind:'給油',target:'移動ログ'},
+        {label:'買い物寄り道',help:'通り道の店',do:'drive',kind:'買い物寄り道',target:'買い物 / 通り道候補'},
+        {label:'渋滞',help:'次回回避',do:'drive',kind:'渋滞',target:'渋滞メモ'},
+        {label:'道の駅/コンビニ',help:'使える寄り道',do:'place',kind:'道の駅/コンビニ',target:'場所カード / 通り道候補'},
+        {label:'到着',help:'到着時刻',do:'drive',kind:'到着',target:'移動ログ'}
+      ]}
+    ];
+  }
+  function sessionRecord(data){
+    const p=state.walk.track[state.walk.track.length-1];
+    const rec={
+      id:uid('rec'),
+      eventId:state.currentPlanId,
+      kind:data.kind||'memo',
+      title:data.title||data.kind||'記録',
+      text:data.text||'',
+      mode:'現地セッション',
+      sessionGroup:data.group||'session',
+      target:data.target||'現地メモ',
+      flow:data.flow||[data.target||'現地メモ'],
+      tags:data.tags||[],
+      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      date:today(),
+      lat:p?.lat||null,
+      lng:p?.lng||null,
+      private:!!data.private
+    };
+    state.records=state.records||[];
+    state.records.push(rec);
+    return rec;
+  }
+  function sessionPrompt(label,def=''){
+    return prompt(`${label}を記録`, def||label)||'';
+  }
+  function sessionPrivate(item,group){
+    const text=sessionPrompt(item.kind, item.kind)||item.kind;
+    state.walk.health=state.walk.health||[];
+    state.walk.health.push({type:item.kind,note:text,mode:'現地セッション',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),private:true});
+    sessionRecord({kind:'health',title:item.kind,text,group:group.title,target:item.target,private:true,tags:['非公開','コタ',item.kind]});
+    save();render();toast('非公開保存');
+  }
+  function sessionPlace(item,group){
+    const name=sessionPrompt(item.kind,item.kind);
+    if(!name)return;
+    const p=state.walk.track[state.walk.track.length-1];
+    state.walk.spots=state.walk.spots||[];
+    state.walk.spots.push({name,type:item.kind,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),lat:p?.lat||null,lng:p?.lng||null,mode:'現地セッション',target:item.target});
+    state.places=state.places||[];
+    state.places.push({id:uid('place'),name,kind:item.kind,note:`${group.title}：${item.target}`,visits:1,lat:p?.lat||null,lng:p?.lng||null});
+    state.mapPins=state.mapPins||[];
+    state.mapPins.push({id:uid('pin'),eventId:state.currentPlanId,name,kind:item.kind,x:Math.round(20+Math.random()*60),y:Math.round(20+Math.random()*60),public:!/(危険|体調|うんち|おしっこ)/.test(item.kind),note:item.target,score:item.kind==='木陰'?5:3});
+    sessionRecord({kind:'place',title:item.kind,text:name,group:group.title,target:item.target,tags:[group.title,item.kind,'場所']});
+    save();render();toast('場所カード候補');
+  }
+  function sessionReturn(item,group){
+    const text=sessionPrompt(item.kind,item.kind);
+    if(!text)return;
+    sessionRecord({kind:item.kind,title:item.kind,text,group:group.title,target:item.target,tags:[group.title,item.kind,'戻し']});
+    state.notes=state.notes||[];
+    state.notes.push({id:uid('note'),title:`${item.kind}：${group.title}`,text:`${text}\n戻し先：${item.target}`,private:false});
+    save();render();toast('戻し先へ保存');
+  }
+  function sessionSimpleRecord(item,group){
+    const text=sessionPrompt(item.kind,item.kind)||item.kind;
+    sessionRecord({kind:item.kind,title:item.kind,text,group:group.title,target:item.target,tags:[group.title,item.kind]});
+    if(item.do==='drive'||/出発|到着|休憩|渋滞|給油|買い物/.test(item.kind)){
+      state.notes=state.notes||[];
+      state.notes.push({id:uid('note'),title:`移動ログ：${item.kind}`,text:`${text}\n戻し先：${item.target}`,private:false});
+    }
+    save();render();toast('記録した');
+  }
+  function handleSessionShortcut(ref){
+    const [gi,ii]=String(ref).split(':').map(Number);
+    const group=sessionShortcutGroups()[gi];
+    const item=group?.items?.[ii];
+    if(!group||!item)return;
+    if(item.do==='private')return sessionPrivate(item,group);
+    if(item.do==='place')return sessionPlace(item,group);
+    if(item.do==='return')return sessionReturn(item,group);
+    if(item.do==='record'||item.do==='drive')return sessionSimpleRecord(item,group);
+    if(item.do==='camera')return captureCamera();
+    if(item.do==='friend')return friend();
+  }
+  function sessionHeroHtml(){
+    const plan=current();
+    return `<section class="sessionHero">
+      <div class="sessionHeroTop">
+        <span><b>現地セッション</b><small>${esc(plan.title||'現在のプラン')}。モードを決めずに、今起きたことを残す。</small></span>
+        <span class="sessionBadge">FIELD</span>
+      </div>
+      <div class="sessionSuggest">${sessionContextHints().map(h=>`<span>${esc(h.label)}：${esc(h.reason)}</span>`).join('')}</div>
+    </section>`;
+  }
+  function sessionMainActionsHtml(){
+    return `<section class="sessionMainGrid">
+      <button class="sessionMainBtn primary" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声メモ'}</b><small>${voiceRecorder?'録音中。もう一度押す':'気づいたことはまず声で残す'}</small></button>
+      <button class="sessionMainBtn" data-act="captureCamera"><b>カメラ</b><small>サイト・配置・ギア・料理・道を撮る</small></button>
+      <button class="sessionMainBtn" data-act="gps"><b>現在地</b><small>場所だけ残す。線だけ地図は出さない</small></button>
+      <button class="sessionMainBtn" data-act="openMap"><b>Google Map</b><small>正確な場所は外部地図で見る</small></button>
+    </section>`;
+  }
+  function sessionBtnClass(item){
+    if(item.do==='private')return ' privateSave';
+    if(item.do==='place')return ' placeSave';
+    if(item.do==='return')return ' returnSave';
+    if(item.do==='drive')return ' driveSave';
+    return '';
+  }
+  function sessionShortcutButton(groupIndex,itemIndex,item){
+    return `<button class="sessionQuickBtn${sessionBtnClass(item)}" data-session-shortcut="${groupIndex}:${itemIndex}"><b>${esc(item.label)}</b><small>${esc(item.help)} → ${esc(item.target)}</small></button>`;
+  }
+  function sessionPriorityHtml(){
+    const groups=sessionShortcutGroups();
+    const picks=[
+      [0,0],[0,1],[0,2],
+      [1,0],[1,2],[1,6],
+      [2,2],[3,1],[4,4]
+    ].filter(([g,i])=>groups[g]?.items?.[i]);
+    return `<section class="sessionSection">
+      <div class="sessionSectionHead"><span><b>今すぐ残す</b><small>よく使うものだけ。保存先は自動で分ける。</small></span></div>
+      <div class="sessionQuickGrid">${picks.map(([g,i])=>sessionShortcutButton(g,i,groups[g].items[i])).join('')}</div>
+    </section>`;
+  }
+  function sessionGroupsHtml(){
+    const groups=sessionShortcutGroups();
+    return `<section class="sessionSection">
+      <div class="sessionSectionHead"><span><b>用途別に残す</b><small>必要な時だけ開く。整理はあとで。</small></span></div>
+      ${groups.map((g,gi)=>`<details class="sessionGroup" ${gi<2?'open':''}>
+        <summary><span><b>${esc(g.title)}</b><small>${esc(g.desc)}</small></span></summary>
+        <div class="sessionGroupBody"><div class="sessionQuickGrid">${g.items.map((it,ii)=>sessionShortcutButton(gi,ii,it)).join('')}</div></div>
+      </details>`).join('')}
+    </section>`;
+  }
+  function sessionRecentHtml(){
+    const rec=planRecords().slice().reverse().slice(0,3);
+    return `<section class="section">
+      <div class="head"><div><h2>直近の記録</h2><p>現地では3件だけ。詳しい整理は整理画面へ。</p></div><button class="btn" data-act="copyFieldSummary">コピー</button></div>
+      <div class="fieldRecentList">${rec.map(r=>`<div class="sessionRecentCard"><b>${esc(r.title||recordKindLabel(r.kind))}</b><small>${esc(r.time||'')} / ${esc(r.sessionGroup||r.mode||'')}<br>${esc(r.text||'')}<br>保存先：${esc(r.target||'現地メモ')}</small><div class="sessionTags">${(r.tags||[]).slice(0,4).map(t=>`<span>${esc(t)}</span>`).join('')}${r.private?'<span>非公開</span>':''}</div></div>`).join('')||`<div class="sessionRecentCard"><b>まだなし</b><small>音声・カメラ・現在地、またはショートカットで残す。</small></div>`}</div>
+    </section>`;
+  }
+
   function field(){
     return shell(`
-      ${fieldSpecNoticeHtml()}
-      ${fieldModeDeepHtml()}
-      ${fieldModeExplanationHtml()}
+      ${sessionHeroHtml()}
+      ${sessionMainActionsHtml()}
+      ${sessionPriorityHtml()}
+      ${sessionGroupsHtml()}
+      ${sessionRecentHtml()}
       ${quickMapHtml()}
-      ${fieldRecentHtml()}
       ${fieldDetailsHtml()}
     `);
   }
@@ -2447,6 +2650,7 @@ ${starterPanelHtml()}
     }
   }
   function bind(){
+    document.querySelectorAll('[data-session-shortcut]').forEach(el=>el.onclick=()=>handleSessionShortcut(el.dataset.sessionShortcut));
     document.querySelectorAll('[data-field-mode]').forEach(el=>el.onclick=()=>{state.fieldMode=el.dataset.fieldMode;state.walkMode=el.dataset.fieldMode==='campWalk'?'camp':'normal';save();render()});
     document.querySelectorAll('[data-field-action]').forEach(el=>el.onclick=()=>handleFieldAction(el.dataset.fieldAction));
     document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;save();render()});
