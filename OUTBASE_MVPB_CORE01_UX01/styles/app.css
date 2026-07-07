@@ -1,0 +1,20 @@
+:root{
+  --green:#1f6f3a;
+  --deep:#123d25;
+  --cream:#fbfaf5;
+  --soft:#edf6ee;
+  --line:#dfe8dc;
+  --text:#243127;
+  --muted:#6b766c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:92px}
+.app-header{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:12px;background:rgba(251,250,245,.96);border-bottom:1px solid var(--line);padding:12px 14px;backdrop-filter:blur(10px)}
+.app-kicker{font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--green)}
+h1{font-size:20px;line-height:1.2;margin:2px 0 0}.status-pill{border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);padding:7px 10px;font-size:12px;font-weight:800;white-space:nowrap}
+.app-shell{width:min(760px,100%);margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:14px}.card{background:#fff;border:1px solid rgba(31,111,58,.12);border-radius:22px;padding:16px;box-shadow:0 8px 22px rgba(20,81,45,.06)}
+.hero{background:linear-gradient(135deg,var(--green),#4f8f5b);color:#fff}.hero .muted{color:rgba(255,255,255,.86)}.title{font-size:25px;font-weight:900;line-height:1.25}.muted{color:var(--muted);font-size:13px;line-height:1.55}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stack{display:flex;flex-direction:column;gap:10px}.btn{width:100%;border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--deep);font-weight:900;font-size:15px;min-height:54px;padding:10px}.btn.primary{background:linear-gradient(180deg,var(--green),var(--deep));color:#fff;border:0}.btn.danger{background:#b71c1c;color:#fff;border:0}.field{width:100%;border:1px solid var(--line);border-radius:14px;background:#fbfaf5;padding:10px;font-size:15px}.textarea{min-height:96px;resize:vertical}.chip{display:inline-flex;align-items:center;border-radius:999px;background:var(--soft);color:var(--deep);padding:6px 10px;font-size:12px;font-weight:900;margin:2px}.preview{width:100%;min-height:160px;border:1px dashed var(--line);border-radius:18px;background:#f8fbf7;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);overflow:hidden}.preview img{max-width:100%;display:block}.bottom-nav{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);width:min(720px,calc(100vw - 20px));display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:rgba(255,255,255,.97);border:1px solid rgba(31,111,58,.14);border-radius:22px;box-shadow:0 10px 22px rgba(20,81,45,.12);padding:8px;z-index:30}.bottom-nav button{border:0;background:transparent;color:var(--muted);font-weight:900;min-height:46px}.bottom-nav button.active{color:var(--green);background:var(--soft);border-radius:16px}@media(max-width:520px){.grid{grid-template-columns:1fr}.title{font-size:23px}.card{padding:15px}}
+
+.label{display:block;margin:12px 0 6px;font-size:12px;font-weight:900;color:var(--deep)}
+.kv{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(31,111,58,.08);padding:9px 0;font-size:13px}.kv span{color:var(--muted)}.kv strong{text-align:right;color:var(--deep)}
+.outbase-list{margin:8px 0 0;padding-left:20px;line-height:1.65;font-size:13px}.outbase-list li{margin:2px 0}.candidate-preview{margin-top:12px}.candidate-card{border:1px solid rgba(31,111,58,.14);border-radius:18px;background:#f8fbf7;padding:12px}.section-heading{display:flex;justify-content:space-between;align-items:center;font-weight:900;color:var(--deep);margin-bottom:8px}.section-heading span{background:var(--green);color:#fff;border-radius:999px;padding:4px 8px;font-size:12px}.prep-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px}.readonly{margin-top:10px;background:#f8fbf7;color:var(--deep);font-size:13px;line-height:1.55}details{margin-top:10px}summary{font-weight:900;color:var(--green);cursor:pointer}select.field{appearance:auto}@media(max-width:640px){.prep-columns{grid-template-columns:1fr}.kv{align-items:flex-start;flex-direction:column;gap:2px}.kv strong{text-align:left}}

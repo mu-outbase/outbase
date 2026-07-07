@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OUTBASE MVPβ Core 01 UX01</title>
+  <meta name="theme-color" content="#1f6f3a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles/app-ux01.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <div class="app-kicker">OUTBASE</div>
+      <h1>MVPβ Core 01 UX01</h1>
+    </div>
+    <div id="appStatus" class="status-pill">起動中</div>
+  </header>
+
+  <main id="app" class="app-shell" aria-live="polite"></main>
+
+  <nav class="bottom-nav" aria-label="OUTBASE main navigation">
+    <button data-route="home">ホーム</button>
+    <button data-route="prep">準備</button>
+    <button data-route="walk">散歩</button>
+    <button data-route="review">改善</button>
+  </nav>
+
+  <script type="module" src="src_ux01/main.js"></script>
+</body>
+</html>

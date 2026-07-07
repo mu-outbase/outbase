@@ -1,0 +1,10 @@
+{
+  "name": "OUTBASE",
+  "short_name": "OUTBASE",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fbfaf5",
+  "theme_color": "#1f6f3a",
+  "description": "キャンプ準備・散歩・記録・レビューをつなぐ体験資産化アプリ",
+  "icons": []
+}

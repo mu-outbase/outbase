@@ -1,0 +1,9 @@
+{
+  "name": "outbase",
+  "version": "0.1.0-core01",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/main.js && node --check src/modules/import/import.js && node --check src/modules/prep/prepEngine.js"
+  }
+}
