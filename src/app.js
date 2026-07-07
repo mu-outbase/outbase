@@ -1,12 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-stabilitypro-20260707';
+  const VERSION = 'outbase-genius-ui-safesavepro-20260707';
   const KEY = 'outbase_genius_ui_state';
+  const SNAP_KEY = 'outbase_genius_ui_snapshot';
+  const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-stabilitypro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-safesavepro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -133,7 +135,38 @@
     return s;
   }
   function load(){try{const raw=localStorage.getItem(KEY); if(raw)return migrateState(JSON.parse(raw))}catch(e){} return migrateState(seed())}
-  function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+  function clonePlain(obj){return JSON.parse(JSON.stringify(obj))}
+  function compactStateForStorage(src){
+    const s=clonePlain(src);
+    let removed=0;
+    (s.records||[]).forEach(r=>{
+      if(r.dataUrl){
+        r.dataUrl='';
+        r.mediaPreviewRemoved=true;
+        removed++;
+      }
+    });
+    return {state:s,removed};
+  }
+  function save(){
+    try{
+      localStorage.setItem(KEY,JSON.stringify(state));
+      return true;
+    }catch(e){
+      try{
+        const packed=compactStateForStorage(state);
+        state=packed.state;
+        state.lastError={message:`保存容量を軽量化して保存: ${e.message||e}`,time:new Date().toISOString(),route:state.route,compacted:packed.removed};
+        localStorage.setItem(KEY,JSON.stringify(state));
+        return false;
+      }catch(err){
+        try{
+          localStorage.setItem(ERR_KEY,JSON.stringify({version:VERSION,time:new Date().toISOString(),message:err.message||String(err),route:state?.route||''}));
+        }catch(_){}
+        return false;
+      }
+    }
+  }
   function toast(msg){state.toast=msg;render();setTimeout(()=>{if(state.toast===msg){state.toast=null;render()}},1600)}
   function current(){return state.events.find(e=>e.id===state.currentPlanId)||state.events.find(e=>e.type==='camp')||state.events[0]}
 
@@ -517,6 +550,60 @@
   function hasRequiredArrays(){
     return ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins','dismissedInsights'].every(k=>Array.isArray(state[k]));
   }
+
+  function backupPayload(compact=false){
+    const payloadState=compact?compactStateForStorage(state).state:migrateState(clonePlain(state));
+    return {version:VERSION,createdAt:new Date().toISOString(),state:payloadState};
+  }
+  function backup(){
+    const compact=stateSize()>3500000 || mediaSize()>1800000;
+    downloadText(`outbase_backup_${today()}.json`,JSON.stringify(backupPayload(compact),null,2),'application/json');
+    toast(compact?'軽量バックアップDL':'バックアップDL');
+  }
+  function saveSnapshot(){
+    try{
+      const compact=compactStateForStorage(state).state;
+      localStorage.setItem(SNAP_KEY,JSON.stringify({version:VERSION,createdAt:new Date().toISOString(),state:compact}));
+      toast('端末控え保存');
+    }catch(e){
+      state.lastError={message:`端末控え失敗: ${e.message||e}`,time:new Date().toISOString(),route:state.route};
+      save();toast('端末控え失敗');
+    }
+  }
+  function restoreSnapshot(){
+    try{
+      const raw=localStorage.getItem(SNAP_KEY);
+      if(!raw)return toast('端末控えなし');
+      const obj=JSON.parse(raw);
+      if(!confirm('端末控えから復元する？ 現在データは上書きされる。'))return;
+      state=migrateState(obj.state||obj);
+      save();render();toast('端末控えから復元');
+    }catch(e){
+      toast('復元失敗');
+    }
+  }
+  function safeSaveScore(){
+    let s=100;
+    const size=stateSize(), media=mediaSize();
+    if(size>3500000)s-=25;
+    if(media>1800000)s-=25;
+    if(!localStorage.getItem(SNAP_KEY))s-=15;
+    if(state.lastError?.message)s-=10;
+    return Math.max(0,s);
+  }
+  function safeSaveGuideText(){
+    return `【OUTBASE 保存/復元】\n1. 大きい写真/動画はプレビューを軽量化して保存する。\n2. JSONバックアップはスマホのファイルに残す。\n3. 端末控えはlocalStorage内の軽量スナップショット。\n4. 復元はJSONまたは端末控えから戻す。\n\n保存:${Math.round(stateSize()/1024)}KB\nメディア:${Math.round(mediaSize()/1024)}KB\n端末控え:${localStorage.getItem(SNAP_KEY)?'あり':'なし'}\nlastError:${state.lastError?.message||'なし'}`;
+  }
+  function safeSavePanelHtml(){
+    const score=safeSaveScore();
+    const hasSnap=!!localStorage.getItem(SNAP_KEY);
+    return `<section class="section"><div class="safeSavePanel"><div class="safeSaveHead"><span><b>保存と復元</b><small>バックアップ未定義・容量超過・復元ズレを避けるための保全パネル。</small></span><span class="safeSaveScore" style="--score:${score}">${score}</span></div><div class="safeSaveGrid"><div class="safeSaveMetric"><b>${Math.round(stateSize()/1024)}</b><span>保存KB</span></div><div class="safeSaveMetric"><b>${Math.round(mediaSize()/1024)}</b><span>メディアKB</span></div><div class="safeSaveMetric"><b>${hasSnap?'有':'無'}</b><span>端末控え</span></div><div class="safeSaveMetric"><b>${state.lastError?.message?'有':'無'}</b><span>エラー</span></div></div><div class="safeSaveOps"><button class="primary" data-act="backup">JSON保存</button><button data-act="saveSnapshot">端末控え</button><button data-act="restoreSnapshot">控え復元</button><button data-act="clearMediaPreviews">軽量化</button><button data-act="copySafeSaveGuide">手順コピー</button><button data-act="exportDebugBundle">診断DL</button></div></div></section>`;
+  }
+  async function copySafeSaveGuide(){
+    const text=safeSaveGuideText();
+    try{await navigator.clipboard.writeText(text);toast('保存手順コピー')}catch(e){prompt('コピー',text)}
+  }
+
   function diagnostics(){
     const size=stateSize(), media=mediaSize();
     const leak=(state.records||[]).filter(r=>!r.private && /うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`)).length;
@@ -528,7 +615,8 @@
       ['メディア容量',media<2200000,`${Math.round(media/1024)}KB`],
       ['GPS状態',!state.walk.active || !!current(),'記録中でも主役あり'],
       ['タイマー状態',timerStats().running<4,`${timerStats().running}件実行中`],
-      ['連携保全',connectScore()>=60,'書き出し/共有/バックアップ']
+      ['連携保全',connectScore()>=60,'書き出し/共有/バックアップ'],
+      ['端末控え',!!localStorage.getItem(SNAP_KEY),localStorage.getItem(SNAP_KEY)?'あり':'未作成']
     ];
     const score=Math.round(checks.filter(x=>x[1]).length/checks.length*100);
     return {checks,score,size,media,leak};
@@ -573,9 +661,10 @@
   function clearMediaPreviews(){
     let n=0;
     state.records=state.records.map(r=>{
-      if(r.dataUrl){n++;return {...r,dataUrl:''}}
+      if(r.dataUrl){n++;return {...r,dataUrl:'',mediaPreviewRemoved:true}}
       return r;
     });
+    state.lastError=null;
     save();render();toast(`メディア軽量化 ${n}件`);
   }
 
@@ -734,6 +823,7 @@ ${starterPanelHtml()}
       <section class="section">
         ${auditPanelHtml()}
       ${qaPanelHtml()}
+      ${safeSavePanelHtml()}
       ${insightPanelHtml()}
       </section>
 
@@ -1349,6 +1439,11 @@ ${starterPanelHtml()}
       mediaSize:file?.size||0,
       dataUrl:dataUrl||''
     });
+    if(mediaSize()>1800000){
+      const packed=compactStateForStorage(state);
+      state=packed.state;
+      state.lastError={message:`メディア容量を自動軽量化: ${packed.removed}件`,time:new Date().toISOString(),route:state.route};
+    }
   }
 
 
@@ -1889,7 +1984,7 @@ ${starterPanelHtml()}
     }
 
     if(state.memoryTab==='data'){
-      return `<section class="section">${auditPanelHtml()}</section><section class="section"><div class="migrationBox"><b>STARTPRO_MIGRATION</b><p>${esc(buildStarterPack())}</p><div class="migrationOps"><button class="primary" data-act="migrateNow">移行補修</button><button data-act="copyStarterPack">スターターコピー</button></div></div></section><section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="versionStrip">VERSION: ${VERSION}<br>保存サイズ: ${Math.round(JSON.stringify(state).length/1024)}KB</div><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
+      return `${safeSavePanelHtml()}<section class="section">${auditPanelHtml()}</section><section class="section"><div class="migrationBox"><b>STARTPRO_MIGRATION</b><p>${esc(buildStarterPack())}</p><div class="migrationOps"><button class="primary" data-act="migrateNow">移行補修</button><button data-act="copyStarterPack">スターターコピー</button></div></div></section><section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="versionStrip">VERSION: ${VERSION}<br>保存サイズ: ${Math.round(JSON.stringify(state).length/1024)}KB</div><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
     }
 
     return `<section class="section"><div class="reportPanel"><div class="reportHead"><span><b>自動レビュー</b><small>公開記録・場所・改善だけで作る。非公開体調メモは除外。</small></span><span class="pill dark">生成</span></div><div class="reportBody">${esc(buildTripReport())}</div><div class="memoryOps"><button class="primary" data-act="saveTripReport">保存</button><button data-act="copyTripReport">コピー</button></div></div></section>`;
@@ -1968,6 +2063,10 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='saveSnapshot')return saveSnapshot();
+    if(a==='restoreSnapshot')return restoreSnapshot();
+    if(a==='copySafeSaveGuide')return copySafeSaveGuide();
 
     if(a==='safeRepair')return safeRepair();
     if(a==='copyDiagnostics')return copyDiagnostics();
@@ -2666,6 +2765,7 @@ ${starterPanelHtml()}
   }
   function starterBackup(){
     backup();
+    saveSnapshot();
     setTimeout(()=>copyStarterPack(),300);
   }
   function freshStart(){
@@ -2906,7 +3006,7 @@ ${starterPanelHtml()}
         const kind=mode.split(':')[1]==='video'?'video':'photo';
         for(const f of files){
           let dataUrl='';
-          const keepPreview=(f.type.startsWith('image/') && f.size<850000) || (f.type.startsWith('video/') && f.size<1400000);
+          const keepPreview=(f.type.startsWith('image/') && f.size<420000) || (f.type.startsWith('video/') && f.size<800000);
           if(keepPreview)dataUrl=await readFileAsDataURL(f);
           addMediaRecord(kind,f,dataUrl);
         }
