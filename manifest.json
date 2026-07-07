@@ -1,9 +1,9 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-remake-audit-20260707",
+  "start_url": "./?v=outbase-final-audit-20260707",
   "display": "standalone",
-  "background_color": "#f3eee2",
-  "theme_color": "#17231d",
+  "background_color": "#f5f1e8",
+  "theme_color": "#1f2a24",
   "icons": []
 }
