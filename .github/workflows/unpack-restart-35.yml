@@ -1,4 +1,4 @@
-name: OUTBASE Restart-35 Unpack
+name: OUTBASE ZIP Unpack
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "OUTBASE_Restart-35*.zip"
+      - "*.zip"
       - ".github/workflows/unpack-restart-35.yml"
 
 permissions:
@@ -24,21 +24,24 @@ jobs:
         run: |
           ls -la
 
-      - name: Unpack OUTBASE Restart-35 ZIP
+      - name: Pick latest ZIP
         run: |
-          ZIP_FILE=$(ls OUTBASE_Restart-35*.zip | head -n 1)
+          ZIP_FILE=$(ls -t *.zip | head -n 1)
+          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
           echo "Using ZIP: $ZIP_FILE"
+
+      - name: Unpack OUTBASE ZIP
+        run: |
           unzip -o "$ZIP_FILE" -d .
 
-      - name: Remove ZIP after unpack
+      - name: Remove uploaded ZIP files
         run: |
-          rm -f OUTBASE_Restart-35*.zip
+          rm -f *.zip
 
       - name: Commit unpacked files
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add index.html style.css src/app.js manifest.json service-worker.js
-          git add -u
-          git commit -m "Apply OUTBASE Restart-35 global plan switch files" || echo "No changes to commit"
+          git add .
+          git commit -m "Apply OUTBASE ZIP files" || echo "No changes to commit"
           git push
