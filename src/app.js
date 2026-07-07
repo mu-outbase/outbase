@@ -1,10 +1,13 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-centerpro-20260707';
+  const VERSION = 'outbase-genius-ui-auditpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-auditpro-20260707').catch(()=>{}));
+  }
 
   const pad=n=>String(n).padStart(2,'0');
   const today=()=>new Date().toISOString().slice(0,10);
@@ -263,6 +266,54 @@
     return `【OUTBASE 現在地】\\n主役:${current().title}\\n準備:${st.score}% / 買い物残:${st.undoneShop} / ギア積込:${gs.loaded}/${gs.total} / 天気:${st.wdone}/${state.weather.length}\\n現地記録:${fs.records} / 場所:${ms.places} / 改善:${ms.imp}\\n未整理:${unresolvedItems().length}\\n\\n次:${prepNextTarget()[1]}`;
   }
 
+
+  function appAudit(){
+    const issues=[];
+    const warn=[];
+    const p=current();
+    if(!p)issues.push(['主役プランなし','予定を1つ主役にする']);
+    if(state.events.some(e=>!e.start))warn.push(['日付未設定予定',`${state.events.filter(e=>!e.start).length}件`]);
+    const gs=gearStats();
+    if(gs.noBox)warn.push(['BOX未設定ギア',`${gs.noBox}件`]);
+    if(gs.care)warn.push(['乾燥/修理/買替',`${gs.care}件`]);
+    const st=prepStats();
+    if(st.undoneShop)warn.push(['買い物未完',`${st.undoneShop}件`]);
+    if(st.loaded<state.gear.length)warn.push(['ギア未積込',`${state.gear.length-st.loaded}件`]);
+    if(st.wdone<state.weather.length)warn.push(['天気未確認',`${state.weather.length-st.wdone}件`]);
+    const leak=(state.records||[]).filter(r=>!r.private && /うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`));
+    if(leak.length)issues.push(['非公開メモ混入',`${leak.length}件`]);
+    if(!state.boxes.length)issues.push(['BOXなし','ギア収納先がない']);
+    if(!state.candidates||!state.candidates.length)warn.push(['候補なし','探す候補を追加']);
+    const dataSize=JSON.stringify(state).length;
+    if(dataSize>850000)warn.push(['データ肥大','バックアップ推奨']);
+    const score=Math.max(0,100-issues.length*18-warn.length*5);
+    return {issues,warn,score,dataSize};
+  }
+  function buildAuditText(){
+    const a=appAudit();
+    const lines=[
+      `【OUTBASE 監査】`,
+      `version:${VERSION}`,
+      `score:${a.score}`,
+      `data:${Math.round(a.dataSize/1024)}KB`,
+      ``,
+      `■重大`,
+      a.issues.length?a.issues.map(x=>`・${x[0]}：${x[1]}`).join('\n'):'なし',
+      ``,
+      `■注意`,
+      a.warn.length?a.warn.map(x=>`・${x[0]}：${x[1]}`).join('\n'):'なし',
+      ``,
+      `■現在地`,
+      buildDashboardText()
+    ];
+    return lines.join('\n');
+  }
+  function auditPanelHtml(){
+    const a=appAudit();
+    const rows=[...a.issues.map(x=>['重大',...x]),...a.warn.map(x=>['注意',...x])];
+    return `<div class="auditPanel"><div class="auditHead"><span><b>総合監査</b><small>抜け・未完了・非公開混入をまとめて確認。</small></span><span class="auditScore" style="--score:${a.score}">${a.score}</span></div><div class="auditList">${rows.length?rows.map(r=>`<div class="auditItem"><span><b>${esc(r[1])}</b><small>${esc(r[0])} / ${esc(r[2])}</small></span><span class="pill ${r[0]==='重大'?'wood':''}">${esc(r[0])}</span></div>`).join(''):`<div class="auditItem"><span><b>問題なし</b><small>大きな抜けは見つからない。</small></span><span class="pill dark">OK</span></div>`}</div><div class="auditOps"><button class="primary" data-act="repairData">自動補修</button><button data-act="copyAudit">監査コピー</button><button data-act="backup">バックアップ</button></div></div>`;
+  }
+
   function home(){
     const p=current();
     const undoneShop=state.shopping.filter(s=>!s.done).length;
@@ -331,7 +382,7 @@
         <div class="centerPanel">
           <div class="centerHead"><span><b>全部から探す</b><small>予定・ギア・買い物・料理・場所・候補・記録をまとめて探す。</small></span><span class="pill">${centerItems().length}件</span></div>
           <div class="centerSearch"><input id="centerSearchInput" placeholder="例：赤城、スキレット、乾燥、コタ" value="${esc(state.centerQuery||'')}"><button class="btn primary" data-act="clearCenterSearch">クリア</button></div>
-          <div class="centerResults">${filteredCenterItems().map(centerResult).join('')||`<div class="centerResult"><span class="centerIcon">無</span><span class="centerMain"><b>該当なし</b><small>別の言葉で探す。</small></span><span class="pill">0</span></div>`}</div>
+          <div class="centerResults" id="centerResults">${filteredCenterItems().map(centerResult).join('')||`<div class="centerResult"><span class="centerIcon">無</span><span class="centerMain"><b>該当なし</b><small>別の言葉で探す。</small></span><span class="pill">0</span></div>`}</div>
         </div>
       </section>
 
@@ -342,6 +393,11 @@
 
       <section class="section">
         <div class="dashboardCopy"><b>現在地コピー</b><p>${esc(buildDashboardText())}</p><div class="dashboardOps"><button class="primary" data-act="copyDashboard">コピー</button><button data-act="autoNext">次に進める</button></div></div>
+      </section>
+
+
+      <section class="section">
+        ${auditPanelHtml()}
       </section>
 
       <section class="section">
@@ -673,7 +729,7 @@
     if(state.gearTab==='import')return `<section class="section"><div class="gearReport"><b>取込候補</b><p>Excel・購入履歴・写真・メモを候補として保存。正式登録はあとで選ぶ。</p><div class="commandDock"><button class="btn wood" data-act="import">ファイル選択</button><button class="btn" data-act="backup">バックアップ</button></div></div></section>`;
 
     const list=filteredGear();
-    return `<section class="section"><div class="list">${list.map(gearCard).join('')||`<div class="gearReport"><b>該当なし</b><p>検索条件に合うギアがない。</p></div>`}</div></section>`;
+    return `<section class="section"><div class="list" id="gearList">${list.map(gearCard).join('')||`<div class="gearReport"><b>該当なし</b><p>検索条件に合うギアがない。</p></div>`}</div></section>`;
   }
 
   function gearRow(g){return gearCard(g)}
@@ -888,7 +944,7 @@
     }
 
     if(state.memoryTab==='data'){
-      return `<section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
+      return `<section class="section">${auditPanelHtml()}</section><section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="versionStrip">VERSION: ${VERSION}<br>保存サイズ: ${Math.round(JSON.stringify(state).length/1024)}KB</div><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
     }
 
     return `<section class="section"><div class="reportPanel"><div class="reportHead"><span><b>自動レビュー</b><small>公開記録・場所・改善だけで作る。非公開体調メモは除外。</small></span><span class="pill dark">生成</span></div><div class="reportBody">${esc(buildTripReport())}</div><div class="memoryOps"><button class="primary" data-act="saveTripReport">保存</button><button data-act="copyTripReport">コピー</button></div></div></section>`;
@@ -926,9 +982,21 @@
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
     const gearSearch=document.getElementById('gearSearchInput');
-    if(gearSearch){gearSearch.oninput=()=>{state.gearFilter=gearSearch.value;save();render()}}
+    if(gearSearch){
+      gearSearch.oninput=()=>{
+        state.gearFilter=gearSearch.value;save();
+        const box=document.getElementById('gearList');
+        if(box){const list=filteredGear();box.innerHTML=list.map(gearCard).join('')||`<div class="gearReport"><b>該当なし</b><p>検索条件に合うギアがない。</p></div>`;box.querySelectorAll('[data-act]').forEach(x=>x.onclick=()=>act(x.dataset.act,x));}
+      }
+    }
     const centerSearch=document.getElementById('centerSearchInput');
-    if(centerSearch){centerSearch.oninput=()=>{state.centerQuery=centerSearch.value;save();render()}}
+    if(centerSearch){
+      centerSearch.oninput=()=>{
+        state.centerQuery=centerSearch.value;save();
+        const box=document.getElementById('centerResults');
+        if(box){box.innerHTML=filteredCenterItems().map(centerResult).join('')||`<div class="centerResult"><span class="centerIcon">無</span><span class="centerMain"><b>該当なし</b><small>別の言葉で探す。</small></span><span class="pill">0</span></div>`;box.querySelectorAll('[data-act]').forEach(x=>x.onclick=()=>act(x.dataset.act,x));}
+      }
+    }
   }
   function bindSwipe(){
     const days=document.getElementById('days'); if(!days)return; let sx=null;
@@ -936,6 +1004,9 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='copyAudit')return copyAudit();
+    if(a==='repairData')return repairData();
 
     if(a==='openCenterItem')return openCenterItem(el.dataset.type,el.dataset.id);
     if(a==='resolveCenterItem')return resolveCenterItem(el.dataset.type,el.dataset.id);
@@ -1046,6 +1117,31 @@
 
 
 
+
+
+  async function copyAudit(){
+    const text=buildAuditText();
+    try{await navigator.clipboard.writeText(text);toast('監査をコピー')}catch(e){prompt('コピー',text)}
+  }
+  function repairData(){
+    state.events=state.events||[];
+    state.shopping=state.shopping||[];
+    state.gear=state.gear||[];
+    state.boxes=state.boxes||[];
+    state.notes=state.notes||[];
+    state.records=state.records||[];
+    state.places=state.places||[];
+    state.candidates=state.candidates||[];
+    state.weather=state.weather||[];
+    state.meals=state.meals||[];
+    if(!state.boxes.length)state.boxes.push({id:uid('box'),name:'未分類BOX',home:'未設定',car:'未設定',role:'未分類'});
+    const fallbackBox=state.boxes[0]?.id||'';
+    state.gear=state.gear.map(g=>({...g,boxId:g.boxId||fallbackBox,status:g.status||'home',qty:g.qty||1}));
+    state.events=state.events.map(e=>({...e,end:e.end||e.start||''}));
+    if(!state.events.some(e=>e.id===state.currentPlanId) && state.events.length)state.currentPlanId=state.events[0].id;
+    state.records=state.records.map(r=>/うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`)?{...r,private:true}:r);
+    save();render();toast('自動補修完了');
+  }
 
   function openCenterItem(type,id){
     if(type==='event'){state.drawer={type:'event',id};}
@@ -1175,9 +1271,10 @@
   }
   function cleanupData(){
     const before=(state.records||[]).length;
-    state.records=(state.records||[]).filter(r=>r.text||r.title||r.kind);
+    state.records=(state.records||[]).filter(r=>r.text||r.title||r.kind).map(r=>/うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`)?{...r,private:true}:r);
     const after=state.records.length;
-    save();render();toast(`整理 ${before-after}件`);
+    repairData();
+    toast(`整理 ${before-after}件`);
   }
 
   function quickRecord(kind){
