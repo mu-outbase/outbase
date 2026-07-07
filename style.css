@@ -5786,3 +5786,12 @@ body{
   .fw03Footer{grid-template-columns:1fr}
   .activeRibbon03{bottom:72px}
 }
+
+/* ===== OUTBASE FIELD REBUILD 04 ===== */
+.fw04DriveOff{grid-template-columns:1fr !important}
+.fw04DriveOffCard{min-height:94px;border-radius:24px;padding:16px;text-align:left;background:linear-gradient(135deg,rgba(17,19,15,.96),rgba(39,58,48,.92));color:var(--milk);box-shadow:var(--shadow)}
+.fw04DriveOffCard b{display:block;font-size:25px;letter-spacing:-.06em}
+.fw04DriveOffCard small{display:block;margin-top:8px;color:rgba(255,248,237,.70);font-size:11.5px;line-height:1.4;font-weight:850}
+.fw04ModeNote{border-radius:16px;padding:11px;background:rgba(17,19,15,.045);color:var(--muted);font-size:11px;line-height:1.45;font-weight:850}
+.fw04SubGrid4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:560px){.fw04SubGrid4{grid-template-columns:repeat(2,1fr)}}
