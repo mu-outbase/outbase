@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-planpro-20260707';
+  const VERSION = 'outbase-genius-ui-timerpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-planpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-timerpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', drawer:null, toast:null, importMode:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -42,6 +42,12 @@
         {id:'pp5',petId:'cats',name:'猫留守番チェック',qty:'フード/水/トイレ/室温',group:'猫',done:false}
       ],
       shares:[],
+      timers:[
+        {id:'tm1',eventId:'akagi',name:'設営ひと区切り',kind:'setup',duration:1800,remaining:1800,status:'idle',startedAt:0,note:'30分で一度休憩'},
+        {id:'tm2',eventId:'akagi',name:'ガーリックシュリンプ',kind:'meal',duration:600,remaining:600,status:'idle',startedAt:0,note:'火を入れすぎない'},
+        {id:'tm3',eventId:'akagi',name:'コタ休憩',kind:'pet',duration:900,remaining:900,status:'idle',startedAt:0,note:'暑い日は短め'},
+        {id:'tm4',eventId:'akagi',name:'撤収ラスト確認',kind:'withdraw',duration:1200,remaining:1200,status:'idle',startedAt:0,note:'忘れ物確認'}
+      ],
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -106,7 +112,7 @@
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
     s.weatherPlan.forecast=s.weatherPlan.forecast||[];
-    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
+    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
     if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
     if(!s.boxes.length)s.boxes=base.boxes;
     const fallbackBox=s.boxes[0]?.id||'';
@@ -345,6 +351,7 @@
     state.weather.forEach(w=>items.push({type:'weather',id:w.id,icon:'天',title:w.when,sub:`${w.done?'確認済':'未確認'} / 天気判断`,text:w.check||''}));
     (state.pets||[]).forEach(p=>items.push({type:'pet',id:p.id,icon:petAvatar(p),title:p.name,sub:`${p.kind} / ${p.age}`,text:p.note||''}));
     (state.petPrep||[]).forEach(x=>items.push({type:'petPrep',id:x.id,icon:'犬',title:x.name,sub:`${x.done?'完了':'未完'} / ${x.group}`,text:x.qty||''}));
+    (state.timers||[]).forEach(t=>items.push({type:'timer',id:t.id,icon:'時',title:t.name,sub:`${timerLabel(t.kind)} / ${formatTimer(timerLeft(t))} / ${t.status}`,text:t.note||''}));
     return items;
   }
   function filteredCenterItems(){
@@ -387,6 +394,7 @@
     const p=current();
     if(!p)issues.push(['主役プランなし','予定を1つ主役にする']);
     if(p && p.type==='camp' && planRecords(p.id).length===0)warn.push(['主役記録なし','現地記録がまだない']);
+    const ts=timerStats(); if(ts.running)warn.push(['タイマー実行中',`${ts.running}件`]);
     if(state.events.some(e=>!e.start))warn.push(['日付未設定予定',`${state.events.filter(e=>!e.start).length}件`]);
     const gs=gearStats();
     if(gs.noBox)warn.push(['BOX未設定ギア',`${gs.noBox}件`]);
@@ -464,6 +472,7 @@
       </div>
 ${starterPanelHtml()}
       ${planBoardHtml()}
+      ${timerPanelHtml()}
 
       <section class="section">
         <div class="head"><div><h2>テンプレート</h2><p>考えずに型から作る。あとで変更できる。</p></div></div>
@@ -945,7 +954,7 @@ ${starterPanelHtml()}
         <button class="${st.wdone===state.weather.length?'done':'warn'}" data-prep="weather"><b>${st.wdone}/${state.weather.length}</b><span>天気</span></button>
       </div>
 
-      <section class="section"><div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="section"><div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット','timer:タイマー'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
       ${prepBody()}
     `)
   }
@@ -964,6 +973,7 @@ ${starterPanelHtml()}
     if(state.prepTab==='gear')return gearView();
 
     if(state.prepTab==='pets')return `${familyPanelHtml()}${familyBody()}`;
+    if(state.prepTab==='timer')return `${timerPanelHtml()}${timerBodyHtml()}`;
 
     if(state.prepTab==='weather')return weatherView();
 
@@ -1146,6 +1156,95 @@ ${starterPanelHtml()}
     });
   }
 
+
+  function timerIcon(kind){
+    return {setup:'設',meal:'食',pet:'犬',withdraw:'撤',dry:'乾',walk:'歩',free:'時'}[kind]||'時';
+  }
+  function timerLabel(kind){
+    return {setup:'設営',meal:'料理',pet:'コタ',withdraw:'撤収',dry:'乾燥',walk:'散歩',free:'自由'}[kind]||kind;
+  }
+  function planTimers(){
+    return (state.timers||[]).filter(t=>!t.eventId || t.eventId===state.currentPlanId);
+  }
+  function timerLeft(t){
+    if(t.status==='running'){
+      const elapsed=Math.floor((Date.now()-(t.startedAt||Date.now()))/1000);
+      return Math.max(0,(t.remaining||t.duration||0)-elapsed);
+    }
+    if(t.status==='done')return 0;
+    return Math.max(0,t.remaining??t.duration??0);
+  }
+  function timerPct(t){
+    const d=Math.max(1,t.duration||1);
+    return Math.round((1-timerLeft(t)/d)*100);
+  }
+  function formatTimer(sec){
+    sec=Math.max(0,Math.floor(sec||0));
+    const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+    return h?`${h}:${pad(m)}:${pad(s)}`:`${m}:${pad(s)}`;
+  }
+  function timerStats(){
+    const list=planTimers();
+    return {
+      total:list.length,
+      running:list.filter(t=>t.status==='running').length,
+      done:list.filter(t=>t.status==='done').length,
+      left:list.filter(t=>t.status!=='done').length
+    };
+  }
+  function timerNext(){
+    const list=planTimers();
+    const running=list.find(t=>t.status==='running');
+    if(running)return ['active',`${running.name} 実行中`,formatTimer(timerLeft(running)),running.id];
+    const ready=list.find(t=>t.status!=='done');
+    if(ready)return ['active',`${ready.name} を始める`,`${timerLabel(ready.kind)} / ${formatTimer(timerLeft(ready))}`,ready.id];
+    return ['templates','タイマーを追加','料理・設営・撤収をすぐ作る',''];
+  }
+  function timerCard(t){
+    const left=timerLeft(t);
+    return `<div class="timerCard ${t.status==='running'?'running':''}">
+      <div class="timerTop"><span><b>${timerIcon(t.kind)} ${esc(t.name)}</b><small>${esc(timerLabel(t.kind))} / ${esc(t.note||'')} / ${t.status==='done'?'完了':t.status==='running'?'進行中':t.status==='paused'?'一時停止':'待機'}</small></span><span class="timerTime" data-timer-left="${t.id}">${formatTimer(left)}</span></div>
+      <div class="timerOps"><button data-act="startTimer" data-id="${t.id}">${t.status==='running'?'再開中':'開始'}</button><button data-act="pauseTimer" data-id="${t.id}">一時停止</button><button data-act="resetTimer" data-id="${t.id}">戻す</button><button data-act="completeTimer" data-id="${t.id}">完了</button></div>
+    </div>`;
+  }
+  function timerPanelHtml(){
+    const st=timerStats(), next=timerNext();
+    const mainId=next[3]||'';
+    return `<section class="section"><div class="timerHero"><div class="timerHeroTop"><span><b>${esc(next[1])}</b><small>${esc(next[2])}。料理・設営・撤収・散歩を考えずに進める。</small></span><span class="timerFace" style="--pct:${st.running?timerPct(planTimers().find(t=>t.status==='running')):st.done/Math.max(1,st.total)*100}">${st.running?'LIVE':st.done+'/'+st.total}</span></div><div class="timerCommand"><button class="mainCmd" data-act="${mainId?'startTimer':'addTimerTemplate'}" data-id="${mainId}" data-kind="meal">${mainId?'次を開始':'料理タイマー追加'}</button><button class="subCmd" data-act="copyTimers">タイマーコピー</button></div></div><div class="timerRail"><button class="${st.running?'warn':'good'}" data-timer-tab="active"><b>${st.running}</b><span>実行中</span></button><button data-timer-tab="active"><b>${st.left}</b><span>残り</span></button><button class="${st.done?'good':''}" data-timer-tab="active"><b>${st.done}</b><span>完了</span></button><button data-timer-tab="templates"><b>型</b><span>追加</span></button></div></section>`;
+  }
+  function timerBodyHtml(){
+    if(state.timerTab==='templates')return `<section class="section"><div class="head"><div><h2>タイマーテンプレート</h2><p>現地で使うものだけ追加。</p></div><button class="btn primary" data-act="timerPrompt">自由作成</button></div><div class="timerTemplateGrid">
+      <button class="timerTemplate primary" data-act="addTimerTemplate" data-kind="meal"><b>料理 10分</b><small>焼きすぎ防止。ガーリックシュリンプ向け。</small></button>
+      <button class="timerTemplate" data-act="addTimerTemplate" data-kind="setup"><b>設営 30分</b><small>一度止まって休憩。</small></button>
+      <button class="timerTemplate" data-act="addTimerTemplate" data-kind="pet"><b>コタ 15分</b><small>暑さ寒さの確認。</small></button>
+      <button class="timerTemplate" data-act="addTimerTemplate" data-kind="withdraw"><b>撤収 20分</b><small>ラスト確認用。</small></button>
+      <button class="timerTemplate" data-act="addTimerTemplate" data-kind="dry"><b>乾燥 60分</b><small>帰宅後の乾燥確認。</small></button>
+      <button class="timerTemplate" data-act="addTimerTemplate" data-kind="walk"><b>散歩 20分</b><small>通常散歩/キャンプ場散歩。</small></button>
+    </div></section>`;
+    const list=planTimers();
+    return `<section class="section"><div class="head"><div><h2>タイマー</h2><p>主役プランのタイマーだけ表示。</p></div><button class="btn primary" data-timer-tab="templates">追加</button></div><div class="timerList">${list.map(timerCard).join('')||`<div class="planNotice"><b>タイマーなし</b><p>テンプレートから追加する。</p></div>`}</div></section>`;
+  }
+  function buildTimerText(){
+    const list=planTimers();
+    return `【OUTBASE タイマー】\\n${current().title}\\n${list.map(t=>`${t.status==='done'?'✓':'□'} ${t.name}：${formatTimer(timerLeft(t))} / ${timerLabel(t.kind)} / ${t.status}`).join('\\n')||'なし'}`;
+  }
+  function updateTimers(){
+    let changed=false, doneNames=[];
+    (state.timers||[]).forEach(t=>{
+      if(t.status==='running' && timerLeft(t)<=0){
+        t.status='done'; t.remaining=0; t.startedAt=0; changed=true; doneNames.push(t.name);
+      }
+    });
+    document.querySelectorAll('[data-timer-left]').forEach(el=>{
+      const t=(state.timers||[]).find(x=>x.id===el.dataset.timerLeft);
+      if(t)el.textContent=formatTimer(timerLeft(t));
+    });
+    if(changed){
+      doneNames.forEach(name=>addPublicRecord('memo',`タイマー完了：${name}`,'タイマー'));
+      save();render();toast('タイマー完了');
+    }
+  }
+
   function fieldStats(){
     const publicRecords=planRecords();
     return {
@@ -1211,6 +1310,9 @@ ${starterPanelHtml()}
       <section class="section">
         <div class="segment"><button class="${state.walkMode==='normal'?'active':''}" data-walk="normal">通常散歩</button><button class="${state.walkMode==='camp'?'active':''}" data-walk="camp">キャンプ場散歩</button></div>
       </section>
+
+      ${timerPanelHtml()}
+      ${timerBodyHtml()}
 
       <section class="section">
         <div class="head"><div><h2>ワンタップ記録</h2><p>現地では細かく書かない。種類だけ残して、必要なら一言。</p></div></div>
@@ -1494,6 +1596,7 @@ ${starterPanelHtml()}
     document.querySelectorAll('[data-family]').forEach(el=>el.onclick=()=>{state.familyTab=el.dataset.family;if(state.route!=='prep'&&state.route!=='memory')state.route='prep';state.prepTab='pets';save();render()});
     document.querySelectorAll('[data-connect]').forEach(el=>el.onclick=()=>{state.connectTab=el.dataset.connect;state.route='memory';state.memoryTab='connect';save();render()});
     document.querySelectorAll('[data-meal-tab]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepTab='meals';state.mealTab=el.dataset.mealTab;save();render()});
+    document.querySelectorAll('[data-timer-tab]').forEach(el=>el.onclick=()=>{state.timerTab=el.dataset.timerTab;save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -1520,6 +1623,14 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='addTimerTemplate')return addTimerTemplate(el.dataset.kind||'meal');
+    if(a==='timerPrompt')return timerPrompt();
+    if(a==='startTimer')return startTimer(el.dataset.id);
+    if(a==='pauseTimer')return pauseTimer(el.dataset.id);
+    if(a==='resetTimer')return resetTimer(el.dataset.id);
+    if(a==='completeTimer')return completeTimer(el.dataset.id);
+    if(a==='copyTimers')return copyTimers();
 
     if(a==='planSwitch')return planSwitch();
     if(a==='selectPlan')return selectPlan(el.dataset.id);
@@ -1716,6 +1827,7 @@ ${starterPanelHtml()}
     else if(type==='record'){state.route='memory';state.memoryTab='timeline';}
     else if(type==='weather'){state.route='prep';state.prepTab='weather';}
     else if(type==='pet'||type==='petPrep'){state.route='prep';state.prepTab='pets';}
+    else if(type==='timer'){state.route='prep';state.prepTab='timer';state.timerTab='active';}
     save();render();
   }
   function resolveCenterItem(type,id){
@@ -1725,6 +1837,7 @@ ${starterPanelHtml()}
     if(type==='weather')state.weather=state.weather.map(w=>w.id===id?{...w,done:true}:w);
     if(type==='candidate')return candidateToPlan(id);
     if(type==='petPrep')state.petPrep=state.petPrep.map(x=>x.id===id?{...x,done:true}:x);
+    if(type==='timer')completeTimer(id);
     save();render();toast('処理した');
   }
   function clearCenterSearch(){
@@ -1994,6 +2107,69 @@ ${starterPanelHtml()}
 
 
 
+
+
+  function timerTemplateData(kind){
+    return {
+      meal:['料理タイマー',600,'火を入れすぎない'],
+      setup:['設営ひと区切り',1800,'30分で一度休憩'],
+      pet:['コタ休憩',900,'暑さ寒さの確認'],
+      withdraw:['撤収ラスト確認',1200,'忘れ物確認'],
+      dry:['乾燥確認',3600,'帰宅後の乾燥'],
+      walk:['散歩タイマー',1200,'歩きすぎ防止'],
+      free:['自由タイマー',600,'']
+    }[kind]||['自由タイマー',600,''];
+  }
+  function addTimerTemplate(kind){
+    const [name,duration,note]=timerTemplateData(kind);
+    state.timers=state.timers||[];
+    state.timers.push({id:uid('tm'),eventId:state.currentPlanId,name,kind,duration,remaining:duration,status:'idle',startedAt:0,note});
+    state.timerTab='active';
+    save();render();toast('タイマー追加');
+  }
+  function timerPrompt(){
+    const name=prompt('タイマー名','自由タイマー')||'自由タイマー';
+    const min=+(prompt('分数','10')||10);
+    state.timers=state.timers||[];
+    state.timers.push({id:uid('tm'),eventId:state.currentPlanId,name,kind:'free',duration:min*60,remaining:min*60,status:'idle',startedAt:0,note:''});
+    state.timerTab='active';
+    save();render();toast('タイマー作成');
+  }
+  function startTimer(id){
+    let t=(state.timers||[]).find(x=>x.id===id);
+    if(!t){addTimerTemplate('meal');return}
+    if(t.status==='done')t.remaining=t.duration;
+    t.remaining=timerLeft(t)||t.duration;
+    t.status='running';
+    t.startedAt=Date.now();
+    save();render();toast('タイマー開始');
+  }
+  function pauseTimer(id){
+    const t=(state.timers||[]).find(x=>x.id===id); if(!t)return;
+    t.remaining=timerLeft(t);
+    t.status='paused';
+    t.startedAt=0;
+    save();render();toast('一時停止');
+  }
+  function resetTimer(id){
+    const t=(state.timers||[]).find(x=>x.id===id); if(!t)return;
+    t.remaining=t.duration;
+    t.status='idle';
+    t.startedAt=0;
+    save();render();toast('リセット');
+  }
+  function completeTimer(id){
+    const t=(state.timers||[]).find(x=>x.id===id); if(!t)return;
+    t.remaining=0;
+    t.status='done';
+    t.startedAt=0;
+    addPublicRecord('memo',`タイマー完了：${t.name}`,'タイマー');
+    save();render();toast('完了');
+  }
+  async function copyTimers(){
+    const text=buildTimerText();
+    try{await navigator.clipboard.writeText(text);toast('タイマーコピー')}catch(e){prompt('コピー',text)}
+  }
 
   function createCampTemplate(){
     const title=prompt('キャンプ名','次のキャンプ')||'次のキャンプ';
@@ -2301,5 +2477,6 @@ ${starterPanelHtml()}
     fileInput.accept='.json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*';
     fileInput.multiple=true;
   };
+  setInterval(updateTimers,1000);
   render();
 })();
