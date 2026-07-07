@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-fieldpro-20260707';
+  const VERSION = 'outbase-genius-ui-memorypro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -20,7 +20,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', drawer:null, toast:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', drawer:null, toast:null,
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -620,23 +620,112 @@
     `)
   }
 
+
+  function publicRecords(){
+    return (state.records||[]).filter(r=>!r.private);
+  }
+  function improveNotes(){
+    const words=['改善','次回','失敗','忘れ','雨','風','乾燥','買い','積込','修理','買替'];
+    return state.notes.filter(n=>!n.private && words.some(w=>`${n.title} ${n.text}`.includes(w)));
+  }
+  function memoryStats(){
+    const pub=publicRecords();
+    const places=state.places||[];
+    const imp=improveNotes();
+    const reviews=state.reviews||[];
+    const score=Math.min(100, Math.round((pub.length*18 + places.length*12 + imp.length*18 + reviews.length*18)/2));
+    return {pub:pub.length,places:places.length,imp:imp.length,reviews:reviews.length,privateHealth:state.walk.health.length,score};
+  }
+  function memoryNextTarget(){
+    const ms=memoryStats();
+    if(ms.pub===0)return ['timeline','記録を整理する','公開できる記録がまだ少ない'];
+    if(ms.places===0)return ['places','場所カードを作る','再訪に使う場所がまだ少ない'];
+    if(ms.imp===0)return ['improve','次回改善を残す','次に直すことを1つ作る'];
+    return ['review','レビューを作る','次回に使える形まで整理済み'];
+  }
+  function buildTripReport(){
+    const p=current();
+    const pub=publicRecords();
+    const spots=state.walk.spots||[];
+    const friends=state.walk.friends||[];
+    const imp=improveNotes();
+    const lines=[
+      `【OUTBASE レポート】`,
+      `${p.title}`,
+      `${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'} / ${typeName[p.type]||p.type}`,
+      ``,
+      `■現地記録`,
+      pub.length?pub.slice(-8).map(r=>`・${r.time||''} ${recordKindLabel(r.kind)}：${r.text||r.title}`).join('\n'):'公開記録なし',
+      ``,
+      `■場所`,
+      spots.length?spots.slice(-8).map(s=>`・${s.type||'スポット'}：${s.name}`).join('\n'):'場所記録なし',
+      ``,
+      `■犬友達`,
+      friends.length?friends.slice(-5).map(f=>`・${f.name}`).join('\n'):'犬友達なし',
+      ``,
+      `■次回改善`,
+      imp.length?imp.slice(-5).map(n=>`・${n.title}：${n.text}`).join('\n'):'改善メモなし',
+      ``,
+      `※体調 / うんち / おしっこ は非公開のため含めない`
+    ];
+    return lines.join('\n');
+  }
+  function buildPlaceSummary(place){
+    return `【場所カード】\\n${place.name}\\n種類:${place.kind}\\n訪問:${place.visits||1}回\\nメモ:${place.note||''}`;
+  }
+
   function memory(){
+    const ms=memoryStats();
+    const next=memoryNextTarget();
     return shell(`
-      <section class="section"><div class="reportBox"><b>自動レビュー</b><p>${esc(buildReviewText())}</p><div class="actions"><button class="btn wood" data-act="saveReview">レビュー保存</button><button class="btn" data-act="copyReview">コピー</button></div></div></section>
-      <section class="section"><div class="head"><div><h2>整理</h2><p>記録を見返し、次回に使える形へ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="list">${state.notes.map(n=>`<div class="row"><span><strong>${esc(n.title)}</strong><small>${esc(n.text)}</small></span><span class="pill ${n.private?'private':''}">${n.private?'非公開':'共有可'}</span></div>`).join('')}</div></section>
-      <section class="section"><div class="head"><div><h2>場所カード</h2><p>散歩先・キャンプ場・再訪候補。</p></div></div><div class="list">${state.places.map(p=>`<div class="row"><span><strong>${esc(p.name)}</strong><small>${esc(p.kind)} / 訪問${p.visits}回<br>${esc(p.note)}</small></span><span class="pill">場所</span></div>`).join('')}</div></section>
-      <section class="section"><div class="actions"><button class="btn primary" data-act="backup">バックアップ</button><button class="btn" data-act="import">復元/取込</button></div></section>
+      <section class="memoryHero">
+        <div class="memoryHeroTop">
+          <span><b>${next[1]}</b><small>${next[2]}。記録は残すだけではなく、次回に使える形へ。</small></span>
+          <span class="memoryScore" style="--score:${ms.score}">${ms.score}</span>
+        </div>
+        <div class="memoryCommand">
+          <button class="mainCmd" data-memory="${next[0]}">次をやる</button>
+          <button class="subCmd" data-act="copyTripReport">レポートコピー</button>
+        </div>
+      </section>
+
+      <div class="memoryStats">
+        <button class="${ms.pub?'good':'warn'}" data-memory="timeline"><b>${ms.pub}</b><span>公開記録</span></button>
+        <button class="${ms.places?'good':'warn'}" data-memory="places"><b>${ms.places}</b><span>場所</span></button>
+        <button class="${ms.imp?'good':'warn'}" data-memory="improve"><b>${ms.imp}</b><span>改善</span></button>
+        <button class="good" data-memory="data"><b>${ms.privateHealth}</b><span>非公開</span></button>
+      </div>
+
+      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','notes:メモ','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
+      ${memoryBody()}
     `)
   }
 
 
-  function buildReviewText(){
-    const p=current();
-    const st=prepStats();
-    const walk=`散歩GPS ${state.walk.track.length}点、スポット ${state.walk.spots.length}件、犬友達 ${state.walk.friends.length}件。体調メモは非公開。`;
-    const prep=`買い物未完 ${st.undoneShop}件、ギア積込 ${st.loaded}/${state.gear.length}、天気確認 ${st.wdone}/${state.weather.length}。`;
-    const next=state.notes.filter(n=>!n.private).slice(-2).map(n=>n.text).join(' / ') || '次回改善は未整理。';
-    return `${p.title}：${prep} ${walk} 次回メモ：${next}`;
+  function memoryBody(){
+    if(state.memoryTab==='timeline'){
+      const list=publicRecords().slice().reverse();
+      return `<section class="section"><div class="head"><div><h2>公開記録</h2><p>体調メモは混ぜない。レビューに使える記録だけ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="memoryTimeline">${list.map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<p>${esc(r.text)}</p>`:''}<div class="improveOps"><button data-act="recordToImprove" data-id="${r.id}">改善へ</button><button data-act="recordToPlace" data-id="${r.id}">場所へ</button></div></div>`).join('')||`<div class="dataPanel"><b>公開記録なし</b><p>現地画面でメモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div></section>`;
+    }
+
+    if(state.memoryTab==='places'){
+      return `<section class="section"><div class="head"><div><h2>場所カード</h2><p>再訪・散歩・キャンプ場レビューに使う。</p></div></div><div class="placeGrid">${(state.places||[]).map(p=>`<div class="placeCard2"><div class="placeTop2"><span><b>${esc(p.name)}</b><small>${esc(p.kind)} / 訪問${p.visits||1}回<br>${esc(p.note||'')}</small></span><span class="pill">場所</span></div><div class="placeOps2"><button data-act="copyPlace" data-id="${p.id}">コピー</button><button data-act="visitPlace" data-id="${p.id}">再訪+1</button><button data-act="placeToPlan" data-id="${p.id}">予定化</button></div></div>`).join('')||`<div class="dataPanel"><b>場所カードなし</b><p>現地画面の景色・木陰・水場・危険から作れる。</p></div>`}</div></section>`;
+    }
+
+    if(state.memoryTab==='improve'){
+      const list=improveNotes();
+      return `<section class="section"><div class="head"><div><h2>次回改善</h2><p>思い出で終わらせず、次回の準備に戻す。</p></div><button class="btn primary" data-act="createImprove">改善追加</button></div><div class="improveList">${list.map(n=>`<div class="improveCard"><b>${esc(n.title)}</b><small>${esc(n.text)}</small><div class="improveOps"><button data-act="improveToPrep" data-id="${n.id}">準備へ送る</button><button data-act="doneImprove" data-id="${n.id}">完了</button></div></div>`).join('')||`<div class="dataPanel"><b>改善なし</b><p>「次はこうする」を1つ残すと、次回の準備に戻せる。</p></div>`}</div></section>`;
+    }
+
+    if(state.memoryTab==='notes'){
+      return `<section class="section"><div class="head"><div><h2>メモ</h2><p>共有可と非公開を分ける。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="list">${state.notes.map(n=>`<div class="row"><span><strong>${esc(n.title)}</strong><small>${esc(n.text)}</small></span><span class="pill ${n.private?'private':''}">${n.private?'非公開':'共有可'}</span></div>`).join('')}</div></section>`;
+    }
+
+    if(state.memoryTab==='data'){
+      return `<section class="section"><div class="dataPanel"><b>データ管理</b><p>端末保存のデータをバックアップ・復元する。非公開体調メモはレビューや場所カードには出さない。</p><div class="dataGrid"><button class="primary" data-act="backup">バックアップ</button><button data-act="import">復元/取込</button><button data-act="copyTripReport">レポートコピー</button><button data-act="cleanupData">整理</button></div></div></section>`;
+    }
+
+    return `<section class="section"><div class="reportPanel"><div class="reportHead"><span><b>自動レビュー</b><small>公開記録・場所・改善だけで作る。非公開体調メモは除外。</small></span><span class="pill dark">生成</span></div><div class="reportBody">${esc(buildTripReport())}</div><div class="memoryOps"><button class="primary" data-act="saveTripReport">保存</button><button data-act="copyTripReport">コピー</button></div></div></section>`;
   }
 
   function drawer(){
@@ -665,6 +754,7 @@
     document.querySelectorAll('[data-prep]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepTab=el.dataset.prep;save();render()});
     document.querySelectorAll('[data-gear]').forEach(el=>el.onclick=()=>{state.gearTab=el.dataset.gear;save();render()});
     document.querySelectorAll('[data-walk]').forEach(el=>el.onclick=()=>{state.walkMode=el.dataset.walk;save();render()});
+    document.querySelectorAll('[data-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.memoryTab=el.dataset.memory;save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -677,6 +767,18 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='copyTripReport')return copyTripReport();
+    if(a==='saveTripReport')return saveTripReport();
+    if(a==='recordToImprove')return recordToImprove(el.dataset.id);
+    if(a==='recordToPlace')return recordToPlace(el.dataset.id);
+    if(a==='copyPlace')return copyPlace(el.dataset.id);
+    if(a==='visitPlace')return visitPlace(el.dataset.id);
+    if(a==='placeToPlan')return placeToPlan(el.dataset.id);
+    if(a==='createImprove')return createImprove();
+    if(a==='improveToPrep')return improveToPrep(el.dataset.id);
+    if(a==='doneImprove')return doneImprove(el.dataset.id);
+    if(a==='cleanupData')return cleanupData();
 
     if(a==='quickRecord')return quickRecord(el.dataset.kind);
     if(a==='spotQuick')return spotQuick(el.dataset.type);
@@ -761,6 +863,72 @@
 
 
 
+
+
+  async function copyTripReport(){
+    const text=buildTripReport();
+    try{await navigator.clipboard.writeText(text);toast('レポートをコピー')}catch(e){prompt('コピー',text)}
+  }
+  function saveTripReport(){
+    const text=buildTripReport();
+    state.reviews=state.reviews||[];
+    state.reviews.push({id:uid('rv'),eventId:state.currentPlanId,title:'OUTBASEレポート',text});
+    state.notes.push({id:uid('note'),title:'OUTBASEレポート',text,private:false});
+    save();render();toast('レポート保存');
+  }
+  function recordToImprove(id){
+    const r=(state.records||[]).find(x=>x.id===id); if(!r)return;
+    state.notes.push({id:uid('note'),title:'次回改善',text:`${recordKindLabel(r.kind)}から改善：${r.text||r.title}`,private:false});
+    save();render();toast('改善へ追加');
+  }
+  function recordToPlace(id){
+    const r=(state.records||[]).find(x=>x.id===id); if(!r)return;
+    const name=prompt('場所名', r.title||r.text||'場所');
+    if(!name)return;
+    state.places.push({id:uid('place'),name,kind:r.mode||'記録から追加',note:r.text||r.title||'',visits:1});
+    save();render();toast('場所カード追加');
+  }
+  async function copyPlace(id){
+    const p=(state.places||[]).find(x=>x.id===id); if(!p)return;
+    const text=buildPlaceSummary(p);
+    try{await navigator.clipboard.writeText(text);toast('場所コピー')}catch(e){prompt('コピー',text)}
+  }
+  function visitPlace(id){
+    state.places=(state.places||[]).map(p=>p.id===id?{...p,visits:(p.visits||1)+1}:p);
+    save();render();toast('再訪+1');
+  }
+  function placeToPlan(id){
+    const p=(state.places||[]).find(x=>x.id===id); if(!p)return;
+    const ev={id:uid('evt'),title:`${p.name}へ行く`,type:p.kind?.includes('散歩')?'walk':'normal',start:state.selectedDate||today(),end:state.selectedDate||today(),repeat:'none',place:p.name,memo:p.note||'',level:1};
+    state.events.push(ev);
+    state.currentPlanId=ev.id;
+    state.route='calendar';
+    state.selectedDate=ev.start;
+    state.currentMonth=ev.start.slice(0,7);
+    save();render();toast('予定へ追加');
+  }
+  function createImprove(){
+    const text=prompt('次回改善', '次回は');
+    if(!text)return;
+    state.notes.push({id:uid('note'),title:'次回改善',text,private:false});
+    save();render();toast('改善追加');
+  }
+  function improveToPrep(id){
+    const n=state.notes.find(x=>x.id===id); if(!n)return;
+    state.shopping.push({id:uid('shop'),name:n.text.slice(0,24),qty:'要確認',group:'改善',source:'次回改善',done:false});
+    state.route='prep';state.prepTab='shopping';
+    save();render();toast('準備へ送った');
+  }
+  function doneImprove(id){
+    state.notes=state.notes.map(n=>n.id===id?{...n,title:`✓ ${n.title}`}:n);
+    save();render();toast('改善完了');
+  }
+  function cleanupData(){
+    const before=(state.records||[]).length;
+    state.records=(state.records||[]).filter(r=>r.text||r.title||r.kind);
+    const after=state.records.length;
+    save();render();toast(`整理 ${before-after}件`);
+  }
 
   function quickRecord(kind){
     const label=recordKindLabel(kind);
