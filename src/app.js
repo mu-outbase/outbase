@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-sitemappro-20260707';
+  const VERSION = 'outbase-genius-ui-insightpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-sitemappro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-insightpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -42,6 +42,7 @@
         {id:'pp5',petId:'cats',name:'猫留守番チェック',qty:'フード/水/トイレ/室温',group:'猫',done:false}
       ],
       shares:[],
+      dismissedInsights:[],
       mapPins:[
         {id:'pin1',eventId:'akagi',name:'サイト候補',kind:'サイト',x:28,y:58,public:true,note:'車と動線確認。コタの日陰も見る。',score:4},
         {id:'pin2',eventId:'akagi',name:'木陰',kind:'木陰',x:58,y:34,public:true,note:'夏のコタ休憩に良い。',score:5},
@@ -121,7 +122,7 @@
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
     s.weatherPlan.forecast=s.weatherPlan.forecast||[];
-    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
+    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins','dismissedInsights'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
     if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
     if(!s.boxes.length)s.boxes=base.boxes;
     const fallbackBox=s.boxes[0]?.id||'';
@@ -363,6 +364,7 @@
     (state.timers||[]).forEach(t=>items.push({type:'timer',id:t.id,icon:'時',title:t.name,sub:`${timerLabel(t.kind)} / ${formatTimer(timerLeft(t))} / ${t.status}`,text:t.note||''}));
     if(state.walk.track.length)items.push({type:'route',id:'current',icon:'歩',title:'現在のルート',sub:`${walkDistance().toFixed(2)}km / ${fmtDuration(walkDurationSec())}`,text:buildRouteSummary()});
     (state.mapPins||[]).forEach(p=>items.push({type:'pin',id:p.id,icon:'ピ',title:p.name,sub:`${p.kind} / ${p.public?'公開':'非公開'}`,text:p.note||''}));
+    rawInsights().forEach(x=>items.push({type:'insight',id:x.id,icon:'提',title:x.title,sub:`${x.level} / ${x.cat}`,text:x.body}));
     return items;
   }
   function filteredCenterItems(){
@@ -398,6 +400,111 @@
     return `【OUTBASE 現在地】\\n主役:${current().title}\\n準備:${st.score}% / 買い物残:${st.undoneShop} / ギア積込:${gs.loaded}/${gs.total} / 天気:${st.wdone}/${state.weather.length}\\n現地記録:${fs.records} / 場所:${ms.places} / 改善:${ms.imp}\\n未整理:${unresolvedItems().length}\\n\\n次:${prepNextTarget()[1]}`;
   }
 
+
+
+  function makeInsight(id,cat,title,body,action='準備へ',level='提案'){
+    return {id,cat,title,body,action,level};
+  }
+  function rawInsights(){
+    const list=[];
+    const st=prepStats(), gs=gearStats(), ms=mealStats(), ps=petPrepStats(), pins=siteMapStats(), ts=timerStats();
+    const weatherRisk=weatherRiskScore();
+    if(st.undoneShop>0)list.push(makeInsight('shop-left','prep','買い物を先に潰す',`買い物が${st.undoneShop}件残り。現地前にLINEコピーしてまとめる。`,'買い物へ','未完'));
+    if(gs.loaded<state.gear.length)list.push(makeInsight('gear-left','gear','ギア積込をBOX単位で終わらせる',`未積込が${state.gear.length-gs.loaded}件。個別ではなくBOX単位で処理する。`,'ギアへ','未完'));
+    if(gs.care>0)list.push(makeInsight('gear-care','gear','乾燥/修理/買替を後回しにしない',`ケア対象が${gs.care}件。次回の準備前に状態を戻す。`,'ケアへ','注意'));
+    if(weatherRisk>=50)list.push(makeInsight('weather-risk','weather','天気で構成を変える',`天気リスク${weatherRisk}。設営・撤収・コタ・幕体判断を確定する。`,'天気へ','注意'));
+    if(Object.values(weatherPlan().decisions||{}).some(v=>v==='未判断'))list.push(makeInsight('weather-decision','weather','天気判断を4つだけ決める','設営 / 撤収 / コタ / 幕体のうち未判断がある。','天気へ','未完'));
+    if(ms.risks>0)list.push(makeInsight('meal-risk','meal','献立の注意食材を確認',`貝アレルギー/魚卵苦手に触れる可能性が${ms.risks}件。`,'料理へ','注意'));
+    if(ms.meals>0 && ms.inShop<ms.ingredients)list.push(makeInsight('meal-shop','meal','献立から買い物へ反映',`材料${ms.ingredients}件のうち買い物反映が${ms.inShop}件。`,'料理へ','未完'));
+    if(ps.done<ps.all.length)list.push(makeInsight('pet-prep','pet','ペット準備を先に終わらせる',`ペット準備が${ps.all.length-ps.done}件残り。コタ用品と猫留守番を確認。`,'ペットへ','未完'));
+    if(state.walk.active)list.push(makeInsight('walk-active','field','散歩記録を終了する',`現在${walkDistance().toFixed(2)}km記録中。終了しないと監査に残る。`,'現地へ','注意'));
+    if(planRecords().length===0 && current().type==='camp')list.push(makeInsight('record-zero','field','現地記録を1つ残す','主役キャンプの記録がまだない。写真・メモ・場所のどれか1つで十分。','現地へ','提案'));
+    if(pins.private>0)list.push(makeInsight('pin-private','field','非公開ピンを公開前確認',`非公開ピンが${pins.private}件。レビュー前に公開可否を決める。`,'MAPへ','注意'));
+    if(ts.running>0)list.push(makeInsight('timer-running','timer','タイマーを確認',`実行中タイマーが${ts.running}件。終わったら完了にする。`,'タイマーへ','注意'));
+    if((state.candidates||[]).filter(c=>c.wish).length>0)list.push(makeInsight('wish-plan','discover','保存候補を予定化する',`保存候補が${(state.candidates||[]).filter(c=>c.wish).length}件。行くなら予定へ入れる。`,'探すへ','提案'));
+    if(improveNotes().length>0)list.push(makeInsight('improve-prep','improve','改善メモを次回準備へ戻す',`改善メモが${improveNotes().length}件。買い物・ギア・予定に戻す。`,'改善へ','提案'));
+    if(connectScore()<60)list.push(makeInsight('connect','connect','バックアップ/書き出しを確認','ICS・CSV・JSONバックアップを一度出しておく。','連携へ','保全'));
+    if(!list.length)list.push(makeInsight('ok','all','今は大きな未処理なし','記録を増やすほど、次回提案が強くなる。','記録へ','OK'));
+    return list;
+  }
+  function insights(){
+    const dis=new Set(state.dismissedInsights||[]);
+    let list=rawInsights().filter(x=>!dis.has(x.id));
+    if(state.insightTab&&state.insightTab!=='all')list=list.filter(x=>x.cat===state.insightTab || x.level===state.insightTab);
+    return list;
+  }
+  function insightStats(){
+    const all=rawInsights().filter(x=>x.id!=='ok');
+    return {
+      total:all.length,
+      warn:all.filter(x=>x.level==='注意').length,
+      undone:all.filter(x=>x.level==='未完').length,
+      dismissed:(state.dismissedInsights||[]).length,
+      score:Math.max(0,100-all.filter(x=>x.level==='注意').length*14-all.filter(x=>x.level==='未完').length*9-all.length*3)
+    };
+  }
+  function insightNext(){
+    const list=insights();
+    const first=list[0];
+    if(!first)return ['all','提案なし','いま大きな未処理はない',''];
+    return [first.cat,first.title,first.body,first.id];
+  }
+  function insightCard(x){
+    return `<div class="insightCard"><div class="insightTop"><span><b>${esc(x.title)}</b><small>${esc(x.level)} / ${esc(x.cat)}</small></span><span class="pill ${x.level==='注意'?'wood':x.level==='未完'?'wood':'dark'}">${esc(x.level)}</span></div><div class="insightBody">${esc(x.body)}</div><div class="insightOps"><button data-act="applyInsight" data-id="${x.id}">${esc(x.action)}</button><button data-act="saveInsight" data-id="${x.id}">メモ化</button><button data-act="dismissInsight" data-id="${x.id}">隠す</button></div></div>`;
+  }
+  function buildInsightReport(){
+    const all=rawInsights();
+    return `【OUTBASE 提案】\\n${current().title}\\n監査:${appAudit().score} / 提案:${all.length}\\n\\n${all.map((x,i)=>`${i+1}. ${x.title}（${x.level}）\\n${x.body}`).join('\\n\\n')}`;
+  }
+  function insightPanelHtml(){
+    const st=insightStats(), next=insightNext();
+    return `<section class="section"><div class="insightHero"><div class="insightHeroTop"><span><b>${esc(next[1])}</b><small>${esc(next[2])}。集めた記録から、次にやることだけ出す。</small></span><span class="insightScore" style="--score:${st.score}">${st.score}</span></div><div class="insightCommand"><button class="mainCmd" data-act="applyInsight" data-id="${next[3]}">${next[3]?'これをやる':'記録へ'}</button><button class="subCmd" data-act="copyInsightReport">提案コピー</button></div></div><div class="insightRail"><button class="${st.undone?'warn':'good'}" data-insight="未完"><b>${st.undone}</b><span>未完</span></button><button class="${st.warn?'warn':'good'}" data-insight="注意"><b>${st.warn}</b><span>注意</span></button><button data-insight="all"><b>${st.total}</b><span>提案</span></button><button data-insight="dismissed"><b>${st.dismissed}</b><span>非表示</span></button></div></section>`;
+  }
+  function insightBodyHtml(){
+    if(state.insightTab==='dismissed')return `<section class="section"><div class="insightReport"><b>非表示提案</b><p>${(state.dismissedInsights||[]).join('\\n')||'なし'}</p><div class="insightReportOps"><button class="primary" data-act="resetInsights">戻す</button><button data-act="copyInsightReport">コピー</button></div></div></section>`;
+    return `<section class="section"><div class="head"><div><h2>提案</h2><p>外部AIではなく、OUTBASE内の記録から作るルールベース提案。</p></div><button class="btn primary" data-act="copyInsightReport">コピー</button></div><div class="insightList">${insights().map(insightCard).join('')||`<div class="insightReport"><b>提案なし</b><p>非表示を戻すか、現地記録を増やす。</p></div>`}</div></section>`;
+  }
+
+
+  function findInsight(id){
+    return rawInsights().find(x=>x.id===id) || insights()[0];
+  }
+  function applyInsight(id){
+    const x=findInsight(id);
+    if(!x){state.route='field';save();render();return}
+    const c=x.cat;
+    if(c==='prep'){state.route='prep';state.prepTab='shopping'}
+    else if(c==='gear'){state.route='prep';state.prepTab='gear';state.gearTab=x.id==='gear-care'?'care':'load'}
+    else if(c==='weather'){state.route='prep';state.prepTab='weather'}
+    else if(c==='meal'){state.route='prep';state.prepTab='meals';state.mealTab=x.id==='meal-risk'?'safe':'plan'}
+    else if(c==='pet'){state.route='prep';state.prepTab='pets';state.familyTab='pets'}
+    else if(c==='field'){state.route='field'}
+    else if(c==='timer'){state.route='prep';state.prepTab='timer'}
+    else if(c==='discover'){state.route='discover';state.discoverTab='wish'}
+    else if(c==='improve'){state.route='memory';state.memoryTab='improve'}
+    else if(c==='connect'){state.route='memory';state.memoryTab='connect'}
+    else {state.route='field'}
+    save();render();
+  }
+  function saveInsight(id){
+    const x=findInsight(id); if(!x)return;
+    state.notes.push({id:uid('note'),title:`提案：${x.title}`,text:x.body,private:false});
+    save();render();toast('提案をメモ化');
+  }
+  function dismissInsight(id){
+    if(!id)return;
+    state.dismissedInsights=state.dismissedInsights||[];
+    if(!state.dismissedInsights.includes(id))state.dismissedInsights.push(id);
+    save();render();toast('提案を隠した');
+  }
+  function resetInsights(){
+    state.dismissedInsights=[];
+    save();render();toast('提案を戻した');
+  }
+  async function copyInsightReport(){
+    const text=buildInsightReport();
+    try{await navigator.clipboard.writeText(text);toast('提案コピー')}catch(e){prompt('コピー',text)}
+  }
 
   function appAudit(){
     const issues=[];
@@ -497,6 +604,7 @@ ${starterPanelHtml()}
       </section>
 
             ${planFlowHtml()}
+      ${insightPanelHtml()}
       <div class="commandDock">
         <button class="btn primary" data-act="copyPlanSummary">準備まとめコピー</button>
         <button class="btn" data-act="autoNext">次に進める</button>
@@ -552,6 +660,7 @@ ${starterPanelHtml()}
 
       <section class="section">
         ${auditPanelHtml()}
+      ${insightPanelHtml()}
       </section>
 
       <section class="section">
@@ -1675,7 +1784,7 @@ ${starterPanelHtml()}
         <button class="good" data-memory="data"><b>${ms.privateHealth}</b><span>非公開</span></button>
       </div>
 
-      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','notes:メモ','family:家族','connect:連携','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','insight:提案','notes:メモ','family:家族','connect:連携','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
       ${memoryBody()}
     `)
   }
@@ -1686,6 +1795,8 @@ ${starterPanelHtml()}
       const list=planRecords().slice().reverse();
       return `<section class="section"><div class="head"><div><h2>公開記録</h2><p>体調メモは混ぜない。レビューに使える記録だけ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="memoryTimeline">${list.map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<p>${esc(r.text)}</p>`:''}${mediaPreviewHtml(r)}<div class="improveOps"><button data-act="recordToImprove" data-id="${r.id}">改善へ</button><button data-act="recordToPlace" data-id="${r.id}">場所へ</button></div></div>`).join('')||`<div class="dataPanel"><b>公開記録なし</b><p>現地画面でメモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div></section>`;
     }
+
+    if(state.memoryTab==='insight')return `${insightPanelHtml()}${insightBodyHtml()}`;
 
     if(state.memoryTab==='places'){
       return `<section class="section"><div class="head"><div><h2>場所カード</h2><p>再訪・散歩・キャンプ場レビューに使う。</p></div></div><div class="placeGrid">${(state.places||[]).map(p=>`<div class="placeCard2"><div class="placeTop2"><span><b>${esc(p.name)}</b><small>${esc(p.kind)} / 訪問${p.visits||1}回<br>${esc(p.note||'')}</small></span><span class="pill">場所</span></div><div class="placeOps2"><button data-act="copyPlace" data-id="${p.id}">コピー</button><button data-act="visitPlace" data-id="${p.id}">再訪+1</button><button data-act="placeToPlan" data-id="${p.id}">予定化</button></div></div>`).join('')||`<div class="dataPanel"><b>場所カードなし</b><p>現地画面の景色・木陰・水場・危険から作れる。</p></div>`}</div></section>`;
@@ -1743,6 +1854,7 @@ ${starterPanelHtml()}
     document.querySelectorAll('[data-connect]').forEach(el=>el.onclick=()=>{state.connectTab=el.dataset.connect;state.route='memory';state.memoryTab='connect';save();render()});
     document.querySelectorAll('[data-meal-tab]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepTab='meals';state.mealTab=el.dataset.mealTab;save();render()});
     document.querySelectorAll('[data-timer-tab]').forEach(el=>el.onclick=()=>{state.timerTab=el.dataset.timerTab;save();render()});
+    document.querySelectorAll('[data-insight]').forEach(el=>el.onclick=()=>{state.insightTab=el.dataset.insight;state.route='memory';state.memoryTab='insight';save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -1769,6 +1881,12 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='applyInsight')return applyInsight(el.dataset.id);
+    if(a==='saveInsight')return saveInsight(el.dataset.id);
+    if(a==='dismissInsight')return dismissInsight(el.dataset.id);
+    if(a==='resetInsights')return resetInsights();
+    if(a==='copyInsightReport')return copyInsightReport();
 
     if(a==='addPinQuick')return addPinQuick(el.dataset.kind||'スポット');
     if(a==='copySiteMapReport')return copySiteMapReport();
@@ -2069,6 +2187,7 @@ ${starterPanelHtml()}
     else if(type==='timer'){state.route='prep';state.prepTab='timer';state.timerTab='active';}
     else if(type==='route'){state.route='field';}
     else if(type==='pin'){state.route='field';}
+    else if(type==='insight'){state.route='memory';state.memoryTab='insight';state.insightTab='all';}
     save();render();
   }
   function resolveCenterItem(type,id){
