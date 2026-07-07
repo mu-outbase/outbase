@@ -1,0 +1,44 @@
+{
+  "version": "v147-ui-keep-all-event-mvp-lock",
+  "ui_base": "RESTART-35 / Restart-37-40 visual structure",
+  "bottom_nav": [
+    "予定",
+    "探す",
+    "準備",
+    "＋",
+    "思い出"
+  ],
+  "implemented": [
+    "全予定カレンダー",
+    "普通の予定",
+    "非直線エントリー",
+    "文脈仮紐付け",
+    "要確認",
+    "散歩3秒記録",
+    "写真/動画",
+    "音声文字起こしメモ",
+    "GPS",
+    "犬友達",
+    "犬友達エンジン",
+    "場所カード",
+    "Weather Watch",
+    "ギア管理",
+    "料理・献立・買い物",
+    "設営撤収ログ",
+    "思い出/レビュー",
+    "チャッピー提案",
+    "一括取込",
+    "バックアップ/復元",
+    "オフライン"
+  ],
+  "excluded_external": [
+    "Google Photos本接続",
+    "天気API本接続",
+    "家族リアルタイム同期"
+  ],
+  "forbidden_terms_absent": [
+    "全予定 / 37-40復旧ベース",
+    "v145-restore-design-calendar-lock",
+    "v144-calendar-context-lock"
+  ]
+}
