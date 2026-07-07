@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-gpspro-20260707';
+  const VERSION = 'outbase-genius-ui-sitemappro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-gpspro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-sitemappro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', drawer:null, toast:null, importMode:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -42,6 +42,12 @@
         {id:'pp5',petId:'cats',name:'猫留守番チェック',qty:'フード/水/トイレ/室温',group:'猫',done:false}
       ],
       shares:[],
+      mapPins:[
+        {id:'pin1',eventId:'akagi',name:'サイト候補',kind:'サイト',x:28,y:58,public:true,note:'車と動線確認。コタの日陰も見る。',score:4},
+        {id:'pin2',eventId:'akagi',name:'木陰',kind:'木陰',x:58,y:34,public:true,note:'夏のコタ休憩に良い。',score:5},
+        {id:'pin3',eventId:'akagi',name:'水場',kind:'水場',x:72,y:70,public:true,note:'洗い物の距離確認。',score:3},
+        {id:'pin4',eventId:'akagi',name:'注意ポイント',kind:'危険',x:40,y:78,public:false,note:'公開前に確認。',score:2}
+      ],
       timers:[
         {id:'tm1',eventId:'akagi',name:'設営ひと区切り',kind:'setup',duration:1800,remaining:1800,status:'idle',startedAt:0,note:'30分で一度休憩'},
         {id:'tm2',eventId:'akagi',name:'ガーリックシュリンプ',kind:'meal',duration:600,remaining:600,status:'idle',startedAt:0,note:'火を入れすぎない'},
@@ -115,7 +121,7 @@
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
     s.weatherPlan.forecast=s.weatherPlan.forecast||[];
-    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
+    ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
     if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
     if(!s.boxes.length)s.boxes=base.boxes;
     const fallbackBox=s.boxes[0]?.id||'';
@@ -356,6 +362,7 @@
     (state.petPrep||[]).forEach(x=>items.push({type:'petPrep',id:x.id,icon:'犬',title:x.name,sub:`${x.done?'完了':'未完'} / ${x.group}`,text:x.qty||''}));
     (state.timers||[]).forEach(t=>items.push({type:'timer',id:t.id,icon:'時',title:t.name,sub:`${timerLabel(t.kind)} / ${formatTimer(timerLeft(t))} / ${t.status}`,text:t.note||''}));
     if(state.walk.track.length)items.push({type:'route',id:'current',icon:'歩',title:'現在のルート',sub:`${walkDistance().toFixed(2)}km / ${fmtDuration(walkDurationSec())}`,text:buildRouteSummary()});
+    (state.mapPins||[]).forEach(p=>items.push({type:'pin',id:p.id,icon:'ピ',title:p.name,sub:`${p.kind} / ${p.public?'公開':'非公開'}`,text:p.note||''}));
     return items;
   }
   function filteredCenterItems(){
@@ -1251,6 +1258,45 @@ ${starterPanelHtml()}
   }
 
 
+
+  function planPins(){
+    return (state.mapPins||[]).filter(p=>!p.eventId || p.eventId===state.currentPlanId);
+  }
+  function pinKindClass(k){
+    return /危険|注意|雨|ぬかるみ/.test(k||'')?'warn':(/非公開|体調/.test(k||'')?'private':'');
+  }
+  function pinShort(k){
+    if((k||'').includes('サイト'))return 'S';
+    if((k||'').includes('木陰'))return '木';
+    if((k||'').includes('水'))return '水';
+    if((k||'').includes('危険'))return '!';
+    if((k||'').includes('景色'))return '景';
+    if((k||'').includes('トイレ'))return 'WC';
+    return 'P';
+  }
+  function siteMapStats(){
+    const pins=planPins();
+    return {
+      total:pins.length,
+      public:pins.filter(p=>p.public).length,
+      private:pins.filter(p=>!p.public).length,
+      score:Math.round(pins.reduce((a,p)=>a+(+p.score||0),0)/Math.max(1,pins.length)*20)
+    };
+  }
+  function buildSiteMapReport(){
+    const p=current(), pins=planPins(), st=siteMapStats();
+    const lines=pins.map(x=>`${x.public?'○':'非'} ${x.kind}：${x.name} / ${x.note||''} / 評価${x.score||'-'}`).join('\\n') || 'ピンなし';
+    return `【OUTBASE サイトMAP】\\n${p.title}\\n場所:${p.place||'未設定'}\\nピン:${st.total} / 公開:${st.public} / 非公開:${st.private} / 評価:${st.score}\\n\\n${lines}\\n\\n※非公開ピンは公開前に確認`;
+  }
+  function siteMapPanelHtml(){
+    const st=siteMapStats();
+    return `<section class="section"><div class="siteMapPanel"><div class="siteMapHead"><span><b>サイトMAP</b><small>キャンプ場散歩の場所メモを、再訪・レビューに使えるピンへ。</small></span><span class="pill ${st.score>=70?'dark':'wood'}">${st.score}</span></div><div class="siteMapCanvasWrap" id="siteMapCanvas">${planPins().map(p=>`<button class="sitePin ${pinKindClass(p.kind)}" style="left:${p.x}%;top:${p.y}%" data-act="openPin" data-id="${p.id}">${esc(pinShort(p.kind))}</button>`).join('')}</div><div class="siteScoreGrid"><div class="siteScore"><b>${st.total}</b><span>ピン</span></div><div class="siteScore"><b>${st.public}</b><span>公開</span></div><div class="siteScore"><b>${st.private}</b><span>非公開</span></div><div class="siteScore"><b>${state.walk.spots.length}</b><span>スポット</span></div></div><div class="siteMapOps"><button data-act="addPinQuick" data-kind="サイト">サイト</button><button data-act="addPinQuick" data-kind="木陰">木陰</button><button data-act="copySiteMapReport">MAPコピー</button></div></div></section>`;
+  }
+  function pinListHtml(){
+    const pins=planPins();
+    return `<section class="section"><div class="head"><div><h2>MAPピン</h2><p>公開前に非公開・注意ピンを確認。</p></div><button class="btn primary" data-act="addPinQuick" data-kind="スポット">追加</button></div><div class="pinList">${pins.map(p=>`<div class="pinCard"><div class="pinTop"><span><b>${esc(p.name)}</b><small>${esc(p.kind)} / 評価${esc(p.score||'-')} / ${p.public?'公開候補':'非公開'}<br>${esc(p.note||'')}</small></span><span class="pill ${p.public?'dark':'private'}">${p.public?'公開':'非公開'}</span></div><div class="pinOps"><button data-act="togglePinPublic" data-id="${p.id}">${p.public?'非公開へ':'公開へ'}</button><button data-act="pinToPlace" data-id="${p.id}">場所カード</button><button data-act="deletePin" data-id="${p.id}">削除</button></div></div>`).join('')||`<div class="siteReport"><b>ピンなし</b><p>サイト・木陰・水場・危険を押すだけで残せる。</p></div>`}</div></section>`;
+  }
+
   function haversine(a,b){
     if(!a||!b||a.lat==null||b.lat==null)return 0;
     const R=6371, toRad=x=>x*Math.PI/180;
@@ -1402,6 +1448,9 @@ ${starterPanelHtml()}
       </section>
 
       ${gpsPanelHtml()}
+
+      ${siteMapPanelHtml()}
+      ${pinListHtml()}
 
       ${timerPanelHtml()}
       ${timerBodyHtml()}
@@ -1721,6 +1770,13 @@ ${starterPanelHtml()}
   }
   function act(a,el){
 
+    if(a==='addPinQuick')return addPinQuick(el.dataset.kind||'スポット');
+    if(a==='copySiteMapReport')return copySiteMapReport();
+    if(a==='togglePinPublic')return togglePinPublic(el.dataset.id);
+    if(a==='pinToPlace')return pinToPlace(el.dataset.id);
+    if(a==='deletePin')return deletePin(el.dataset.id);
+    if(a==='openPin')return openPin(el.dataset.id);
+
     if(a==='copyRouteSummary')return copyRouteSummary();
     if(a==='exportGpx')return exportGpx();
     if(a==='clearTrack')return clearTrack();
@@ -1877,6 +1933,39 @@ ${starterPanelHtml()}
   }
   function toggleBox(id){const gs=state.gear.filter(g=>g.boxId===id),all=gs.length&&gs.every(g=>g.status==='loaded');state.gear=state.gear.map(g=>g.boxId===id?{...g,status:all?'home':'loaded'}:g);save();render()}
 
+
+  function addPinQuick(kind){
+    const name=prompt(`${kind}名`,kind)||kind;
+    const note=prompt('メモ','')||'';
+    const p=state.walk.track[state.walk.track.length-1];
+    state.mapPins=state.mapPins||[];
+    state.mapPins.push({id:uid('pin'),eventId:state.currentPlanId,name,kind,x:Math.round(18+Math.random()*64),y:Math.round(18+Math.random()*64),lat:p?.lat||null,lng:p?.lng||null,public:!/(危険|注意|非公開|体調|うんち|おしっこ)/.test(kind),note,score:kind==='木陰'?5:kind==='危険'?1:3});
+    if(p)state.walk.spots.push({name,type:kind,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),lat:p.lat,lng:p.lng,mode:fieldModeName()});
+    save();render();toast('ピン追加');
+  }
+  async function copySiteMapReport(){
+    const text=buildSiteMapReport();
+    try{await navigator.clipboard.writeText(text);toast('MAPコピー')}catch(e){prompt('コピー',text)}
+  }
+  function togglePinPublic(id){
+    state.mapPins=state.mapPins.map(p=>p.id===id?{...p,public:!p.public}:p);
+    save();render();toast('公開設定変更');
+  }
+  function pinToPlace(id){
+    const p=(state.mapPins||[]).find(x=>x.id===id); if(!p)return;
+    state.places.push({id:uid('place'),name:p.name,kind:p.kind,note:p.note||'',visits:1});
+    save();render();toast('場所カード追加');
+  }
+  function deletePin(id){
+    state.mapPins=(state.mapPins||[]).filter(p=>p.id!==id);
+    save();render();toast('ピン削除');
+  }
+  function openPin(id){
+    const p=(state.mapPins||[]).find(x=>x.id===id); if(!p)return;
+    const text=`${p.name}\\n${p.kind}\\n${p.note||''}`;
+    alert(text);
+  }
+
   async function copyRouteSummary(){
     const text=buildRouteSummary();
     try{await navigator.clipboard.writeText(text);toast('ルートコピー')}catch(e){prompt('コピー',text)}
@@ -1979,6 +2068,7 @@ ${starterPanelHtml()}
     else if(type==='pet'||type==='petPrep'){state.route='prep';state.prepTab='pets';}
     else if(type==='timer'){state.route='prep';state.prepTab='timer';state.timerTab='active';}
     else if(type==='route'){state.route='field';}
+    else if(type==='pin'){state.route='field';}
     save();render();
   }
   function resolveCenterItem(type,id){
@@ -2163,6 +2253,8 @@ ${starterPanelHtml()}
     const item={name,type:type||'スポット',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),lat:p?.lat||null,lng:p?.lng||null,mode:fieldModeName()};
     state.walk.spots.push(item);
     state.places.push({id:uid('place'),name,kind:item.mode,note:`${type||'スポット'}として記録`,visits:1});
+    state.mapPins=state.mapPins||[];
+    state.mapPins.push({id:uid('pin'),eventId:state.currentPlanId,name,kind:type||'スポット',x:Math.round(20+Math.random()*60),y:Math.round(20+Math.random()*60),public:!/(危険|注意|体調|うんち|おしっこ)/.test(type||''),note:`${fieldModeName()}で記録`,score:type==='木陰'?5:3});
     addPublicRecord('site',`${type||'スポット'}：${name}`,name);
     save();render();toast('場所を保存');
   }
