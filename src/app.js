@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc5-20260707';
+  const VERSION = 'outbase-finalrc6-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc5-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc6-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1702,6 +1702,22 @@ ${starterPanelHtml()}
   }
 
 
+
+  function quickMapHtml(){
+    return `<section class="quickMapPanel">
+      <div class="quickMapHead">
+        <span><b>地図</b><small>ルートの形をすぐ見る。外部地図はGoogle Mapで開く。</small></span>
+        <span class="pill">${state.walk.track.length} GPS</span>
+      </div>
+      <canvas class="quickMapCanvas" id="quickWalkMap" width="680" height="220"></canvas>
+      <div class="quickMapOps">
+        <button class="primary" data-act="gps">現在地追加</button>
+        <button data-act="openMap">Google Map</button>
+        <button data-act="copyRouteSummary">ルートコピー</button>
+      </div>
+    </section>`;
+  }
+
   function fieldFirstPanelHtml(){
     const nt=timerNext(), tid=nt[3]||'';
     return `<section class="fieldFirstPanel">
@@ -1711,12 +1727,13 @@ ${starterPanelHtml()}
       </div>
       <div class="fieldFirstGrid">
         <button class="fieldFirstBtn primary" data-act="gps"><b>現在地</b><small>GPSを1点保存</small></button>
-        <button class="fieldFirstBtn" data-act="captureMedia" data-kind="photo"><b>写真</b><small>画像を選んで記録</small></button>
-        <button class="fieldFirstBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中。もう一度押す':'その場で録音'}</small></button>
-        <button class="fieldFirstBtn" data-act="${tid?'startTimer':'addTimerTemplate'}" data-id="${tid}" data-kind="meal"><b>タイマー</b><small>${tid?'次のタイマーを開始':'料理タイマーを追加'}</small></button>
+        <button class="fieldFirstBtn" data-act="captureCamera"><b>カメラ</b><small>カメラを起動して撮影</small></button>
+        <button class="fieldFirstBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中。もう一度押す':'押して録音 / 押して停止'}</small></button>
+        <button class="fieldFirstBtn map" data-act="openMap"><b>地図</b><small>現在地をGoogle Mapで開く</small></button>
       </div>
       <div class="fieldFirstMini">
         <button data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
+        <button data-act="${tid?'startTimer':'addTimerTemplate'}" data-id="${tid}" data-kind="meal">タイマー</button>
         <button data-act="quickRecord" data-kind="memo">メモ</button>
       </div>
       <div class="fieldFirstHint">この下は詳細確認用。現地で急いでいる時は、この枠だけ使えばいい。<div class="scrollFixNote">散歩中のGPS自動更新では画面位置を動かさない。</div></div>
@@ -1727,6 +1744,7 @@ ${starterPanelHtml()}
     const fs=fieldStats();
     return shell(`
       ${fieldFirstPanelHtml()}
+      ${quickMapHtml()}
       <section class="fieldHero2">
         <div class="fieldHeroTop2">
           <span><b>${state.walk.active?'記録中':'現地詳細'}</b><small>${fieldModeName()}。上の固定ボタンで記録して、この下は確認用。</small></span>
@@ -1769,7 +1787,7 @@ ${starterPanelHtml()}
         <div class="head"><div><h2>ワンタップ記録</h2><p>現地では細かく書かない。種類だけ残して、必要なら一言。</p></div></div>
         <div class="captureGrid">
           <button class="captureBtn primary" data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言だけ残す</small></button>
-          <button class="captureBtn" data-act="captureMedia" data-kind="photo"><b>写真</b><small>画像を選んで記録</small></button>
+          <button class="captureBtn" data-act="captureCamera"><b>カメラ</b><small>撮影して記録</small></button>
           <button class="captureBtn" data-act="captureMedia" data-kind="video"><b>動画</b><small>動画ファイルを記録</small></button>
           <button class="captureBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中':'その場で録音'}</small></button>
           <button class="captureBtn" data-act="quickRecord" data-kind="meal"><b>料理</b><small>食べた/作った記録</small></button>
@@ -2042,7 +2060,7 @@ ${starterPanelHtml()}
     try{
       app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
       bind();
-      if(state.route==='field')drawMap();
+      if(state.route==='field'){drawMap();drawQuickMap();}
       bindSwipe();
       if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
     }catch(err){
@@ -2171,6 +2189,7 @@ ${starterPanelHtml()}
     if(a==='decideWeather')return decideWeather(el.dataset.type);
     if(a==='openWeatherChecks')return openWeatherChecks();
 
+    if(a==='captureCamera')return captureCamera();
     if(a==='captureMedia')return captureMedia(el.dataset.kind);
     if(a==='toggleVoice')return toggleVoice();
 
@@ -2373,6 +2392,29 @@ ${starterPanelHtml()}
 
 
 
+  function drawQuickMap(){
+    const c=document.getElementById('quickWalkMap');
+    if(!c)return;
+    const ctx=c.getContext('2d'),w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='rgba(17,19,15,.08)';
+    for(let x=0;x<w;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+    for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+    const pts=state.walk.track||[];
+    if(!pts.length){
+      ctx.fillStyle='rgba(17,19,15,.55)';
+      ctx.font='700 24px sans-serif';
+      ctx.fillText('現在地を押すとここにルート表示',28,64);
+      return;
+    }
+    const lats=pts.map(p=>p.lat),lngs=pts.map(p=>p.lng),minLa=Math.min(...lats),maxLa=Math.max(...lats),minLn=Math.min(...lngs),maxLn=Math.max(...lngs);
+    const mp=p=>({x:28+(w-56)*((p.lng-minLn)/((maxLn-minLn)||.001)),y:h-28-(h-56)*((p.lat-minLa)/((maxLa-minLa)||.001))});
+    ctx.strokeStyle='#273a30';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+    pts.forEach((p,i)=>{const m=mp(p);i?ctx.lineTo(m.x,m.y):ctx.moveTo(m.x,m.y)});
+    ctx.stroke();
+    pts.forEach((p,i)=>{const m=mp(p);ctx.fillStyle=i===pts.length-1?'#b99a66':'#3f5e4c';ctx.beginPath();ctx.arc(m.x,m.y,i===pts.length-1?9:5,0,Math.PI*2);ctx.fill()});
+  }
+
   async function copyAudit(){
     const text=buildAuditText();
     try{await navigator.clipboard.writeText(text);toast('監査をコピー')}catch(e){prompt('コピー',text)}
@@ -2539,10 +2581,18 @@ ${starterPanelHtml()}
   }
 
 
+  function captureCamera(){
+    state.importMode='media:photo';
+    fileInput.accept='image/*';
+    fileInput.multiple=false;
+    fileInput.setAttribute('capture','environment');
+    fileInput.click();
+  }
   function captureMedia(kind){
     state.importMode=`media:${kind}`;
     fileInput.accept=kind==='video'?'video/*':'image/*';
     fileInput.multiple=true;
+    fileInput.removeAttribute('capture');
     fileInput.click();
   }
   async function toggleVoice(){
@@ -3064,6 +3114,7 @@ ${starterPanelHtml()}
     fileInput.value='';
     fileInput.accept='.json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*';
     fileInput.multiple=true;
+    fileInput.removeAttribute('capture');
   };
   window.addEventListener('error',e=>{state.lastError={message:e.message||'error',time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
   window.addEventListener('unhandledrejection',e=>{state.lastError={message:String(e.reason?.message||e.reason||'promise'),time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
