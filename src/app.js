@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-mediapro-20260707';
+  const VERSION = 'outbase-genius-ui-weatherpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-mediapro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-weatherpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -161,7 +161,7 @@
     const p=current();
     const shop=state.shopping.filter(s=>!s.done).map(s=>`□ ${s.name}：${s.qty}`).join('\\n') || '買い物未完なし';
     const gear=state.gear.filter(g=>g.status!=='loaded').map(g=>`□ ${g.name}（${state.boxes.find(b=>b.id===g.boxId)?.name||'未収納'}）`).join('\\n') || 'ギア未積込なし';
-    return `【OUTBASE 準備まとめ】\\n${p.title}\\n${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'}\\n\\n■買い物\\n${shop}\\n\\n■ギア\\n${gear}\\n\\n■天気判断\\n${state.weather.map(w=>`${w.done?'✓':'□'} ${w.when}：${w.check}`).join('\\n')}`;
+    return `【OUTBASE 準備まとめ】\\n${p.title}\\n${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'}\\n\\n■買い物\\n${shop}\\n\\n■ギア\\n${gear}\\n\\n■天気判断\\n${buildWeatherReport()}`;
   }
 
 
@@ -281,6 +281,7 @@
     if(st.undoneShop)warn.push(['買い物未完',`${st.undoneShop}件`]);
     if(st.loaded<state.gear.length)warn.push(['ギア未積込',`${state.gear.length-st.loaded}件`]);
     if(st.wdone<state.weather.length)warn.push(['天気未確認',`${state.weather.length-st.wdone}件`]);
+    if(Object.values(weatherPlan().decisions||{}).some(v=>v==='未判断'))warn.push(['天気判断未決定','設営/撤収/コタ/幕体']);
     const leak=(state.records||[]).filter(r=>!r.private && /うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`));
     if(leak.length)issues.push(['非公開メモ混入',`${leak.length}件`]);
     if(!state.boxes.length)issues.push(['BOXなし','ギア収納先がない']);
@@ -544,6 +545,75 @@
   }
 
 
+
+  function weatherPlan(){
+    state.weatherPlan=state.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
+    state.weatherPlan.decisions=state.weatherPlan.decisions||{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'};
+    state.weatherPlan.forecast=state.weatherPlan.forecast||[];
+    return state.weatherPlan;
+  }
+  function weatherRiskScore(){
+    const wp=weatherPlan();
+    const rows=wp.forecast||[];
+    if(!rows.length)return 0;
+    const maxRain=Math.max(...rows.map(r=>+r.rain||0));
+    const maxWind=Math.max(...rows.map(r=>+r.wind||0));
+    const maxTemp=Math.max(...rows.map(r=>+r.temp||0));
+    const minTemp=Math.min(...rows.map(r=>+r.temp||0));
+    let risk=Math.round(maxRain*.45 + Math.min(40,maxWind*5) + (maxTemp>=30?12:0) + (minTemp<=8?10:0));
+    return Math.min(100,Math.max(0,risk));
+  }
+  function weatherLevel(){
+    const r=weatherRiskScore();
+    if(r>=75)return ['高','雨風を避ける判断が必要'];
+    if(r>=50)return ['中','設営/撤収の時間を調整'];
+    if(r>=25)return ['低','通常運用で確認'];
+    return ['軽','大きな問題なし'];
+  }
+  function weatherNextDecision(){
+    const wp=weatherPlan(), d=wp.decisions||{};
+    if(d.setup==='未判断')return ['setup','設営判断を決める','雨・風で設営順とタープを決める'];
+    if(d.withdraw==='未判断')return ['withdraw','撤収判断を決める','雨撤収か乾燥サービスか決める'];
+    if(d.kota==='未判断')return ['kota','コタ判断を決める','暑さ・寒さ・散歩時間を決める'];
+    if(d.tent==='未判断')return ['tent','幕体判断を決める','リビシェル/タープ/寝室を決める'];
+    return ['copy','天気まとめをコピー','判断は一通り完了'];
+  }
+  function weatherSuggestion(type){
+    const risk=weatherRiskScore();
+    const rows=weatherPlan().forecast||[];
+    const maxRain=Math.max(0,...rows.map(r=>+r.rain||0));
+    const maxWind=Math.max(0,...rows.map(r=>+r.wind||0));
+    const maxTemp=Math.max(0,...rows.map(r=>+r.temp||0));
+    const minTemp=Math.min(99,...rows.map(r=>+r.temp||99));
+    if(type==='setup'){
+      if(maxWind>=7)return '風強め。タープは無理せず、幕体を先に安定させる。';
+      if(maxRain>=60)return '雨設営想定。荷物を濡らさない順番で、設営を短縮。';
+      return '通常設営。風だけ直前確認。';
+    }
+    if(type==='withdraw'){
+      if(maxRain>=50)return '雨撤収候補。直営なら乾燥サービスや帰宅後乾燥を前提。';
+      return '通常撤収。朝露と乾燥だけ確認。';
+    }
+    if(type==='kota'){
+      if(maxTemp>=30)return 'コタ暑さ注意。散歩は朝夕、日中は冷却・日陰優先。';
+      if(minTemp<=8)return 'コタ寒さ注意。寝床と服を確認。';
+      return 'コタは通常運用。地面温度だけ確認。';
+    }
+    if(type==='tent'){
+      if(maxWind>=7)return '風対策優先。タープを小さくする/張らない判断。';
+      if(maxRain>=60)return '雨対策優先。リビシェル中心、導線を短くする。';
+      return '通常構成でOK。気温で寝具だけ調整。';
+    }
+    return risk>=50?'慎重判断':'通常判断';
+  }
+  function buildWeatherReport(){
+    const wp=weatherPlan(), lv=weatherLevel();
+    const forecast=(wp.forecast||[]).map(r=>`・${r.label} ${r.time}：雨${r.rain}% / 風${r.wind}m / ${r.temp}℃ / 湿度${r.humidity}% ${r.note?`/ ${r.note}`:''}`).join('\\n') || '予報メモなし';
+    const checks=state.weather.map(w=>`${w.done?'✓':'□'} ${w.when}：${w.check}`).join('\\n');
+    const d=wp.decisions||{};
+    return `【OUTBASE 天気判断】\\n${current().title}\\nリスク:${weatherRiskScore()}（${lv[0]}） ${lv[1]}\\n更新:${wp.updated||'未更新'} / ${wp.source||'手入力'}\\n\\n■判断\\n設営:${d.setup||'未判断'}\\n撤収:${d.withdraw||'未判断'}\\nコタ:${d.kota||'未判断'}\\n幕体:${d.tent||'未判断'}\\n\\n■予報メモ\\n${forecast}\\n\\n■確認タイミング\\n${checks}`;
+  }
+
   function prepNextTarget(){
     const st=prepStats();
     if(state.meals.length===0)return ['meals','献立を決める','料理を1つ入れる'];
@@ -570,10 +640,54 @@
     return groups;
   }
   function weatherDecisionText(){
-    const undone=state.weather.filter(w=>!w.done);
-    if(!undone.length)return '天気確認は完了。あとは当日の風と雨で最終判断。';
-    const first=undone[0];
-    return `${first.when}：${first.check} を確認。雨・風・気温で設営時間、コタの暑寒、幕体を決める。`;
+    const next=weatherNextDecision();
+    const lv=weatherLevel();
+    return `${next[1]}。${next[2]}。現在リスク ${weatherRiskScore()}（${lv[0]}）：${lv[1]}。`;
+  }
+
+  function weatherView(){
+    const wp=weatherPlan(), risk=weatherRiskScore(), lv=weatherLevel(), next=weatherNextDecision(), d=wp.decisions||{};
+    const checksDone=state.weather.filter(w=>w.done).length;
+    return `<section class="section">
+      <div class="weatherHero">
+        <div class="weatherHeroTop">
+          <span><b>${next[1]}</b><small>${next[2]}。天気は見るだけで終わらせず、設営・撤収・コタ・幕体へ変換する。</small></span>
+          <span class="weatherRisk" style="--risk:${risk}">${risk}</span>
+        </div>
+        <div class="weatherCommand">
+          <button class="mainCmd" data-act="${next[0]==='copy'?'copyWeatherReport':'decideWeather'}" data-type="${next[0]}">${next[0]==='copy'?'まとめコピー':'判断する'}</button>
+          <button class="subCmd" data-act="weatherSource">予報を入力</button>
+        </div>
+      </div>
+
+      <div class="weatherRail">
+        <button class="${checksDone===state.weather.length?'good':'warn'}" data-act="openWeatherChecks"><b>${checksDone}/${state.weather.length}</b><span>確認</span></button>
+        <button class="${risk>=50?'warn':'good'}" data-act="copyWeatherReport"><b>${lv[0]}</b><span>リスク</span></button>
+        <button class="${d.kota==='未判断'?'warn':'good'}" data-act="decideWeather" data-type="kota"><b>コタ</b><span>${esc(d.kota||'未判断')}</span></button>
+        <button class="${d.tent==='未判断'?'warn':'good'}" data-act="decideWeather" data-type="tent"><b>幕体</b><span>${esc(d.tent||'未判断')}</span></button>
+      </div>
+
+      <section class="section">
+        <div class="weatherCopy"><b>今の判断</b><p>${esc(weatherDecisionText())}</p><div class="weatherOps"><button class="primary" data-act="copyWeatherReport">天気まとめコピー</button><button data-act="addForecast">予報行追加</button></div></div>
+      </section>
+
+      <section class="section">
+        <div class="head"><div><h2>予報メモ</h2><p>外部天気を見た結果だけ、判断に必要な形で残す。</p></div><span class="pill">${esc(wp.source||'手入力')}</span></div>
+        <div class="forecastStack">${(wp.forecast||[]).map(r=>`<div class="forecastCard"><div class="forecastTop"><span><b>${esc(r.label)}</b><small>${esc(r.time)}<br>${esc(r.note||'')}</small></span><button class="btn" data-act="editForecast" data-id="${r.id}">変更</button></div><div class="forecastGrid"><div class="forecastMetric"><b>${r.rain}%</b><span>雨</span></div><div class="forecastMetric"><b>${r.wind}m</b><span>風</span></div><div class="forecastMetric"><b>${r.temp}℃</b><span>気温</span></div><div class="forecastMetric"><b>${r.humidity}%</b><span>湿度</span></div></div></div>`).join('')||`<div class="forecastCard"><div class="forecastTop"><span><b>予報なし</b><small>予報行を追加する。</small></span><button class="btn" data-act="addForecast">追加</button></div></div>`}</div>
+      </section>
+
+      <section class="section">
+        <div class="head"><div><h2>判断マトリクス</h2><p>4つだけ決める。細かい気象情報はここへ集約。</p></div></div>
+        <div class="decisionMatrix">
+          ${[['setup','設営',weatherSuggestion('setup')],['withdraw','撤収',weatherSuggestion('withdraw')],['kota','コタ',weatherSuggestion('kota')],['tent','幕体',weatherSuggestion('tent')]].map(([id,label,sug])=>`<div class="decisionUnit"><div class="decisionUnitTop"><span><b>${label}</b><small>${esc(sug)}</small></span><span class="pill ${d[id]==='未判断'?'wood':'dark'}">${esc(d[id]||'未判断')}</span></div><div class="decisionButtons"><button data-act="setWeatherDecision" data-type="${id}" data-value="通常">通常</button><button data-act="setWeatherDecision" data-type="${id}" data-value="注意">注意</button><button data-act="setWeatherDecision" data-type="${id}" data-value="変更">変更</button></div></div>`).join('')}
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="head"><div><h2>確認タイミング</h2><p>14日前 / 7日前 / 3日前 / 前日 / 当日。</p></div></div>
+        <div class="list">${state.weather.map(w=>`<button class="row" data-act="toggleWeather" data-id="${w.id}"><span><strong>${w.done?'✓ ':''}${esc(w.when)}</strong><small>${esc(w.check)}</small></span><span class="pill ${w.done?'dark':''}">${w.done?'済':'確認'}</span></button>`).join('')}</div>
+      </section>
+    </section>`;
   }
 
   function prep(){
@@ -624,11 +738,7 @@
 
     if(state.prepTab==='gear')return gearView();
 
-    if(state.prepTab==='weather')return `<section class="section">
-      <div class="head"><div><h2>天気判断</h2><p>天気を見るだけで終わらせず、設営・撤収・コタ・幕体を決める。</p></div></div>
-      <div class="decisionCard"><b>今の判断</b><p>${esc(weatherDecisionText())}</p><div class="decisionOps"><button data-act="weatherDecision" data-type="setup">設営判断</button><button data-act="weatherDecision" data-type="withdraw">撤収判断</button><button data-act="weatherDecision" data-type="kota">コタ判断</button><button data-act="weatherDecision" data-type="tent">幕体判断</button></div></div>
-      <div class="list" style="margin-top:10px">${state.weather.map(w=>`<button class="row" data-act="toggleWeather" data-id="${w.id}"><span><strong>${w.done?'✓ ':''}${esc(w.when)}</strong><small>${esc(w.check)}</small></span><span class="pill ${w.done?'dark':''}">${w.done?'済':'確認'}</span></button>`).join('')}</div>
-    </section>`;
+    if(state.prepTab==='weather')return weatherView();
 
     return `<section class="section">
       ${planFlowHtml()}
@@ -1052,6 +1162,14 @@
   }
   function act(a,el){
 
+    if(a==='copyWeatherReport')return copyWeatherReport();
+    if(a==='weatherSource')return weatherSource();
+    if(a==='addForecast')return addForecast();
+    if(a==='editForecast')return editForecast(el.dataset.id);
+    if(a==='setWeatherDecision')return setWeatherDecision(el.dataset.type,el.dataset.value);
+    if(a==='decideWeather')return decideWeather(el.dataset.type);
+    if(a==='openWeatherChecks')return openWeatherChecks();
+
     if(a==='captureMedia')return captureMedia(el.dataset.kind);
     if(a==='toggleVoice')return toggleVoice();
 
@@ -1447,6 +1565,59 @@
     state.shopping=state.shopping.filter(s=>!s.done);
     save();render();toast('購入済みを整理');
   }
+
+  async function copyWeatherReport(){
+    const text=buildWeatherReport();
+    try{await navigator.clipboard.writeText(text);toast('天気まとめコピー')}catch(e){prompt('コピー',text)}
+  }
+  function weatherSource(){
+    const wp=weatherPlan();
+    const source=prompt('確認した天気サービス', wp.source||'そとてんき / ウェザーニュース / tenki.jp / Yahoo / 気象庁') || wp.source || '手入力';
+    wp.source=source;
+    wp.updated=new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    save();render();toast('天気ソース更新');
+  }
+  function addForecast(){
+    const wp=weatherPlan();
+    const label=prompt('場面', '設営')||'予報';
+    const time=prompt('時間帯', '初日 12-16時')||'時間未定';
+    const rain=+(prompt('降水確率 %', '40')||0);
+    const wind=+(prompt('風速 m/s', '4')||0);
+    const temp=+(prompt('気温 ℃', '24')||0);
+    const humidity=+(prompt('湿度 %', '75')||0);
+    const note=prompt('判断メモ', '')||'';
+    wp.forecast.push({id:uid('fc'),label,time,rain,wind,temp,humidity,note});
+    wp.updated=new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    save();render();toast('予報追加');
+  }
+  function editForecast(id){
+    const wp=weatherPlan();
+    const r=wp.forecast.find(x=>x.id===id); if(!r)return;
+    r.rain=+(prompt('降水確率 %', r.rain)||r.rain);
+    r.wind=+(prompt('風速 m/s', r.wind)||r.wind);
+    r.temp=+(prompt('気温 ℃', r.temp)||r.temp);
+    r.humidity=+(prompt('湿度 %', r.humidity)||r.humidity);
+    r.note=prompt('判断メモ', r.note||'')||r.note||'';
+    wp.updated=new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    save();render();toast('予報変更');
+  }
+  function setWeatherDecision(type,value){
+    const wp=weatherPlan();
+    wp.decisions[type]=value;
+    state.notes.push({id:uid('note'),title:`天気判断：${{setup:'設営',withdraw:'撤収',kota:'コタ',tent:'幕体'}[type]||type}`,text:`${value}：${weatherSuggestion(type)}`,private:false});
+    save();render();toast('判断保存');
+  }
+  function decideWeather(type){
+    if(!type || type==='copy')return copyWeatherReport();
+    const sug=weatherSuggestion(type);
+    const value=confirm(`${sug}\\n\\n注意/変更として保存する？\\nOK=注意 / キャンセル=通常`) ? '注意' : '通常';
+    setWeatherDecision(type,value);
+  }
+  function openWeatherChecks(){
+    state.prepTab='weather';
+    save();render();
+  }
+
   function weatherDecision(type){
     const label={setup:'設営判断',withdraw:'撤収判断',kota:'コタ判断',tent:'幕体判断'}[type]||'天気判断';
     state.notes.push({id:uid('note'),title:label,text:`${label}：${weatherDecisionText()}`,private:false});

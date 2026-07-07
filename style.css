@@ -2158,3 +2158,177 @@ body{
   line-height:1.55;
   font-weight:800;
 }
+
+
+/* ===== OUTBASE WEATHER PRO =====
+   天気を「見る」ではなく、設営・撤収・コタ・幕体の判断へ変換。
+*/
+.weatherHero{
+  border-radius:28px;
+  padding:16px;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(185,154,102,.22), transparent 32%),
+    linear-gradient(135deg, rgba(17,19,15,.97), rgba(39,58,48,.94));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.weatherHeroTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.weatherHero b{font-size:23px;letter-spacing:-.05em}
+.weatherHero small{display:block;margin-top:5px;color:rgba(255,248,237,.70);font-size:11px;font-weight:850;line-height:1.45}
+.weatherRisk{
+  width:58px;height:58px;border-radius:50%;
+  flex:0 0 auto;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--brass) calc(var(--risk,0)*1%), rgba(255,248,237,.12) 0);
+  box-shadow:inset 0 0 0 8px rgba(17,19,15,.38);
+  color:var(--milk);
+  font-weight:950;
+}
+.weatherCommand{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:14px;
+}
+.weatherCommand button{
+  min-height:48px;
+  border-radius:18px;
+  padding:11px 12px;
+  text-align:left;
+  font-weight:950;
+}
+.weatherCommand .mainCmd{
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+}
+.weatherCommand .subCmd{
+  background:rgba(255,248,237,.10);
+  color:var(--milk);
+  border:1px solid rgba(255,248,237,.12);
+}
+.weatherRail{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:12px;
+}
+.weatherRail button{
+  min-height:60px;
+  border-radius:18px;
+  background:rgba(255,248,237,.62);
+  border:1px solid rgba(17,19,15,.08);
+  padding:8px 6px;
+  text-align:center;
+}
+.weatherRail b{display:block;font-size:15px}
+.weatherRail span{display:block;margin-top:5px;color:var(--muted);font-size:9.5px;font-weight:900}
+.weatherRail button.good{background:rgba(63,94,76,.13)}
+.weatherRail button.warn{background:rgba(185,154,102,.15)}
+.forecastStack{
+  display:grid;
+  gap:10px;
+}
+.forecastCard{
+  border-radius:24px;
+  overflow:hidden;
+  background:rgba(255,248,237,.68);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.forecastTop{
+  padding:13px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  border-bottom:1px solid rgba(17,19,15,.08);
+}
+.forecastTop b{font-size:16px}
+.forecastTop small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.42;font-weight:760}
+.forecastGrid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:rgba(17,19,15,.08);
+}
+.forecastMetric{
+  min-height:58px;
+  padding:9px 6px;
+  background:rgba(255,248,237,.70);
+  text-align:center;
+}
+.forecastMetric b{display:block;font-size:15px}
+.forecastMetric span{display:block;margin-top:5px;color:var(--muted);font-size:9.5px;font-weight:900}
+.decisionMatrix{
+  display:grid;
+  gap:10px;
+}
+.decisionUnit{
+  border-radius:24px;
+  overflow:hidden;
+  background:rgba(255,248,237,.68);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.decisionUnitTop{
+  padding:13px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  border-bottom:1px solid rgba(17,19,15,.08);
+}
+.decisionUnitTop b{font-size:16px}
+.decisionUnitTop small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.42;font-weight:760}
+.decisionButtons{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:1px;
+  background:rgba(17,19,15,.08);
+}
+.decisionButtons button{
+  min-height:44px;
+  background:rgba(255,248,237,.70);
+  font-size:11px;
+  font-weight:950;
+}
+.weatherCopy{
+  border-radius:23px;
+  padding:14px;
+  background:linear-gradient(135deg,rgba(17,19,15,.94),rgba(39,58,48,.92));
+  color:var(--milk);
+  box-shadow:var(--softShadow);
+}
+.weatherCopy b{font-size:16px}
+.weatherCopy p{margin-top:7px;color:rgba(255,248,237,.73);font-size:12px;line-height:1.7;white-space:pre-wrap}
+.weatherOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:12px;
+}
+.weatherOps button{
+  min-height:44px;
+  border-radius:16px;
+  background:rgba(255,248,237,.10);
+  color:var(--milk);
+  border:1px solid rgba(255,248,237,.12);
+  font-size:12px;
+  font-weight:950;
+}
+.weatherOps .primary{
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+}
+@media(max-width:430px){
+  .weatherCommand,.weatherOps{grid-template-columns:1fr}
+  .weatherRail{grid-template-columns:repeat(4,1fr);gap:6px}
+  .weatherRail button{min-height:56px;border-radius:16px}
+  .forecastGrid{grid-template-columns:repeat(4,1fr)}
+  .decisionButtons{grid-template-columns:1fr}
+}
