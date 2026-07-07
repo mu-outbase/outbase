@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-preppro-20260707';
+  const VERSION = 'outbase-genius-ui-gearpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -20,7 +20,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', walkMode:'normal', drawer:null, toast:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', drawer:null, toast:null,
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -414,17 +414,103 @@
     </section>`;
   }
 
+
+  function gearStats(){
+    const total=state.gear.length;
+    const loaded=state.gear.filter(g=>g.status==='loaded').length;
+    const home=state.gear.filter(g=>g.status==='home').length;
+    const care=state.gear.filter(g=>['dry','repair','replace'].includes(g.status)).length;
+    const noBox=state.gear.filter(g=>!g.boxId).length;
+    const score=Math.round((loaded+Math.max(0,total-care-noBox))/(Math.max(1,total*2))*100);
+    return {total,loaded,home,care,noBox,score};
+  }
+  function gearNextTarget(){
+    const gs=gearStats();
+    if(gs.noBox>0)return ['list','収納未設定を直す',`${gs.noBox}件のギアにBOXがない`];
+    if(gs.care>0)return ['care','乾燥・修理を見る',`${gs.care}件のケア対象`];
+    if(gs.loaded<gs.total)return ['load','積込を終わらせる',`${gs.total-gs.loaded}件残り`];
+    return ['boxes','帰宅後に戻せる',`積込は完了。BOX単位で戻せる`];
+  }
+  function gearBoxStats(boxId){
+    const items=state.gear.filter(g=>g.boxId===boxId);
+    const loaded=items.filter(g=>g.status==='loaded').length;
+    const care=items.filter(g=>['dry','repair','replace'].includes(g.status)).length;
+    return {items,loaded,care};
+  }
+  function filteredGear(){
+    const q=(state.gearFilter||'').trim().toLowerCase();
+    if(!q)return state.gear;
+    return state.gear.filter(g=>{
+      const b=state.boxes.find(x=>x.id===g.boxId);
+      return [g.name,g.cat,g.note,g.car,gearStatus[g.status],b?.name,b?.home,b?.car].join(' ').toLowerCase().includes(q);
+    });
+  }
+  function gearIcon(cat){
+    const c=String(cat||'').toLowerCase();
+    if(c.includes('幕'))return '幕';
+    if(c.includes('料理'))return '食';
+    if(c.includes('照明'))return '灯';
+    if(c.includes('ペット'))return '犬';
+    if(c.includes('寝'))return '寝';
+    return '道';
+  }
+  function gearCard(g){
+    const b=state.boxes.find(x=>x.id===g.boxId);
+    return `<button class="gearCard" data-act="editGear" data-id="${g.id}">
+      <span class="gearIcon">${gearIcon(g.cat)}</span>
+      <span class="gearCardMain"><b>${esc(g.name)} ×${g.qty}</b><small>${esc(g.cat||'未分類')} / ${esc(b?.name||'BOX未設定')} / 家:${esc(b?.home||'未設定')} / 車:${esc(g.car||b?.car||'未設定')}<br>${esc(g.note||'')}</small></span>
+      <span class="gearState ${g.status}">${gearStatus[g.status]||g.status}</span>
+    </button>`;
+  }
+  function buildGearSummary(){
+    const gs=gearStats();
+    const boxes=state.boxes.map(b=>{
+      const x=gearBoxStats(b.id);
+      return `■${b.name}\\n家:${b.home||'未設定'} / 車:${b.car||'未設定'} / ${x.loaded}/${x.items.length}積込\\n${x.items.map(g=>`${g.status==='loaded'?'✓':'□'} ${g.name}`).join('\\n')}`;
+    }).join('\\n\\n');
+    const care=state.gear.filter(g=>['dry','repair','replace'].includes(g.status)).map(g=>`□ ${g.name}：${gearStatus[g.status]} / ${g.note||''}`).join('\\n') || 'ケア対象なし';
+    return `【OUTBASE ギアまとめ】\\n総数:${gs.total} / 積込:${gs.loaded} / ケア:${gs.care}\\n\\n${boxes}\\n\\n■乾燥・修理・買替\\n${care}`;
+  }
+
   function gearView(){
-    return `<section class="section"><div class="head"><div><h2>ギア</h2><p>登録・変更・ボックス・車載位置を一体で管理。</p></div><button class="btn primary" data-act="addGear">登録</button></div><div class="tabs">${['list:一覧','boxes:ボックス','load:積込','care:乾燥/修理','import:取込'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.gearTab===id?'active':''}" data-gear="${id}">${l}</button>`}).join('')}</div></section>${gearBody()}`
+    const gs=gearStats();
+    const next=gearNextTarget();
+    return `<section class="section">
+      <div class="gearHero">
+        <div class="gearHeroTop">
+          <span><b>${next[1]}</b><small>${next[2]}。ギアは探すより、積める・戻せる・直せる状態にする。</small></span>
+          <span class="gearScore" style="--score:${gs.score}">${gs.score}</span>
+        </div>
+        <div class="gearCommand">
+          <button class="mainCmd" data-gear="${next[0]}">次をやる</button>
+          <button class="subCmd" data-act="copyGearSummary">ギアまとめコピー</button>
+        </div>
+      </div>
+      <div class="gearStats">
+        <button class="${gs.loaded===gs.total?'good':'warn'}" data-gear="load"><b>${gs.loaded}/${gs.total}</b><span>積込</span></button>
+        <button class="${gs.care?'warn':'good'}" data-gear="care"><b>${gs.care}</b><span>ケア</span></button>
+        <button class="${gs.noBox?'warn':'good'}" data-gear="list"><b>${gs.noBox}</b><span>BOX未設定</span></button>
+        <button class="good" data-gear="boxes"><b>${state.boxes.length}</b><span>BOX</span></button>
+      </div>
+      <div class="gearSearch"><input id="gearSearchInput" placeholder="ギア / BOX / 車載位置で検索" value="${esc(state.gearFilter||'')}"><button class="btn primary" data-act="addGear">登録</button></div>
+      <div class="tabs" style="margin-top:10px">${['list:一覧','boxes:ボックス','load:積込','care:乾燥/修理','import:取込'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.gearTab===id?'active':''}" data-gear="${id}">${l}</button>`}).join('')}</div>
+    </section>${gearBody()}`
   }
+
   function gearBody(){
-    if(state.gearTab==='boxes')return `<section class="section"><div class="list">${state.boxes.map(b=>{const names=state.gear.filter(g=>g.boxId===b.id).map(g=>g.name).join(' / ');return `<button class="row" data-act="editBox" data-id="${b.id}"><span><strong>${esc(b.name)}</strong><small>家:${esc(b.home)} / 車:${esc(b.car)}<br>${esc(names||'中身なし')}</small></span><span class="pill">変更</span></button>`}).join('')}</div><div class="actions"><button class="btn primary" data-act="addBox">BOX追加</button></div></section>`;
-    if(state.gearTab==='load')return `<section class="section"><div class="decisionCard"><b>積込順</b><p>重い物・奥に置く物から積む。ボックスを押すと中身をまとめて積込済みにする。</p><div class="decisionOps"><button data-act="markAllLoaded">全部積込済み</button><button data-act="resetLoaded">積込リセット</button></div></div><div class="list" style="margin-top:10px">${state.boxes.map(b=>{const list=state.gear.filter(g=>g.boxId===b.id), loaded=list.filter(g=>g.status==='loaded').length;return `<button class="row" data-act="toggleBox" data-id="${b.id}"><span><strong>${esc(b.name)}</strong><small>${loaded}/${list.length} 積込済 / 車:${esc(b.car)} / 家:${esc(b.home)}</small></span><span class="pill ${loaded===list.length&&list.length?'dark':''}">${loaded===list.length&&list.length?'完了':'積む'}</span></button>`}).join('')}</div></section>`;
-    if(state.gearTab==='care'){const targets=state.gear.filter(g=>['dry','repair','replace'].includes(g.status));return `<section class="section"><div class="list">${targets.length?targets.map(gearRow).join(''):`<div class="row"><span><strong>対象なし</strong><small>乾燥・修理・買替候補はない。</small></span></div>`}</div></section>`}
-    if(state.gearTab==='import')return `<section class="section"><div class="tile"><strong>取込候補</strong><small>Excel・購入履歴・写真を候補として保存。</small><div class="actions"><button class="btn primary" data-act="import">ファイル選択</button><button class="btn" data-act="backup">バックアップ</button></div></div></section>`;
-    return `<section class="section"><div class="list">${state.gear.map(gearRow).join('')}</div></section>`;
+    if(state.gearTab==='boxes')return `<section class="section"><div class="boxMatrix">${state.boxes.map(b=>{const x=gearBoxStats(b.id);return `<div class="boxCard"><div class="boxTop"><span><b>${esc(b.name)}</b><small>家:${esc(b.home||'未設定')} / 車:${esc(b.car||'未設定')}<br>${x.loaded}/${x.items.length}積込 / ケア${x.care}</small></span><button class="btn" data-act="editBox" data-id="${b.id}">変更</button></div><div class="boxOps"><button data-act="toggleBox" data-id="${b.id}">${x.loaded===x.items.length&&x.items.length?'家へ戻す':'積込済み'}</button><button data-act="boxCare" data-id="${b.id}">乾燥へ</button><button data-act="boxReport" data-id="${b.id}">中身コピー</button></div></div>`}).join('')}</div><div class="commandDock"><button class="btn primary" data-act="addBox">BOX追加</button><button class="btn" data-act="copyGearSummary">全体コピー</button></div></section>`;
+
+    if(state.gearTab==='load')return `<section class="section"><div class="gearReport"><b>積込順</b><p>奥に置くBOXから積む。BOXを押すと中身をまとめて積込済みにする。帰宅後は同じ画面で家へ戻す。</p></div><div class="boxMatrix" style="margin-top:10px">${state.boxes.map(b=>{const x=gearBoxStats(b.id);return `<div class="boxCard"><div class="boxTop"><span><b>${esc(b.name)}</b><small>車:${esc(b.car||'未設定')} / 家:${esc(b.home||'未設定')}<br>${x.loaded}/${x.items.length} 積込済</small></span><span class="pill ${x.loaded===x.items.length&&x.items.length?'dark':'wood'}">${x.loaded===x.items.length&&x.items.length?'完了':'未完'}</span></div><div class="boxOps"><button data-act="toggleBox" data-id="${b.id}">BOX切替</button><button data-act="openBoxItems" data-id="${b.id}">中身</button><button data-act="editBox" data-id="${b.id}">位置変更</button></div></div>`}).join('')}</div><div class="commandDock"><button class="btn primary" data-act="markAllLoaded">全部積込済み</button><button class="btn" data-act="resetLoaded">積込リセット</button></div></section>`;
+
+    if(state.gearTab==='care'){const targets=state.gear.filter(g=>['dry','repair','replace'].includes(g.status));return `<section class="section"><div class="careQueue">${targets.length?targets.map(g=>`<div class="careCard"><div class="careCardTop"><span><b>${esc(g.name)}</b><small>${gearStatus[g.status]} / ${esc(g.note||'メモなし')}</small></span><span class="pill wood">${gearStatus[g.status]}</span></div><div class="careOps"><button data-act="setGearStatus" data-id="${g.id}" data-status="home">完了</button><button data-act="setGearStatus" data-id="${g.id}" data-status="repair">修理</button><button data-act="setGearStatus" data-id="${g.id}" data-status="replace">買替</button></div></div>`).join(''):`<div class="gearReport"><b>ケア対象なし</b><p>乾燥・修理・買替候補はない。</p></div>`}</div></section>`}
+
+    if(state.gearTab==='import')return `<section class="section"><div class="gearReport"><b>取込候補</b><p>Excel・購入履歴・写真・メモを候補として保存。正式登録はあとで選ぶ。</p><div class="commandDock"><button class="btn wood" data-act="import">ファイル選択</button><button class="btn" data-act="backup">バックアップ</button></div></div></section>`;
+
+    const list=filteredGear();
+    return `<section class="section"><div class="list">${list.map(gearCard).join('')||`<div class="gearReport"><b>該当なし</b><p>検索条件に合うギアがない。</p></div>`}</div></section>`;
   }
-  function gearRow(g){const b=state.boxes.find(x=>x.id===g.boxId);return `<button class="row" data-act="editGear" data-id="${g.id}"><span><strong>${esc(g.name)} ×${g.qty}</strong><small>${esc(g.cat)} / ${esc(b?.name||'未収納')} / 車:${esc(g.car)} / ${gearStatus[g.status]}<br>${esc(g.note)}</small></span><span class="pill">変更</span></button>`}
+
+  function gearRow(g){return gearCard(g)}
 
   function field(){
     const modeText=state.walkMode==='camp'?'キャンプ場散歩':'通常散歩';
@@ -508,6 +594,8 @@
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
+    const gearSearch=document.getElementById('gearSearchInput');
+    if(gearSearch){gearSearch.oninput=()=>{state.gearFilter=gearSearch.value;save();render()}}
   }
   function bindSwipe(){
     const days=document.getElementById('days'); if(!days)return; let sx=null;
@@ -515,6 +603,12 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='copyGearSummary')return copyGearSummary();
+    if(a==='boxCare')return boxCare(el.dataset.id);
+    if(a==='boxReport')return boxReport(el.dataset.id);
+    if(a==='openBoxItems')return openBoxItems(el.dataset.id);
+    if(a==='setGearStatus')return setGearStatus(el.dataset.id,el.dataset.status);
 
     if(a==='mealToShop')return mealToShop(el.dataset.id);
     if(a==='mealGearCheck')return mealGearCheck(el.dataset.id);
@@ -587,6 +681,32 @@
   function drawMap(){const c=document.getElementById('walkMap');if(!c)return;const ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.strokeStyle='rgba(17,19,15,.08)';for(let x=0;x<w;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}const pts=state.walk.track;if(!pts.length)return;const lats=pts.map(p=>p.lat),lngs=pts.map(p=>p.lng),minLa=Math.min(...lats),maxLa=Math.max(...lats),minLn=Math.min(...lngs),maxLn=Math.max(...lngs);const mp=p=>({x:28+(w-56)*((p.lng-minLn)/((maxLn-minLn)||.001)),y:h-28-(h-56)*((p.lat-minLa)/((maxLa-minLa)||.001))});ctx.strokeStyle='#273a30';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();pts.forEach((p,i)=>{const m=mp(p);i?ctx.lineTo(m.x,m.y):ctx.moveTo(m.x,m.y)});ctx.stroke();pts.forEach((p,i)=>{const m=mp(p);ctx.fillStyle=i===pts.length-1?'#b99a66':'#3f5e4c';ctx.beginPath();ctx.arc(m.x,m.y,5,0,Math.PI*2);ctx.fill()})}
 
 
+
+
+  async function copyGearSummary(){
+    const text=buildGearSummary();
+    try{await navigator.clipboard.writeText(text);toast('ギアまとめをコピー')}catch(e){prompt('コピー',text)}
+  }
+  function boxCare(id){
+    state.gear=state.gear.map(g=>g.boxId===id?{...g,status:'dry'}:g);
+    save();render();toast('BOXを乾燥へ');
+  }
+  async function boxReport(id){
+    const b=state.boxes.find(x=>x.id===id); if(!b)return;
+    const x=gearBoxStats(id);
+    const text=`【${b.name}】\\n家:${b.home||'未設定'} / 車:${b.car||'未設定'}\\n${x.items.map(g=>`${g.status==='loaded'?'✓':'□'} ${g.name} ×${g.qty} / ${gearStatus[g.status]}`).join('\\n')}`;
+    try{await navigator.clipboard.writeText(text);toast('BOX中身コピー')}catch(e){prompt('コピー',text)}
+  }
+  function openBoxItems(id){
+    const b=state.boxes.find(x=>x.id===id); if(!b)return;
+    state.gearFilter=b.name;
+    state.gearTab='list';
+    save();render();
+  }
+  function setGearStatus(id,status){
+    state.gear=state.gear.map(g=>g.id===id?{...g,status}:g);
+    save();render();toast('状態更新');
+  }
 
   function mealToShop(id){
     const m=state.meals.find(x=>x.id===id); if(!m)return;
