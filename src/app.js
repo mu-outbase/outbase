@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc6-20260707';
+  const VERSION = 'outbase-finalrc7-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc6-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc7-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1706,10 +1706,11 @@ ${starterPanelHtml()}
   function quickMapHtml(){
     return `<section class="quickMapPanel">
       <div class="quickMapHead">
-        <span><b>地図</b><small>ルートの形をすぐ見る。外部地図はGoogle Mapで開く。</small></span>
+        <span><b>地図：歩いた線を見る</b><small>正確な道路地図ではなく、現在地を残した軌跡の確認用。</small></span>
         <span class="pill">${state.walk.track.length} GPS</span>
       </div>
       <canvas class="quickMapCanvas" id="quickWalkMap" width="680" height="220"></canvas>
+      <div class="mapPurpose"><b>この地図でわかること：</b>歩いた方向、戻った場所、現在地を残した点。<br>正確な場所確認は Google Map を押す。</div>
       <div class="quickMapOps">
         <button class="primary" data-act="gps">現在地追加</button>
         <button data-act="openMap">Google Map</button>
@@ -1720,9 +1721,9 @@ ${starterPanelHtml()}
 
   function fieldFirstPanelHtml(){
     const nt=timerNext(), tid=nt[3]||'';
-    return `<section class="fieldFirstPanel">
+    return `<section class="fieldFirstPanel simpleField">
       <div class="fieldFirstHead">
-        <span><b>現地で押す場所</b><small>探さない。現在地・写真・音声・タイマーはここに固定。</small></span>
+        <span><b>現地タブは記録する場所</b><small>あとで忘れることだけ残す。迷ったらこの4つ。</small></span>
         <span class="fieldFirstBadge">FIELD</span>
       </div>
       <div class="fieldFirstGrid">
@@ -1736,102 +1737,73 @@ ${starterPanelHtml()}
         <button data-act="${tid?'startTimer':'addTimerTemplate'}" data-id="${tid}" data-kind="meal">タイマー</button>
         <button data-act="quickRecord" data-kind="memo">メモ</button>
       </div>
-      <div class="fieldFirstHint">この下は詳細確認用。現地で急いでいる時は、この枠だけ使えばいい。<div class="scrollFixNote">散歩中のGPS自動更新では画面位置を動かさない。</div></div>
+      <div class="fieldFirstHint">写真はカメラ起動。音声は押して録音・もう一度押して停止。地図は歩いた線を見る場所。<div class="fieldPurpose">この画面でやること：現在地・カメラ・音声・地図。管理や一覧確認は下の「詳細機能」に隠す。</div></div>
+    </section>`;
+  }
+
+
+  function fieldRecentHtml(){
+    const rec=planRecords().slice().reverse().slice(0,3);
+    return `<section class="section">
+      <div class="head"><div><h2>今残したもの</h2><p>直近3件だけ。全部の履歴は詳細機能へ。</p></div><button class="btn" data-act="copyFieldSummary">コピー</button></div>
+      <div class="fieldRecentList">${rec.map(r=>`<div class="fieldRecentCard"><b>${esc(r.title||recordKindLabel(r.kind))}</b><small>${esc(r.time||'')} / ${esc(r.mode||'')}<br>${esc(r.text||'')}</small></div>`).join('')||`<div class="fieldRecentCard"><b>まだなし</b><small>現在地・カメラ・音声・メモのどれかを押す。</small></div>`}</div>
+    </section>`;
+  }
+  function fieldDetailsHtml(){
+    return `<section class="section">
+      <details class="fieldMore">
+        <summary>詳細機能</summary>
+        <div class="fieldMoreBody">
+          ${timerPanelHtml()}
+          ${timerBodyHtml()}
+          ${siteMapPanelHtml()}
+          ${pinListHtml()}
+
+          <section class="section">
+            <div class="head"><div><h2>追加記録</h2><p>必要な時だけ使う。</p></div></div>
+            <div class="fieldMiniOps">
+              <button data-act="captureMedia" data-kind="video">動画</button>
+              <button data-act="quickRecord" data-kind="meal">料理</button>
+              <button data-act="import">ファイル</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="head"><div><h2>場所を残す</h2><p>再訪に使える場所だけ。</p></div></div>
+            <div class="spotRail">
+              <button data-act="spotQuick" data-type="景色">景色</button>
+              <button data-act="spotQuick" data-type="木陰">木陰</button>
+              <button data-act="spotQuick" data-type="水場">水場</button>
+              <button data-act="spotQuick" data-type="危険">危険</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="head"><div><h2>GPS履歴</h2><p>最新の位置だけ確認。</p></div><button class="btn" data-act="clearTrack">クリア</button></div>
+            <div class="trackList">${state.walk.track.slice().reverse().slice(0,6).map((p,i)=>`<div class="trackPoint"><span><b>${esc(p.time||'')}</b><small>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)} / ${esc(p.source||'gps')}</small></span><span class="pill">${i===0?'最新':'GPS'}</span></div>`).join('')||`<div class="routeBox"><b>GPSなし</b><p>現在地を押すと記録。</p></div>`}</div>
+          </section>
+
+          <section class="section">
+            <details class="privateHealth"><summary>非公開の体調メモ</summary><div class="healthGrid"><button data-act="health" data-type="体調">体調</button><button data-act="health" data-type="うんち">うんち</button><button data-act="health" data-type="おしっこ">おしっこ</button></div></details>
+          </section>
+
+          <section class="section">
+            <div class="head"><div><h2>現地タイムライン</h2><p>公開できる記録だけ。非公開体調メモは混ぜない。</p></div><button class="btn" data-act="copyFieldSummary">コピー</button></div>
+            ${planRecords().slice().reverse().slice(0,10).map(r=>recordCard(r)).join('')||'<div class="row"><span><strong>記録なし</strong><small>現地で押す場所から記録する。</small></span></div>'}
+          </section>
+        </div>
+      </details>
     </section>`;
   }
 
   function field(){
-    const fs=fieldStats();
     return shell(`
       ${fieldFirstPanelHtml()}
       ${quickMapHtml()}
-      <section class="fieldHero2">
-        <div class="fieldHeroTop2">
-          <span><b>${state.walk.active?'記録中':'現地詳細'}</b><small>${fieldModeName()}。上の固定ボタンで記録して、この下は確認用。</small></span>
-          <span class="liveBadge ${state.walk.active?'on':''}">${state.walk.active?'LIVE':'READY'}</span>
-        </div>
-        <div class="fieldCommand2">
-          <button class="mainCmd" data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
-          <button class="subCmd" data-act="gps">現在地</button>
-        </div>
-      </section>
-
-      <section class="section">
-        <button class="locBigButton" data-act="gps">
-          <span><b>現在地を記録</b><small>ここを押すとGPSを1点保存。許可が出たら許可する。</small></span>
-          <span class="locMark">◎</span>
-        </button>
-        <div class="locHint">場所が分からなくなったら、現地画面ではまずこのボタン。散歩開始とは別に、手動で現在地だけ残せる。</div>
-      </section>
-
-      <div class="fieldStats2">
-        <button data-act="gps"><b>${fs.km.toFixed(2)}</b><span>km</span></button>
-        <button data-act="spotQuick" data-type="スポット"><b>${fs.spots}</b><span>スポット</span></button>
-        <button data-act="friend"><b>${fs.friends}</b><span>犬友達</span></button>
-        <button data-act="copyFieldSummary"><b>${fs.records}</b><span>記録</span></button>
-      </div>
-
-      <section class="section">
-        <div class="segment"><button class="${state.walkMode==='normal'?'active':''}" data-walk="normal">通常散歩</button><button class="${state.walkMode==='camp'?'active':''}" data-walk="camp">キャンプ場散歩</button></div>
-      </section>
-
-      ${gpsPanelHtml()}
-
-      ${siteMapPanelHtml()}
-      ${pinListHtml()}
-
-      ${timerPanelHtml()}
-      ${timerBodyHtml()}
-
-      <section class="section">
-        <div class="head"><div><h2>ワンタップ記録</h2><p>現地では細かく書かない。種類だけ残して、必要なら一言。</p></div></div>
-        <div class="captureGrid">
-          <button class="captureBtn primary" data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言だけ残す</small></button>
-          <button class="captureBtn" data-act="captureCamera"><b>カメラ</b><small>撮影して記録</small></button>
-          <button class="captureBtn" data-act="captureMedia" data-kind="video"><b>動画</b><small>動画ファイルを記録</small></button>
-          <button class="captureBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中':'その場で録音'}</small></button>
-          <button class="captureBtn" data-act="quickRecord" data-kind="meal"><b>料理</b><small>食べた/作った記録</small></button>
-          <button class="captureBtn" data-act="import"><b>ファイル</b><small>資料・メモ取込</small></button>
-        </div>
-        ${voiceRecorder?`<div class="voiceLive">録音中。もう一度「音声停止」を押すと保存。</div>`:''}
-      </section>
-
-      <section class="section">
-        <div class="head"><div><h2>場所を残す</h2><p>キャンプ場散歩でも通常散歩でも、再訪に使える形で残す。</p></div></div>
-        <div class="spotRail">
-          <button data-act="spotQuick" data-type="景色">景色</button>
-          <button data-act="spotQuick" data-type="木陰">木陰</button>
-          <button data-act="spotQuick" data-type="水場">水場</button>
-          <button data-act="spotQuick" data-type="危険">危険</button>
-        </div>
-        <div class="spotList">${state.walk.spots.slice().reverse().slice(0,6).map(s=>`<div class="spotItem"><span><b>${esc(s.name)}</b><small>${esc(s.type||'スポット')} / ${esc(s.time||'')}</small></span><span class="pill">場所</span></div>`).join('')||`<div class="spotItem"><span><b>まだなし</b><small>景色・木陰・水場・危険を押すだけ。</small></span><span class="pill">0</span></div>`}</div>
-      </section>
-
-      <section class="section">
-        <div class="map"><canvas id="walkMap" width="600" height="226"></canvas>${state.walk.track.length?'':'<div class="empty">現在地を押すと<br>簡易ルートを描く</div>'}</div>
-        <div class="fieldMapOps"><button data-act="gps">現在地追加</button><button data-act="openMap">Google Map</button><button data-act="copyRouteSummary">ルート</button></div>
-      </section>
-
-      <section class="section">
-        <div class="head"><div><h2>GPS履歴</h2><p>最新の位置だけを軽く確認。</p></div><button class="btn" data-act="clearTrack">クリア</button></div>
-        <div class="trackList">${state.walk.track.slice().reverse().slice(0,8).map((p,i)=>`<div class="trackPoint"><span><b>${esc(p.time||'')}</b><small>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)} / ${esc(p.source||'gps')}</small></span><span class="pill">${i===0?'最新':'GPS'}</span></div>`).join('')||`<div class="routeBox"><b>GPSなし</b><p>散歩開始または現在地追加で記録。</p></div>`}</div>
-      </section>
-
-      <section class="section">
-        <details class="privateHealth">
-          <summary>非公開の体調メモ</summary>
-          <div class="healthOps"><button data-act="health" data-type="体調">体調</button><button data-act="health" data-type="うんち">うんち</button><button data-act="health" data-type="おしっこ">おしっこ</button></div>
-          <div class="eventStack">${state.walk.health.slice().reverse().slice(0,8).map(h=>`<div class="eventMini"><span class="typeIcon">非</span><span style="min-width:0;flex:1"><strong>${esc(h.type)}</strong><small>${esc(h.time)} / ${esc(h.mode)} / 表示・レビューには出さない</small></span><span class="pill private">非公開</span></div>`).join('')||`<div class="eventMini"><span class="typeIcon">非</span><span style="min-width:0;flex:1"><strong>まだなし</strong><small>ここだけに保存。場所カードやレビューには出さない。</small></span><span class="pill private">非公開</span></div>`}</div>
-        </details>
-      </section>
-
-      <section class="section">
-        <div class="head"><div><h2>現地タイムライン</h2><p>公開できる記録だけ。非公開体調メモは混ぜない。</p></div><button class="btn primary" data-act="copyFieldSummary">コピー</button></div>
-        <div class="fieldTimeline">${planRecords().slice().reverse().slice(0,8).map(r=>`<div class="recordCard"><div class="recordTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.time)} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<div class="recordBody">${esc(r.text)}</div>`:''}${mediaPreviewHtml(r)}</div>`).join('')||`<div class="fieldReport"><b>まだ公開記録なし</b><p>メモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div>
-      </section>
-    `)
+      ${fieldRecentHtml()}
+      ${fieldDetailsHtml()}
+    `);
   }
-
 
   function publicRecords(){
     return (state.records||[]).filter(r=>!r.private);
