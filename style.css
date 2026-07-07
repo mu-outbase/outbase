@@ -5252,3 +5252,239 @@ body{
   .obMainPair,.obShortcutGrid{grid-template-columns:1fr 1fr}
   .obPrimaryTalk{min-height:112px}
 }
+
+
+/* ===== OUTBASE FIELD REBUILD 02 =====
+   1画面で使う。モード固定・地図表示・長押し音声・ドライブ自動終了。
+*/
+.fieldWork02{
+  height:calc(100dvh - 112px);
+  min-height:640px;
+  display:grid;
+  grid-template-rows:auto auto 1fr auto;
+  gap:8px;
+  overflow:hidden;
+  padding-bottom:4px;
+}
+.fw02Head{
+  border-radius:24px;
+  padding:12px;
+  background:linear-gradient(135deg, rgba(17,19,15,.98), rgba(39,58,48,.95));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.fw02Top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.fw02Top b{display:block;font-size:20px;letter-spacing:-.05em;line-height:1.1}
+.fw02Top small{display:block;margin-top:4px;color:rgba(255,248,237,.68);font-size:10.5px;line-height:1.35;font-weight:850}
+.fw02Badge{border-radius:999px;padding:7px 9px;background:rgba(255,248,237,.12);font-size:10px;font-weight:950;white-space:nowrap}
+.fw02Modes{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:5px;
+  margin-top:10px;
+}
+.fw02Modes button{
+  min-height:42px;
+  border-radius:14px;
+  background:rgba(255,248,237,.10);
+  border:1px solid rgba(255,248,237,.12);
+  color:rgba(255,248,237,.72);
+  font-size:11px;
+  font-weight:950;
+}
+.fw02Modes button.active{
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+}
+.fw02Main{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:8px;
+  min-height:0;
+}
+.fw02Ops{
+  display:grid;
+  grid-template-rows:1fr auto;
+  gap:8px;
+  min-height:0;
+}
+.holdVoice{
+  width:100%;
+  min-height:132px;
+  border-radius:28px;
+  padding:18px;
+  text-align:left;
+  background:linear-gradient(135deg,var(--black),var(--green2));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.holdVoice.recording{
+  background:linear-gradient(135deg,#5c1f1f,#9b4d40);
+}
+.holdVoice b{display:block;font-size:36px;letter-spacing:-.07em;line-height:.95}
+.holdVoice small{display:block;margin-top:9px;color:rgba(255,248,237,.70);font-size:12px;line-height:1.35;font-weight:850}
+.fw02SubOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.fw02SubOps button{
+  min-height:76px;
+  border-radius:22px;
+  padding:13px;
+  text-align:left;
+  background:rgba(255,248,237,.78);
+  border:1px solid rgba(17,19,15,.08);
+  box-shadow:var(--softShadow);
+}
+.fw02SubOps b{display:block;font-size:22px;letter-spacing:-.06em}
+.fw02SubOps small{display:block;margin-top:6px;color:var(--muted);font-size:10.5px;line-height:1.3;font-weight:850}
+.fw02Map{
+  border-radius:24px;
+  overflow:hidden;
+  background:rgba(255,248,237,.76);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  min-height:0;
+}
+.fw02MapHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:10px 11px;
+}
+.fw02MapHead b{font-size:14px}
+.fw02MapHead small{color:var(--muted);font-size:10px;font-weight:850}
+.fw02Map iframe{
+  width:100%;
+  height:100%;
+  min-height:164px;
+  border:0;
+  display:block;
+  background:#e6e0d2;
+}
+.fw02MapEmpty{
+  display:grid;
+  place-items:center;
+  text-align:center;
+  padding:12px;
+  min-height:164px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:850;
+  line-height:1.5;
+  background:
+    linear-gradient(90deg,rgba(17,19,15,.06) 1px,transparent 1px),
+    linear-gradient(rgba(17,19,15,.06) 1px,transparent 1px),
+    rgba(255,248,237,.68);
+  background-size:30px 30px;
+}
+.fw02MapOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  background:rgba(17,19,15,.08);
+}
+.fw02MapOps button{
+  min-height:40px;
+  background:rgba(255,248,237,.78);
+  font-size:11px;
+  font-weight:950;
+}
+.fw02ModePanel{
+  min-height:0;
+  overflow:hidden;
+  border-radius:24px;
+  padding:12px;
+  background:rgba(255,248,237,.74);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.fw02ModePanelHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:8px;
+}
+.fw02ModePanelHead b{font-size:17px;letter-spacing:-.04em}
+.fw02ModePanelHead small{display:block;color:var(--muted);font-size:10.5px;line-height:1.3;font-weight:850}
+.fw02Actions{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+}
+.fw02Actions button{
+  min-height:54px;
+  border-radius:16px;
+  padding:9px;
+  text-align:left;
+  background:rgba(17,19,15,.055);
+  border:1px solid rgba(17,19,15,.055);
+}
+.fw02Actions button.privateSave{background:rgba(245,230,222,.96)}
+.fw02Actions button.placeSave{background:rgba(228,239,229,.96)}
+.fw02Actions button.returnSave{background:rgba(244,235,215,.98)}
+.fw02Actions button.driveSave{background:rgba(224,232,239,.98)}
+.fw02Actions b{display:block;font-size:12.5px;line-height:1.15}
+.fw02Actions small{display:block;margin-top:4px;color:var(--muted);font-size:9.5px;line-height:1.25;font-weight:850}
+.fw02Foot{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  min-height:0;
+}
+.fw02Drive{
+  border-radius:20px;
+  padding:10px 11px;
+  background:rgba(224,232,239,.86);
+  border:1px solid rgba(17,19,15,.08);
+  box-shadow:var(--softShadow);
+}
+.fw02Drive b{font-size:13px}
+.fw02Drive small{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.3;font-weight:850}
+.fw02Drive button{
+  margin-top:7px;
+  width:100%;
+  min-height:34px;
+  border-radius:13px;
+  background:rgba(17,19,15,.08);
+  font-size:11px;
+  font-weight:950;
+}
+.fw02Recent{
+  border-radius:20px;
+  padding:10px 11px;
+  background:rgba(255,248,237,.74);
+  border:1px solid rgba(17,19,15,.08);
+  box-shadow:var(--softShadow);
+  overflow:hidden;
+}
+.fw02Recent b{font-size:13px}
+.fw02Recent small{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.3;font-weight:850}
+.fw02RecentLine{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px;font-size:10px;color:var(--muted);font-weight:850}
+@media(max-width:520px){
+  .fieldWork02{
+    height:calc(100dvh - 104px);
+    min-height:620px;
+    grid-template-rows:auto auto auto 1fr;
+  }
+  .fw02Main{grid-template-columns:1fr;grid-template-rows:auto 190px}
+  .holdVoice{min-height:98px}
+  .holdVoice b{font-size:32px}
+  .fw02SubOps button{min-height:62px}
+  .fw02Map iframe,.fw02MapEmpty{min-height:132px}
+  .fw02Actions{grid-template-columns:repeat(3,1fr)}
+  .fw02Foot{grid-template-columns:1fr}
+}

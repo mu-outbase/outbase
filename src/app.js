@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild01-20260707';
+  const VERSION = 'outbase-field-rebuild02-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild01-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild02-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -123,6 +123,8 @@
     s.walk={...base.walk,...(s.walk||{})};
     s.fieldActionMode=s.fieldActionMode||base.fieldActionMode||'kota';
     s.walk.track=s.walk.track||[];s.walk.spots=s.walk.spots||[];s.walk.friends=s.walk.friends||[];s.walk.health=s.walk.health||[];s.walk.sessions=s.walk.sessions||[];
+    s.drive={active:false,startedAt:0,endedAt:0,lastMoveAt:0,lastPointAt:0,lastSpeedKmh:0,hasMoved:false,startTrackIndex:0,autoEndMinutes:10,...(s.drive||{})};
+    s.fieldFixedMode=s.fieldFixedMode||'kota';
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
     s.weatherPlan.forecast=s.weatherPlan.forecast||[];
@@ -1616,11 +1618,13 @@ ${starterPanelHtml()}
   function pushGpsPoint(lat,lng,source='gps'){
     const p={lat,lng,source,mode:fieldModeName(),time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),ts:Date.now(),eventId:state.currentPlanId};
     const last=state.walk.track[state.walk.track.length-1];
-    if(last && haversine(last,p)>GPS_JUMP_LIMIT_KM){
-      state.notes.push({id:uid('note'),title:'GPSジャンプ除外',text:`${haversine(last,p).toFixed(2)}km / ${p.time}`,private:false});
+    const dist=last?haversine(last,p):0;
+    if(last && dist>GPS_JUMP_LIMIT_KM){
+      state.notes.push({id:uid('note'),title:'GPSジャンプ除外',text:`${dist.toFixed(2)}km / ${p.time}`,private:false});
       return false;
     }
     state.walk.track.push(p);
+    maybeAutoEndDrive(p,last,dist);
     return true;
   }
   function ensureWalkSession(){
@@ -1639,7 +1643,7 @@ ${starterPanelHtml()}
         if(pushGpsPoint(pos.coords.latitude,pos.coords.longitude,'watch'))save();
       },()=>{}, {enableHighAccuracy:true,timeout:8000,maximumAge:5000});
     }
-    gpsAutoTimer=setInterval(()=>{ if(state.walk.active) gps(true); }, GPS_INTERVAL_MS);
+    gpsAutoTimer=setInterval(()=>{ if(state.walk.active||state.drive?.active) gps(true); }, GPS_INTERVAL_MS);
   }
   function stopGpsAuto(saveState=true){
     if(gpsWatchId!==null && navigator.geolocation){try{navigator.geolocation.clearWatch(gpsWatchId)}catch(e){}}
@@ -2469,13 +2473,163 @@ ${starterPanelHtml()}
     </section>`;
   }
 
+
+  function fw02Modes(){
+    return [
+      {id:'kota',label:'コタ',group:0,sub:'散歩'},
+      {id:'site',label:'サイト',group:1,sub:'調査'},
+      {id:'setup',label:'設営',group:2,sub:'配置'},
+      {id:'withdraw',label:'撤収',group:3,sub:'帰宅後'},
+      {id:'drive',label:'ドライブ',group:4,sub:'移動'}
+    ];
+  }
+  function fw02CurrentMode(){
+    const list=fw02Modes();
+    return list.find(x=>x.id===(state.fieldFixedMode||'kota'))||list[0];
+  }
+  function fw02ModeBar(){
+    const cur=fw02CurrentMode().id;
+    return `<div class="fw02Modes">${fw02Modes().map(m=>`<button class="${cur===m.id?'active':''}" data-fw02-mode="${m.id}">${esc(m.label)}<br><small>${esc(m.sub)}</small></button>`).join('')}</div>`;
+  }
+  function fw02MapHtml(){
+    const p=state.walk.track[state.walk.track.length-1];
+    const has=!!p;
+    const url=has?`https://maps.google.com/maps?q=${p.lat},${p.lng}&z=16&output=embed`:'';
+    return `<div class="fw02Map">
+      <div class="fw02MapHead"><span><b>地図を見ながら記録</b><small>${has?`${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`:'現在地未取得'}</small></span></div>
+      ${has?`<iframe loading="lazy" src="${url}"></iframe>`:`<div class="fw02MapEmpty">現在地を押すと<br>ここにGoogle Mapを表示</div>`}
+      <div class="fw02MapOps"><button data-act="gps">現在地更新</button><button data-act="openMap">Google Map</button></div>
+    </div>`;
+  }
+  function fw02ActionClass(item){
+    if(item.do==='private')return ' privateSave';
+    if(item.do==='place')return ' placeSave';
+    if(item.do==='return')return ' returnSave';
+    if(item.do==='drive')return ' driveSave';
+    return '';
+  }
+  function fw02ModeActions(){
+    const mode=fw02CurrentMode();
+    const group=sessionShortcutGroups()[mode.group];
+    const items=(group?.items||[]).slice(0,8);
+    return `<div class="fw02ModePanel">
+      <div class="fw02ModePanelHead"><span><b>${esc(group?.title||mode.label)}モード</b><small>${esc(group?.desc||'必要な操作だけ表示')}</small></span></div>
+      <div class="fw02Actions">${items.map((it,ii)=>`<button class="${fw02ActionClass(it)}" data-session-shortcut="${mode.group}:${ii}"><b>${esc(it.label)}</b><small>${esc(it.target||it.help||'記録')}</small></button>`).join('')}</div>
+    </div>`;
+  }
+  function fw02HeaderHtml(){
+    const plan=current();
+    return `<section class="fw02Head">
+      <div class="fw02Top"><span><b>OUTBASE 現地</b><small>${esc(plan.title||'現在のプラン')} / ${state.drive?.active?'ドライブ記録中':state.walk.active?'散歩記録中':'待機中'}</small></span><span class="fw02Badge">${state.fieldFixedMode||'kota'}</span></div>
+      ${fw02ModeBar()}
+    </section>`;
+  }
+  function fw02MainHtml(){
+    return `<section class="fw02Main">
+      <div class="fw02Ops">
+        <button class="holdVoice ${voiceRecorder?'recording':''}" data-hold-voice><b>${voiceRecorder?'録音中':'話す'}</b><small>${voiceRecorder?'指を離すと保存':'長押し中だけ録音。離すと保存。'}</small></button>
+        <div class="fw02SubOps">
+          <button data-act="captureCamera"><b>撮る</b><small>カメラ起動</small></button>
+          <button data-act="gps"><b>場所</b><small>現在地保存</small></button>
+        </div>
+      </div>
+      ${fw02MapHtml()}
+    </section>`;
+  }
+  function fw02DriveHtml(){
+    const d=state.drive||{};
+    const active=!!d.active;
+    const started=d.startedAt?new Date(d.startedAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'未開始';
+    const speed=Number(d.lastSpeedKmh||0).toFixed(1);
+    return `<div class="fw02Drive"><b>ドライブ自動終了</b><small>${active?`開始 ${started} / ${speed}km/h / 10分停止で自動終了`:'ドライブモードで開始すると、画面起動中は自動終了判定'}</small><button data-act="toggleDrive">${active?'ドライブ終了':'ドライブ開始'}</button></div>`;
+  }
+  function fw02RecentHtml(){
+    const rec=planRecords().slice().reverse().slice(0,2);
+    return `<div class="fw02Recent"><b>直近</b><small>2件だけ表示</small>${rec.map(r=>`<div class="fw02RecentLine">${esc(r.time||'')} ${esc(r.title||recordKindLabel(r.kind))} → ${esc(r.target||'現地メモ')}</div>`).join('')||`<div class="fw02RecentLine">まだなし</div>`}</div>`;
+  }
+  function fw02FootHtml(){
+    return `<section class="fw02Foot">${fw02DriveHtml()}${fw02RecentHtml()}</section>`;
+  }
+  function startHoldVoice(){
+    if(voiceRecorder&&voiceRecorder.state==='recording')return;
+    if(!navigator.mediaDevices || !window.MediaRecorder){
+      const text=prompt('音声メモ（録音非対応のため文字で保存）','');
+      if(text){sessionRecord?sessionRecord({kind:'voice',title:'音声メモ',text,target:'現地メモ',tags:['音声']}):addPublicRecord('voice',text,'音声メモ');save();render();toast('音声メモ保存')}
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+      voiceChunks=[];
+      voiceStartedAt=Date.now();
+      voiceRecorder=new MediaRecorder(stream);
+      voiceRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data)};
+      voiceRecorder.onstop=()=>{
+        const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||'audio/webm'});
+        stream.getTracks().forEach(t=>t.stop());
+        const file={name:`voice_${Date.now()}.webm`,type:blob.type,size:blob.size};
+        const reader=new FileReader();
+        reader.onload=()=>{
+          addMediaRecord('voice',file,reader.result);
+          voiceRecorder=null;voiceChunks=[];
+          save();render();toast('音声保存');
+        };
+        reader.readAsDataURL(blob);
+      };
+      voiceRecorder.start();
+      render();
+    }).catch(()=>{
+      const text=prompt('音声メモ（マイク許可なし）','');
+      if(text){sessionRecord?sessionRecord({kind:'voice',title:'音声メモ',text,target:'現地メモ',tags:['音声']}):addPublicRecord('voice',text,'音声メモ');save();render();toast('音声メモ保存')}
+    });
+  }
+  function stopHoldVoice(){
+    if(voiceRecorder&&voiceRecorder.state==='recording')voiceRecorder.stop();
+  }
+  function ensureDrive(){
+    state.drive={active:false,startedAt:0,endedAt:0,lastMoveAt:0,lastPointAt:0,lastSpeedKmh:0,hasMoved:false,startTrackIndex:0,autoEndMinutes:10,...(state.drive||{})};
+    return state.drive;
+  }
+  function toggleDrive(){
+    const d=ensureDrive();
+    if(d.active)return finishDrive('手動終了',false);
+    d.active=true;d.startedAt=Date.now();d.endedAt=0;d.lastMoveAt=Date.now();d.lastPointAt=0;d.lastSpeedKmh=0;d.hasMoved=false;d.startTrackIndex=state.walk.track.length;
+    sessionRecord?sessionRecord({kind:'出発',title:'ドライブ開始',text:'ドライブ開始',group:'ドライブ',target:'移動ログ',tags:['ドライブ','出発']}):addPublicRecord('memo','ドライブ開始','ドライブ開始');
+    startGpsAuto();gps(true);save();render();toast('ドライブ開始');
+  }
+  function finishDrive(reason='ドライブ終了',auto=true){
+    const d=ensureDrive();
+    if(!d.active)return;
+    d.active=false;d.endedAt=Date.now();
+    const mins=Math.max(0,Math.round((d.endedAt-(d.startedAt||d.endedAt))/60000));
+    sessionRecord?sessionRecord({kind:'到着',title:auto?'ドライブ自動終了':'ドライブ終了',text:`${reason} / ${mins}分`,group:'ドライブ',target:'移動ログ',tags:['ドライブ',auto?'自動終了':'終了']}):addPublicRecord('memo',`${reason} / ${mins}分`,'ドライブ終了');
+    if(!state.walk.active)stopGpsAuto(false);
+    save();render();toast(auto?'ドライブ自動終了':'ドライブ終了');
+  }
+  function maybeAutoEndDrive(p,last,dist){
+    const d=ensureDrive();
+    if(!d.active)return;
+    const now=Date.now();
+    if(last&&last.ts){
+      const hours=Math.max((now-last.ts)/3600000, 1/3600000);
+      const sp=dist/hours;
+      d.lastSpeedKmh=sp;
+      if(sp>8 || dist>.08){d.lastMoveAt=now;d.hasMoved=true;}
+    }else{
+      d.lastMoveAt=now;
+    }
+    d.lastPointAt=now;
+    const idleMin=(now-(d.lastMoveAt||now))/60000;
+    const runMin=(now-(d.startedAt||now))/60000;
+    if(d.hasMoved && runMin>=15 && idleMin>=Number(d.autoEndMinutes||10))finishDrive('10分以上停止',true);
+  }
+
   function field(){
     return shell(`
-      ${obHeroHtml()}
-      ${obMainActionsHtml()}
-      ${obNowShortcutsHtml()}
-      ${obRecentHtml()}
-      ${obMoreShortcutsHtml()}
+      <section class="fieldWork02">
+        ${fw02HeaderHtml()}
+        ${fw02MainHtml()}
+        ${fw02ModeActions()}
+        ${fw02FootHtml()}
+      </section>
     `);
   }
 
@@ -2723,6 +2877,13 @@ ${starterPanelHtml()}
     }
   }
   function bind(){
+    document.querySelectorAll('[data-fw02-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.fw02Mode;save();render()});
+    document.querySelectorAll('[data-hold-voice]').forEach(el=>{
+      el.onpointerdown=e=>{e.preventDefault();startHoldVoice()};
+      el.onpointerup=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointercancel=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointerleave=e=>{if(voiceRecorder&&voiceRecorder.state==='recording')stopHoldVoice()};
+    });
     document.querySelectorAll('[data-session-shortcut]').forEach(el=>el.onclick=()=>handleSessionShortcut(el.dataset.sessionShortcut));
     document.querySelectorAll('[data-field-mode]').forEach(el=>el.onclick=()=>{state.fieldMode=el.dataset.fieldMode;state.walkMode=el.dataset.fieldMode==='campWalk'?'camp':'normal';save();render()});
     document.querySelectorAll('[data-field-action]').forEach(el=>el.onclick=()=>handleFieldAction(el.dataset.fieldAction));
@@ -2841,6 +3002,7 @@ ${starterPanelHtml()}
     if(a==='openWeatherChecks')return openWeatherChecks();
 
     if(a==='captureCamera')return captureCamera();
+    if(a==='toggleDrive')return toggleDrive();
     if(a==='captureMedia')return captureMedia(el.dataset.kind);
     if(a==='toggleVoice')return toggleVoice();
 
@@ -3770,6 +3932,6 @@ ${starterPanelHtml()}
   window.addEventListener('error',e=>{state.lastError={message:e.message||'error',time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
   window.addEventListener('unhandledrejection',e=>{state.lastError={message:String(e.reason?.message||e.reason||'promise'),time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
   setInterval(updateTimers,1000);
-  if(state.walk.active)startGpsAuto();
+  if(state.walk.active||state.drive?.active)startGpsAuto();
   render();
 })();
