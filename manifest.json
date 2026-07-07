@@ -1,9 +1,9 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-usable-remake-20260707",
+  "start_url": "./?v=outbase-calendar-design-remake-20260707",
   "display": "standalone",
-  "background_color": "#f5f1e8",
-  "theme_color": "#1f2a24",
+  "background_color": "#eee8dc",
+  "theme_color": "#201f1b",
   "icons": []
 }
