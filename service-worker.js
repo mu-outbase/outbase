@@ -1,10 +1,10 @@
-const CACHE_NAME = 'outbase-restart-43-record-first-lock';
+const CACHE_NAME = 'outbase-v144-calendar-context-lock';
 const ASSETS = [
   './',
-  './index.html?v=restart-43-record-first-lock',
-  './style.css?v=restart-43-record-first-lock',
-  './src/app.js?v=restart-43-record-first-lock',
-  './manifest.json?v=restart-43-record-first-lock'
+  './index.html?v=v144-calendar-context-lock',
+  './style.css?v=v144-calendar-context-lock',
+  './src/app.js?v=v144-calendar-context-lock',
+  './manifest.json?v=v144-calendar-context-lock'
 ];
 
 self.addEventListener('install', (event) => {
