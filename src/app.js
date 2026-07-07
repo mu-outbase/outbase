@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-discoverpro-20260707';
+  const VERSION = 'outbase-genius-ui-centerpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -20,7 +20,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', drawer:null, toast:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', drawer:null, toast:null,
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -215,6 +215,54 @@
     return list.map((c,i)=>`${i+1}. ${c.name}（${candidateScore(c)}）\\n${c.area} / ${c.drive}\\n${candidateReason(c)}\\n${c.memo}`).join('\\n\\n');
   }
 
+
+  function centerItems(){
+    const items=[];
+    state.events.forEach(e=>items.push({type:'event',id:e.id,icon:'予',title:e.title,sub:`${typeName[e.type]||e.type} / ${e.start?`${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''}`:'日付未設定'} / ${e.place||'場所未設定'}`,text:`${e.memo||''} ${e.place||''}`}));
+    state.gear.forEach(g=>{const b=state.boxes.find(x=>x.id===g.boxId);items.push({type:'gear',id:g.id,icon:gearIcon(g.cat),title:g.name,sub:`${g.cat||'未分類'} / ${b?.name||'BOX未設定'} / ${gearStatus[g.status]}`,text:`${g.note||''} ${g.car||''} ${b?.home||''} ${b?.car||''}`})});
+    state.boxes.forEach(b=>items.push({type:'box',id:b.id,icon:'箱',title:b.name,sub:`家:${b.home||'未設定'} / 車:${b.car||'未設定'}`,text:b.role||''}));
+    state.shopping.forEach(s=>items.push({type:'shopping',id:s.id,icon:'買',title:s.name,sub:`${s.done?'購入済':'未購入'} / ${s.qty} / ${s.group}`,text:s.source||''}));
+    state.meals.forEach(m=>items.push({type:'meal',id:m.id,icon:'食',title:m.name,sub:`${m.slot} / 材料${m.ingredients.length} / ギア${m.gear.length}`,text:`${m.note||''} ${m.ingredients.join(' ')} ${m.gear.join(' ')}`}));
+    (state.places||[]).forEach(p=>items.push({type:'place',id:p.id,icon:'地',title:p.name,sub:`${p.kind} / 訪問${p.visits||1}回`,text:p.note||''}));
+    (state.candidates||[]).forEach(c=>items.push({type:'candidate',id:c.id,icon:'探',title:c.name,sub:`${c.area} / ${c.drive} / ${candidateScore(c)}点`,text:`${c.memo||''} ${(c.flags||[]).join(' ')}`}));
+    state.notes.forEach(n=>items.push({type:'note',id:n.id,icon:n.private?'非':'メ',title:n.title,sub:n.private?'非公開メモ':'共有メモ',text:n.text||''}));
+    publicRecords().forEach(r=>items.push({type:'record',id:r.id,icon:'記',title:r.title||recordKindLabel(r.kind),sub:`${r.date||''} ${r.time||''} / ${r.mode||''}`,text:r.text||''}));
+    state.weather.forEach(w=>items.push({type:'weather',id:w.id,icon:'天',title:w.when,sub:`${w.done?'確認済':'未確認'} / 天気判断`,text:w.check||''}));
+    return items;
+  }
+  function filteredCenterItems(){
+    const q=(state.centerQuery||'').trim().toLowerCase();
+    const list=centerItems();
+    if(!q)return list.slice(0,8);
+    return list.filter(i=>[i.title,i.sub,i.text,i.type].join(' ').toLowerCase().includes(q)).slice(0,20);
+  }
+  function centerIconName(type){
+    return {event:'予定',gear:'ギア',box:'BOX',shopping:'買物',meal:'料理',place:'場所',candidate:'候補',note:'メモ',record:'記録',weather:'天気'}[type]||type;
+  }
+  function centerResult(i){
+    return `<button class="centerResult" data-act="openCenterItem" data-type="${i.type}" data-id="${i.id}">
+      <span class="centerIcon">${esc(i.icon)}</span>
+      <span class="centerMain"><b>${esc(i.title)}</b><small>${esc(centerIconName(i.type))} / ${esc(i.sub)}</small></span>
+      <span class="pill">開く</span>
+    </button>`;
+  }
+  function unresolvedItems(){
+    const items=[];
+    state.events.filter(e=>!e.start).forEach(e=>items.push({type:'event',id:e.id,title:e.title,sub:'日付未設定',action:'選択日に入れる'}));
+    state.shopping.filter(s=>!s.done).slice(0,4).forEach(s=>items.push({type:'shopping',id:s.id,title:s.name,sub:`買い物未完 / ${s.qty}`,action:'購入済み'}));
+    state.gear.filter(g=>g.status!=='loaded').slice(0,4).forEach(g=>items.push({type:'gear',id:g.id,title:g.name,sub:`${gearStatus[g.status]} / 未積込`,action:'積込済み'}));
+    state.weather.filter(w=>!w.done).slice(0,3).forEach(w=>items.push({type:'weather',id:w.id,title:w.when,sub:w.check,action:'確認済み'}));
+    (state.candidates||[]).filter(c=>c.wish).slice(0,3).forEach(c=>items.push({type:'candidate',id:c.id,title:c.name,sub:`保存候補 / ${candidateScore(c)}点`,action:'予定化'}));
+    return items.slice(0,10);
+  }
+  function inboxItem(i){
+    return `<div class="inboxItem"><div class="inboxTop"><span><b>${esc(i.title)}</b><small>${esc(i.sub)}</small></span><span class="pill wood">${esc(i.action)}</span></div><div class="inboxOps"><button data-act="resolveCenterItem" data-type="${i.type}" data-id="${i.id}">処理する</button><button data-act="openCenterItem" data-type="${i.type}" data-id="${i.id}">開く</button></div></div>`;
+  }
+  function buildDashboardText(){
+    const st=prepStats(), gs=gearStats(), ms=memoryStats(), fs=fieldStats();
+    return `【OUTBASE 現在地】\\n主役:${current().title}\\n準備:${st.score}% / 買い物残:${st.undoneShop} / ギア積込:${gs.loaded}/${gs.total} / 天気:${st.wdone}/${state.weather.length}\\n現地記録:${fs.records} / 場所:${ms.places} / 改善:${ms.imp}\\n未整理:${unresolvedItems().length}\\n\\n次:${prepNextTarget()[1]}`;
+  }
+
   function home(){
     const p=current();
     const undoneShop=state.shopping.filter(s=>!s.done).length;
@@ -276,6 +324,24 @@
             <button class="fieldBig" data-act="addNote"><b>メモ</b><small>後で整理へ送る</small></button>
           </div>
         </div>
+      </section>
+
+
+      <section class="section">
+        <div class="centerPanel">
+          <div class="centerHead"><span><b>全部から探す</b><small>予定・ギア・買い物・料理・場所・候補・記録をまとめて探す。</small></span><span class="pill">${centerItems().length}件</span></div>
+          <div class="centerSearch"><input id="centerSearchInput" placeholder="例：赤城、スキレット、乾燥、コタ" value="${esc(state.centerQuery||'')}"><button class="btn primary" data-act="clearCenterSearch">クリア</button></div>
+          <div class="centerResults">${filteredCenterItems().map(centerResult).join('')||`<div class="centerResult"><span class="centerIcon">無</span><span class="centerMain"><b>該当なし</b><small>別の言葉で探す。</small></span><span class="pill">0</span></div>`}</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="head"><div><h2>未整理・未完了</h2><p>放置すると面倒になるものだけ集める。</p></div><span class="pill ${unresolvedItems().length?'wood':'dark'}">${unresolvedItems().length}件</span></div>
+        <div class="inboxGrid">${unresolvedItems().map(inboxItem).join('')||`<div class="dashboardCopy"><b>未処理なし</b><p>いま急いで処理するものはない。</p></div>`}</div>
+      </section>
+
+      <section class="section">
+        <div class="dashboardCopy"><b>現在地コピー</b><p>${esc(buildDashboardText())}</p><div class="dashboardOps"><button class="primary" data-act="copyDashboard">コピー</button><button data-act="autoNext">次に進める</button></div></div>
       </section>
 
       <section class="section">
@@ -861,6 +927,8 @@
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
     const gearSearch=document.getElementById('gearSearchInput');
     if(gearSearch){gearSearch.oninput=()=>{state.gearFilter=gearSearch.value;save();render()}}
+    const centerSearch=document.getElementById('centerSearchInput');
+    if(centerSearch){centerSearch.oninput=()=>{state.centerQuery=centerSearch.value;save();render()}}
   }
   function bindSwipe(){
     const days=document.getElementById('days'); if(!days)return; let sx=null;
@@ -868,6 +936,11 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='openCenterItem')return openCenterItem(el.dataset.type,el.dataset.id);
+    if(a==='resolveCenterItem')return resolveCenterItem(el.dataset.type,el.dataset.id);
+    if(a==='clearCenterSearch')return clearCenterSearch();
+    if(a==='copyDashboard')return copyDashboard();
 
     if(a==='addCandidate')return addCandidate();
     if(a==='candidateToPlan')return candidateToPlan(el.dataset.id);
@@ -972,6 +1045,37 @@
 
 
 
+
+
+  function openCenterItem(type,id){
+    if(type==='event'){state.drawer={type:'event',id};}
+    else if(type==='gear'){state.route='prep';state.prepTab='gear';state.gearTab='list';state.gearFilter=state.gear.find(g=>g.id===id)?.name||'';}
+    else if(type==='box'){state.route='prep';state.prepTab='gear';state.gearTab='boxes';}
+    else if(type==='shopping'){state.route='prep';state.prepTab='shopping';}
+    else if(type==='meal'){state.route='prep';state.prepTab='meals';}
+    else if(type==='place'){state.route='memory';state.memoryTab='places';}
+    else if(type==='candidate'){state.route='discover';state.discoverTab='wish';}
+    else if(type==='note'){state.route='memory';state.memoryTab='notes';}
+    else if(type==='record'){state.route='memory';state.memoryTab='timeline';}
+    else if(type==='weather'){state.route='prep';state.prepTab='weather';}
+    save();render();
+  }
+  function resolveCenterItem(type,id){
+    if(type==='event')state.events=state.events.map(e=>e.id===id?{...e,start:state.selectedDate||today(),end:state.selectedDate||today()}:e);
+    if(type==='shopping')state.shopping=state.shopping.map(s=>s.id===id?{...s,done:true}:s);
+    if(type==='gear')state.gear=state.gear.map(g=>g.id===id?{...g,status:'loaded'}:g);
+    if(type==='weather')state.weather=state.weather.map(w=>w.id===id?{...w,done:true}:w);
+    if(type==='candidate')return candidateToPlan(id);
+    save();render();toast('処理した');
+  }
+  function clearCenterSearch(){
+    state.centerQuery='';
+    save();render();
+  }
+  async function copyDashboard(){
+    const text=buildDashboardText();
+    try{await navigator.clipboard.writeText(text);toast('現在地コピー')}catch(e){prompt('コピー',text)}
+  }
 
   function addCandidate(){
     const name=prompt('候補名'); if(!name)return;
