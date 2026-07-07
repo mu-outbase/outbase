@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-appframe-20260707';
+  const VERSION = 'outbase-genius-ui-easyflow-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -119,38 +119,67 @@
 
   function home(){
     const p=current();
+    const undoneShop=state.shopping.filter(s=>!s.done).length;
+    const loaded=state.gear.filter(g=>g.status==='loaded').length;
+    const care=state.gear.filter(g=>['dry','repair','replace'].includes(g.status)).length;
+    const wdone=state.weather.filter(w=>w.done).length;
+    const stageText={
+      before:['まず予定を見る','日付・連日・繰り返しを確認','calendar','予定を見る'],
+      prep:['持ち物を終わらせる','買い物・ギア・天気をチェック','prep','準備する'],
+      field:['現地で残す','散歩・現在地・スポットを3秒で記録','field','記録する'],
+      after:['次回に残す','メモ・場所カード・改善を整理','memory','整理する']
+    }[state.stage]||['まず予定を見る','次に押す場所だけ表示','calendar','予定を見る'];
     return shell(`
-      <div class="control">
-        <section class="heroPanel">
-          <div class="kicker">CONTROL BOARD</div>
-          <h1>${state.stage==='field'?'現地で迷わない。':'次の一手だけ見る。'}</h1>
-          <p>予定・準備・記録・整理を、見た目だけでなく使う順番でまとめる。</p>
-        </section>
-        <section class="statusPanel">
-          <h2>準備メーター</h2>
-          <div class="gauge">
-            <div class="gaugeItem"><span><b>買い物</b><b>${state.shopping.filter(s=>s.done).length}/${state.shopping.length}</b></span><div class="bar"><i style="width:${Math.round(state.shopping.filter(s=>s.done).length/Math.max(1,state.shopping.length)*100)}%"></i></div></div>
-            <div class="gaugeItem"><span><b>ギア</b><b>${state.gear.filter(g=>g.status==='loaded').length}/${state.gear.length}</b></span><div class="bar"><i style="width:${Math.round(state.gear.filter(g=>g.status==='loaded').length/Math.max(1,state.gear.length)*100)}%"></i></div></div>
-            <div class="gaugeItem"><span><b>天気</b><b>${state.weather.filter(w=>w.done).length}/${state.weather.length}</b></span><div class="bar"><i style="width:${Math.round(state.weather.filter(w=>w.done).length/Math.max(1,state.weather.length)*100)}%"></i></div></div>
+      <section class="nextAction">
+        <div class="nextActionIn">
+          <div class="nextLabel"><span>NEXT ACTION</span><span>${esc(p.title)}</span></div>
+          <h1>${stageText[0]}</h1>
+          <p>${stageText[1]}</p>
+          <div class="nextButtons">
+            <button class="bigGo" data-route="${stageText[2]}">${stageText[3]}<small>迷ったらここだけ押す</small></button>
+            <button class="subGo" data-act="editPlan">今の主役を開く</button>
           </div>
-        </section>
-      </div>
-      <div class="quick">
-        <button data-route="calendar"><em>▦</em><span>予定</span></button>
-        <button data-prep="gear"><em>◫</em><span>ギア</span></button>
-        <button data-route="field"><em>＋</em><span>記録</span></button>
-        <button data-route="memory"><em>○</em><span>整理</span></button>
-      </div>
-      <section class="section">
-        <div class="head"><div><h2>今の主役</h2><p>プランを大きく邪魔せず、でも迷わない位置に置く。</p></div><span class="pill wood">${p.start&&p.end&&p.start!==p.end?`${Math.round((dObj(p.end)-dObj(p.start))/86400000)}泊${Math.round((dObj(p.end)-dObj(p.start))/86400000)+1}日`:'予定'}</span></div>
-        <div class="list">${eventRow(p)}</div>
-        <div class="actions"><button class="btn primary" data-route="calendar">予定を見る</button><button class="btn" data-route="prep">準備する</button><button class="btn" data-route="field">現地で残す</button></div>
+        </div>
       </section>
+
+      <div class="flowRail">
+        ${[['before','予定'],['prep','準備'],['field','現地'],['after','整理']].map(([id,label])=>`<button class="flowStep ${state.stage===id?'active':''}" data-stage="${id}">${label}</button>`).join('')}
+      </div>
+
+      <section class="section">
+        <div class="head"><div><h2>今やること</h2><p>細かい管理画面へ行かず、この場で確認できるものを先に出す。</p></div></div>
+        <div class="easyCard">
+          <div class="easyTitle"><b>準備チェック</b><small>${undoneShop}件買い物 / ${state.gear.length-loaded}件未積込</small></div>
+          <button class="checkRow" data-prep="shopping">
+            <span class="checkMain"><strong>買い物</strong><small>未完了 ${undoneShop}件。LINEコピーもここ。</small></span>
+            <span class="checkMark ${undoneShop===0?'done':''}">${undoneShop===0?'✓':'›'}</span>
+          </button>
+          <button class="checkRow" data-prep="gear">
+            <span class="checkMain"><strong>ギア</strong><small>積込 ${loaded}/${state.gear.length}。ボックス単位で確認。</small></span>
+            <span class="checkMark ${loaded===state.gear.length?'done':''}">${loaded===state.gear.length?'✓':'›'}</span>
+          </button>
+          <button class="checkRow" data-prep="weather">
+            <span class="checkMain"><strong>天気判断</strong><small>${wdone}/${state.weather.length}確認。設営・撤収・コタ判断。</small></span>
+            <span class="checkMark ${wdone===state.weather.length?'done':''}">${wdone===state.weather.length?'✓':'›'}</span>
+          </button>
+        </div>
+
+        <div class="easyCard">
+          <div class="easyTitle"><b>すぐ使う</b><small>説明を読まずに押す</small></div>
+          <div class="fieldGrid">
+            <button class="fieldBig primary" data-route="field"><b>散歩開始</b><small>通常/キャンプ場を選んで記録</small></button>
+            <button class="fieldBig" data-act="gps"><b>現在地</b><small>地図へ1点追加</small></button>
+            <button class="fieldBig" data-act="addEvent"><b>予定追加</b><small>単体/連日/繰り返し</small></button>
+            <button class="fieldBig" data-act="addNote"><b>メモ</b><small>後で整理へ送る</small></button>
+          </div>
+        </div>
+      </section>
+
       <section class="section">
         <div class="metricGrid">
-          <div class="metricBox"><small>買い物未完</small><b>${state.shopping.filter(s=>!s.done).length}</b></div>
-          <div class="metricBox"><small>乾燥/修理</small><b>${state.gear.filter(g=>['dry','repair','replace'].includes(g.status)).length}</b></div>
-          <div class="metricBox"><small>未設定</small><b>${unscheduled().length}</b></div>
+          <div class="metricBox"><small>買い物未完</small><b>${undoneShop}</b></div>
+          <div class="metricBox"><small>未積込</small><b>${state.gear.length-loaded}</b></div>
+          <div class="metricBox"><small>乾燥/修理</small><b>${care}</b></div>
         </div>
       </section>
     `)
@@ -217,11 +246,35 @@
   function gearRow(g){const b=state.boxes.find(x=>x.id===g.boxId);return `<button class="row" data-act="editGear" data-id="${g.id}"><span><strong>${esc(g.name)} ×${g.qty}</strong><small>${esc(g.cat)} / ${esc(b?.name||'未収納')} / 車:${esc(g.car)} / ${gearStatus[g.status]}<br>${esc(g.note)}</small></span><span class="pill">変更</span></button>`}
 
   function field(){
+    const modeText=state.walkMode==='camp'?'キャンプ場散歩':'通常散歩';
     return shell(`
-      <section class="heroPanel"><div class="kicker">FIELD MODE</div><h1>現地は3秒。</h1><p>散歩・スポット・犬友達・体調メモを迷わず残す。</p></section>
-      <section class="section"><div class="segment"><button class="${state.walkMode==='normal'?'active':''}" data-walk="normal">通常散歩</button><button class="${state.walkMode==='camp'?'active':''}" data-walk="camp">キャンプ場散歩</button></div>
-      <div class="metricGrid" style="margin-top:12px"><div class="metricBox"><small>GPS</small><b>${state.walk.track.length}</b></div><div class="metricBox"><small>スポット</small><b>${state.walk.spots.length}</b></div><div class="metricBox"><small>犬友達</small><b>${state.walk.friends.length}</b></div></div></section>
-      <section class="section"><div class="map"><canvas id="walkMap" width="600" height="226"></canvas>${state.walk.track.length?'':'<div class="empty">現在地を記録すると<br>簡易ルートを描く</div>'}</div><div class="actions"><button class="btn ${state.walk.active?'danger':'primary'}" data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button><button class="btn" data-act="gps">現在地</button><button class="btn" data-act="spot">スポット</button><button class="btn" data-act="friend">犬友達</button><button class="btn" data-act="map">Google Map</button></div></section>
+      <section class="nextAction">
+        <div class="nextActionIn">
+          <div class="nextLabel"><span>FIELD MODE</span><span>${modeText}</span></div>
+          <h1>${state.walk.active?'記録中':'現地は3秒。'}</h1>
+          <p>表に出すのは散歩・場所・スポット。体調メモは非公開だけ。</p>
+          <div class="nextButtons">
+            <button class="bigGo" data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}<small>まずここだけ押す</small></button>
+            <button class="subGo" data-act="gps">現在地を記録</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="segment"><button class="${state.walkMode==='normal'?'active':''}" data-walk="normal">通常散歩</button><button class="${state.walkMode==='camp'?'active':''}" data-walk="camp">キャンプ場散歩</button></div>
+        <div class="metricGrid" style="margin-top:12px"><div class="metricBox"><small>GPS</small><b>${state.walk.track.length}</b></div><div class="metricBox"><small>スポット</small><b>${state.walk.spots.length}</b></div><div class="metricBox"><small>犬友達</small><b>${state.walk.friends.length}</b></div></div>
+      </section>
+
+      <section class="section">
+        <div class="fieldGrid">
+          <button class="fieldBig primary" data-act="gps"><b>現在地</b><small>地図に1点追加</small></button>
+          <button class="fieldBig" data-act="spot"><b>スポット</b><small>良い場所を残す</small></button>
+          <button class="fieldBig" data-act="friend"><b>犬友達</b><small>名前未確認でもOK</small></button>
+          <button class="fieldBig" data-act="addNote"><b>メモ</b><small>後で整理へ送る</small></button>
+        </div>
+      </section>
+
+      <section class="section"><div class="map"><canvas id="walkMap" width="600" height="226"></canvas>${state.walk.track.length?'':'<div class="empty">現在地を押すと<br>簡易ルートを描く</div>'}</div><div class="actions"><button class="btn" data-act="map">Google Map</button></div></section>
       <section class="section"><details class="privateBox"><summary>非公開の体調メモ</summary><div class="actions"><button class="btn" data-act="health" data-type="体調">体調</button><button class="btn" data-act="health" data-type="うんち">うんち</button><button class="btn" data-act="health" data-type="おしっこ">おしっこ</button></div><div class="list" style="margin-top:12px">${state.walk.health.slice().reverse().map(h=>`<div class="row"><span><strong>${esc(h.type)}</strong><small>${esc(h.time)} / ${esc(h.mode)} / 非公開</small></span><span class="pill private">非公開</span></div>`).join('')||'<div class="row"><span><strong>まだなし</strong><small>表には出さない。</small></span></div>'}</div></details></section>
     `)
   }
