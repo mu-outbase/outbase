@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc-20260707';
+  const VERSION = 'outbase-finalrc2-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc2-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -632,7 +632,7 @@
   }
   function recoveryHtml(err){
     const msg=err?.message||state.lastError?.message||'表示エラー';
-    return `<div class="recoveryPanel"><div class="recoveryCard"><b>OUTBASEを復旧する</b><p>画面生成中に止まったため、復旧メニューを表示している。データは消さずに、構造補修・ホーム復帰・メディア軽量化を実行できる。\\n\\n${esc(msg)}</p><div class="recoveryOps"><button class="primary" id="recoverRepair">安全補修してホームへ</button><button id="recoverMedia">メディアプレビューだけ削除</button><button id="recoverBackup">診断バックアップ</button></div></div></div>`;
+    return `<div class="recoveryPanel"><div class="recoveryCard"><b>OUTBASEを復旧する</b><p>画面生成中に止まったため、復旧メニューを表示している。これは通常の起動画面ではない。データは消さずに、構造補修・ホーム復帰・メディア軽量化を実行できる。\\n\\n${esc(msg)}</p><div class="recoveryOps"><button class="primary" id="recoverRepair">安全補修してホームへ</button><button id="recoverMedia">メディアプレビューだけ削除</button><button id="recoverBackup">診断バックアップ</button></div></div></div>`;
   }
 
 
@@ -903,6 +903,7 @@ ${starterPanelHtml()}
     `)
   }
   function discoverBody(){
+    const list=filteredCandidates();
     if(state.discoverTab==='conditions')return `<section class="section"><div class="conditionPanel"><div class="conditionHead"><b>探す基準</b><small>ムーの条件を点数化。外部検索APIではなく、候補メモを判断しやすくする画面。</small></div><div class="conditionList">
       ${[['犬可','最優先。犬不可は候補にしない'],['温水','冬キャンプ優先条件'],['ドッグフリー','次点で強い条件'],['景色','満足度に効く'],['4時間以内','下り方面希望。遠すぎる候補を避ける'],['暑期','エアコン付き・1泊2万円以下なら候補']].map(r=>`<div class="conditionRow"><span><b>${r[0]}</b><small>${r[1]}</small></span><span class="pill dark">基準</span></div>`).join('')}
       </div></div><div class="commandDock"><button class="btn primary" data-act="addCandidate">候補追加</button><button class="btn" data-act="compareCandidates">比較コピー</button></div></section>`;
