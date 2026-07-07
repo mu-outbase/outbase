@@ -1,9 +1,9 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=v148-forward-37-40-design-fix-lock",
+  "start_url": "./?v=outbase-one-shot-full-20260707",
   "display": "standalone",
   "background_color": "#f5f1e8",
-  "theme_color": "#0e1411",
+  "theme_color": "#1f2a24",
   "icons": []
 }
