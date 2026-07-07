@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-calendarpro-20260707';
+  const VERSION = 'outbase-genius-ui-preppro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -320,26 +320,106 @@
     return `<button class="row" data-act="openEvent" data-id="${e.id}"><span><strong>${esc(e.title)}</strong><small>${typeName[e.type]||e.type} / ${e.start?`${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''}`:'日付未設定'} / ${kind}${rep}<br>${esc(e.place||'場所未設定')}</small></span><span class="pill ${kind==='連日'?'wood':''}">${kind}</span></button>`
   }
 
+
+  function prepNextTarget(){
+    const st=prepStats();
+    if(state.meals.length===0)return ['meals','献立を決める','料理を1つ入れる'];
+    if(st.undoneShop>0)return ['shopping','買い物を終わらせる',`${st.undoneShop}件残り`];
+    if(st.loaded<state.gear.length)return ['gear','ギアを積む',`${state.gear.length-st.loaded}件残り`];
+    if(st.wdone<state.weather.length)return ['weather','天気で判断する',`${state.weather.length-st.wdone}件残り`];
+    return ['overview','現地へ行ける','準備はほぼ完了'];
+  }
+  function mealMissing(m){
+    const shopNames=new Set(state.shopping.map(s=>s.name));
+    const gearNames=new Set(state.gear.map(g=>g.name));
+    return {
+      ingredients:m.ingredients.filter(i=>!shopNames.has(i)),
+      gear:m.gear.filter(g=>!gearNames.has(g))
+    }
+  }
+  function groupedShopping(){
+    const groups={};
+    state.shopping.forEach(s=>{
+      const k=s.group||'その他';
+      groups[k]=groups[k]||[];
+      groups[k].push(s);
+    });
+    return groups;
+  }
+  function weatherDecisionText(){
+    const undone=state.weather.filter(w=>!w.done);
+    if(!undone.length)return '天気確認は完了。あとは当日の風と雨で最終判断。';
+    const first=undone[0];
+    return `${first.when}：${first.check} を確認。雨・風・気温で設営時間、コタの暑寒、幕体を決める。`;
+  }
+
   function prep(){
+    const st=prepStats();
+    const next=prepNextTarget();
     return shell(`
-      <section class="section"><div class="head"><div><h2>準備</h2><p>料理・買い物・ギア・天気をバラバラにしない。</p></div></div>
-      <div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="prepHero">
+        <div class="prepHeroTop">
+          <span><b>${next[1]}</b><small>${next[2]}。考えずに、まず下の大きいボタンを押す。</small></span>
+          <span class="prepScore" style="--score:${st.score}">${st.score}</span>
+        </div>
+        <div class="prepCommand">
+          <button class="mainCmd" data-prep="${next[0]}">次をやる</button>
+          <button class="subCmd" data-act="copyPlanSummary">まとめコピー</button>
+        </div>
+      </section>
+
+      <div class="prepLane">
+        <button class="${state.meals.length?'done':'warn'}" data-prep="meals"><b>${state.meals.length}</b><span>料理</span></button>
+        <button class="${st.undoneShop===0?'done':'warn'}" data-prep="shopping"><b>${st.undoneShop}</b><span>買い物残</span></button>
+        <button class="${st.loaded===state.gear.length?'done':'warn'}" data-prep="gear"><b>${st.loaded}/${state.gear.length}</b><span>積込</span></button>
+        <button class="${st.wdone===state.weather.length?'done':'warn'}" data-prep="weather"><b>${st.wdone}/${state.weather.length}</b><span>天気</span></button>
+      </div>
+
+      <section class="section"><div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
       ${prepBody()}
     `)
   }
+
   function prepBody(){
-    if(state.prepTab==='meals')return `<section class="section"><div class="head"><div><h2>料理</h2><p>献立から買い物とギアに繋げる。</p></div><button class="btn primary" data-act="addMeal">追加</button></div><div class="list">${state.meals.map(m=>`<button class="row" data-act="editMeal" data-id="${m.id}"><span><strong>${esc(m.name)}</strong><small>${esc(m.slot)} / 材料${m.ingredients.length} / ギア${m.gear.length}<br>${esc(m.note)}</small></span><span class="pill">編集</span></button>`).join('')}</div><div class="actions"><button class="btn" data-act="genShop">買い物へ反映</button></div></section>`;
-    if(state.prepTab==='shopping')return `<section class="section"><div class="head"><div><h2>買い物</h2><p>LINEへ送れる形まで整える。</p></div><button class="btn primary" data-act="addShop">追加</button></div><div class="list">${state.shopping.map(s=>`<button class="row" data-act="toggleShop" data-id="${s.id}"><span><strong>${s.done?'✓ ':''}${esc(s.name)}</strong><small>${esc(s.qty)} / ${esc(s.group)} / ${esc(s.source)}</small></span><span class="pill ${s.done?'dark':''}">${s.done?'済':'未'}</span></button>`).join('')}</div><div class="actions"><button class="btn primary" data-act="copyShop">LINE用コピー</button></div></section>`;
+    const st=prepStats();
+    if(state.prepTab==='meals')return `<section class="section">
+      <div class="head"><div><h2>料理</h2><p>献立から買い物とギアへ自動でつなげる。</p></div><button class="btn primary" data-act="addMeal">追加</button></div>
+      ${state.meals.map(m=>{const miss=mealMissing(m);return `<div class="mealBundle">
+        <div class="mealBundleTop"><span><h3>${esc(m.name)}</h3><p>${esc(m.slot)} / ${esc(m.note)}</p></span><button class="btn" data-act="editMeal" data-id="${m.id}">編集</button></div>
+        <div class="miniTags">${m.ingredients.slice(0,6).map(i=>`<span>${esc(i)}</span>`).join('')}${m.ingredients.length>6?`<span>+${m.ingredients.length-6}</span>`:''}</div>
+        <div class="commandDock"><button class="btn primary" data-act="mealToShop" data-id="${m.id}">材料を買い物へ</button><button class="btn" data-act="mealGearCheck" data-id="${m.id}">必要ギア確認</button></div>
+        ${(miss.ingredients.length||miss.gear.length)?`<div class="warnLine">不足候補：${[...miss.ingredients,...miss.gear].map(esc).join(' / ')}</div>`:''}
+      </div>`}).join('') || `<div class="row"><span><strong>料理なし</strong><small>まず1つ入れる。材料とギアへつながる。</small></span><button class="btn primary" data-act="addMeal">追加</button></div>`}
+    </section>`;
+
+    if(state.prepTab==='shopping'){const groups=groupedShopping();return `<section class="section">
+      <div class="head"><div><h2>買い物</h2><p>店で迷わない。グループごとに消す。</p></div><button class="btn primary" data-act="addShop">追加</button></div>
+      <div class="finishPanel"><div class="finishHead"><span><b>買い物残り ${st.undoneShop}件</b><small>買ったら行ごとに押す。</small></span><span class="pill ${st.undoneShop===0?'dark':'wood'}">${st.undoneShop===0?'完了':'未完'}</span></div>
+      <div class="finishBody">${Object.entries(groups).map(([g,items])=>`<div class="groupHead"><span>${esc(g)}</span><span>${items.filter(i=>!i.done).length}/${items.length}</span></div>${items.map(s=>`<button class="finishRow" data-act="toggleShop" data-id="${s.id}"><span><b>${s.done?'✓ ':''}${esc(s.name)}</b><small>${esc(s.qty)} / ${esc(s.source)}</small></span><span class="roundMark ${s.done?'done':''}">${s.done?'✓':'□'}</span></button>`).join('')}`).join('')}</div></div>
+      <div class="commandDock"><button class="btn primary" data-act="copyShop">LINE用コピー</button><button class="btn" data-act="clearDoneShop">購入済みを隠す</button></div>
+    </section>`;}
+
     if(state.prepTab==='gear')return gearView();
-    if(state.prepTab==='weather')return `<section class="section"><div class="head"><div><h2>天気</h2><p>表示ではなく、設営・撤収・コタ・幕体の判断。</p></div></div><div class="list">${state.weather.map(w=>`<button class="row" data-act="toggleWeather" data-id="${w.id}"><span><strong>${w.done?'✓ ':''}${esc(w.when)}</strong><small>${esc(w.check)}</small></span><span class="pill ${w.done?'dark':''}">${w.done?'済':'確認'}</span></button>`).join('')}</div></section>`;
-    return `<section class="section">${planFlowHtml()}<div class="linkPanel"><div class="linkPanelHead"><span><b>次にやること</b><small>画面を探さず、ここから押す</small></span><span class="pill">自動整理</span></div><div style="padding:0 14px 14px">${smartPrepRows()}<div class="commandDock"><button class="btn primary" data-act="copyPlanSummary">準備まとめコピー</button><button class="btn" data-act="markAllLoaded">全部積込済みにする</button></div></div></div><div class="grid2" style="margin-top:12px"><button class="tile" data-prep="meals"><strong>料理</strong><small>献立・材料・必要ギア</small></button><button class="tile" data-prep="shopping"><strong>買い物</strong><small>LINEコピー対応</small></button><button class="tile" data-prep="gear"><strong>ギア</strong><small>ボックス・積込・乾燥</small></button><button class="tile" data-prep="weather"><strong>天気</strong><small>設営/撤収/コタ判断</small></button></div></section>`;
+
+    if(state.prepTab==='weather')return `<section class="section">
+      <div class="head"><div><h2>天気判断</h2><p>天気を見るだけで終わらせず、設営・撤収・コタ・幕体を決める。</p></div></div>
+      <div class="decisionCard"><b>今の判断</b><p>${esc(weatherDecisionText())}</p><div class="decisionOps"><button data-act="weatherDecision" data-type="setup">設営判断</button><button data-act="weatherDecision" data-type="withdraw">撤収判断</button><button data-act="weatherDecision" data-type="kota">コタ判断</button><button data-act="weatherDecision" data-type="tent">幕体判断</button></div></div>
+      <div class="list" style="margin-top:10px">${state.weather.map(w=>`<button class="row" data-act="toggleWeather" data-id="${w.id}"><span><strong>${w.done?'✓ ':''}${esc(w.when)}</strong><small>${esc(w.check)}</small></span><span class="pill ${w.done?'dark':''}">${w.done?'済':'確認'}</span></button>`).join('')}</div>
+    </section>`;
+
+    return `<section class="section">
+      ${planFlowHtml()}
+      <div class="finishPanel" style="margin-top:12px"><div class="finishHead"><span><b>準備を終わらせる</b><small>次にやることだけを上から潰す。</small></span><span class="pill ${st.score>=80?'dark':'wood'}">${st.score}%</span></div><div class="finishBody">${smartPrepRows()}</div></div>
+      <div class="commandDock"><button class="btn primary" data-act="autoNext">次に進める</button><button class="btn" data-act="copyPlanSummary">準備まとめコピー</button></div>
+    </section>`;
   }
+
   function gearView(){
     return `<section class="section"><div class="head"><div><h2>ギア</h2><p>登録・変更・ボックス・車載位置を一体で管理。</p></div><button class="btn primary" data-act="addGear">登録</button></div><div class="tabs">${['list:一覧','boxes:ボックス','load:積込','care:乾燥/修理','import:取込'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.gearTab===id?'active':''}" data-gear="${id}">${l}</button>`}).join('')}</div></section>${gearBody()}`
   }
   function gearBody(){
     if(state.gearTab==='boxes')return `<section class="section"><div class="list">${state.boxes.map(b=>{const names=state.gear.filter(g=>g.boxId===b.id).map(g=>g.name).join(' / ');return `<button class="row" data-act="editBox" data-id="${b.id}"><span><strong>${esc(b.name)}</strong><small>家:${esc(b.home)} / 車:${esc(b.car)}<br>${esc(names||'中身なし')}</small></span><span class="pill">変更</span></button>`}).join('')}</div><div class="actions"><button class="btn primary" data-act="addBox">BOX追加</button></div></section>`;
-    if(state.gearTab==='load')return `<section class="section"><div class="list">${state.boxes.map(b=>{const list=state.gear.filter(g=>g.boxId===b.id), loaded=list.filter(g=>g.status==='loaded').length;return `<button class="row" data-act="toggleBox" data-id="${b.id}"><span><strong>${esc(b.name)}</strong><small>${loaded}/${list.length} 積込済 / ${esc(b.car)}</small></span><span class="pill ${loaded===list.length&&list.length?'dark':''}">${loaded===list.length&&list.length?'完了':'確認'}</span></button>`}).join('')}</div></section>`;
+    if(state.gearTab==='load')return `<section class="section"><div class="decisionCard"><b>積込順</b><p>重い物・奥に置く物から積む。ボックスを押すと中身をまとめて積込済みにする。</p><div class="decisionOps"><button data-act="markAllLoaded">全部積込済み</button><button data-act="resetLoaded">積込リセット</button></div></div><div class="list" style="margin-top:10px">${state.boxes.map(b=>{const list=state.gear.filter(g=>g.boxId===b.id), loaded=list.filter(g=>g.status==='loaded').length;return `<button class="row" data-act="toggleBox" data-id="${b.id}"><span><strong>${esc(b.name)}</strong><small>${loaded}/${list.length} 積込済 / 車:${esc(b.car)} / 家:${esc(b.home)}</small></span><span class="pill ${loaded===list.length&&list.length?'dark':''}">${loaded===list.length&&list.length?'完了':'積む'}</span></button>`}).join('')}</div></section>`;
     if(state.gearTab==='care'){const targets=state.gear.filter(g=>['dry','repair','replace'].includes(g.status));return `<section class="section"><div class="list">${targets.length?targets.map(gearRow).join(''):`<div class="row"><span><strong>対象なし</strong><small>乾燥・修理・買替候補はない。</small></span></div>`}</div></section>`}
     if(state.gearTab==='import')return `<section class="section"><div class="tile"><strong>取込候補</strong><small>Excel・購入履歴・写真を候補として保存。</small><div class="actions"><button class="btn primary" data-act="import">ファイル選択</button><button class="btn" data-act="backup">バックアップ</button></div></div></section>`;
     return `<section class="section"><div class="list">${state.gear.map(gearRow).join('')}</div></section>`;
@@ -436,6 +516,12 @@
   }
   function act(a,el){
 
+    if(a==='mealToShop')return mealToShop(el.dataset.id);
+    if(a==='mealGearCheck')return mealGearCheck(el.dataset.id);
+    if(a==='clearDoneShop')return clearDoneShop();
+    if(a==='weatherDecision')return weatherDecision(el.dataset.type);
+    if(a==='resetLoaded')return resetLoaded();
+
     if(a==='goToday')return goToday();
     if(a==='quickAdd')return quickAdd(el.dataset.type);
     if(a==='dateUnscheduled')return dateUnscheduled(el.dataset.id);
@@ -500,6 +586,45 @@
   function backup(){const blob=new Blob([JSON.stringify({version:VERSION,state},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`outbase_backup_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
   function drawMap(){const c=document.getElementById('walkMap');if(!c)return;const ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.strokeStyle='rgba(17,19,15,.08)';for(let x=0;x<w;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}const pts=state.walk.track;if(!pts.length)return;const lats=pts.map(p=>p.lat),lngs=pts.map(p=>p.lng),minLa=Math.min(...lats),maxLa=Math.max(...lats),minLn=Math.min(...lngs),maxLn=Math.max(...lngs);const mp=p=>({x:28+(w-56)*((p.lng-minLn)/((maxLn-minLn)||.001)),y:h-28-(h-56)*((p.lat-minLa)/((maxLa-minLa)||.001))});ctx.strokeStyle='#273a30';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();pts.forEach((p,i)=>{const m=mp(p);i?ctx.lineTo(m.x,m.y):ctx.moveTo(m.x,m.y)});ctx.stroke();pts.forEach((p,i)=>{const m=mp(p);ctx.fillStyle=i===pts.length-1?'#b99a66':'#3f5e4c';ctx.beginPath();ctx.arc(m.x,m.y,5,0,Math.PI*2);ctx.fill()})}
 
+
+
+  function mealToShop(id){
+    const m=state.meals.find(x=>x.id===id); if(!m)return;
+    const names=new Set(state.shopping.map(s=>s.name));
+    let added=0;
+    m.ingredients.forEach(i=>{
+      if(!names.has(i)){
+        state.shopping.push({id:uid('shop'),name:i,qty:'要確認',group:'食材',source:m.name,done:false});
+        names.add(i); added++;
+      }
+    });
+    save();render();toast(added?`${added}件追加`:'追加なし');
+  }
+  function mealGearCheck(id){
+    const m=state.meals.find(x=>x.id===id); if(!m)return;
+    const miss=mealMissing(m);
+    if(miss.gear.length){
+      const ok=confirm(`未登録ギア候補：\\n${miss.gear.join('\\n')}\\n\\nギアに追加する？`);
+      if(ok){
+        const box=state.boxes.find(b=>b.role.includes('料理'))||state.boxes[0];
+        miss.gear.forEach(name=>state.gear.push({id:uid('gear'),name,cat:'料理',qty:1,boxId:box?.id||'',car:box?.car||'',status:'home',note:`${m.name}で使用`}));
+        save();render();toast('ギア追加');
+      }
+    }else{state.prepTab='gear';state.gearTab='load';save();render();toast('必要ギア確認');}
+  }
+  function clearDoneShop(){
+    state.shopping=state.shopping.filter(s=>!s.done);
+    save();render();toast('購入済みを整理');
+  }
+  function weatherDecision(type){
+    const label={setup:'設営判断',withdraw:'撤収判断',kota:'コタ判断',tent:'幕体判断'}[type]||'天気判断';
+    state.notes.push({id:uid('note'),title:label,text:`${label}：${weatherDecisionText()}`,private:false});
+    save();render();toast('判断メモ保存');
+  }
+  function resetLoaded(){
+    state.gear=state.gear.map(g=>g.status==='loaded'?{...g,status:'home'}:g);
+    save();render();toast('積込をリセット');
+  }
 
   function goToday(){
     state.selectedDate=today();
