@@ -2511,3 +2511,158 @@ body{
   .familyRail{grid-template-columns:repeat(4,1fr);gap:6px}
   .familyRail button{min-height:56px;border-radius:16px}
 }
+
+
+/* ===== OUTBASE CONNECT PRO =====
+   静的PWAで現実にできる連携を強化。
+*/
+.connectHero{
+  border-radius:28px;
+  padding:16px;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(185,154,102,.22), transparent 32%),
+    linear-gradient(135deg, rgba(17,19,15,.97), rgba(39,58,48,.94));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.connectHeroTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.connectHero b{font-size:23px;letter-spacing:-.05em}
+.connectHero small{display:block;margin-top:5px;color:rgba(255,248,237,.70);font-size:11px;font-weight:850;line-height:1.45}
+.connectScore{
+  width:58px;height:58px;border-radius:50%;
+  flex:0 0 auto;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--brass) calc(var(--score,0)*1%), rgba(255,248,237,.12) 0);
+  box-shadow:inset 0 0 0 8px rgba(17,19,15,.38);
+  color:var(--milk);
+  font-weight:950;
+}
+.connectCommand{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:14px;
+}
+.connectCommand button{
+  min-height:48px;
+  border-radius:18px;
+  padding:11px 12px;
+  text-align:left;
+  font-weight:950;
+}
+.connectCommand .mainCmd{
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+}
+.connectCommand .subCmd{
+  background:rgba(255,248,237,.10);
+  color:var(--milk);
+  border:1px solid rgba(255,248,237,.12);
+}
+.connectRail{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:12px;
+}
+.connectRail button{
+  min-height:60px;
+  border-radius:18px;
+  background:rgba(255,248,237,.62);
+  border:1px solid rgba(17,19,15,.08);
+  padding:8px 6px;
+  text-align:center;
+}
+.connectRail b{display:block;font-size:15px}
+.connectRail span{display:block;margin-top:5px;color:var(--muted);font-size:9.5px;font-weight:900}
+.connectCard{
+  border-radius:25px;
+  overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,248,237,.74),rgba(239,230,213,.62));
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.connectTop{
+  padding:14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  border-bottom:1px solid rgba(17,19,15,.08);
+}
+.connectTop b{font-size:17px}
+.connectTop small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.45;font-weight:800}
+.connectOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  background:rgba(17,19,15,.08);
+}
+.connectOps button{
+  min-height:46px;
+  background:rgba(255,248,237,.70);
+  font-size:11px;
+  font-weight:950;
+}
+.connectOps button.primary{
+  background:linear-gradient(135deg,var(--black),var(--green2));
+  color:var(--milk);
+}
+.connectBody{
+  padding:13px 14px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+  font-weight:780;
+}
+.exportGrid{
+  display:grid;
+  gap:10px;
+}
+.exportItem{
+  border-radius:23px;
+  padding:13px;
+  background:rgba(255,248,237,.68);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.exportTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.exportTop b{font-size:15px}
+.exportTop small{display:block;margin-top:5px;color:var(--muted);font-size:11px;line-height:1.42;font-weight:760}
+.exportOps{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:7px;
+  margin-top:11px;
+}
+.exportOps button{
+  min-height:40px;
+  border-radius:15px;
+  background:rgba(17,19,15,.07);
+  font-size:11px;
+  font-weight:950;
+}
+.honestBox{
+  border-radius:23px;
+  padding:14px;
+  background:linear-gradient(135deg,rgba(17,19,15,.94),rgba(39,58,48,.92));
+  color:var(--milk);
+  box-shadow:var(--softShadow);
+}
+.honestBox b{font-size:16px}
+.honestBox p{margin-top:7px;color:rgba(255,248,237,.73);font-size:12px;line-height:1.7;white-space:pre-wrap}
+@media(max-width:430px){
+  .connectCommand,.connectOps,.exportOps{grid-template-columns:1fr}
+  .connectRail{grid-template-columns:repeat(4,1fr);gap:6px}
+  .connectRail button{min-height:56px;border-radius:16px}
+}

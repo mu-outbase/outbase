@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-familypro-20260707';
+  const VERSION = 'outbase-genius-ui-connectpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-familypro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-connectpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', drawer:null, toast:null, importMode:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -307,6 +307,7 @@
     if(leak.length)issues.push(['非公開メモ混入',`${leak.length}件`]);
     if(!state.boxes.length)issues.push(['BOXなし','ギア収納先がない']);
     if(!state.candidates||!state.candidates.length)warn.push(['候補なし','探す候補を追加']);
+    if(connectScore()<60)warn.push(['連携未確認','ICS/CSV/共有/バックアップ']);
     const dataSize=JSON.stringify(state).length;
     if(dataSize>850000)warn.push(['データ肥大','バックアップ推奨']);
     const score=Math.max(0,100-issues.length*18-warn.length*5);
@@ -1072,6 +1073,101 @@
     const words=['改善','次回','失敗','忘れ','雨','風','乾燥','買い','積込','修理','買替'];
     return state.notes.filter(n=>!n.private && words.some(w=>`${n.title} ${n.text}`.includes(w)));
   }
+
+  function connectScore(){
+    let s=0;
+    if(state.events?.length)s+=15;
+    if(state.gear?.length)s+=15;
+    if(state.shopping?.length)s+=10;
+    if(publicRecords().length)s+=15;
+    if(state.places?.length)s+=10;
+    if(state.candidates?.length)s+=10;
+    if(state.shares?.length)s+=5;
+    if(state.weatherPlan)s+=10;
+    if(state.petPrep?.length)s+=10;
+    return Math.min(100,s);
+  }
+  function dateToIcs(s){
+    if(!s)return '';
+    return s.replaceAll('-','');
+  }
+  function escapeIcs(v){
+    return String(v||'').replaceAll('\\','\\\\').replaceAll('\n','\\n').replaceAll(',','\\,').replaceAll(';','\\;');
+  }
+  function buildIcs(){
+    const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//OUTBASE//OUTBASE PWA//JA'];
+    state.events.filter(e=>e.start).forEach(e=>{
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${e.id}@outbase`);
+      lines.push(`SUMMARY:${escapeIcs(e.title)}`);
+      lines.push(`DTSTART;VALUE=DATE:${dateToIcs(e.start)}`);
+      lines.push(`DTEND;VALUE=DATE:${dateToIcs(addDays(e.end||e.start,1))}`);
+      if(e.place)lines.push(`LOCATION:${escapeIcs(e.place)}`);
+      if(e.memo)lines.push(`DESCRIPTION:${escapeIcs(e.memo)}`);
+      if(e.repeat&&e.repeat!=='none'){
+        const freq={daily:'DAILY',weekly:'WEEKLY',monthly:'MONTHLY',yearly:'YEARLY'}[e.repeat];
+        if(freq)lines.push(`RRULE:FREQ=${freq}`);
+      }
+      lines.push('END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n');
+  }
+  function csvEscape(v){
+    const s=String(v??'');
+    return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s;
+  }
+  function buildGearCsv(){
+    const rows=[['name','category','qty','box','home','car','status','note']];
+    state.gear.forEach(g=>{
+      const b=state.boxes.find(x=>x.id===g.boxId);
+      rows.push([g.name,g.cat,g.qty,b?.name||'',b?.home||'',g.car||b?.car||'',gearStatus[g.status]||g.status,g.note||'']);
+    });
+    return rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  }
+  function buildShoppingCsv(){
+    const rows=[['name','qty','group','source','done']];
+    state.shopping.forEach(s=>rows.push([s.name,s.qty,s.group,s.source,s.done?'done':'']));
+    (state.petPrep||[]).forEach(p=>rows.push([p.name,p.qty,p.group,'petPrep',p.done?'done':'']));
+    return rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  }
+  function buildPlacesCsv(){
+    const rows=[['name','kind','visits','note']];
+    (state.places||[]).forEach(p=>rows.push([p.name,p.kind,p.visits||1,p.note||'']));
+    return rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  }
+  function downloadText(filename,text,type='text/plain'){
+    const blob=new Blob([text],{type});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  function buildGoogleCalendarUrl(e=current()){
+    const start=dateToIcs(e.start||today());
+    const end=dateToIcs(addDays(e.end||e.start||today(),1));
+    const params=new URLSearchParams({action:'TEMPLATE',text:e.title||'OUTBASE予定',dates:`${start}/${end}`,details:e.memo||'',location:e.place||''});
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+  function buildConnectSummary(){
+    return `【OUTBASE 連携まとめ】\\n予定:${state.events.length} / ギア:${state.gear.length} / 買い物:${state.shopping.length} / 記録:${publicRecords().length}\\nICS:予定をカレンダーへ渡せる\\nCSV:ギア/買い物/場所を外へ出せる\\nJSON:完全バックアップ/復元\\n共有:LINE用コピー/端末共有\\n※Google Photosやリアルタイム同期は、この静的PWA単体では直接接続しない`;
+  }
+  function connectPanelHtml(){
+    return `<section class="section"><div class="connectHero"><div class="connectHeroTop"><span><b>外へ出せる状態にする</b><small>静的PWAで現実にできる連携をまとめる。予定・CSV・バックアップ・共有を分ける。</small></span><span class="connectScore" style="--score:${connectScore()}">${connectScore()}</span></div><div class="connectCommand"><button class="mainCmd" data-act="exportIcs">予定を書き出す</button><button class="subCmd" data-act="nativeShare">端末共有</button></div></div><div class="connectRail"><button data-connect="export"><b>ICS</b><span>予定</span></button><button data-connect="csv"><b>CSV</b><span>台帳</span></button><button data-connect="share"><b>共有</b><span>LINE</span></button><button data-connect="backup"><b>JSON</b><span>復元</span></button></div></section>`;
+  }
+  function connectBody(){
+    const tab=state.connectTab||'export';
+    if(tab==='csv')return `<section class="section"><div class="exportGrid">
+      <div class="exportItem"><div class="exportTop"><span><b>ギアCSV</b><small>ギア名 / BOX / 家の保管場所 / 車載位置 / 状態。</small></span><span class="pill">${state.gear.length}</span></div><div class="exportOps"><button data-act="exportGearCsv">DL</button><button data-act="copyGearSummary">コピー</button><button data-prep="gear">開く</button></div></div>
+      <div class="exportItem"><div class="exportTop"><span><b>買い物CSV</b><small>食材・コタ用品・改善から来た買い物。</small></span><span class="pill">${state.shopping.length}</span></div><div class="exportOps"><button data-act="exportShoppingCsv">DL</button><button data-act="copyShop">コピー</button><button data-prep="shopping">開く</button></div></div>
+      <div class="exportItem"><div class="exportTop"><span><b>場所CSV</b><small>散歩スポット・キャンプ場・再訪候補。</small></span><span class="pill">${state.places?.length||0}</span></div><div class="exportOps"><button data-act="exportPlacesCsv">DL</button><button data-memory="places">開く</button><button data-route="discover">探す</button></div></div>
+    </div></section>`;
+    if(tab==='share')return `<section class="section"><div class="honestBox"><b>共有</b><p>${esc(buildConnectSummary())}</p><div class="shareOps"><button class="primary" data-act="nativeShare">端末共有</button><button data-act="copyFamilyShare">リン共有コピー</button><button data-act="copyDashboard">現在地コピー</button><button data-act="copyTripReport">レポートコピー</button></div></div></section>`;
+    if(tab==='backup')return `<section class="section"><div class="honestBox"><b>バックアップ/復元</b><p>JSONはOUTBASE全体の正本バックアップ。スマホ機種変更や作業前に保存する。</p><div class="shareOps"><button class="primary" data-act="backup">JSONバックアップ</button><button data-act="import">復元/取込</button><button data-act="copyAudit">監査コピー</button><button data-act="repairData">自動補修</button></div></div></section>`;
+    return `<section class="section"><div class="connectCard"><div class="connectTop"><span><b>カレンダー連携</b><small>ICSファイルで予定を書き出す。Google Calendarの追加画面も開ける。</small></span><span class="pill">${state.events.filter(e=>e.start).length}件</span></div><div class="connectBody">単体・連日・繰り返しを含む予定を書き出す。静的PWAなので自動同期ではなく、ファイル/リンク連携。</div><div class="connectOps"><button class="primary" data-act="exportIcs">ICSダウンロード</button><button data-act="openGoogleCalendar">Google追加</button></div></div><div class="versionStrip">Google Photos / Google Calendar 双方向同期 / 家族リアルタイム同期は、この静的PWAだけでは未接続。ここでは現実に動く書き出し・共有・バックアップを優先。</div></section>`;
+  }
+
   function memoryStats(){
     const pub=publicRecords();
     const places=state.places||[];
@@ -1140,7 +1236,7 @@
         <button class="good" data-memory="data"><b>${ms.privateHealth}</b><span>非公開</span></button>
       </div>
 
-      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','notes:メモ','family:家族','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','notes:メモ','family:家族','connect:連携','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
       ${memoryBody()}
     `)
   }
@@ -1162,6 +1258,7 @@
     }
 
     if(state.memoryTab==='family')return `${familyPanelHtml()}${familyBody()}`;
+    if(state.memoryTab==='connect')return `${connectPanelHtml()}${connectBody()}`;
 
     if(state.memoryTab==='notes'){
       return `<section class="section"><div class="head"><div><h2>メモ</h2><p>共有可と非公開を分ける。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="list">${state.notes.map(n=>`<div class="row"><span><strong>${esc(n.title)}</strong><small>${esc(n.text)}</small></span><span class="pill ${n.private?'private':''}">${n.private?'非公開':'共有可'}</span></div>`).join('')}</div></section>`;
@@ -1203,6 +1300,7 @@
     document.querySelectorAll('[data-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.memoryTab=el.dataset.memory;save();render()});
     document.querySelectorAll('[data-discover]').forEach(el=>el.onclick=()=>{state.route='discover';state.discoverTab=el.dataset.discover;save();render()});
     document.querySelectorAll('[data-family]').forEach(el=>el.onclick=()=>{state.familyTab=el.dataset.family;if(state.route!=='prep'&&state.route!=='memory')state.route='prep';state.prepTab='pets';save();render()});
+    document.querySelectorAll('[data-connect]').forEach(el=>el.onclick=()=>{state.connectTab=el.dataset.connect;state.route='memory';state.memoryTab='connect';save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -1229,6 +1327,13 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='exportIcs')return exportIcs();
+    if(a==='openGoogleCalendar')return openGoogleCalendar();
+    if(a==='exportGearCsv')return exportGearCsv();
+    if(a==='exportShoppingCsv')return exportShoppingCsv();
+    if(a==='exportPlacesCsv')return exportPlacesCsv();
+    if(a==='nativeShare')return nativeShare();
 
     if(a==='togglePetPrep')return togglePetPrep(el.dataset.id);
     if(a==='petToPrep')return petToPrep(el.dataset.id);
@@ -1641,6 +1746,34 @@
     save();render();toast('購入済みを整理');
   }
 
+
+
+  function exportIcs(){
+    downloadText(`outbase_events_${today()}.ics`,buildIcs(),'text/calendar');
+    toast('ICSを書き出した');
+  }
+  function openGoogleCalendar(){
+    window.open(buildGoogleCalendarUrl(current()),'_blank');
+  }
+  function exportGearCsv(){
+    downloadText(`outbase_gear_${today()}.csv`,buildGearCsv(),'text/csv');
+    toast('ギアCSV');
+  }
+  function exportShoppingCsv(){
+    downloadText(`outbase_shopping_${today()}.csv`,buildShoppingCsv(),'text/csv');
+    toast('買い物CSV');
+  }
+  function exportPlacesCsv(){
+    downloadText(`outbase_places_${today()}.csv`,buildPlacesCsv(),'text/csv');
+    toast('場所CSV');
+  }
+  async function nativeShare(){
+    const text=buildConnectSummary();
+    if(navigator.share){
+      try{await navigator.share({title:'OUTBASE',text});toast('共有を開いた');return;}catch(e){}
+    }
+    try{await navigator.clipboard.writeText(text);toast('共有文コピー')}catch(e){prompt('コピー',text)}
+  }
 
   function togglePetPrep(id){
     state.petPrep=state.petPrep.map(x=>x.id===id?{...x,done:!x.done}:x);
