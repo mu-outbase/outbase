@@ -290,3 +290,60 @@ html{scroll-behavior:smooth;background:#171914}
   .shell{min-height:calc(100dvh - 24px)}
   @media(max-width:430px){.shell{min-height:100dvh}}
 }
+
+
+/* ===== OUTBASE scroll clean fix =====
+   The previous sticky header created clipping/overlap while scrolling on Android Chrome.
+   This version makes the header part of the document flow and removes the dark side gutters.
+*/
+html{
+  background:#eee5d5;
+  scroll-behavior:smooth;
+}
+body{
+  background:
+    radial-gradient(circle at 72% -8%, rgba(185,154,102,.18), transparent 24rem),
+    linear-gradient(180deg,#11130f 0 132px,#eee5d5 132px,#eee5d5 100%) !important;
+  overflow-x:hidden;
+}
+#app{
+  width:100% !important;
+  max-width:640px;
+  padding:0 0 calc(var(--navH) + env(safe-area-inset-bottom) + 18px) !important;
+  background:#eee5d5;
+}
+.shell{
+  width:100%;
+  min-height:100dvh;
+  border-radius:0 !important;
+  overflow:visible !important;
+  box-shadow:none !important;
+  background:linear-gradient(180deg,rgba(255,248,237,.99),rgba(239,230,213,.99)) !important;
+}
+.top{
+  position:relative !important;
+  top:auto !important;
+  z-index:1 !important;
+  border-radius:0 0 28px 28px !important;
+  transform:none !important;
+}
+.main{
+  background:linear-gradient(180deg,rgba(255,248,237,.99),rgba(239,230,213,.99)) !important;
+  padding-top:16px;
+}
+.bottomNav{
+  max-width:640px;
+}
+.drawer{
+  max-width:640px;
+}
+@media(max-width:700px){
+  #app{max-width:none}
+  .bottomNav{max-width:none}
+  .drawer{max-width:none}
+  body{
+    background:
+      radial-gradient(circle at 72% -8%, rgba(185,154,102,.18), transparent 24rem),
+      linear-gradient(180deg,#11130f 0 132px,#eee5d5 132px,#eee5d5 100%) !important;
+  }
+}

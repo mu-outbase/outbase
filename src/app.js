@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-scrollfix-20260707';
+  const VERSION = 'outbase-genius-ui-scrollclean-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
