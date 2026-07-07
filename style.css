@@ -347,3 +347,81 @@ body{
       linear-gradient(180deg,#11130f 0 132px,#eee5d5 132px,#eee5d5 100%) !important;
   }
 }
+
+
+/* ===== OUTBASE app-frame scroll fix =====
+   Body scroll made the top control panel half-cut while scrolling.
+   This version makes OUTBASE behave like a real app:
+   fixed app header + fixed bottom nav + only the content area scrolls.
+*/
+html,
+body{
+  height:100%;
+  overflow:hidden !important;
+  background:#11130f !important;
+}
+body{
+  overscroll-behavior:none;
+}
+#app{
+  width:100% !important;
+  max-width:640px;
+  height:100dvh;
+  margin:0 auto !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  background:#11130f !important;
+}
+.shell{
+  height:100dvh !important;
+  min-height:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  background:#11130f !important;
+}
+.top{
+  position:relative !important;
+  flex:0 0 auto !important;
+  top:auto !important;
+  z-index:20 !important;
+  border-radius:0 0 28px 28px !important;
+  transform:none !important;
+}
+.main{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding:16px 12px calc(var(--navH) + env(safe-area-inset-bottom) + 24px) !important;
+  background:linear-gradient(180deg,rgba(255,248,237,.99),rgba(239,230,213,.99)) !important;
+}
+.bottomNav{
+  position:fixed !important;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+  width:100% !important;
+  max-width:640px;
+  z-index:50;
+}
+.drawer{
+  max-width:640px;
+}
+.drawerBack{
+  z-index:90;
+}
+.drawer{
+  z-index:91;
+}
+.toast{
+  z-index:92;
+}
+@media(max-width:700px){
+  #app{max-width:none}
+  .bottomNav{max-width:none}
+  .drawer{max-width:none}
+}
