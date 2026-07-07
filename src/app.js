@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-insightpro-20260707';
+  const VERSION = 'outbase-genius-ui-stabilitypro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-insightpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-stabilitypro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null, lastError:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -110,6 +110,7 @@
   }
 
   let state=load();
+  state=migrateState(state); save();
   let voiceRecorder=null, voiceChunks=[], voiceStartedAt=0;
   let gpsWatchId=null, gpsAutoTimer=null;
   const GPS_INTERVAL_MS=10000, GPS_JUMP_LIMIT_KM=1;
@@ -506,6 +507,78 @@
     try{await navigator.clipboard.writeText(text);toast('提案コピー')}catch(e){prompt('コピー',text)}
   }
 
+
+  function stateSize(){
+    return JSON.stringify(state).length;
+  }
+  function mediaSize(){
+    return (state.records||[]).reduce((n,r)=>n+(r.dataUrl?String(r.dataUrl).length:0),0);
+  }
+  function hasRequiredArrays(){
+    return ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins','dismissedInsights'].every(k=>Array.isArray(state[k]));
+  }
+  function diagnostics(){
+    const size=stateSize(), media=mediaSize();
+    const leak=(state.records||[]).filter(r=>!r.private && /うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`)).length;
+    const checks=[
+      ['データ構造',hasRequiredArrays(),'必要配列が揃っている'],
+      ['主役プラン',!!current(),'現在の主役がある'],
+      ['非公開保護',leak===0,leak?`${leak}件確認`:'公開混入なし'],
+      ['容量',size<4200000,`${Math.round(size/1024)}KB`],
+      ['メディア容量',media<2200000,`${Math.round(media/1024)}KB`],
+      ['GPS状態',!state.walk.active || !!current(),'記録中でも主役あり'],
+      ['タイマー状態',timerStats().running<4,`${timerStats().running}件実行中`],
+      ['連携保全',connectScore()>=60,'書き出し/共有/バックアップ']
+    ];
+    const score=Math.round(checks.filter(x=>x[1]).length/checks.length*100);
+    return {checks,score,size,media,leak};
+  }
+  function buildDiagnosticsReport(){
+    const d=diagnostics();
+    return `【OUTBASE 実機監査】\\nversion:${VERSION}\\nscore:${d.score}\\n保存:${Math.round(d.size/1024)}KB\\nメディア:${Math.round(d.media/1024)}KB\\n\\n${d.checks.map(x=>`${x[1]?'✓':'⚠'} ${x[0]}：${x[2]}`).join('\\n')}\\n\\nlastError:${state.lastError?.message||'なし'}`;
+  }
+  function qaPanelHtml(){
+    const d=diagnostics();
+    const pct=Math.min(100,Math.round(d.size/4200000*100));
+    return `<section class="section"><div class="qaPanel"><div class="qaHead"><span><b>実機安定チェック</b><small>表示崩れより先に、保存・復旧・容量・非公開保護を確認。</small></span><span class="qaScore" style="--score:${d.score}">${d.score}</span></div><div class="qaGrid">${d.checks.map(x=>`<div class="qaItem ${x[1]?'':'bad'}"><b>${x[1]?'✓':'⚠'} ${esc(x[0])}</b><small>${esc(x[2])}</small></div>`).join('')}</div><div class="connectBody">保存サイズ ${Math.round(d.size/1024)}KB / メディア ${Math.round(d.media/1024)}KB<div class="storageBar"><div class="storageFill" style="--w:${pct}%"></div></div></div><div class="qaOps"><button class="primary" data-act="safeRepair">安全補修</button><button data-act="copyDiagnostics">監査コピー</button><button data-act="exportDebugBundle">診断DL</button><button data-act="clearMediaPreviews">軽量化</button></div></div></section>`;
+  }
+  function recoveryHtml(err){
+    const msg=err?.message||state.lastError?.message||'表示エラー';
+    return `<div class="recoveryPanel"><div class="recoveryCard"><b>OUTBASEを復旧する</b><p>画面生成中に止まったため、復旧メニューを表示している。データは消さずに、構造補修・ホーム復帰・メディア軽量化を実行できる。\\n\\n${esc(msg)}</p><div class="recoveryOps"><button class="primary" id="recoverRepair">安全補修してホームへ</button><button id="recoverMedia">メディアプレビューだけ削除</button><button id="recoverBackup">診断バックアップ</button></div></div></div>`;
+  }
+
+
+  function safeRepair(){
+    state=migrateState(state);
+    state.route=state.route||'home';
+    if(!['home','calendar','discover','prep','field','memory'].includes(state.route))state.route='home';
+    if(!current() && state.events.length)state.currentPlanId=state.events[0].id;
+    if(!state.boxes.length)state.boxes=seed().boxes;
+    const fallbackBox=state.boxes[0]?.id||'';
+    state.gear=state.gear.map(g=>({...g,boxId:g.boxId||fallbackBox,status:g.status||'home',qty:g.qty||1}));
+    state.records=state.records.map(r=>/うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`)?{...r,private:true}:r);
+    state.dismissedInsights=[...new Set(state.dismissedInsights||[])];
+    state.lastError=null;
+    save();render();toast('安全補修完了');
+  }
+  async function copyDiagnostics(){
+    const text=buildDiagnosticsReport();
+    try{await navigator.clipboard.writeText(text);toast('実機監査コピー')}catch(e){prompt('コピー',text)}
+  }
+  function exportDebugBundle(){
+    const bundle={version:VERSION,createdAt:new Date().toISOString(),diagnostics:diagnostics(),audit:appAudit(),state};
+    downloadText(`outbase_debug_${today()}.json`,JSON.stringify(bundle,null,2),'application/json');
+    toast('診断DL');
+  }
+  function clearMediaPreviews(){
+    let n=0;
+    state.records=state.records.map(r=>{
+      if(r.dataUrl){n++;return {...r,dataUrl:''}}
+      return r;
+    });
+    save();render();toast(`メディア軽量化 ${n}件`);
+  }
+
   function appAudit(){
     const issues=[];
     const warn=[];
@@ -660,6 +733,7 @@ ${starterPanelHtml()}
 
       <section class="section">
         ${auditPanelHtml()}
+      ${qaPanelHtml()}
       ${insightPanelHtml()}
       </section>
 
@@ -1837,10 +1911,23 @@ ${starterPanelHtml()}
   }
 
   function render(){
-    app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
-    bind();
-    if(state.route==='field')drawMap();
-    bindSwipe();
+    try{
+      app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
+      bind();
+      if(state.route==='field')drawMap();
+      bindSwipe();
+    }catch(err){
+      console.error(err);
+      state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};
+      try{save()}catch(e){}
+      app.innerHTML=recoveryHtml(err);
+      const repair=document.getElementById('recoverRepair');
+      const media=document.getElementById('recoverMedia');
+      const backup=document.getElementById('recoverBackup');
+      if(repair)repair.onclick=()=>{state.route='home';safeRepair()};
+      if(media)media.onclick=()=>clearMediaPreviews();
+      if(backup)backup.onclick=()=>exportDebugBundle();
+    }
   }
   function bind(){
     document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;save();render()});
@@ -1881,6 +1968,11 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='safeRepair')return safeRepair();
+    if(a==='copyDiagnostics')return copyDiagnostics();
+    if(a==='exportDebugBundle')return exportDebugBundle();
+    if(a==='clearMediaPreviews')return clearMediaPreviews();
 
     if(a==='applyInsight')return applyInsight(el.dataset.id);
     if(a==='saveInsight')return saveInsight(el.dataset.id);
@@ -2825,7 +2917,7 @@ ${starterPanelHtml()}
         const text=await f.text();
         if(f.name.endsWith('.json')){
           const obj=JSON.parse(text);
-          if(obj.state)state={...seed(),...obj.state};
+          state=migrateState(obj.state||obj);
         }else{
           state.notes.push({id:uid('note'),title:'取込候補',text:f.name,private:false});
         }
@@ -2839,6 +2931,8 @@ ${starterPanelHtml()}
     fileInput.accept='.json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*';
     fileInput.multiple=true;
   };
+  window.addEventListener('error',e=>{state.lastError={message:e.message||'error',time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
+  window.addEventListener('unhandledrejection',e=>{state.lastError={message:String(e.reason?.message||e.reason||'promise'),time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
   setInterval(updateTimers,1000);
   if(state.walk.active)startGpsAuto();
   render();
