@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc13-20260707';
+  const VERSION = 'outbase-field-rebuild01-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc13-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild01-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -2394,15 +2394,88 @@ ${starterPanelHtml()}
     </section>`;
   }
 
+
+  function obMainPlanLine(){
+    const plan=current();
+    const title=plan?.title||'現在のプラン';
+    const day=plan?.start||today();
+    const kota=(state.pets||[]).some(p=>p.id==='kota'&&p.active)?'コタあり':'';
+    return `${esc(title)} / ${esc(day)}${kota?' / '+kota:''}`;
+  }
+  function obSmartHints(){
+    const hints=sessionContextHints ? sessionContextHints() : [];
+    return hints.slice(0,3).map(h=>h.label);
+  }
+  function obActionClass(item){
+    if(item.do==='private')return ' privateSave';
+    if(item.do==='place')return ' placeSave';
+    if(item.do==='return')return ' returnSave';
+    if(item.do==='drive')return ' driveSave';
+    return '';
+  }
+  function obButton(groupIndex,itemIndex,item){
+    return `<button class="${obActionClass(item)}" data-session-shortcut="${groupIndex}:${itemIndex}"><b>${esc(item.label)}</b><small>${esc(item.target||item.help||'記録')}</small></button>`;
+  }
+  function obHeroHtml(){
+    return `<section class="obFieldHero">
+      <div class="obFieldTop">
+        <span><b>OUTBASE 現地</b><small>${obMainPlanLine()}</small></span>
+        <span class="obFieldStatus">${state.walk.active?'記録中':'FIELD'}</span>
+      </div>
+      <div class="obFieldNow"><b>今はそのまま残せばいい</b><span>分類はあと。現地では、話す・撮る・場所だけ。</span></div>
+      <div class="obSmartChips">${obSmartHints().map(x=>`<span>${esc(x)}</span>`).join('')}</div>
+    </section>`;
+  }
+  function obMainActionsHtml(){
+    return `<section>
+      <button class="obPrimaryTalk" data-act="toggleVoice"><b>${voiceRecorder?'止める':'話す'}</b><small>${voiceRecorder?'録音中。もう一度押すと保存':'気づいたことをそのまま残す。押して録音 / もう一度で保存。'}</small></button>
+      <div class="obMainPair">
+        <button data-act="captureCamera"><b>撮る</b><small>カメラ起動。設営・サイト・料理・ギア・コタを残す。</small></button>
+        <button data-act="gps"><b>場所</b><small>現在地を保存。正確な確認はGoogle Map。</small></button>
+      </div>
+    </section>`;
+  }
+  function obNowShortcutsHtml(){
+    const groups=sessionShortcutGroups();
+    const picks=[
+      [0,0],[0,1],[0,2],[0,3],
+      [1,0],[1,1],[1,2]
+    ].filter(([g,i])=>groups[g]?.items?.[i]);
+    return `<section class="obShortcutBlock">
+      <div class="obShortcutHead"><span><b>いま使いそう</b><small>保存先は裏で分ける</small></span><button class="btn" data-act="openMap">Google Map</button></div>
+      <div class="obShortcutGrid">${picks.map(([g,i])=>obButton(g,i,groups[g].items[i])).join('')}</div>
+    </section>`;
+  }
+  function obMoreShortcutsHtml(){
+    const groups=sessionShortcutGroups();
+    const order=[1,2,3,4,0];
+    return `<section>
+      ${order.map((gi,idx)=>{
+        const g=groups[gi];
+        if(!g)return '';
+        const open=idx===0?' open':'';
+        return `<details class="obMorePanel"${open}>
+          <summary><span><b>${esc(g.title)}</b><small>${esc(g.desc)}</small></span></summary>
+          <div class="obMoreBody"><div class="obShortcutGrid">${g.items.map((it,ii)=>obButton(gi,ii,it)).join('')}</div></div>
+        </details>`;
+      }).join('')}
+    </section>`;
+  }
+  function obRecentHtml(){
+    const rec=planRecords().slice().reverse().slice(0,3);
+    return `<section class="obRecent">
+      <div class="obRecentHead"><span><b>直近</b><small>現地では3件だけ</small></span><button class="btn" data-act="copyFieldSummary">コピー</button></div>
+      <div class="obRecentList">${rec.map(r=>`<div class="obRecentCard"><b>${esc(r.title||recordKindLabel(r.kind))}</b><small>${esc(r.time||'')} / ${esc(r.text||'')}<br>${r.target?`保存先：${esc(r.target)}`:''}</small><div class="obTags">${(r.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('')}${r.private?'<span>非公開</span>':''}</div></div>`).join('')||`<div class="obRecentCard"><b>まだなし</b><small>話す・撮る・場所、またはショートカットで残す。</small></div>`}</div>
+    </section>`;
+  }
+
   function field(){
     return shell(`
-      ${sessionHeroHtml()}
-      ${sessionMainActionsHtml()}
-      ${sessionPriorityHtml()}
-      ${sessionGroupsHtml()}
-      ${sessionRecentHtml()}
-      ${quickMapHtml()}
-      ${fieldDetailsHtml()}
+      ${obHeroHtml()}
+      ${obMainActionsHtml()}
+      ${obNowShortcutsHtml()}
+      ${obRecentHtml()}
+      ${obMoreShortcutsHtml()}
     `);
   }
 
