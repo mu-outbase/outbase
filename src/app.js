@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild02-20260707';
+  const VERSION = 'outbase-field-rebuild03-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild02-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild03-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -113,7 +113,7 @@
 
   let state=load();
   state=migrateState(state); save();
-  let voiceRecorder=null, voiceChunks=[], voiceStartedAt=0;
+  let voiceRecorder=null, voiceChunks=[], voiceStartedAt=0, speechRecognizer=null, voiceLiveText='', wakeLockObj=null;
   let gpsWatchId=null, gpsAutoTimer=null;
   const GPS_INTERVAL_MS=10000, GPS_JUMP_LIMIT_KM=1;
   function migrateState(s){
@@ -124,6 +124,11 @@
     s.fieldActionMode=s.fieldActionMode||base.fieldActionMode||'kota';
     s.walk.track=s.walk.track||[];s.walk.spots=s.walk.spots||[];s.walk.friends=s.walk.friends||[];s.walk.health=s.walk.health||[];s.walk.sessions=s.walk.sessions||[];
     s.drive={active:false,startedAt:0,endedAt:0,lastMoveAt:0,lastPointAt:0,lastSpeedKmh:0,hasMoved:false,startTrackIndex:0,autoEndMinutes:10,...(s.drive||{})};
+    s.campRun={active:false,startedAt:0,endedAt:0,startLabel:'',endLabel:'',...(s.campRun||{})};
+    s.fieldSessions=s.fieldSessions||[];
+    s.visibilityLog={hiddenAt:0,gaps:[],...(s.visibilityLog||{})};
+    s.siteMap={image:'',name:'',loadedAt:0,...(s.siteMap||{})};
+    s.wake={enabled:false,active:false,...(s.wake||{})};
     s.fieldFixedMode=s.fieldFixedMode||'kota';
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
@@ -270,8 +275,7 @@
   function nav(){
     return `<nav class="bottomNav">${[['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','現地'],['memory','○','整理']].map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
   }
-  function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
-
+  function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${activeRibbon03()}${nav()}`}
 
   function prepStats(){
     const undoneShop=state.shopping.filter(s=>!s.done).length;
@@ -1431,7 +1435,7 @@ ${starterPanelHtml()}
       eventId:state.currentPlanId,
       kind,
       title:recordKindLabel(kind),
-      text:file?.name?`${file.name} を記録`:'',
+      text:file?.name?`${file.name} を記録`:((kind==='voice'&&voiceLiveText)?voiceLiveText:''),
       mode:fieldModeName(),
       time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
       date:today(),
@@ -1439,21 +1443,21 @@ ${starterPanelHtml()}
       lng:p?.lng||null,
       private:false,
       fieldModeId:state.fieldMode||'',
-      target:kind==='photo'?'現地写真':kind==='video'?'現地動画':'現地メディア',
+      target:kind==='photo'?'現地写真':kind==='video'?'現地動画':'音声メモ',
       flow:(state.fieldMode?currentFieldMode().saveTo:[])||[],
-      tags:[currentFieldMode().title, recordKindLabel(kind)].filter(Boolean),
+      tags:[fw03CurrentMode?fw03CurrentMode().label:currentFieldMode().title, recordKindLabel(kind)].filter(Boolean),
       mediaName:file?.name||'',
       mediaType:file?.type||'',
       mediaSize:file?.size||0,
       dataUrl:dataUrl||''
     });
+    if(kind==='photo'||kind==='voice')autoPin(kind==='photo'?'写真':'音声', recordKindLabel(kind), file?.name||voiceLiveText||'');
     if(mediaSize()>1800000){
       const packed=compactStateForStorage(state);
       state=packed.state;
       state.lastError={message:`メディア容量を自動軽量化: ${packed.removed}件`,time:new Date().toISOString(),route:state.route};
     }
   }
-
 
   function timerIcon(kind){
     return {setup:'設',meal:'食',pet:'犬',withdraw:'撤',dry:'乾',walk:'歩',free:'時'}[kind]||'時';
@@ -2289,8 +2293,10 @@ ${starterPanelHtml()}
     return rec;
   }
   function sessionPrompt(label,def=''){
-    return prompt(`${label}を記録`, def||label)||'';
+    // FIELD REBUILD 03: 現地操作は文字入力前提にしない。ワンタップ保存して、必要なら後で整理画面で直す。
+    return def || label || '記録';
   }
+
   function sessionPrivate(item,group){
     const text=sessionPrompt(item.kind, item.kind)||item.kind;
     state.walk.health=state.walk.health||[];
@@ -2552,9 +2558,11 @@ ${starterPanelHtml()}
   }
   function startHoldVoice(){
     if(voiceRecorder&&voiceRecorder.state==='recording')return;
+    startLiveSpeech();
     if(!navigator.mediaDevices || !window.MediaRecorder){
+      voiceLiveText='';
       const text=prompt('音声メモ（録音非対応のため文字で保存）','');
-      if(text){sessionRecord?sessionRecord({kind:'voice',title:'音声メモ',text,target:'現地メモ',tags:['音声']}):addPublicRecord('voice',text,'音声メモ');save();render();toast('音声メモ保存')}
+      if(text){sessionRecord({kind:'voice',title:'音声メモ',text,target:'音声メモ',tags:['音声']});autoPin('音声','音声メモ',text);save();render();toast('音声メモ保存')}
       return;
     }
     navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
@@ -2563,27 +2571,38 @@ ${starterPanelHtml()}
       voiceRecorder=new MediaRecorder(stream);
       voiceRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data)};
       voiceRecorder.onstop=()=>{
+        stopLiveSpeech();
         const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||'audio/webm'});
         stream.getTracks().forEach(t=>t.stop());
         const file={name:`voice_${Date.now()}.webm`,type:blob.type,size:blob.size};
         const reader=new FileReader();
         reader.onload=()=>{
           addMediaRecord('voice',file,reader.result);
+          if(voiceLiveText){
+            const r=state.records[state.records.length-1];
+            if(r){r.text=voiceLiveText;r.transcript=voiceLiveText;r.target='音声メモ / 文字起こし';}
+          }
           voiceRecorder=null;voiceChunks=[];
           save();render();toast('音声保存');
+          voiceLiveText='';
         };
         reader.readAsDataURL(blob);
       };
       voiceRecorder.start();
       render();
     }).catch(()=>{
-      const text=prompt('音声メモ（マイク許可なし）','');
-      if(text){sessionRecord?sessionRecord({kind:'voice',title:'音声メモ',text,target:'現地メモ',tags:['音声']}):addPublicRecord('voice',text,'音声メモ');save();render();toast('音声メモ保存')}
+      stopLiveSpeech();
+      const text=voiceLiveText||prompt('音声メモ（マイク許可なし）','');
+      if(text){sessionRecord({kind:'voice',title:'音声メモ',text,target:'音声メモ / 文字起こし',tags:['音声']});autoPin('音声','音声メモ',text);save();render();toast('音声メモ保存')}
+      voiceLiveText='';
     });
   }
+
   function stopHoldVoice(){
+    stopLiveSpeech();
     if(voiceRecorder&&voiceRecorder.state==='recording')voiceRecorder.stop();
   }
+
   function ensureDrive(){
     state.drive={active:false,startedAt:0,endedAt:0,lastMoveAt:0,lastPointAt:0,lastSpeedKmh:0,hasMoved:false,startTrackIndex:0,autoEndMinutes:10,...(state.drive||{})};
     return state.drive;
@@ -2622,13 +2641,335 @@ ${starterPanelHtml()}
     if(d.hasMoved && runMin>=15 && idleMin>=Number(d.autoEndMinutes||10))finishDrive('10分以上停止',true);
   }
 
+
+  function fw03Modes(){
+    return [
+      {id:'kota',label:'コタ散歩',short:'コタ'},
+      {id:'campWalk',label:'場内散歩',short:'場内'},
+      {id:'site',label:'サイト調査',short:'サイト'},
+      {id:'setup',label:'設営',short:'設営'},
+      {id:'withdraw',label:'撤収',short:'撤収'},
+      {id:'drive',label:'ドライブ',short:'移動'}
+    ];
+  }
+  function fw03CurrentMode(){
+    const id=state.fieldFixedMode||'kota';
+    return fw03Modes().find(m=>m.id===id)||fw03Modes()[0];
+  }
+  function fw03ModeBar(){
+    const cur=fw03CurrentMode().id;
+    return `<div class="fw03Modes">${fw03Modes().map(m=>`<button class="${cur===m.id?'active':''}" data-fw03-mode="${m.id}">${esc(m.short)}</button>`).join('')}</div>`;
+  }
+  function fw03RunLine(){
+    const cr=state.campRun||{};
+    if(cr.active)return `キャンプ実行中 ${fmtDuration((Date.now()-(cr.startedAt||Date.now()))/1000)}`;
+    if(cr.endedAt)return `前回終了 ${new Date(cr.endedAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`;
+    return '出発から帰宅到着までを1本で残す';
+  }
+  function startCampRun(){
+    state.campRun={active:true,startedAt:Date.now(),endedAt:0,startLabel:'自宅出発',endLabel:''};
+    sessionRecord({kind:'出発',title:'キャンプ実行開始',text:'自宅出発',group:'キャンプ実行',target:'キャンプ実行ログ',tags:['キャンプ実行','出発']});
+    state.fieldFixedMode='drive';
+    toggleDriveStartOnly();
+    save();render();toast('キャンプ実行開始');
+  }
+  function endCampRun(){
+    const cr=state.campRun||{};
+    if(state.drive?.active)finishDrive('帰宅到着',false);
+    state.campRun={...cr,active:false,endedAt:Date.now(),endLabel:'帰宅到着'};
+    sessionRecord({kind:'帰宅',title:'キャンプ実行終了',text:'帰宅到着',group:'キャンプ実行',target:'キャンプ実行ログ / 帰宅後処理',tags:['キャンプ実行','帰宅']});
+    save();render();toast('キャンプ実行終了');
+  }
+  function toggleDriveStartOnly(){
+    const d=ensureDrive();
+    if(d.active)return;
+    d.active=true;d.startedAt=Date.now();d.endedAt=0;d.lastMoveAt=Date.now();d.lastPointAt=0;d.lastSpeedKmh=0;d.hasMoved=false;d.startTrackIndex=state.walk.track.length;
+    startGpsAuto();gps(true);
+  }
+  function fw03Session(modeId=fw03CurrentMode().id){
+    state.fieldSessions=state.fieldSessions||[];
+    return state.fieldSessions.find(s=>s.modeId===modeId && !s.endedAt)||null;
+  }
+  function fw03StartMode(){
+    const m=fw03CurrentMode();
+    if(fw03Session(m.id))return toast('すでに開始中');
+    const s={id:uid('fs'),modeId:m.id,label:m.label,eventId:state.currentPlanId,startedAt:Date.now(),endedAt:0,pauses:[],status:'active'};
+    state.fieldSessions.push(s);
+    if(['kota','campWalk','site'].includes(m.id)){state.walk.active=true;ensureWalkSession();startGpsAuto();gps(true);}
+    if(m.id==='drive')toggleDriveStartOnly();
+    sessionRecord({kind:'開始',title:`${m.label}開始`,text:`${m.label}開始`,group:m.label,target:'実行ログ',tags:[m.label,'開始']});
+    save();render();toast(`${m.label}開始`);
+  }
+  function fw03PauseMode(reason='休憩'){
+    const s=fw03Session(); if(!s)return toast('開始してない');
+    if(s.status==='paused')return;
+    s.status='paused';s.pauses=s.pauses||[];s.pauses.push({start:Date.now(),end:0,reason});
+    sessionRecord({kind:'休憩',title:`${s.label}休憩`,text:reason,group:s.label,target:'作業時間 / 休憩時間',tags:[s.label,'休憩']});
+    save();render();toast('休憩');
+  }
+  function fw03ResumeMode(){
+    const s=fw03Session(); if(!s)return toast('開始してない');
+    const p=(s.pauses||[]).slice().reverse().find(x=>!x.end);
+    if(p)p.end=Date.now();
+    s.status='active';
+    sessionRecord({kind:'再開',title:`${s.label}再開`,text:'再開',group:s.label,target:'作業時間 / 休憩時間',tags:[s.label,'再開']});
+    save();render();toast('再開');
+  }
+  function fw03EndMode(){
+    const s=fw03Session(); if(!s)return toast('開始してない');
+    const p=(s.pauses||[]).slice().reverse().find(x=>!x.end);
+    if(p)p.end=Date.now();
+    s.status='done';s.endedAt=Date.now();
+    if(['kota','campWalk','site'].includes(s.modeId)){
+      state.walk.active=false;
+      const ws=currentWalkSession(); if(ws&&ws.active){ws.active=false;ws.endedAt=Date.now();ws.distance=walkDistance();ws.duration=walkDurationSec();}
+      if(!state.drive?.active)stopGpsAuto(false);
+    }
+    if(s.modeId==='drive' && state.drive?.active)finishDrive('モード終了',false);
+    const total=fw03SessionTotal(s), rest=fw03SessionRest(s);
+    sessionRecord({kind:'終了',title:`${s.label}終了`,text:`合計 ${fmtDuration(total/1000)} / 休憩 ${fmtDuration(rest/1000)}`,group:s.label,target:'実行ログ / 次回見積',tags:[s.label,'終了']});
+    save();render();toast(`${s.label}終了`);
+  }
+  function fw03SessionTotal(s){
+    if(!s)return 0; return (s.endedAt||Date.now())-(s.startedAt||Date.now());
+  }
+  function fw03SessionRest(s){
+    return (s?.pauses||[]).reduce((a,p)=>a+((p.end||Date.now())-(p.start||Date.now())),0);
+  }
+  function fw03ModeOps(){
+    const s=fw03Session();
+    const paused=s?.status==='paused';
+    return `<div class="fw03SessionOps">
+      <button class="${s?'active':''}" data-act="fw03StartMode">開始</button>
+      <button data-act="fw03PauseMode">${paused?'休憩中':'休憩'}</button>
+      <button data-act="fw03ResumeMode">再開</button>
+      <button data-act="fw03EndMode">終了</button>
+    </div>`;
+  }
+  function fw03ModeItems(){
+    const id=fw03CurrentMode().id;
+    const item=(label,target,doType='record',kind=label,cls='')=>({label,target,doType,kind,cls});
+    const data={
+      kota:[
+        item('うんち','非公開コタ健康メモ','private'),item('おしっこ','非公開コタ健康メモ','private'),item('体調','非公開コタ健康メモ','private'),
+        item('危険','危険ポイント','place','危険'),item('犬友達','犬友達メモ','record'),item('暑い/寒い','コタ体調メモ','private','気温注意'),
+        item('水休憩','コタ休憩ログ','record'),item('写真','写真+ピン','camera')
+      ],
+      campWalk:[
+        item('散歩開始','場内散歩ログ','start'),item('写真','写真+ピン','camera'),item('現在地','場内ピン','gps'),
+        item('危険','危険ポイント','place'),item('景色','レビュー候補','place'),item('犬友達','犬友達メモ','record'),
+        item('コタ休憩','コタ休憩ログ','record'),item('散歩終了','場内散歩ログ','end')
+      ],
+      site:[
+        item('サイトMAP読込','サイトMAP','siteMap'),item('サイト候補','場所カード候補','place'),item('探索済み','サイトMAPピン','place','探索済み'),
+        item('未確認','サイトMAPピン','place','未確認'),item('水場','設備メモ','place'),item('トイレ','設備メモ','place'),
+        item('炊事場','設備メモ','place'),item('木陰','コタ向け候補','place'),item('景色','レビュー候補','place'),item('危険','危険ポイント','place')
+      ],
+      setup:[
+        item('受付完了','設営工程ログ','record'),item('サイト到着','設営工程ログ','record'),item('考察中','レイアウト考察時間','pause','レイアウト考察'),
+        item('荷下ろし','設営工程ログ','record'),item('設営開始','設営タイマー','start'),item('休憩','休憩時間','pause'),
+        item('再開','作業時間','resume'),item('設営完了','設営ログ','end'),item('配置写真','次回レイアウト','camera'),
+        item('車位置','配置図ピン','place'),item('テント位置','配置図ピン','place'),item('タープ位置','配置図ピン','place'),
+        item('キッチン','配置図ピン','place'),item('寝室','配置図ピン','place'),item('コタ位置','配置図ピン','place'),
+        item('風向き','次回レイアウト','return'),item('日当たり','次回レイアウト','return'),item('地面','次回レイアウト','return'),
+        item('ペグ/ロープ','設営改善','return'),item('足りないギア','ギア/買い物/準備','return'),item('使わなかったギア','ギア見直し','return'),
+        item('困った','改善メモ','return'),item('次回レイアウト','改善メモ','return')
+      ],
+      withdraw:[
+        item('撤収開始','撤収タイマー','start'),item('休憩','休憩時間','pause'),item('乾燥待ち','待ち時間','pause'),
+        item('再開','作業時間','resume'),item('乾燥','帰宅後やること','return'),item('濡れた','ギアケア','return'),
+        item('汚れた','洗浄','return'),item('壊れた','修理','return'),item('忘れ物','忘れ物チェック','return'),
+        item('ゴミ','撤収ログ','record'),item('積込','車載改善','return'),item('サイト最終確認','チェックアウト前確認','record'),
+        item('チェックアウト','撤収ログ','record'),item('撤収完了','撤収ログ','end')
+      ],
+      drive:[
+        item('出発','移動ログ','drive'),item('休憩','休憩候補','drive'),item('給油','移動ログ','drive'),
+        item('買い物','通り道候補','drive'),item('渋滞','渋滞メモ','drive'),item('道の駅/コンビニ','場所カード','place'),
+        item('Google Maps','外部地図','map'),item('到着','移動ログ','drive')
+      ]
+    };
+    return data[id]||data.kota;
+  }
+  function fw03ClickItem(i){
+    const it=fw03ModeItems()[Number(i)]; if(!it)return;
+    const m=fw03CurrentMode();
+    if(it.doType==='start')return fw03StartMode();
+    if(it.doType==='pause')return fw03PauseMode(it.kind||it.label);
+    if(it.doType==='resume')return fw03ResumeMode();
+    if(it.doType==='end')return fw03EndMode();
+    if(it.doType==='camera')return captureCamera();
+    if(it.doType==='gps')return gps();
+    if(it.doType==='map')return openMap();
+    if(it.doType==='siteMap')return loadSiteMap();
+    if(it.doType==='private'){
+      const group={title:m.label}; const item={kind:it.kind,label:it.label,target:it.target};
+      return sessionPrivate(item,group);
+    }
+    if(it.doType==='place'){
+      const group={title:m.label}; const item={kind:it.kind,label:it.label,target:it.target};
+      return sessionPlace(item,group);
+    }
+    if(it.doType==='return'){
+      const group={title:m.label}; const item={kind:it.kind,label:it.label,target:it.target};
+      return sessionReturn(item,group);
+    }
+    if(it.doType==='drive'){
+      const group={title:m.label}; const item={kind:it.kind,label:it.label,target:it.target,do:'drive'};
+      return sessionSimpleRecord(item,group);
+    }
+    sessionRecord({kind:it.kind,title:it.label,text:it.label,group:m.label,target:it.target,tags:[m.label,it.label]});
+    autoPin(it.kind,it.label,it.target);
+    save();render();toast('記録した');
+  }
+  function fw03ActionsHtml(){
+    const items=fw03ModeItems();
+    return `<div class="fw03Actions">${items.map((it,i)=>`<button class="${it.doType==='private'?'privateSave':it.doType==='place'?'placeSave':it.doType==='return'?'returnSave':it.doType==='drive'?'driveSave':''}" data-fw03-item="${i}"><b>${esc(it.label)}</b><small>${esc(it.target)}</small></button>`).join('')}</div>`;
+  }
+  function fw03MapHtml(){
+    const mode=fw03CurrentMode().id;
+    const p=state.walk.track[state.walk.track.length-1];
+    const pins=planPins().slice(-18);
+    if(mode==='site'||mode==='setup'){
+      const has=!!state.siteMap?.image;
+      const bg=has?` style="background-image:url('${state.siteMap.image}')"`:'';
+      return `<div class="fw03Map">
+        <div class="fw03MapHead"><span><b>${mode==='setup'?'配置図 / サイトMAP':'サイトMAP'}</b><small>${has?esc(state.siteMap.name||'読込済み'):'未読込'}</small></span></div>
+        <div class="fw03SiteMap ${has?'':'noImage'}"${bg}>${has?pins.map(pin=>`<button class="fw03Pin ${pinKindClass(pin.kind)}" style="left:${pin.x||50}%;top:${pin.y||50}%;" data-act="openPin" data-id="${pin.id}">${pinShort(pin.kind)}</button>`).join(''):'サイトMAP読込で画像を表示<br>写真・音声・候補押下でピンを残す'}</div>
+        <div class="fw03MapOps"><button data-act="loadSiteMap">MAP読込</button><button data-act="addPinQuick" data-kind="現在地">ピン</button><button data-act="gps">現在地</button></div>
+      </div>`;
+    }
+    const url=p?`https://maps.google.com/maps?q=${p.lat},${p.lng}&z=16&output=embed`:'';
+    return `<div class="fw03Map">
+      <div class="fw03MapHead"><span><b>${mode==='drive'?'Google Map / 位置ログ':'地図 / 軌跡ログ'}</b><small>${p?`${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`:'現在地未取得'} / GPS ${state.walk.track.length}点 / ピン ${pins.length}件</small></span></div>
+      ${p?`<iframe loading="lazy" src="${url}"></iframe>`:`<div class="fw03MapEmpty">現在地を押すとGoogle Mapを表示<br>軌跡とピンはログに保存</div>`}
+      <div class="fw03MapOps"><button data-act="gps">現在地</button><button data-act="addPinQuick" data-kind="現在地">ピン</button><button data-act="openMap">Google Map</button></div>
+    </div>`;
+  }
+  function fw03HeaderHtml(){
+    const p=current();
+    const cr=state.campRun||{};
+    return `<section class="fw03Head">
+      <div class="fw03HeadTop"><span><b>OUTBASE 現地</b><small>${esc(p.title||'現在のプラン')} / ${fw03RunLine()}</small></span><span class="fw02Badge">${state.wake?.active?'画面ON':'FIELD'}</span></div>
+      <div class="fw03RunOps">
+        <button class="${cr.active?'active':''}" data-act="startCampRun">自宅出発</button>
+        <button data-act="toggleWake">${state.wake?.active?'画面ON解除':'画面ON維持'}</button>
+        <button data-act="endCampRun">帰宅到着</button>
+      </div>
+      ${fw03ModeBar()}
+    </section>`;
+  }
+  function fw03ControlsHtml(){
+    return `<section class="fw03Controls">
+      <button class="fw03Voice ${voiceRecorder?'recording':''}" data-hold-voice><b>${voiceRecorder?'録音中':'話す'}</b><small>${voiceRecorder?`離すと保存${voiceLiveText?' / '+esc(voiceLiveText.slice(-28)):''}`:'長押し中だけ録音。対応端末はリアルタイム文字起こし。'}</small></button>
+      <div class="fw03SubGrid">
+        <button data-act="captureCamera"><b>撮る</b><small>写真+位置+ピン</small></button>
+        <button data-act="gps"><b>場所</b><small>現在地+ピン</small></button>
+      </div>
+    </section>`;
+  }
+  function fw03PanelHtml(){
+    const m=fw03CurrentMode(), s=fw03Session(m.id);
+    const total=s?fmtDuration(fw03SessionTotal(s)/1000):'未開始';
+    const rest=s?fmtDuration(fw03SessionRest(s)/1000):'0:00';
+    return `<div class="fw03Panel"><div class="fw03PanelHead"><span><b>${esc(m.label)}</b><small>合計 ${total} / 休憩 ${rest}</small></span></div>${fw03ModeOps()}${fw03ActionsHtml()}</div>`;
+  }
+  function fw03FooterHtml(){
+    const gaps=(state.visibilityLog?.gaps||[]).slice(-1)[0];
+    const rec=planRecords().slice().reverse().slice(0,1)[0];
+    const gpsGap=gaps?`${Math.round(((gaps.end||Date.now())-gaps.start)/60000)}分欠測候補`:'欠測なし';
+    const d=state.drive||{};
+    return `<section class="fw03Footer">
+      <div class="fw03Card"><b>GPS/時間</b><small>時間は開始時刻から復元。画面OFFは欠測として記録。サイトMAPはサイト/設営で読込。</small><div class="fw03Line">${gpsGap}</div></div>
+      <div class="fw03Card"><b>ドライブ</b><small>${d.active?`記録中 ${Number(d.lastSpeedKmh||0).toFixed(1)}km/h / 停止10分で候補`:'出発・到着・停車を移動ログへ'}</small><div class="fw03Line">${d.active?'自動終了判定中':'停止中'}</div></div>
+      <div class="fw03Card"><b>直近</b><small>${rec?`${esc(rec.time||'')} ${esc(rec.title||'記録')}`:'まだなし'}</small><div class="fw03Line">${rec?esc(rec.target||rec.text||'現地メモ'):'話す/撮る/場所で残す'}</div></div>
+    </section>`;
+  }
+  function activeRibbon03(){
+    const fs=fw03Session&&fw03Session();
+    const active=state.walk.active||state.drive?.active||state.campRun?.active||fs;
+    if(!active||state.route==='field')return '';
+    const label=fs?`${fs.label} ${fs.status==='paused'?'休憩中':'実行中'}`:(state.drive?.active?'ドライブ中':'キャンプ実行中');
+    return `<div class="activeRibbon03"><span><b>${esc(label)}</b><small>OUTBASE内の画面切替では継続。GPS欠測は記録。</small></span><button data-route="field">現地へ</button></div>`;
+  }
+  function autoPin(kind='ピン',name='記録',note=''){
+    const p=state.walk.track[state.walk.track.length-1];
+    state.mapPins=state.mapPins||[];
+    state.mapPins.push({id:uid('pin'),eventId:state.currentPlanId,name,kind,x:Math.round(18+Math.random()*64),y:Math.round(18+Math.random()*64),lat:p?.lat||null,lng:p?.lng||null,public:!/(うんち|おしっこ|体調|非公開)/.test(kind),note,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),score:3});
+  }
+  function loadSiteMap(){
+    state.importMode='siteMap';
+    fileInput.accept='image/*';
+    fileInput.multiple=false;
+    fileInput.removeAttribute('capture');
+    fileInput.click();
+  }
+  async function toggleWake(){
+    state.wake=state.wake||{enabled:false,active:false};
+    if(wakeLockObj){
+      try{await wakeLockObj.release()}catch(e){}
+      wakeLockObj=null;state.wake.active=false;state.wake.enabled=false;save();render();toast('画面ON解除');return;
+    }
+    try{
+      if(navigator.wakeLock?.request){
+        wakeLockObj=await navigator.wakeLock.request('screen');
+        state.wake.active=true;state.wake.enabled=true;
+        wakeLockObj.addEventListener?.('release',()=>{state.wake.active=false;save();render()});
+        save();render();toast('画面ON維持');
+      }else{
+        state.wake.active=false;state.wake.enabled=false;toast('非対応');
+      }
+    }catch(e){state.wake.active=false;state.wake.enabled=false;toast('Wake Lock不可')}
+  }
+  function startLiveSpeech(){
+    voiceLiveText='';
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR)return;
+    try{
+      speechRecognizer=new SR();
+      speechRecognizer.lang='ja-JP';
+      speechRecognizer.continuous=true;
+      speechRecognizer.interimResults=true;
+      speechRecognizer.onresult=e=>{
+        let text='';
+        for(let i=0;i<e.results.length;i++)text+=e.results[i][0]?.transcript||'';
+        voiceLiveText=text.trim();
+        const el=document.querySelector('[data-hold-voice] small');
+        if(el&&voiceLiveText)el.textContent='離すと保存 / '+voiceLiveText.slice(-28);
+      };
+      speechRecognizer.start();
+    }catch(e){speechRecognizer=null}
+  }
+  function stopLiveSpeech(){
+    if(speechRecognizer){try{speechRecognizer.stop()}catch(e){}}
+    speechRecognizer=null;
+  }
+  function visibility03(){
+    if(document.hidden){
+      state.visibilityLog=state.visibilityLog||{hiddenAt:0,gaps:[]};
+      state.visibilityLog.hiddenAt=Date.now();save();
+    }else{
+      const v=state.visibilityLog||{hiddenAt:0,gaps:[]};
+      if(v.hiddenAt && (state.walk.active||state.drive?.active||state.campRun?.active)){
+        v.gaps=v.gaps||[];
+        v.gaps.push({start:v.hiddenAt,end:Date.now(),route:state.route});
+        v.hiddenAt=0;
+        state.visibilityLog=v;
+        startGpsAuto();gps(true);
+        save();render();
+      }
+    }
+  }
+
   function field(){
     return shell(`
-      <section class="fieldWork02">
-        ${fw02HeaderHtml()}
-        ${fw02MainHtml()}
-        ${fw02ModeActions()}
-        ${fw02FootHtml()}
+      <section class="fieldWork03">
+        ${fw03HeaderHtml()}
+        ${fw03ControlsHtml()}
+        <section class="fw03Middle">
+          ${fw03MapHtml()}
+          ${fw03PanelHtml()}
+        </section>
+        ${fw03FooterHtml()}
       </section>
     `);
   }
@@ -2877,6 +3218,8 @@ ${starterPanelHtml()}
     }
   }
   function bind(){
+    document.querySelectorAll('[data-fw03-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.fw03Mode;save();render()});
+    document.querySelectorAll('[data-fw03-item]').forEach(el=>el.onclick=()=>fw03ClickItem(el.dataset.fw03Item));
     document.querySelectorAll('[data-fw02-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.fw02Mode;save();render()});
     document.querySelectorAll('[data-hold-voice]').forEach(el=>{
       el.onpointerdown=e=>{e.preventDefault();startHoldVoice()};
@@ -2925,6 +3268,14 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+    if(a==='startCampRun')return startCampRun();
+    if(a==='endCampRun')return endCampRun();
+    if(a==='toggleWake')return toggleWake();
+    if(a==='fw03StartMode')return fw03StartMode();
+    if(a==='fw03PauseMode')return fw03PauseMode();
+    if(a==='fw03ResumeMode')return fw03ResumeMode();
+    if(a==='fw03EndMode')return fw03EndMode();
+    if(a==='loadSiteMap')return loadSiteMap();
     if(a==='setFieldMode')return setFieldMode(el.dataset.mode);
     if(a==='fieldModeAction')return fieldModeAction(el.dataset.code);
 
@@ -3178,7 +3529,7 @@ ${starterPanelHtml()}
   function gps(silent=false){
     const push=(lat,lng,source='gps')=>{
       const ok=pushGpsPoint(lat,lng,source);
-      if(ok && !silent)addPublicRecord('site','現在地を記録','現在地');
+      if(ok && !silent){addPublicRecord('site','現在地を記録','現在地');autoPin('現在地','現在地','GPS手動保存');}
       save();
       if(!silent){render();toast(ok?'現在地記録':'GPSジャンプ除外')}
       return ok;
@@ -3186,6 +3537,7 @@ ${starterPanelHtml()}
     if(!navigator.geolocation)return push(35.867+Math.random()/1000,139.975+Math.random()/1000,'demo');
     navigator.geolocation.getCurrentPosition(p=>push(p.coords.latitude,p.coords.longitude,'manual'),()=>push(35.867+Math.random()/1000,139.975+Math.random()/1000,'demo'),{enableHighAccuracy:true,timeout:6000,maximumAge:5000})
   }
+
   function spot(){const name=prompt('スポット名');if(!name)return;state.walk.spots.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render()}
   function friend(){const name=prompt('犬友達名');if(!name)return;state.walk.friends.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),mode:fieldModeName()});addPublicRecord('memo',`犬友達：${name}`,'犬友達');save();render();toast('犬友達保存')}
   function health(type){state.walk.health.push({type,mode:state.walkMode==='camp'?'キャンプ場散歩':'通常散歩',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render();toast('非公開保存')}
@@ -3899,7 +4251,15 @@ ${starterPanelHtml()}
     if(!files.length)return;
     const mode=state.importMode||'import';
     try{
-      if(mode.startsWith('media:')){
+      if(mode==='siteMap'){
+        const f=files[0];
+        const dataUrl=await readFileAsDataURL(f);
+        state.siteMap={image:dataUrl,name:f.name,loadedAt:Date.now()};
+        autoPin('サイトMAP','サイトMAP読込',f.name);
+        sessionRecord({kind:'サイトMAP',title:'サイトMAP読込',text:f.name,group:'サイト調査',target:'サイトMAP / 場所カード',tags:['サイトMAP','読込']});
+        state.importMode=null;
+        save();render();toast('サイトMAP読込');
+      }else if(mode.startsWith('media:')){
         const kind=mode.split(':')[1]==='video'?'video':'photo';
         for(const f of files){
           let dataUrl='';
@@ -3931,6 +4291,7 @@ ${starterPanelHtml()}
   };
   window.addEventListener('error',e=>{state.lastError={message:e.message||'error',time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
   window.addEventListener('unhandledrejection',e=>{state.lastError={message:String(e.reason?.message||e.reason||'promise'),time:new Date().toISOString(),route:state.route};try{save()}catch(_){}});
+  document.addEventListener('visibilitychange',visibility03);
   setInterval(updateTimers,1000);
   if(state.walk.active||state.drive?.active)startGpsAuto();
   render();
