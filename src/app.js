@@ -1,462 +1,812 @@
 (() => {
   'use strict';
-  const VERSION = 'outbase-one-shot-full-20260707';
-  const STORAGE_KEY = 'outbase_one_shot_full_state';
+
+  const VERSION = 'outbase-remake-audit-20260707';
+  const STORAGE_KEY = 'outbase_remake_audit_state_v1';
   const app = document.getElementById('app');
   const mediaInput = document.getElementById('mediaInput');
   const importInput = document.getElementById('importInput');
 
-  const pad = (n) => String(n).padStart(2, '0');
-  const today = () => new Date().toISOString().slice(0, 10);
-  const nowTime = () => new Date().toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
-  const uid = (p='id') => `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
-  const dateObj = (iso) => { const [y,m,d] = String(iso || today()).split('-').map(Number); return new Date(y,(m||1)-1,d||1); };
-  const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const addDays = (iso, days) => { const d = dateObj(iso); d.setDate(d.getDate()+days); return isoDate(d); };
-  const monthKey = (iso) => String(iso || today()).slice(0,7);
-  const h = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-  const yen = (n) => n ? `${Number(n).toLocaleString('ja-JP')}円` : '未入力';
-  const typeLabel = (t) => ({camp:'キャンプ',walk:'散歩',outing:'外出',normal:'予定',work:'仕事',hospital:'病院',payment:'支払い',pet:'ペット',car:'車',travel:'旅行'}[t] || t || '予定');
-  const recLabel = (t) => ({photo:'写真',video:'動画',voice:'音声メモ',memo:'メモ',gps:'位置',poop:'💩',water:'💧',friend:'犬友達',spot:'スポット',setup:'設営撤収',weather:'天気',import:'取込',meal:'料理',gear:'ギア'}[t] || t);
-  const toast = (msg) => { state.toast = msg; render(); setTimeout(() => { if (state.toast === msg) { state.toast = ''; render(); } }, 1700); };
-  const clone = (x) => JSON.parse(JSON.stringify(x));
-
-  const defaultPrep = (projectId, type='camp') => {
-    const common = [
-      ['天気','14日前から天気・風・気温を確認','要確認'],['ルート','出発時間・休憩・買い出し場所を確認','未'],['コタ','水・フード・カート・暑さ対策','未']
-    ];
-    const camp = [
-      ['買い物','肉・野菜・朝食・飲み物・氷','未'],['料理','夜・朝・軽食・片付けまで決める','未'],['ギア','幕・寝具・照明・電源・空調・乾燥','未'],['設営','レイアウト・風向き・ペットエリア','未'],['思い出','撮りたい場面・残したいことを決める','未']
-    ];
-    const walk = [['散歩','ハーネス・水・袋・休憩地点','未'],['場所','車/徒歩・駐車場・日陰・犬可','要確認']];
-    const arr = type === 'walk' ? [...walk, ...common.slice(0,1)] : [...camp, ...common];
-    return arr.map(([group,text,status]) => ({ id: uid('prep'), projectId, group, text, status, done:false, source:'auto' }));
+  const TYPES = {
+    camp: 'キャンプ', walk: '散歩', campWalk: 'キャンプ場散歩', outing: '外出', hospital: '病院', payment: '支払い', work: '仕事', event: '行事', memo: 'メモ'
   };
+  const GROUPS = {
+    shop: '買い物', cook: '料理', gear: 'ギア', kota: 'コタ', weather: '天気', route: 'ルート', setup: '設営撤収', other: 'その他'
+  };
+  const REC_TYPES = { photo:'写真', video:'動画', voice:'音声メモ', note:'メモ', gps:'位置', poo:'うんち', pee:'おしっこ', dog:'犬友達', spot:'スポット', setup:'設営撤収', import:'取込' };
 
-  const DEFAULT = () => {
-    const p1 = uid('project');
-    const p2 = uid('project');
+  const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+  const today = () => new Date().toISOString().slice(0,10);
+  const nowTime = () => new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  const toDate = iso => { if (!iso) return null; const [y,m,d] = iso.split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+  const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const addDays = (iso,n) => { const d = toDate(iso) || new Date(); d.setDate(d.getDate()+n); return isoDate(d); };
+  const jpDate = iso => iso ? `${Number(iso.slice(5,7))}/${Number(iso.slice(8,10))}` : '日付未設定';
+  const weekday = iso => iso ? '日月火水木金土'[toDate(iso).getDay()] : '';
+  const compactDate = iso => iso ? `${jpDate(iso)}(${weekday(iso)})` : '日付未設定';
+  const clamp = (n,min,max) => Math.max(min, Math.min(max, n));
+
+  const defaultState = () => {
+    const t = today();
+    const future = addDays(t, 18);
     return {
       version: VERSION,
-      view: 'home',
-      section: 'main',
-      activeProjectId: p1,
-      selectedDate: today(),
-      calendarMonth: monthKey(today()),
-      toast: '',
-      modal: null,
-      projects: [
-        { id:p1, title:'赤城山キャンプ', type:'camp', status:'準備中', level:4, start:addDays(today(), 12), end:addDays(today(),13), place:'スノーピーク赤城山CF', site:'未設定', people:['ムー','リン'], pets:['コタ'], cost:{stay:0,food:0,road:0,fuel:0}, notes:'キャンプ前・現地・帰宅後をOUTBASEで回す', goals:['忘れ物を減らす','現地3秒記録','帰宅後に次回改善'] },
-        { id:p2, title:'コタ散歩候補探し', type:'walk', status:'候補', level:3, start:addDays(today(), 3), end:addDays(today(),3), place:'柏から車40分圏内', site:'', people:['ムー'], pets:['コタ'], cost:{}, notes:'日陰・駐車場・犬可を優先', goals:['犬友達','スポット','💩/💧記録'] }
+      activeTab: 'home',
+      calendarMonth: t.slice(0,7),
+      selectedDate: t,
+      currentId: 'camp-next',
+      activeSessionId: null,
+      filter: 'all',
+      experiences: [
+        { id:'camp-next', title:'次のキャンプ', type:'camp', level:4, status:'planning', date:'', endDate:'', location:'行き先未設定', people:'夫婦＋コタ', note:'日付と場所を入れると、準備・天気監視・買い物・記録がつながる。', favorite:true, createdAt:t },
+        { id:'walk-home', title:'コタと自宅散歩', type:'walk', level:3, status:'ready', date:t, endDate:'', location:'自宅周辺', people:'ムー＋コタ', note:'3秒記録で散歩ログを残す。', favorite:false, createdAt:t }
       ],
-      prep: [],
-      records: [
-        { id:uid('rec'), projectId:p1, type:'memo', text:'初回は、出発前チェック→設営ログ→思い出レビューまで通す。', at:new Date().toISOString(), date:today(), time:nowTime(), location:null, media:[] }
-      ],
-      places: [
-        { id:uid('place'), name:'スノーピーク赤城山CF', kind:'キャンプ場', area:'群馬県 前橋市', dog:'犬可', water:'温水/乾燥サービス確認', view:'高原・涼しい', score:{dog:5,view:4,summer:5,facility:4}, notes:'梅雨時期・乾燥サービス・直営の安心感。', favorite:true, photos:[] },
-        { id:uid('place'), name:'近場散歩候補', kind:'散歩スポット', area:'柏から車40分', dog:'犬向け条件確認', water:'水場/日陰確認', view:'公園・湖・道の駅', score:{dog:4,view:3,summer:3,facility:3}, notes:'駐車場、日陰、休憩、混雑を要確認。', favorite:true, photos:[] }
+      prep: [
+        { id:'p1', experienceId:'camp-next', group:'weather', text:'候補日の天気を見張る', done:false, source:'template' },
+        { id:'p2', experienceId:'camp-next', group:'route', text:'行き先と買い出しルートを決める', done:false, source:'template' },
+        { id:'p3', experienceId:'camp-next', group:'gear', text:'リビング・寝室・コタ用品を確認', done:false, source:'template' },
+        { id:'p4', experienceId:'camp-next', group:'cook', text:'夜ごはんと朝ごはんを決める', done:false, source:'template' },
+        { id:'p5', experienceId:'camp-next', group:'kota', text:'水・フード・マナー袋・カートを準備', done:false, source:'template' }
       ],
       gear: [
-        { id:uid('gear'), name:'リビングシェル アイボリー', category:'幕', qty:1, status:'主力', favorite:true, lastUsed:'', cost:0, notes:'寝室・リビング構成の中心' },
-        { id:uid('gear'), name:'EcoFlow DELTA 3 1500', category:'電源', qty:1, status:'充電確認', favorite:true, lastUsed:'', cost:0, notes:'WAVE/冷蔵/照明' },
-        { id:uid('gear'), name:'AirBuggy Dome3 Large', category:'コタ', qty:1, status:'忘れない', favorite:true, lastUsed:'', cost:0, notes:'暑さ・移動・休憩用' }
+        { id:'g1', name:'リビングシェル', group:'幕', status:'要確認', note:'乾燥・ポール・ペグ' },
+        { id:'g2', name:'アメニティドームM', group:'寝室', status:'要確認', note:'寝室候補' },
+        { id:'g3', name:'グランドオフトンS ×2', group:'寝具', status:'通常', note:'夫婦分' },
+        { id:'g4', name:'EcoFlow DELTA 3 1500', group:'電源', status:'充電確認', note:'WAVE/Glacier用途' },
+        { id:'g5', name:'ドッグオフトン・フードボウルL', group:'コタ', status:'必須', note:'犬連れ必須' }
       ],
       meals: [
-        { id:uid('meal'), name:'ガーリックシュリンプ', timing:'夜', rating:0, ingredients:['ブラックタイガー','にんにく','オリーブオイル','バター','レモン'], notes:'バケットなしでも量を調整' },
-        { id:uid('meal'), name:'手作りピザ', timing:'夜', rating:0, ingredients:['ピザ生地','チーズ','ソース','具材'], notes:'ピザ生地は作る' },
-        { id:uid('meal'), name:'ホットサンド', timing:'朝', rating:0, ingredients:['食パン','具材','チーズ'], notes:'朝は軽く' }
+        { id:'m1', name:'ガーリックシュリンプ', timing:'夜', ingredients:'ブラックタイガー,にんにく,オリーブオイル,バター,レモン', gear:'大きいスキレット', note:'バゲットなしでも成立。量注意。' },
+        { id:'m2', name:'手作りピザ', timing:'夜', ingredients:'ピザ生地,チーズ,トマトソース,具材', gear:'焼き台/フライパン', note:'生地は作る。' },
+        { id:'m3', name:'ホットサンド', timing:'朝', ingredients:'パン,チーズ,ハム/卵', gear:'ホットサンドメーカー', note:'撤収朝向き。' }
       ],
-      setupSteps: [
-        '家出発','休憩/買い出し','キャンプ場到着','受付開始','受付完了','サイト到着','レイアウト考察','レイアウト決定','荷下ろし開始','荷下ろし完了','設営開始','幕完了','寝室完了','キッチン完了','電源/空調完了','ペットエリア完了','設営完了','撤収開始','乾燥待ち','テント撤収','車載完了','チェックアウト','帰宅'
+      places: [
+        { id:'pl1', name:'スノーピーク赤城山キャンプフィールド', category:'キャンプ場', area:'群馬県 前橋市', dog:true, weatherWatch:true, score:88, tags:['犬可','標高高め','直営','乾燥サービス'], note:'雨時期の候補。コタ連れ・友人同行にも使いやすい。' },
+        { id:'pl2', name:'自宅周辺散歩ルート', category:'散歩', area:'柏市', dog:true, weatherWatch:false, score:76, tags:['短時間','普段使い'], note:'3秒記録のベースルート。' },
+        { id:'pl3', name:'次に行きたいキャンプ場候補', category:'候補', area:'未定', dog:true, weatherWatch:true, score:60, tags:['要調査','犬可必須'], note:'検索・スクショ・URLから候補化する。' }
       ],
-      weather: [],
-      checks: [],
+      records: [],
+      reviews: [],
       imports: [],
-      friends: [],
-      settings: { chappyTone:'実用優先', familyShare:false, photosMode:'Google Photos URL/端末添付', user:'ムー' }
+      settings: { speech:true, location:true, googlePhotosUrl:'', calendarName:'OUTBASE', familyShare:false }
     };
   };
 
-  let state = load();
-  function load() {
+  let state = loadState();
+
+  function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return normalize(parsed);
-      }
-    } catch (e) {}
-    const s = DEFAULT();
-    s.projects.forEach(p => { s.prep.push(...defaultPrep(p.id, p.type)); });
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      return migrate({ ...defaultState(), ...parsed });
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function migrate(s) {
+    s.version = VERSION;
+    s.experiences ||= [];
+    s.prep ||= [];
+    s.gear ||= [];
+    s.meals ||= [];
+    s.places ||= [];
+    s.records ||= [];
+    s.reviews ||= [];
+    s.imports ||= [];
+    s.settings ||= defaultState().settings;
+    if (!s.currentId || !s.experiences.some(x => x.id === s.currentId)) s.currentId = s.experiences[0]?.id || null;
+    s.activeTab ||= 'home';
+    s.selectedDate ||= today();
+    s.calendarMonth ||= today().slice(0,7);
+    s.filter ||= 'all';
     return s;
   }
-  function normalize(s) {
-    const d = DEFAULT();
-    const merged = { ...d, ...s };
-    ['projects','prep','records','places','gear','meals','weather','checks','imports','friends'].forEach(k => { if (!Array.isArray(merged[k])) merged[k] = []; });
-    if (!merged.activeProjectId || !merged.projects.some(p => p.id === merged.activeProjectId)) merged.activeProjectId = merged.projects[0]?.id || '';
-    if (!merged.selectedDate) merged.selectedDate = today();
-    if (!merged.calendarMonth) merged.calendarMonth = monthKey(today());
-    if (!merged.setupSteps?.length) merged.setupSteps = d.setupSteps;
-    return merged;
+
+  function save() {
+    state.version = VERSION;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
-  function save() { state.version = VERSION; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function activeProject() { return state.projects.find(p => p.id === state.activeProjectId) || state.projects[0]; }
-  function projectById(id) { return state.projects.find(p => p.id === id); }
-  function projectDate(p) { return p?.start || ''; }
-  function daysToProject(p) { if (!p?.start) return null; return Math.ceil((dateObj(p.start)-dateObj(today()))/86400000); }
-  function projectPrep(p) { return state.prep.filter(x => x.projectId === p?.id); }
-  function projectRecords(p) { return state.records.filter(x => x.projectId === p?.id).sort((a,b) => String(b.at).localeCompare(String(a.at))); }
-  function progressFor(p) { const arr = projectPrep(p); if (!arr.length) return 0; return Math.round(arr.filter(x => x.done).length / arr.length * 100); }
-  function grouped(arr, key) { return arr.reduce((m,x) => { const k = x[key] || 'その他'; (m[k] ||= []).push(x); return m; }, {}); }
+
+  function currentExperience() {
+    return state.experiences.find(e => e.id === state.currentId) || state.experiences[0] || null;
+  }
+
+  function experienceById(id) {
+    return state.experiences.find(e => e.id === id) || currentExperience();
+  }
+
+  function experiencePrep(id = state.currentId) {
+    return state.prep.filter(p => p.experienceId === id);
+  }
+
+  function experienceRecords(id = state.currentId) {
+    return state.records.filter(r => r.experienceId === id);
+  }
+
+  function readiness(exp = currentExperience()) {
+    if (!exp) return { score:0, done:0, total:0, records:0, checks:0 };
+    const list = experiencePrep(exp.id);
+    const total = list.length;
+    const done = list.filter(p => p.done).length;
+    const records = experienceRecords(exp.id).length;
+    const checks = pendingChecks(exp.id).length;
+    const base = total ? Math.round(done / total * 70) : 8;
+    const dateScore = exp.date ? 12 : 0;
+    const placeScore = exp.location && !/未設定|未定/.test(exp.location) ? 10 : 0;
+    const recordScore = records ? 8 : 0;
+    return { score: clamp(base + dateScore + placeScore + recordScore, 0, 100), done, total, records, checks };
+  }
+
+  function pendingChecks(expId = state.currentId) {
+    return state.records.filter(r => (r.needsCheck || !r.experienceId) && (!expId || r.experienceId === expId));
+  }
+
+  function nextExperience() {
+    const dated = state.experiences.filter(e => e.date && e.date >= today()).sort((a,b) => a.date.localeCompare(b.date));
+    return dated[0] || currentExperience();
+  }
+
+  function toast(message) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast hide';
+      document.body.appendChild(t);
+    }
+    t.textContent = message;
+    t.classList.remove('hide');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => t.classList.add('hide'), 2200);
+  }
+
+  function setTab(tab) {
+    state.activeTab = tab;
+    save();
+    render();
+  }
+
+  function setCurrent(id) {
+    state.currentId = id;
+    save();
+    render();
+  }
+
+  function setFilter(filter) {
+    state.filter = filter;
+    save();
+    render();
+  }
+
+  function typeLabel(type) { return TYPES[type] || type || '予定'; }
+  function groupLabel(group) { return GROUPS[group] || group || 'その他'; }
+  function recLabel(type) { return REC_TYPES[type] || type || '記録'; }
+
+  function chappyHints(exp = currentExperience()) {
+    if (!exp) return ['次のキャンプを作ると、準備・記録・思い出がつながる。'];
+    const prep = experiencePrep(exp.id);
+    const undone = prep.filter(p => !p.done);
+    const records = experienceRecords(exp.id);
+    const hints = [];
+    if (!exp.date) hints.push('まず日付を入れる。天気監視と準備逆算が動く。');
+    if (/未設定|未定/.test(exp.location || '')) hints.push('行き先を入れる。場所カード・ルート・天気がつながる。');
+    if (undone.some(p => p.group === 'weather')) hints.push('天気は手入力しない。候補地点をWeather Watchに入れて見張る。');
+    if (undone.some(p => p.group === 'gear')) hints.push('ギアは一覧から選ぶ。忘れ物対策に回す。');
+    if (records.length === 0 && exp.status === 'doing') hints.push('現地では考えずに3秒記録。整理は帰宅後でいい。');
+    if (records.length >= 3) hints.push('記録が増えた。レビュー生成で次回改善に送れる。');
+    if (!hints.length) hints.push('今日は未完了の準備を1つ終わらせれば十分。');
+    return hints.slice(0, 3);
+  }
 
   function render() {
-    save();
-    const p = activeProject();
-    app.innerHTML = `${renderTopbar(p)}${renderPlanChip(p)}${renderBody()}${renderBottomNav()}${state.toast ? `<div class="toast">${h(state.toast)}</div>` : ''}${state.modal ? renderModal() : ''}`;
+    const exp = currentExperience();
+    app.innerHTML = `
+      ${renderTop(exp)}
+      ${renderPlanChip(exp)}
+      ${renderPage()}
+      ${renderBottomNav()}
+      <div id="modalRoot"></div>
+    `;
   }
 
-  function renderTopbar(p) {
-    const d = daysToProject(p);
-    const label = d === null ? '日付未設定' : d === 0 ? '今日' : d > 0 ? `${d}日前` : `${Math.abs(d)}日経過`;
-    return `<header class="topbar">
-      <button class="brand" data-action="go" data-view="home" aria-label="ホームへ">
-        <div class="logo">OB</div><div><div class="brand-title">OUTBASE</div><div class="brand-sub">体験を資産化する</div></div>
-      </button>
-      <button class="status-pill" data-action="open-project-switch">${h(label)}</button>
-    </header>`;
+  function renderTop(exp) {
+    return `
+      <header class="topbar">
+        <button class="brand" data-action="tab" data-tab="home" aria-label="ホームへ">
+          <span class="logo">OB</span>
+          <span class="brand-copy">
+            <span class="brand-title">OUTBASE</span>
+            <span class="brand-sub">FIELD NOTE / ${VERSION.replace('outbase-','')}</span>
+          </span>
+        </button>
+        <div class="top-actions">
+          <button class="top-btn" data-action="openBackup">控え</button>
+          <button class="top-btn dark" data-action="triggerImport">取込</button>
+        </div>
+      </header>`;
   }
-  function renderPlanChip(p) {
-    if (!p) return '';
-    return `<button class="plan-chip" data-action="open-project-switch">
-      <span class="label">現在</span>
-      <strong>${h(p.title)}</strong>
-      <small>${h(typeLabel(p.type))} / ${h(p.place || '場所未設定')} / ${h(p.start || '日付なし')}</small>
-      <i>切替</i>
-    </button>`;
+
+  function renderPlanChip(exp) {
+    if (!exp) return '';
+    return `
+      <div class="plan-chip">
+        <span class="label">現在</span>
+        <button data-action="openProjectSwitcher">
+          <div class="plan-name">${esc(exp.title)}</div>
+          <div class="plan-meta">${esc(typeLabel(exp.type))} / ${esc(exp.date ? compactDate(exp.date) : '日付なし')} / ${esc(exp.location || '場所未設定')}</div>
+        </button>
+        <span class="plan-status">${statusLabel(exp.status)}</span>
+      </div>`;
   }
-  function renderBody() {
-    return ({home:renderHome,plans:renderPlans,search:renderSearch,prep:renderPrep,add:renderAdd,memories:renderMemories}[state.view] || renderHome)();
+
+  function statusLabel(status) {
+    return { planning:'計画中', ready:'準備中', doing:'実施中', done:'思い出', candidate:'候補' }[status] || status || '計画中';
   }
+
+  function renderPage() {
+    const tab = state.activeTab;
+    if (tab === 'schedule') return renderSchedule();
+    if (tab === 'explore') return renderExplore();
+    if (tab === 'prep') return renderPrep();
+    if (tab === 'add') return renderAdd();
+    if (tab === 'memory') return renderMemory();
+    return renderHome();
+  }
+
   function renderBottomNav() {
-    const items = [['plans','予定'],['search','探す'],['prep','準備'],['add','＋'],['memories','思い出']];
-    return `<nav class="bottom-nav">${items.map(([v,l]) => `<button class="nav-btn ${state.view===v?'active':''}" data-action="go" data-view="${v}"><span class="${v==='add'?'nav-plus':''}">${l}</span></button>`).join('')}</nav>`;
+    const nav = [
+      ['schedule','予定'], ['explore','探す'], ['prep','準備'], ['add','＋'], ['memory','思い出']
+    ];
+    return `<nav class="bottom-nav">${nav.map(([id,label]) => `<button class="nav-btn ${state.activeTab===id?'active':''} ${id==='add'?'nav-plus':''}" data-action="tab" data-tab="${id}">${label}</button>`).join('')}</nav>`;
   }
 
   function renderHome() {
-    const p = activeProject();
-    const recs = projectRecords(p).slice(0,3);
-    const tasks = todayTasks(p);
-    const nexts = state.projects.slice().sort((a,b) => String(a.start||'9999').localeCompare(String(b.start||'9999'))).slice(0,4);
-    return `<main class="stack">
-      <section class="hero">
-        <div class="hero-kicker">${h(typeLabel(p.type))} / ${h(p.status)}</div>
-        <h1>今日は何する？</h1>
-        <p>${h(p.title)}を、準備・現地記録・思い出・次回改善まで一本で回す。</p>
-        <div class="hero-actions"><button class="btn primary" data-action="go" data-view="add">現地3秒記録</button><button class="btn" data-action="go" data-view="prep">準備を見る</button></div>
-      </section>
-      <section class="card"><div class="card-inner">
-        <div class="card-header"><div><div class="eyebrow">次の行動</div><h2 class="card-title">開く理由があるホーム</h2></div><span class="tag light">${progressFor(p)}%</span></div>
-        <div class="metric-row"><div class="metric"><small>現在プラン</small><strong>${h(p.title)}</strong></div><div class="metric"><small>予定日</small><strong>${h(p.start || '日付未設定')}</strong></div><div class="metric"><small>場所</small><strong>${h(p.place || '未設定')}</strong></div><div class="metric"><small>記録</small><strong>${projectRecords(p).length}件</strong></div></div>
-        <div class="progress"><span style="width:${progressFor(p)}%"></span></div>
-      </div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">今日やる3つ</div><h2 class="card-title">迷わないための確認</h2></div><button class="btn ghost" data-action="generate-prep">不足補完</button></div><div class="list">${tasks.map(t => renderTaskItem(t)).join('')}</div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">高機能カレンダー</div><h2 class="card-title">予定と体験をまとめる</h2></div><button class="btn ghost" data-action="go" data-view="plans">開く</button></div>${renderMiniCalendar()}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">最近の記録</div><h2 class="card-title">あとで資産になる素材</h2></div><button class="btn ghost" data-action="go" data-view="memories">整理</button></div>${recs.length ? `<div class="timeline">${recs.map(renderRecord).join('')}</div>` : `<div class="empty">まだ記録がない。現地3秒記録から写真・音声・位置・メモを残せる。</div>`}</div></section>
-      ${renderChappyCard(p)}
-    </main>`;
-  }
-  function todayTasks(p) {
-    const arr = projectPrep(p).filter(x => !x.done).slice(0,3);
-    if (arr.length) return arr;
-    return [{id:'review', group:'レビュー', text:'記録を見返して次回改善を1つ残す', done:false, projectId:p?.id}];
-  }
-  function renderTaskItem(x) {
-    return `<button class="item ${x.done?'done':''}" data-action="toggle-prep" data-id="${h(x.id)}"><span class="item-left"><span class="checkmark">${x.done?'✓':''}</span><span class="item-main"><span class="item-title">${h(x.text)}</span><span class="item-sub">${h(x.group || '確認')} / ${h(x.status || '未')}</span></span></span><span class="tag light">${x.done?'完了':'未'}</span></button>`;
-  }
-  function renderMiniCalendar() {
-    const month = state.calendarMonth || monthKey(today());
-    const items = state.projects.filter(p => String(p.start||'').startsWith(month)).slice(0,4);
-    return `<div class="day-list">${items.length ? items.map(p => `<button class="date-card" data-action="select-project" data-id="${p.id}"><span>${h(String(p.start).slice(5).replace('-','/'))}</span><strong>${h(p.title)}</strong><small>${h(typeLabel(p.type))} / ${h(p.place || '')}</small></button>`).join('') : `<div class="empty">この月の予定はまだない。予定画面から追加できる。</div>`}</div>`;
+    const exp = nextExperience();
+    if (exp && exp.id !== state.currentId) state.currentId = exp.id;
+    const r = readiness(exp);
+    const missions = buildMissions(exp);
+    return `
+      <main class="stack">
+        <section class="hero">
+          <div class="hero-kicker">OUTBASE / TODAY</div>
+          <h1>今日は何する？</h1>
+          <p>キャンプ前・現地・帰宅後を、1つの流れで迷わず進める。</p>
+          <div class="hero-line">
+            <span class="pill dark">次の一手</span>
+            <span class="pill gray">3秒記録</span>
+            <span class="pill gray">次回改善</span>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-inner">
+            <div class="card-head">
+              <div>
+                <div class="eyebrow">CHAPPY BOARD</div>
+                <div class="card-title">${esc(exp?.title || '次の予定を作る')}</div>
+                <p class="card-text">${esc(exp?.note || '予定を作ると、準備・記録・思い出が自然につながる。')}</p>
+              </div>
+              <span class="pill ${exp?.date ? 'dark':'warn'}">${esc(exp?.date ? compactDate(exp.date) : '日付未設定')}</span>
+            </div>
+            <div class="readiness" style="--score:${r.score}%;">
+              <div class="gauge"><span>${r.score}</span></div>
+              <div>
+                <div class="metric-row grid-3">
+                  <div class="metric"><small>準備</small><strong>${r.done}/${r.total}</strong></div>
+                  <div class="metric"><small>記録</small><strong>${r.records}</strong></div>
+                  <div class="metric"><small>確認</small><strong>${r.checks}</strong></div>
+                </div>
+                <div class="actions" style="margin-top:12px">
+                  <button class="btn primary" data-action="tab" data-tab="prep">準備する</button>
+                  <button class="btn" data-action="tab" data-tab="add">3秒記録</button>
+                  <button class="btn ghost" data-action="openEvent" data-id="${esc(exp?.id || '')}">開く</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="card subtle">
+          <div class="card-inner">
+            <div class="card-head"><div><div class="eyebrow">TODAY'S MOVE</div><div class="card-title">今日の一手</div></div><button class="btn small" data-action="openPrep">追加</button></div>
+            <div class="mission-list">${missions.map(renderMission).join('')}</div>
+          </div>
+        </section>
+        <section class="card subtle">
+          <div class="card-inner">
+            <div class="card-head"><div><div class="eyebrow">CHAPPY</div><div class="card-title">ムー向け提案</div></div><span class="pill gray">提案のみ</span></div>
+            <div class="list">${chappyHints(exp).map(h => `<div class="item"><div><div class="item-title">${esc(h)}</div><div class="item-sub">決定はムー。OUTBASEは候補だけ出す。</div></div></div>`).join('')}</div>
+          </div>
+        </section>
+        <section class="card subtle">
+          <div class="card-inner">
+            <div class="card-head"><div><div class="eyebrow">FIELD MODE</div><div class="card-title">現地で開く理由</div></div><span class="pill dark">3秒</span></div>
+            <div class="quick-grid">
+              <button class="quick dark" data-action="startSession" data-kind="camp"><strong>キャンプ開始</strong><small>到着から記録</small></button>
+              <button class="quick" data-action="startSession" data-kind="walk"><strong>散歩開始</strong><small>コタ・場所・スポット</small></button>
+              <button class="quick" data-action="quickRecord" data-type="note"><strong>今メモ</strong><small>分類しないで残す</small></button>
+              <button class="quick" data-action="generateReview"><strong>レビュー生成</strong><small>帰宅後に次回へ</small></button>
+            </div>
+          </div>
+        </section>
+      </main>`;
   }
 
-  function renderPlans() {
-    const p = activeProject();
-    return `<main class="stack">
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">予定</div><h2 class="card-title">全予定カレンダー</h2></div><button class="btn primary" data-action="open-modal" data-modal="project">予定追加</button></div>${renderCalendar()}<div class="divider"></div><div class="day-list">${state.projects.filter(x => x.start === state.selectedDate).map(renderProjectRow).join('') || `<div class="empty">${h(state.selectedDate)} の予定はまだない。</div>`}</div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">主役プラン</div><h2 class="card-title">${h(p.title)}</h2></div><span class="tag">${h(typeLabel(p.type))}</span></div>${renderProjectDetail(p)}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">日付未設定</div><h2 class="card-title">候補・未確定</h2></div></div><div class="day-list">${state.projects.filter(x => !x.start).map(renderProjectRow).join('') || `<div class="empty">日付未設定の予定はない。</div>`}</div></div></section>
-    </main>`;
-  }
-  function renderCalendar() {
-    const [yy,mm] = String(state.calendarMonth || monthKey(today())).split('-').map(Number);
-    const first = new Date(yy, mm-1, 1);
-    const last = new Date(yy, mm, 0);
-    const prev = isoDate(new Date(yy, mm-2, 1)).slice(0,7);
-    const next = isoDate(new Date(yy, mm, 1)).slice(0,7);
-    const blanks = Array.from({length:first.getDay()}, (_,i) => `<div class="day empty" aria-hidden="true"></div>`);
-    const days = Array.from({length:last.getDate()}, (_,i) => {
-      const iso = `${yy}-${pad(mm)}-${pad(i+1)}`;
-      const items = state.projects.filter(p => p.start === iso);
-      const cls = ['day', iso===today()?'today':'', iso===state.selectedDate?'selected':'', items.length?'has':''].join(' ');
-      return `<button class="${cls}" data-action="select-date" data-date="${iso}"><span class="num">${i+1}</span><span class="dots">${items.slice(0,3).map(p => `<i class="${p.type==='camp'?'camp':p.type==='walk'?'walk':'normal'}"></i>`).join('')}${items.length>3?'<i class="warn"></i>':''}</span>${items[0]?`<small>${h(items[0].title.slice(0,5))}</small>`:''}</button>`;
-    });
-    return `<div class="calendar-toolbar"><button class="btn ghost" data-action="month" data-month="${prev}">前</button><div class="month-label">${yy}年 ${mm}月</div><button class="btn ghost" data-action="month" data-month="${next}">次</button></div><div class="weekdays">${['日','月','火','水','木','金','土'].map(x=>`<span>${x}</span>`).join('')}</div><div class="calendar-grid">${[...blanks,...days].join('')}</div>`;
-  }
-  function renderProjectRow(p) {
-    return `<button class="date-card" data-action="select-project" data-id="${p.id}"><span>${h((p.start||'--').slice(5).replace('-','/'))}</span><strong>${h(p.title)}</strong><small>${h(typeLabel(p.type))} / ${h(p.place || '場所未設定')} / ${h(p.status)}</small></button>`;
-  }
-  function renderProjectDetail(p) {
-    if (!p) return `<div class="empty">予定を追加すると、準備・記録・思い出がつながる。</div>`;
-    return `<p class="note">${h(p.notes || 'メモなし')}</p><div class="metric-row"><div class="metric"><small>準備</small><strong>${progressFor(p)}%</strong></div><div class="metric"><small>記録</small><strong>${projectRecords(p).length}件</strong></div><div class="metric"><small>費用</small><strong>${yen(Object.values(p.cost||{}).reduce((a,b)=>a+Number(b||0),0))}</strong></div><div class="metric"><small>深さ</small><strong>Lv.${h(p.level || 1)}</strong></div></div><div class="actions"><button class="btn primary" data-action="go" data-view="prep">準備</button><button class="btn" data-action="go" data-view="add">現地記録</button><button class="btn ghost" data-action="export-ics" data-id="${p.id}">ICS</button></div>`;
+  function buildMissions(exp) {
+    if (!exp) return [{ title:'次のキャンプを作る', sub:'予定から開始', action:'openEventForm', done:false }];
+    const undone = experiencePrep(exp.id).filter(p => !p.done).slice(0, 3).map(p => ({ id:p.id, title:p.text, sub:groupLabel(p.group), done:false, action:'togglePrep' }));
+    if (!exp.date) undone.unshift({ title:'日付を決める', sub:'天気監視と逆算の起点', done:false, action:'openEvent' });
+    if (!exp.location || /未設定|未定/.test(exp.location)) undone.unshift({ title:'行き先を決める', sub:'場所カードとルートの起点', done:false, action:'tabExplore' });
+    if (!undone.length) undone.push({ title:'現地で3秒記録する', sub:'写真・声・位置・メモ', done:false, action:'tabAdd' });
+    return undone.slice(0, 4);
   }
 
-  function renderSearch() {
-    return `<main class="stack">
-      <section class="hero"><div class="hero-kicker">探す / 取り込む</div><h1>行きたい場所を資産にする</h1><p>キャンプ場、散歩先、寄り道、予約スクショ、URL、写真を場所カードへまとめる。</p><div class="hero-actions"><button class="btn primary" data-action="open-modal" data-modal="place">場所追加</button><button class="btn" data-action="trigger-import">一括取込</button></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">キャンプ場・場所カード</div><h2 class="card-title">候補と再訪理由</h2></div></div><div class="list">${state.places.map(renderPlace).join('')}</div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">MAP / 場所記憶</div><h2 class="card-title">ピンではなく場所カードで管理</h2></div><button class="btn ghost" data-action="save-gps">現在地</button></div><div class="map-box"><div class="route-line"></div><div class="map-pin pin1">管理棟</div><div class="map-pin pin2">サイト</div><div class="map-pin pin3">散歩道</div><div class="map-pin pin4">犬友達</div></div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">Weather Watch</div><h2 class="card-title">天気で予定を守る</h2></div><button class="btn ghost" data-action="open-modal" data-modal="weather">天気記録</button></div>${renderWeatherList()}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">一括取込</div><h2 class="card-title">入力ではなく候補承認</h2></div></div><form data-form="importText" class="field"><label>予約・購入・天気・メモの貼り付け</label><textarea name="text" placeholder="予約メール、購入履歴、天気メモ、キャンプ場URLなどを貼り付け"></textarea><button class="btn primary" type="submit">候補化</button></form>${renderChecks('import')}</div></section>
-    </main>`;
+  function renderMission(m) {
+    const actionAttr = m.action === 'togglePrep' ? `data-action="togglePrep" data-id="${m.id}"` : m.action === 'tabExplore' ? `data-action="tab" data-tab="explore"` : m.action === 'tabAdd' ? `data-action="tab" data-tab="add"` : `data-action="openEvent" data-id="${esc(currentExperience()?.id || '')}"`;
+    return `<div class="mission ${m.done?'done':''}"><span class="check-dot">${m.done?'✓':'・'}</span><div><div class="mission-title">${esc(m.title)}</div><div class="mission-sub">${esc(m.sub)}</div></div><button ${actionAttr}>進む</button></div>`;
   }
-  function renderPlace(x) {
-    return `<article class="item"><div class="item-main"><div class="item-title">${h(x.name)}</div><div class="item-sub">${h(x.kind)} / ${h(x.area)} / ${h(x.dog)}</div><div class="place-score"><div class="score-cell"><small>犬</small><strong>${x.score?.dog || '-'}</strong></div><div class="score-cell"><small>景色</small><strong>${x.score?.view || '-'}</strong></div><div class="score-cell"><small>暑さ</small><strong>${x.score?.summer || '-'}</strong></div><div class="score-cell"><small>設備</small><strong>${x.score?.facility || '-'}</strong></div></div></div><button class="tag light" data-action="place-to-project" data-id="${x.id}">予定化</button></article>`;
+
+  function renderSchedule() {
+    const [y,m] = state.calendarMonth.split('-').map(Number);
+    const first = new Date(y, m - 1, 1);
+    const start = new Date(first); start.setDate(1 - first.getDay());
+    const days = Array.from({ length: 42 }, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return d; });
+    const selectedEvents = state.experiences.filter(e => e.date === state.selectedDate);
+    const undated = state.experiences.filter(e => !e.date);
+    return `
+      <main class="stack">
+        <section class="hero">
+          <div class="hero-kicker">SCHEDULE</div>
+          <h1>予定</h1>
+          <p>ジョルテ代替。普通の予定もキャンプも、深さを変えて扱う。</p>
+        </section>
+        <section class="card calendar-card">
+          <div class="card-inner">
+            <div class="card-head"><div><div class="eyebrow">FIELD CALENDAR</div><div class="card-title">高機能カレンダー</div></div><button class="btn small primary" data-action="openEventForm">予定追加</button></div>
+            <div class="calendar-toolbar"><button class="nav-round" data-action="month" data-dir="-1">‹</button><div class="month-label"><strong>${y}.${String(m).padStart(2,'0')}</strong><small>${compactDate(state.selectedDate)}</small></div><button class="nav-round" data-action="month" data-dir="1">›</button></div>
+            <div class="weekdays">${['日','月','火','水','木','金','土'].map(d => `<div>${d}</div>`).join('')}</div>
+            <div class="calendar-grid">${days.map(d => renderDay(d, m)).join('')}</div>
+            <div class="divider"></div>
+            <div class="card-head"><div><div class="eyebrow">${esc(compactDate(state.selectedDate))}</div><div class="card-title">この日の予定</div></div><span class="pill gray">${selectedEvents.length}件</span></div>
+            <div class="event-list">${selectedEvents.length ? selectedEvents.map(renderEventCard).join('') : `<div class="empty">この日の予定はまだない。普通の予定もキャンプも追加できる。</div>`}</div>
+          </div>
+        </section>
+        <section class="card subtle">
+          <div class="card-inner">
+            <div class="card-head"><div><div class="eyebrow">UNSCHEDULED</div><div class="card-title">日付未設定</div></div><span class="pill warn">${undated.length}件</span></div>
+            <div class="undated">${undated.length ? undated.map(renderEventCard).join('') : `<div class="empty">日付なし予定はない。</div>`}</div>
+          </div>
+        </section>
+      </main>`;
   }
-  function renderWeatherList() {
-    const arr = state.weather.slice(-4).reverse();
-    return arr.length ? `<div class="list">${arr.map(w => `<div class="item"><div class="item-main"><div class="item-title">${h(w.place)} / ${h(w.date)}</div><div class="item-sub">${h(w.text)}</div></div><span class="tag ${Number(w.risk||0)>60?'warn':'light'}">${h(w.risk||0)}%</span></div>`).join('')}</div>` : `<div class="empty">天気API本接続前でも、スクショ/メモ/手入力を予報履歴として保存できる。</div>`;
+
+  function renderDay(d, month) {
+    const iso = isoDate(d);
+    const list = state.experiences.filter(e => e.date === iso);
+    const muted = d.getMonth() !== month - 1;
+    const selected = state.selectedDate === iso;
+    const labels = list.slice(0,2).map(e => `<span class="day-label">${esc(shortTitle(e.title))}</span>`).join('') + (list.length > 2 ? `<span class="day-label more">他 ${list.length-2}</span>` : '');
+    return `<button class="day ${muted?'muted-day':''} ${selected?'selected':''} ${iso===today()?'today':''}" data-action="selectDate" data-date="${iso}"><span class="day-no">${d.getDate()}</span><div class="day-labels">${labels}</div></button>`;
+  }
+
+  function shortTitle(t) { return String(t || '').replace('スノーピーク','SP').slice(0, 5); }
+
+  function renderEventCard(e) {
+    const r = readiness(e);
+    return `<div class="event-card"><div class="event-top"><div><div class="event-title">${esc(e.title)}</div><div class="event-meta">${esc(typeLabel(e.type))} / Lv.${esc(e.level || 1)} / ${esc(statusLabel(e.status))} / ${esc(e.date ? compactDate(e.date) : '日付なし')} / ${esc(e.location || '場所未設定')}</div></div><span class="pill ${e.status==='doing'?'dark':'gray'}">${esc(statusLabel(e.status))}</span></div><div class="event-foot"><button class="btn small primary" data-action="openEvent" data-id="${e.id}">開く</button><button class="btn small" data-action="setCurrent" data-id="${e.id}">主役</button><div class="progress"><span style="width:${r.score}%"></span></div></div></div>`;
+  }
+
+  function renderExplore() {
+    const tabs = ['all','キャンプ場','散歩','候補','行事'];
+    const places = state.places.filter(p => state.filter === 'all' || p.category === state.filter);
+    return `
+      <main class="stack">
+        <section class="hero"><div class="hero-kicker">DISCOVERY</div><h1>探す</h1><p>予定とは分けて、キャンプ場・散歩先・寄り道・イベント候補を育てる。</p></section>
+        <div class="tabs">${tabs.map(t => `<button class="tab ${state.filter===t?'active':''}" data-action="filter" data-filter="${t}">${t==='all'?'全部':t}</button>`).join('')}</div>
+        <section class="card subtle"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">PLACE CARDS</div><div class="card-title">場所カード</div></div><button class="btn small primary" data-action="openPlaceForm">追加</button></div><div class="list">${places.map(renderPlace).join('') || `<div class="empty">候補はまだない。予約スクショ・URL・メモから増やせる。</div>`}</div></div></section>
+        <section class="card"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">WEATHER WATCH</div><div class="card-title">天気から行き先を考える</div></div><span class="pill gray">接続口</span></div><p class="card-text">今はスクショ・URL・手入力候補を保存。外部天気API接続後に、降水・風・標高・犬可条件で自動監視する。</p><div class="actions"><button class="btn" data-action="triggerImport">天気スクショ取込</button><button class="btn" data-action="openPlaceForm">監視地点追加</button></div></div></section>
+      </main>`;
+  }
+
+  function renderPlace(p) {
+    return `<div class="place-card"><div class="event-top"><div><div class="event-title">${esc(p.name)}</div><div class="event-meta">${esc(p.category)} / ${esc(p.area)} / ${p.dog?'犬可':'犬条件未確認'}</div></div><span class="pill ${p.weatherWatch?'dark':'gray'}">${p.weatherWatch?'監視中':'候補'}</span></div><p class="card-text">${esc(p.note)}</p><div class="place-score"><strong>${esc(p.score)}</strong><span class="mini">候補スコア</span>${(p.tags || []).map(t => `<span class="pill gray">${esc(t)}</span>`).join('')}</div><div class="actions"><button class="btn small primary" data-action="makeEventFromPlace" data-id="${p.id}">予定化</button><button class="btn small" data-action="toggleWeather" data-id="${p.id}">${p.weatherWatch?'監視OFF':'天気監視'}</button></div></div>`;
   }
 
   function renderPrep() {
-    const p = activeProject();
-    const groups = grouped(projectPrep(p), 'group');
-    return `<main class="stack">
-      <section class="hero"><div class="hero-kicker">準備 / ${h(p?.title || '')}</div><h1>忘れないための準備</h1><p>買い物、料理、ギア、天気、ルート、コタ、設営を、予定に紐づけて残す。</p><div class="hero-actions"><button class="btn primary" data-action="generate-prep">不足補完</button><button class="btn" data-action="open-modal" data-modal="prep">準備追加</button></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">チェックリスト</div><h2 class="card-title">準備進捗 ${progressFor(p)}%</h2></div><span class="tag light">${projectPrep(p).filter(x=>x.done).length}/${projectPrep(p).length}</span></div><div class="progress"><span style="width:${progressFor(p)}%"></span></div><div class="divider"></div>${Object.entries(groups).map(([g,items]) => `<div class="section"><h3 class="section-title">${h(g)}</h3><div class="list">${items.map(renderTaskItem).join('')}</div></div>`).join('') || `<div class="empty">準備項目がない。自動補完で作成できる。</div>`}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">ギア管理</div><h2 class="card-title">持ち物・使用履歴・忘れ物対策</h2></div><button class="btn ghost" data-action="open-modal" data-modal="gear">ギア追加</button></div>${renderGearList()}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">料理・買い物</div><h2 class="card-title">献立から買い物へ</h2></div><button class="btn ghost" data-action="open-modal" data-modal="meal">料理追加</button></div>${renderMealList()}<div class="divider"></div>${renderShopping()}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">設営・撤収ログ</div><h2 class="card-title">単純タイマーではなく工程ログ</h2></div><button class="btn ghost" data-action="go" data-view="add">記録</button></div><p class="note">家出発、受付、サイト到着、レイアウト、荷下ろし、設営、乾燥待ち、車載、帰宅までワンタップで残す。</p></div></section>
-    </main>`;
+    const exp = currentExperience();
+    const tabs = ['all','shop','cook','gear','kota','weather','route','setup'];
+    const prep = experiencePrep(exp?.id).filter(p => state.filter === 'all' || p.group === state.filter);
+    const gearRequired = state.gear.slice(0,5);
+    return `
+      <main class="stack">
+        <section class="hero"><div class="hero-kicker">PREP</div><h1>準備</h1><p>${esc(exp?.title || '予定')} の準備。買い物・料理・ギア・コタ・天気・ルートを一画面で進める。</p></section>
+        <section class="card"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">READY FLOW</div><div class="card-title">キャンプ前に開く理由</div></div><button class="btn small primary" data-action="openPrep">準備追加</button></div><div class="flow">${renderFlowRows(exp)}</div></div></section>
+        <div class="tabs">${tabs.map(t => `<button class="tab ${state.filter===t?'active':''}" data-action="filter" data-filter="${t}">${t==='all'?'全部':groupLabel(t)}</button>`).join('')}</div>
+        <section class="card subtle"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">CHECKLIST</div><div class="card-title">準備リスト</div></div><button class="btn small" data-action="buildShopping">買い物統合</button></div><div class="mission-list">${prep.length ? prep.map(p => renderPrepItem(p)).join('') : `<div class="empty">このカテゴリの準備はまだない。</div>`}</div></div></section>
+        <section class="card subtle"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">GEAR</div><div class="card-title">ギア管理</div></div><button class="btn small primary" data-action="openGearForm">追加</button></div><div class="list">${gearRequired.map(g => `<div class="item"><div><div class="item-title">${esc(g.name)}</div><div class="item-sub">${esc(g.group)} / ${esc(g.status)} / ${esc(g.note)}</div></div><span class="pill gray">${esc(g.status)}</span></div>`).join('')}</div></div></section>
+        <section class="card subtle"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">MEAL</div><div class="card-title">料理・献立・買い物</div></div><button class="btn small primary" data-action="openMealForm">追加</button></div><div class="list">${state.meals.map(m => `<div class="item"><div><div class="item-title">${esc(m.name)}</div><div class="item-sub">${esc(m.timing)} / ${esc(m.ingredients)} / ${esc(m.gear)}</div></div><span class="pill gray">${esc(m.timing)}</span></div>`).join('')}</div></div></section>
+      </main>`;
   }
-  function renderGearList() {
-    return `<div class="list">${state.gear.map(g => `<div class="item"><div class="item-main"><div class="item-title">${h(g.name)}</div><div class="item-sub">${h(g.category)} / ${h(g.status)} / ${g.qty || 1}個 / ${yen(g.cost)}</div></div><button class="tag light" data-action="use-gear" data-id="${g.id}">使用</button></div>`).join('')}</div>`;
+
+  function renderFlowRows(exp) {
+    const rows = [
+      ['予定', exp?.date ? compactDate(exp.date) : '日付を決める', !!exp?.date],
+      ['行き先', exp?.location || '場所未設定', !!(exp?.location && !/未設定|未定/.test(exp.location))],
+      ['天気', '14日前から監視・悪化なら代替候補', experiencePrep(exp?.id).some(p => p.group === 'weather' && p.done)],
+      ['買い物', '献立から買い物を統合', experiencePrep(exp?.id).some(p => p.group === 'shop' && p.done)],
+      ['ギア', '忘れ物・乾燥・充電を確認', experiencePrep(exp?.id).some(p => p.group === 'gear' && p.done)],
+      ['当日', '設営撤収ログに送る', false]
+    ];
+    return rows.map((r,i) => `<div class="flow-row ${r[2]?'':'pending'}"><span class="flow-no">${i+1}</span><div><div class="flow-title">${esc(r[0])}</div><div class="flow-sub">${esc(r[1])}</div></div><span class="pill ${r[2]?'dark':'gray'}">${r[2]?'OK':'未'}</span></div>`).join('');
   }
-  function renderMealList() {
-    return `<div class="list">${state.meals.map(m => `<div class="item"><div class="item-main"><div class="item-title">${h(m.name)}</div><div class="item-sub">${h(m.timing)} / ${h((m.ingredients||[]).join('、'))}</div></div><button class="tag light" data-action="meal-record" data-id="${m.id}">作る</button></div>`).join('')}</div>`;
-  }
-  function renderShopping() {
-    const items = [...new Set(state.meals.flatMap(m => m.ingredients || []))];
-    return `<h3 class="section-title">買い物候補</h3><div class="chip-row">${items.map(x => `<span class="chip">${h(x)}</span>`).join('')}</div>`;
+
+  function renderPrepItem(p) {
+    return `<div class="mission ${p.done?'done':''}"><button class="check-dot" data-action="togglePrep" data-id="${p.id}">${p.done?'✓':'・'}</button><div><div class="mission-title">${esc(p.text)}</div><div class="mission-sub">${esc(groupLabel(p.group))} / ${esc(p.source || 'manual')}</div></div><button data-action="deletePrep" data-id="${p.id}">削除</button></div>`;
   }
 
   function renderAdd() {
-    const p = activeProject();
-    return `<main class="stack">
-      <section class="hero"><div class="hero-kicker">現地3秒 / ${h(p?.title || '')}</div><h1>今これを残す</h1><p>写真、動画、音声メモ、位置、💩/💧、犬友達、スポット、設営撤収を迷わず保存する。</p></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">3秒操作盤</div><h2 class="card-title">押せば記録になる</h2></div><span class="tag light">${h(typeLabel(p?.type))}</span></div><div class="op-grid">
-        <button class="op-tile primary" data-action="trigger-media"><strong>写真 / 動画</strong><small>標準カメラ・端末ファイル</small></button>
-        <button class="op-tile" data-action="voice"><strong>音声メモ</strong><small>録音ではなく文字起こし</small></button>
-        <button class="op-tile" data-action="quick-memo"><strong>メモ</strong><small>気づいたことだけ</small></button>
-        <button class="op-tile" data-action="save-gps"><strong>位置</strong><small>GPS・場所候補</small></button>
-        <button class="op-tile" data-action="quick-record" data-type="poop" data-text="コタ 💩"><strong>💩</strong><small>犬ログ</small></button>
-        <button class="op-tile" data-action="quick-record" data-type="water" data-text="水分補給"><strong>💧</strong><small>水・休憩</small></button>
-        <button class="op-tile" data-action="friend"><strong>犬友達</strong><small>名前不明でもOK</small></button>
-        <button class="op-tile" data-action="spot"><strong>スポット</strong><small>管理棟・サイト・景色</small></button>
-      </div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">設営・撤収ログ</div><h2 class="card-title">工程をワンタップ</h2></div></div><div class="chip-row">${state.setupSteps.map(s => `<button class="chip" data-action="setup-log" data-step="${h(s)}">${h(s)}</button>`).join('')}</div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">入口</div><h2 class="card-title">予定なしでも始められる</h2></div></div><div class="grid2"><button class="btn" data-action="open-modal" data-modal="project">予定から開始</button><button class="btn" data-action="open-modal" data-modal="prep">準備から開始</button><button class="btn" data-action="quick-memo">メモから開始</button><button class="btn" data-action="open-modal" data-modal="past">過去実績</button></div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">直近記録</div><h2 class="card-title">保存された素材</h2></div></div><div class="timeline">${projectRecords(p).slice(0,8).map(renderRecord).join('') || `<div class="empty">まだ保存がない。</div>`}</div></div></section>
-    </main>`;
+    const session = state.activeSessionId ? state.records.find(r => r.id === state.activeSessionId) : null;
+    return `
+      <main class="stack">
+        <section class="hero"><div class="hero-kicker">CAPTURE</div><h1>＋</h1><p>入口は1つに決めない。予定・準備・現地・過去・メモから始める。</p></section>
+        <section class="card"><div class="card-inner"><div class="kit-grid">
+          <button class="kit primary" data-action="openEventForm"><strong>予定</strong><small>普通の予定もキャンプも</small></button>
+          <button class="kit" data-action="openPrep"><strong>準備</strong><small>予定なしでも開始</small></button>
+          <button class="kit" data-action="startSession" data-kind="camp"><strong>現地記録</strong><small>写真・声・場所・メモ</small></button>
+          <button class="kit" data-action="openPastForm"><strong>過去実績</strong><small>後から登録</small></button>
+          <button class="kit" data-action="quickRecord" data-type="note"><strong>メモ</strong><small>文脈で仮紐付け</small></button>
+          <button class="kit" data-action="triggerImport"><strong>一括取込</strong><small>写真・PDF・Excel・スクショ</small></button>
+        </div></div></section>
+        ${renderSessionPanel(session)}
+      </main>`;
   }
 
-  function renderMemories() {
-    const p = activeProject();
-    const recs = projectRecords(p);
-    return `<main class="stack">
-      <section class="hero"><div class="hero-kicker">思い出 / 改善</div><h1>次回がラクになる記録</h1><p>写真・音声・場所・ギア・料理・天気を、レビューと次回改善へ変える。</p><div class="hero-actions"><button class="btn primary" data-action="make-review">レビュー生成</button><button class="btn" data-action="export-json">バックアップ</button></div></section>
-      ${renderChappyCard(p)}
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">レビュー</div><h2 class="card-title">良かったこと・困ったこと・次回</h2></div><span class="tag light">${recs.length}記録</span></div><div class="list">${reviewItems(p).map(x => `<div class="item"><div class="item-main"><div class="item-title">${h(x.title)}</div><div class="item-sub">${h(x.text)}</div></div><span class="tag ${x.kind==='warn'?'warn':'light'}">${h(x.label)}</span></div>`).join('')}</div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">タイムライン</div><h2 class="card-title">素材を見返す</h2></div></div><div class="timeline">${state.records.slice().sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(0,30).map(renderRecord).join('') || `<div class="empty">記録がない。</div>`}</div></div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">要確認</div><h2 class="card-title">迷ったものだけ確認</h2></div></div>${renderChecks()}</div></section>
-      <section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">データ管理センター</div><h2 class="card-title">取込・書出し・復元</h2></div></div><div class="grid2"><button class="btn" data-action="trigger-import">ファイル取込</button><button class="btn" data-action="export-json">JSON書出し</button><button class="btn" data-action="copy-summary">共有用まとめ</button><button class="btn ghost" data-action="open-modal" data-modal="restore">復元</button></div><p class="note" style="margin-top:10px">Google Photos/Calendar/天気APIは外部認証前提。OUTBASE側はURL、ICS、履歴、添付、取込候補を保存する。</p></div></section>
-    </main>`;
+  function renderSessionPanel(session) {
+    const active = getActiveSession();
+    return `<section class="card"><div class="card-inner">
+      <div class="card-head"><div><div class="eyebrow">FIELD RECORD</div><div class="card-title">${active ? '記録中' : '現地3秒記録'}</div><p class="card-text">${active ? `${esc(active.title)} / ${active.startedAt}` : '開始してから、分類せずに残す。整理は後で候補化。'}</p></div>${active ? `<button class="btn small warn" data-action="endSession">終了</button>` : `<span class="pill gray">待機</span>`}</div>
+      <div class="quick-grid">
+        <button class="quick dark" data-action="media"><strong>写真・動画</strong><small>標準カメラで撮る</small></button>
+        <button class="quick" data-action="voice"><strong>声</strong><small>文字起こしメモ</small></button>
+        <button class="quick" data-action="quickRecord" data-type="poo"><strong>うんち</strong><small>コタ記録</small></button>
+        <button class="quick" data-action="quickRecord" data-type="pee"><strong>おしっこ</strong><small>コタ記録</small></button>
+        <button class="quick" data-action="quickRecord" data-type="dog"><strong>犬友達</strong><small>名前・特徴を後で</small></button>
+        <button class="quick" data-action="quickRecord" data-type="spot"><strong>スポット</strong><small>場所カード候補</small></button>
+        <button class="quick" data-action="gps"><strong>位置</strong><small>GPSを保存</small></button>
+        <button class="quick" data-action="openRecordForm"><strong>メモ</strong><small>手入力</small></button>
+      </div>
+    </div></section>`;
   }
+
+  function renderMemory() {
+    const exp = currentExperience();
+    const records = state.records.filter(r => state.filter === 'all' || r.type === state.filter || r.experienceId === exp?.id);
+    const filters = ['all','photo','voice','note','gps','poo','pee','dog','spot','import'];
+    return `
+      <main class="stack">
+        <section class="hero"><div class="hero-kicker">MEMORY</div><h1>思い出</h1><p>記録を整理して、レビュー・次回改善・年表へつなげる。</p></section>
+        <div class="tabs">${filters.map(f => `<button class="tab ${state.filter===f?'active':''}" data-action="filter" data-filter="${f}">${f==='all'?'全部':recLabel(f)}</button>`).join('')}</div>
+        <section class="card"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">RECORDS</div><div class="card-title">記録カード</div></div><span class="pill ${pendingChecks().length?'warn':'gray'}">要確認 ${pendingChecks().length}</span></div><div class="records">${records.length ? records.slice().reverse().map(renderRecord).join('') : `<div class="empty">記録はまだない。現地では＋から3秒で残す。</div>`}</div></div></section>
+        <section class="card subtle"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">REVIEW</div><div class="card-title">レビュー・次回改善</div></div><button class="btn small primary" data-action="generateReview">生成</button></div>${renderReview(exp)}</div></section>
+        <section class="card subtle"><div class="card-inner"><div class="card-head"><div><div class="eyebrow">DATA CENTER</div><div class="card-title">控え・復元・外部接続</div></div><button class="btn small" data-action="openBackup">開く</button></div><p class="card-text">Google Photos / Google Calendar / 天気APIは、本接続前の保存構造と出力口を用意。静的PWAでは認証接続は別工程。</p></div></section>
+      </main>`;
+  }
+
   function renderRecord(r) {
-    const p = projectById(r.projectId);
-    const media = (r.media||[]).slice(0,4).map(m => m.kind === 'video' ? `<video src="${m.dataUrl}" muted playsinline></video>` : m.dataUrl ? `<img src="${m.dataUrl}" alt="${h(m.name||'media')}" />` : '').join('');
-    return `<div class="timeline-item"><div class="time-dot">${h((r.time||'--:--').replace(':',''))}</div><div class="record-box"><div class="item-title">${h(recLabel(r.type))}</div><div class="item-sub">${h(r.text || '')}${p?` / ${h(p.title)}`:''}</div>${media?`<div class="record-media">${media}</div>`:''}</div></div>`;
-  }
-  function reviewItems(p) {
-    const recs = projectRecords(p);
-    const prep = projectPrep(p);
-    const incomplete = prep.filter(x=>!x.done);
-    return [
-      {title:'良かったこと', text: recs.length ? `${recs.length}件の素材が残っている。写真・メモ・位置から思い出化できる。` : 'まだ素材が少ない。現地では3秒記録を使う。', label:'記録', kind:'ok'},
-      {title:'困ったこと', text: incomplete.length ? `未完了準備が${incomplete.length}件ある。出発前に減らす。` : '未完了準備は少ない。', label:'準備', kind: incomplete.length ? 'warn':'ok'},
-      {title:'次回改善', text: chappySuggestions(p)[0] || '次回は記録を1つ残して改善につなげる。', label:'次回', kind:'ok'}
-    ];
-  }
-  function renderChappyCard(p) {
-    const suggestions = chappySuggestions(p);
-    return `<section class="card"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">チャッピー提案</div><h2 class="card-title">次にやることだけ出す</h2></div><button class="btn ghost" data-action="make-review">更新</button></div><div class="list">${suggestions.map(s => `<div class="item"><div class="item-main"><div class="item-title">${h(s)}</div><div class="item-sub">記録・準備・天気・ギアから生成</div></div></div>`).join('')}</div></div></section>`;
-  }
-  function chappySuggestions(p) {
-    const prep = projectPrep(p); const recs = projectRecords(p); const d = daysToProject(p);
-    const s = [];
-    if (d !== null && d <= 14 && d >= 0) s.push(`出発まで${d}日。天気・買い出し・ギア乾燥を確認する。`);
-    if (prep.filter(x=>!x.done).length) s.push(`未完了準備が${prep.filter(x=>!x.done).length}件。まず「${prep.find(x=>!x.done)?.text}」を片付ける。`);
-    if (!recs.some(r=>r.type==='weather')) s.push('天気スクショか予報メモを1つ保存して、Weather Watchに履歴を残す。');
-    if (!recs.some(r=>r.type==='setup')) s.push('設営撤収ログを1回通すと、次回の出発逆算に使える。');
-    if (state.gear.some(g=>String(g.status).includes('充電'))) s.push('電源・空調・ランタンの充電状態を出発前に確認する。');
-    return s.slice(0,4);
-  }
-  function renderChecks(filter) {
-    const arr = state.checks.filter(c => !filter || c.kind === filter).slice().reverse();
-    if (!arr.length) return `<div class="empty">要確認はない。判断できないものだけここに出す。</div>`;
-    return `<div class="list">${arr.map(c => `<div class="item item-warn"><div class="item-main"><div class="item-title">${h(c.title)}</div><div class="item-sub">${h(c.reason)}</div></div><div class="compact-actions"><button class="tag light" data-action="approve-check" data-id="${c.id}">承認</button><button class="tag warn" data-action="delete-check" data-id="${c.id}">削除</button></div></div>`).join('')}</div>`;
+    const exp = experienceById(r.experienceId);
+    return `<div class="record"><div class="event-top"><div><div class="record-title">${esc(recLabel(r.type))} / ${esc(r.time || '')}</div><div class="record-body">${esc(r.text || r.fileName || '記録')}</div></div><span class="pill ${r.needsCheck?'warn':'gray'}">${r.needsCheck?'要確認':'保存済'}</span></div><div class="record-meta"><span>${esc(exp?.title || '未紐付け')}</span><span>${esc(r.date || today())}</span>${r.location ? `<span>${esc(r.location)}</span>` : ''}</div></div>`;
   }
 
-  function renderModal() {
-    const m = state.modal;
-    const title = ({project:'予定追加',place:'場所追加',prep:'準備追加',gear:'ギア追加',meal:'料理追加',weather:'天気記録',restore:'復元',past:'過去実績',projectSwitch:'プラン切替'})[m] || '入力';
-    const body = ({project:formProject,place:formPlace,prep:formPrep,gear:formGear,meal:formMeal,weather:formWeather,restore:formRestore,past:formPast,projectSwitch:formProjectSwitch})[m]?.() || '';
-    return `<div class="modal-backdrop" data-action="close-modal"><section class="modal" onclick="event.stopPropagation()"><div class="card-inner"><div class="card-header"><div><div class="eyebrow">OUTBASE</div><h2 class="card-title">${h(title)}</h2></div><button class="btn ghost" data-action="close-modal">閉じる</button></div>${body}</div></section></div>`;
+  function renderReview(exp) {
+    const rev = state.reviews.find(r => r.experienceId === exp?.id);
+    if (!rev) return `<div class="review-box"><div class="item-title">レビュー待ち</div><div class="item-sub">記録が増えると、良かったこと・困ったこと・次回改善にまとめる。</div><div class="actions" style="margin-top:12px"><button class="btn primary" data-action="generateReview">レビュー生成</button><button class="btn" data-action="openReviewForm">手で書く</button></div></div>`;
+    return `<div class="review-box"><div class="item-title">${esc(rev.title)}</div><p class="card-text">${esc(rev.summary)}</p><div class="divider"></div><div class="list"><div class="item"><div><div class="item-title">良かった</div><div class="item-sub">${esc(rev.good)}</div></div></div><div class="item"><div><div class="item-title">次回改善</div><div class="item-sub">${esc(rev.next)}</div></div></div></div></div>`;
   }
-  function formProjectSwitch() { return `<div class="list">${state.projects.map(p => `<button class="item ${p.id===state.activeProjectId?'item-warn':''}" data-action="set-active-project" data-id="${p.id}"><div class="item-main"><div class="item-title">${h(p.title)}</div><div class="item-sub">${h(typeLabel(p.type))} / ${h(p.start || '日付未設定')} / ${h(p.place || '')}</div></div><span class="tag light">選択</span></button>`).join('')}</div><div class="actions"><button class="btn primary" data-action="open-modal" data-modal="project">予定追加</button></div>`; }
-  function formProject() { return `<form data-form="project" class="form-grid"><input name="title" placeholder="予定名 例: 赤城山キャンプ" required><div class="form-grid two"><select name="type"><option value="camp">キャンプ</option><option value="walk">散歩</option><option value="outing">外出</option><option value="normal">普通の予定</option><option value="hospital">病院</option><option value="payment">支払い</option><option value="work">仕事</option><option value="car">車</option></select><input name="start" type="date" value="${today()}"></div><input name="place" placeholder="場所"><textarea name="notes" placeholder="メモ・目的・注意点"></textarea><button class="btn primary" type="submit">保存して主役にする</button></form>`; }
-  function formPlace() { return `<form data-form="place" class="form-grid"><input name="name" placeholder="場所名" required><div class="form-grid two"><input name="kind" placeholder="キャンプ場/散歩/寄り道"><input name="area" placeholder="エリア"></div><input name="dog" placeholder="犬条件"><textarea name="notes" placeholder="景色、温水、駐車場、日陰、再訪理由"></textarea><button class="btn primary" type="submit">場所カード保存</button></form>`; }
-  function formPrep() { return `<form data-form="prep" class="form-grid"><div class="form-grid two"><input name="group" placeholder="分類 例: ギア"><input name="status" placeholder="状態 例: 未"></div><textarea name="text" placeholder="準備すること" required></textarea><button class="btn primary" type="submit">準備に追加</button></form>`; }
-  function formGear() { return `<form data-form="gear" class="form-grid"><input name="name" placeholder="ギア名" required><div class="form-grid three"><input name="category" placeholder="分類"><input name="qty" type="number" placeholder="数量"><input name="cost" type="number" placeholder="金額"></div><input name="status" placeholder="状態"><textarea name="notes" placeholder="使用感、乾燥、故障、買替候補"></textarea><button class="btn primary" type="submit">ギア保存</button></form>`; }
-  function formMeal() { return `<form data-form="meal" class="form-grid"><input name="name" placeholder="料理名" required><div class="form-grid two"><input name="timing" placeholder="夜/朝/昼"><input name="ingredients" placeholder="材料をカンマ区切り"></div><textarea name="notes" placeholder="量、好み、次回改善"></textarea><button class="btn primary" type="submit">料理保存</button></form>`; }
-  function formWeather() { const p=activeProject(); return `<form data-form="weather" class="form-grid"><div class="form-grid two"><input name="place" value="${h(p?.place || '')}" placeholder="場所"><input name="date" type="date" value="${p?.start || today()}"></div><div class="form-grid two"><input name="risk" type="number" placeholder="雨リスク%"><input name="wind" placeholder="風速"></div><textarea name="text" placeholder="天気、気温、風、注意点"></textarea><button class="btn primary" type="submit">Weather Watchに保存</button></form>`; }
-  function formRestore() { return `<form data-form="restore" class="form-grid"><textarea name="json" placeholder="OUTBASE JSONバックアップを貼り付け"></textarea><button class="btn danger" type="submit">復元する</button></form>`; }
-  function formPast() { return `<form data-form="past" class="form-grid"><input name="title" placeholder="過去実績名" required><div class="form-grid two"><input name="start" type="date" value="${today()}"><input name="place" placeholder="場所"></div><textarea name="notes" placeholder="良かったこと、困ったこと、次回改善"></textarea><button class="btn primary" type="submit">実績として保存</button></form>`; }
 
-  app.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const a = btn.dataset.action;
-    if (a === 'go') { state.view = btn.dataset.view; state.modal = null; render(); }
-    if (a === 'open-modal') { state.modal = btn.dataset.modal; render(); }
-    if (a === 'close-modal') { state.modal = null; render(); }
-    if (a === 'month') { state.calendarMonth = btn.dataset.month; render(); }
-    if (a === 'select-date') { state.selectedDate = btn.dataset.date; render(); }
-    if (a === 'select-project') { state.activeProjectId = btn.dataset.id; const p=activeProject(); state.selectedDate = p.start || state.selectedDate; state.view='plans'; render(); }
-    if (a === 'set-active-project') { state.activeProjectId = btn.dataset.id; state.modal = null; toast('主役プランを切替'); render(); }
-    if (a === 'toggle-prep') togglePrep(btn.dataset.id);
-    if (a === 'generate-prep') generatePrep();
-    if (a === 'trigger-media') mediaInput.click();
-    if (a === 'trigger-import') importInput.click();
-    if (a === 'quick-memo') quickMemo();
-    if (a === 'voice') voiceMemo();
-    if (a === 'save-gps') saveGps();
-    if (a === 'quick-record') saveRecord(btn.dataset.type, btn.dataset.text);
-    if (a === 'friend') friendRecord();
-    if (a === 'spot') spotRecord();
-    if (a === 'setup-log') setupLog(btn.dataset.step);
-    if (a === 'use-gear') useGear(btn.dataset.id);
-    if (a === 'meal-record') mealRecord(btn.dataset.id);
-    if (a === 'place-to-project') placeToProject(btn.dataset.id);
-    if (a === 'approve-check') approveCheck(btn.dataset.id);
-    if (a === 'delete-check') { state.checks = state.checks.filter(c=>c.id!==btn.dataset.id); toast('要確認を削除'); render(); }
-    if (a === 'make-review') { toast('レビューを更新'); render(); }
-    if (a === 'export-json') exportJson();
-    if (a === 'copy-summary') copySummary();
-    if (a === 'export-ics') exportIcs(btn.dataset.id);
-    if (a === 'open-project-switch') { state.modal = 'projectSwitch'; render(); }
-  });
-  app.addEventListener('submit', (e) => {
-    const form = e.target.closest('form[data-form]');
-    if (!form) return;
-    e.preventDefault();
+  function getActiveSession() {
+    return state.records.find(r => r.id === state.activeSessionId && r.sessionStart);
+  }
+
+  function addRecord(type, text = '', extra = {}) {
+    const exp = currentExperience();
+    const rec = { id:uid('rec'), experienceId: exp?.id || null, type, text, date: today(), time: nowTime(), createdAt:new Date().toISOString(), needsCheck:false, ...extra };
+    if (!rec.experienceId) rec.needsCheck = true;
+    state.records.push(rec);
+    save();
+    render();
+    toast(`${recLabel(type)}を保存`);
+    return rec;
+  }
+
+  function startSession(kind) {
+    const exp = currentExperience();
+    if (state.activeSessionId && getActiveSession()) return toast('すでに記録中');
+    const title = kind === 'walk' ? '散歩中' : 'キャンプ記録中';
+    const session = { id:uid('session'), experienceId: exp?.id || null, type:kind === 'walk' ? 'walk' : 'setup', text:`${title}を開始`, title, sessionStart:true, date:today(), time:nowTime(), startedAt:nowTime(), createdAt:new Date().toISOString(), needsCheck:false };
+    state.records.push(session);
+    state.activeSessionId = session.id;
+    if (exp && kind === 'camp') exp.status = 'doing';
+    save();
+    state.activeTab = 'add';
+    render();
+    toast(`${title}を開始`);
+  }
+
+  function endSession() {
+    const session = getActiveSession();
+    if (!session) return toast('記録中ではない');
+    session.endedAt = nowTime();
+    session.text += ` / 終了 ${session.endedAt}`;
+    session.sessionStart = false;
+    state.activeSessionId = null;
+    const exp = currentExperience();
+    if (exp?.status === 'doing') exp.status = 'done';
+    save();
+    render();
+    toast('記録を終了');
+  }
+
+  function openModal(title, body) {
+    const root = document.getElementById('modalRoot') || document.body;
+    root.innerHTML = `<div class="overlay show"><div class="modal"><div class="modal-head"><div class="modal-title">${esc(title)}</div><button class="btn small" data-action="closeModal">閉じる</button></div><div class="modal-body">${body}</div></div></div>`;
+  }
+
+  function closeModal() {
+    const root = document.getElementById('modalRoot');
+    if (root) root.innerHTML = '';
+  }
+
+  function openEventForm(existing = null) {
+    const e = existing || { title:'', type:'camp', level:4, status:'planning', date:state.selectedDate, location:'', note:'' };
+    openModal(existing ? '予定を編集' : '予定を追加', `
+      <form class="form-grid" data-form="event" data-id="${esc(existing?.id || '')}">
+        <div class="field"><label>予定名</label><input name="title" value="${esc(e.title)}" placeholder="例：赤城山キャンプ" required></div>
+        <div class="grid-2"><div class="field"><label>種別</label><select name="type">${Object.keys(TYPES).map(k => `<option value="${k}" ${e.type===k?'selected':''}>${TYPES[k]}</option>`).join('')}</select></div><div class="field"><label>深さ</label><select name="level">${[1,2,3,4].map(n => `<option value="${n}" ${Number(e.level)===n?'selected':''}>Lv.${n}</option>`).join('')}</select></div></div>
+        <div class="grid-2"><div class="field"><label>日付</label><input type="date" name="date" value="${esc(e.date || '')}"></div><div class="field"><label>状態</label><select name="status">${['planning','ready','doing','done','candidate'].map(s => `<option value="${s}" ${e.status===s?'selected':''}>${statusLabel(s)}</option>`).join('')}</select></div></div>
+        <div class="field"><label>場所</label><input name="location" value="${esc(e.location || '')}" placeholder="キャンプ場・病院・店名など"></div>
+        <div class="field"><label>メモ</label><textarea name="note" placeholder="この予定で大事なこと">${esc(e.note || '')}</textarea></div>
+        <button class="btn primary full" data-action="saveEvent">保存</button>
+      </form>`);
+  }
+
+  function openPrepForm() {
+    openModal('準備を追加', `<form class="form-grid" data-form="prep"><div class="field"><label>カテゴリ</label><select name="group">${Object.keys(GROUPS).map(k => `<option value="${k}">${GROUPS[k]}</option>`).join('')}</select></div><div class="field"><label>準備内容</label><input name="text" placeholder="例：ペグとハンマー確認" required></div><button class="btn primary full" data-action="savePrep">保存</button></form>`);
+  }
+
+  function openRecordForm() {
+    openModal('メモを残す', `<form class="form-grid" data-form="record"><div class="field"><label>種類</label><select name="type">${Object.keys(REC_TYPES).map(k => `<option value="${k}">${REC_TYPES[k]}</option>`).join('')}</select></div><div class="field"><label>内容</label><textarea name="text" placeholder="後で整理できるように残す"></textarea></div><button class="btn primary full" data-action="saveRecord">保存</button></form>`);
+  }
+
+  function openPlaceForm() {
+    openModal('場所カード追加', `<form class="form-grid" data-form="place"><div class="field"><label>名称</label><input name="name" placeholder="キャンプ場・公園・寄り道先" required></div><div class="grid-2"><div class="field"><label>カテゴリ</label><select name="category"><option>キャンプ場</option><option>散歩</option><option>候補</option><option>行事</option><option>買い物</option></select></div><div class="field"><label>エリア</label><input name="area" placeholder="県・市など"></div></div><div class="field"><label>メモ</label><textarea name="note" placeholder="犬可、景色、標高、温水、電源など"></textarea></div><button class="btn primary full" data-action="savePlace">保存</button></form>`);
+  }
+
+  function openGearForm() {
+    openModal('ギア追加', `<form class="form-grid" data-form="gear"><div class="field"><label>ギア名</label><input name="name" required placeholder="例：ランドロックMFS"></div><div class="grid-2"><div class="field"><label>カテゴリ</label><input name="group" placeholder="幕・寝具・電源など"></div><div class="field"><label>状態</label><input name="status" placeholder="通常・要確認・充電など"></div></div><div class="field"><label>メモ</label><textarea name="note"></textarea></div><button class="btn primary full" data-action="saveGear">保存</button></form>`);
+  }
+
+  function openMealForm() {
+    openModal('料理追加', `<form class="form-grid" data-form="meal"><div class="field"><label>料理名</label><input name="name" required placeholder="例：アヒージョ"></div><div class="grid-2"><div class="field"><label>タイミング</label><input name="timing" placeholder="夜・朝など"></div><div class="field"><label>必要ギア</label><input name="gear" placeholder="スキレットなど"></div></div><div class="field"><label>材料</label><textarea name="ingredients" placeholder="食材をカンマ区切り"></textarea></div><button class="btn primary full" data-action="saveMeal">保存</button></form>`);
+  }
+
+  function openBackup() {
+    const json = esc(JSON.stringify(state, null, 2));
+    openModal('控え・復元', `<div class="form-grid"><p class="card-text">JSONでバックアップ。ICSでカレンダー書き出し。Google連携は本接続前の出力口。</p><div class="actions"><button class="btn primary" data-action="exportJson">JSON控え</button><button class="btn" data-action="exportIcs">ICS書き出し</button><button class="btn" data-action="triggerImport">復元/取込</button><button class="btn warn" data-action="resetApp">初期化</button></div><div class="field"><label>現在データ</label><textarea readonly>${json}</textarea></div></div>`);
+  }
+
+  function openProjectSwitcher() {
+    openModal('主役を切替', `<div class="list">${state.experiences.map(e => `<button class="item" data-action="chooseProject" data-id="${e.id}"><div><div class="item-title">${esc(e.title)}</div><div class="item-sub">${esc(typeLabel(e.type))} / ${esc(e.date ? compactDate(e.date) : '日付未設定')} / ${esc(e.location || '')}</div></div><span class="pill ${e.id===state.currentId?'dark':'gray'}">${e.id===state.currentId?'現在':'切替'}</span></button>`).join('')}</div><div class="actions" style="margin-top:14px"><button class="btn primary full" data-action="openEventForm">予定を追加</button></div>`);
+  }
+
+  function openEventDetail(e) {
+    const r = readiness(e);
+    openModal(e.title, `<div class="form-grid"><div class="readiness" style="--score:${r.score}%"><div class="gauge"><span>${r.score}</span></div><div><p class="card-text">${esc(typeLabel(e.type))} / ${esc(e.date ? compactDate(e.date) : '日付なし')} / ${esc(e.location || '場所未設定')}</p><div class="actions" style="margin-top:12px"><button class="btn primary" data-action="editEvent" data-id="${e.id}">編集</button><button class="btn" data-action="chooseProject" data-id="${e.id}">主役</button></div></div></div><div class="divider"></div><div class="grid-3"><div class="metric"><small>準備</small><strong>${r.done}/${r.total}</strong></div><div class="metric"><small>記録</small><strong>${r.records}</strong></div><div class="metric"><small>確認</small><strong>${r.checks}</strong></div></div><div class="actions"><button class="btn" data-action="tab" data-tab="prep">準備</button><button class="btn" data-action="tab" data-tab="add">記録</button><button class="btn" data-action="tab" data-tab="memory">思い出</button></div></div>`);
+  }
+
+  function saveForm(type, form, id = '') {
     const data = Object.fromEntries(new FormData(form).entries());
-    handleForm(form.dataset.form, data);
+    const exp = currentExperience();
+    if (type === 'event') {
+      if (id) {
+        const e = state.experiences.find(x => x.id === id);
+        Object.assign(e, { title:data.title.trim(), type:data.type, level:Number(data.level), status:data.status, date:data.date, location:data.location.trim(), note:data.note.trim() });
+      } else {
+        const e = { id:uid('exp'), title:data.title.trim(), type:data.type, level:Number(data.level), status:data.status, date:data.date, endDate:'', location:data.location.trim(), people:'', note:data.note.trim(), createdAt:today() };
+        state.experiences.push(e); state.currentId = e.id; state.selectedDate = e.date || state.selectedDate; if (e.date) state.calendarMonth = e.date.slice(0,7);
+        seedPrepFor(e);
+      }
+    }
+    if (type === 'prep') state.prep.push({ id:uid('prep'), experienceId:exp?.id || null, group:data.group, text:data.text.trim(), done:false, source:'manual' });
+    if (type === 'record') addRecord(data.type, data.text.trim(), {});
+    if (type === 'place') state.places.push({ id:uid('pl'), name:data.name.trim(), category:data.category, area:data.area.trim(), dog:true, weatherWatch:false, score:65, tags:['手入力'], note:data.note.trim() });
+    if (type === 'gear') state.gear.push({ id:uid('gear'), name:data.name.trim(), group:data.group.trim() || 'その他', status:data.status.trim() || '通常', note:data.note.trim() });
+    if (type === 'meal') state.meals.push({ id:uid('meal'), name:data.name.trim(), timing:data.timing.trim() || '未定', ingredients:data.ingredients.trim(), gear:data.gear.trim(), note:'' });
+    save(); closeModal(); render(); toast('保存した');
+  }
+
+  function seedPrepFor(e) {
+    if (e.type === 'camp') {
+      ['天気を監視する','ルートと買い出しを決める','ギアを確認する','献立を決める','コタ用品を準備する'].forEach((text,i) => state.prep.push({ id:uid('prep'), experienceId:e.id, group:['weather','route','gear','cook','kota'][i], text, done:false, source:'template' }));
+    } else if (e.type === 'walk' || e.type === 'campWalk') {
+      state.prep.push({ id:uid('prep'), experienceId:e.id, group:'kota', text:'水・マナー袋・リード確認', done:false, source:'template' });
+    }
+  }
+
+  function buildShopping() {
+    const exp = currentExperience();
+    const existing = state.prep.some(p => p.experienceId === exp?.id && p.group === 'shop' && p.source === 'meal');
+    if (existing) return toast('買い物統合は作成済み');
+    const ingredients = state.meals.flatMap(m => String(m.ingredients || '').split(',').map(x => x.trim()).filter(Boolean));
+    const unique = [...new Set(ingredients)].slice(0, 12);
+    unique.forEach(name => state.prep.push({ id:uid('prep'), experienceId:exp?.id || null, group:'shop', text:`${name}を買う`, done:false, source:'meal' }));
+    save(); render(); toast(`${unique.length}件を買い物へ追加`);
+  }
+
+  function makeEventFromPlace(id) {
+    const p = state.places.find(x => x.id === id); if (!p) return;
+    const e = { id:uid('exp'), title:p.name, type:p.category === '散歩' ? 'walk' : 'camp', level:p.category === '散歩' ? 3 : 4, status:'candidate', date:'', endDate:'', location:p.name, people:'', note:p.note, createdAt:today() };
+    state.experiences.push(e); state.currentId = e.id; seedPrepFor(e); save(); render(); toast('候補を予定化');
+  }
+
+  function generateReview() {
+    const exp = currentExperience(); if (!exp) return toast('予定がない');
+    const records = experienceRecords(exp.id);
+    const good = records.filter(r => ['photo','spot','note'].includes(r.type)).slice(0,3).map(r => r.text || recLabel(r.type)).join(' / ') || '記録が増えると良かったことを抽出';
+    const next = experiencePrep(exp.id).filter(p => !p.done).slice(0,3).map(p => p.text).join(' / ') || '次回は天気・ルート・持ち物を早めに確認';
+    const summary = `${records.length}件の記録から、次回準備に使うメモを生成。`;
+    const old = state.reviews.find(r => r.experienceId === exp.id);
+    const review = { id: old?.id || uid('review'), experienceId:exp.id, title:`${exp.title} レビュー`, summary, good, problem:'困ったことは記録から追記', next, createdAt:new Date().toISOString() };
+    if (old) Object.assign(old, review); else state.reviews.push(review);
+    save(); state.activeTab = 'memory'; render(); toast('レビュー生成');
+  }
+
+  function download(name, content, type='application/json') {
+    const blob = new Blob([content], { type });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function exportIcs() {
+    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//OUTBASE//JP'];
+    state.experiences.filter(e => e.date).forEach(e => {
+      const dt = e.date.replaceAll('-','');
+      lines.push('BEGIN:VEVENT',`UID:${e.id}@outbase`,`DTSTART;VALUE=DATE:${dt}`,`SUMMARY:${ics(e.title)}`,`LOCATION:${ics(e.location || '')}`,`DESCRIPTION:${ics(e.note || '')}`,'END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    download(`OUTBASE_${today()}.ics`, lines.join('\r\n'), 'text/calendar');
+  }
+  const ics = v => String(v || '').replaceAll('\\','\\\\').replaceAll('\n','\\n').replaceAll(',','\\,').replaceAll(';','\\;');
+
+  function triggerImport() { importInput.click(); }
+  function triggerMedia() { mediaInput.click(); }
+
+  function handleImports(files) {
+    [...files].forEach(file => {
+      const item = { id:uid('imp'), name:file.name, size:file.size, type:file.type || 'unknown', date:today(), status:'候補', createdAt:new Date().toISOString() };
+      state.imports.push(item);
+      state.records.push({ id:uid('rec'), experienceId:state.currentId, type:'import', text:`取込候補: ${file.name}`, fileName:file.name, date:today(), time:nowTime(), createdAt:new Date().toISOString(), needsCheck:true });
+      if (/\.json$/i.test(file.name)) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const incoming = JSON.parse(reader.result);
+            if (incoming && incoming.experiences && incoming.prep) {
+              state = migrate({ ...defaultState(), ...incoming });
+              save(); render(); toast('JSONを復元');
+            }
+          } catch (e) { toast('JSON復元失敗'); }
+        };
+        reader.readAsText(file);
+      }
+    });
+    save(); render(); toast(`${files.length}件を取込候補へ`);
+  }
+
+  function handleMedia(files) {
+    [...files].forEach(file => {
+      const type = file.type.startsWith('video') ? 'video' : 'photo';
+      addRecord(type, `${file.name} を追加`, { fileName:file.name, fileType:file.type, fileSize:file.size, needsCheck:false });
+    });
+  }
+
+  function voiceRecord() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      openRecordForm();
+      toast('音声認識未対応。メモ入力へ');
+      return;
+    }
+    const rec = new SpeechRecognition();
+    rec.lang = 'ja-JP'; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = ev => addRecord('voice', ev.results[0][0].transcript, {});
+    rec.onerror = () => toast('音声メモに失敗');
+    rec.start();
+    toast('話して記録');
+  }
+
+  function gpsRecord() {
+    if (!navigator.geolocation) return addRecord('gps', 'GPS非対応', { needsCheck:true });
+    toast('位置を取得中');
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      addRecord('gps', `緯度 ${latitude.toFixed(5)} / 経度 ${longitude.toFixed(5)} / 誤差 ${Math.round(accuracy)}m`, { location:`${latitude.toFixed(5)},${longitude.toFixed(5)}` });
+    }, () => addRecord('gps', '位置取得失敗', { needsCheck:true }), { enableHighAccuracy:true, timeout:8000 });
+  }
+
+  function monthMove(dir) {
+    const [y,m] = state.calendarMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + Number(dir), 1);
+    state.calendarMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    save(); render();
+  }
+
+  function resetApp() {
+    if (!confirm('OUTBASEを初期化しますか？控えを取ってから実行してください。')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    save(); render(); toast('初期化した');
+  }
+
+  document.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    ev.preventDefault();
+    if (action === 'tab') { closeModal(); return setTab(btn.dataset.tab); }
+    if (action === 'filter') return setFilter(btn.dataset.filter);
+    if (action === 'month') return monthMove(btn.dataset.dir);
+    if (action === 'selectDate') { state.selectedDate = btn.dataset.date; state.calendarMonth = btn.dataset.date.slice(0,7); save(); return render(); }
+    if (action === 'setCurrent' || action === 'chooseProject') { setCurrent(btn.dataset.id); closeModal(); return; }
+    if (action === 'openProjectSwitcher') return openProjectSwitcher();
+    if (action === 'openEventForm') return openEventForm();
+    if (action === 'openEvent') { const e = state.experiences.find(x => x.id === btn.dataset.id) || currentExperience(); return e ? openEventDetail(e) : openEventForm(); }
+    if (action === 'editEvent') { const e = state.experiences.find(x => x.id === btn.dataset.id); return openEventForm(e); }
+    if (action === 'openPrep') return openPrepForm();
+    if (action === 'openRecordForm') return openRecordForm();
+    if (action === 'openPlaceForm') return openPlaceForm();
+    if (action === 'openGearForm') return openGearForm();
+    if (action === 'openMealForm') return openMealForm();
+    if (action === 'openBackup') return openBackup();
+    if (action === 'closeModal') return closeModal();
+    if (action === 'saveEvent') return saveForm('event', btn.closest('form'), btn.closest('form')?.dataset.id || '');
+    if (action === 'savePrep') return saveForm('prep', btn.closest('form'));
+    if (action === 'saveRecord') return saveForm('record', btn.closest('form'));
+    if (action === 'savePlace') return saveForm('place', btn.closest('form'));
+    if (action === 'saveGear') return saveForm('gear', btn.closest('form'));
+    if (action === 'saveMeal') return saveForm('meal', btn.closest('form'));
+    if (action === 'togglePrep') { const p = state.prep.find(x => x.id === btn.dataset.id); if (p) p.done = !p.done; save(); return render(); }
+    if (action === 'deletePrep') { state.prep = state.prep.filter(x => x.id !== btn.dataset.id); save(); return render(); }
+    if (action === 'buildShopping') return buildShopping();
+    if (action === 'makeEventFromPlace') return makeEventFromPlace(btn.dataset.id);
+    if (action === 'toggleWeather') { const p = state.places.find(x => x.id === btn.dataset.id); if (p) p.weatherWatch = !p.weatherWatch; save(); return render(); }
+    if (action === 'startSession') return startSession(btn.dataset.kind);
+    if (action === 'endSession') return endSession();
+    if (action === 'quickRecord') return addRecord(btn.dataset.type, defaultRecordText(btn.dataset.type), {});
+    if (action === 'media') return triggerMedia();
+    if (action === 'voice') return voiceRecord();
+    if (action === 'gps') return gpsRecord();
+    if (action === 'triggerImport') return triggerImport();
+    if (action === 'exportJson') return download(`OUTBASE_backup_${today()}.json`, JSON.stringify(state, null, 2));
+    if (action === 'exportIcs') return exportIcs();
+    if (action === 'resetApp') return resetApp();
+    if (action === 'generateReview') return generateReview();
+    if (action === 'openPastForm') { openEventForm({ id:'', title:'過去キャンプ', type:'camp', level:4, status:'done', date:'', location:'', note:'後から実績登録' }); return; }
   });
-  mediaInput.addEventListener('change', async () => { await handleMediaFiles(mediaInput.files); mediaInput.value=''; });
-  importInput.addEventListener('change', async () => { await handleImportFiles(importInput.files); importInput.value=''; });
 
-  function handleForm(kind, d) {
-    const p = activeProject();
-    if (kind === 'project' || kind === 'past') {
-      const id = uid('project');
-      const proj = { id, title:d.title, type:kind==='past'?'camp':d.type, status:kind==='past'?'実績':'準備中', level:kind==='past'?4:((d.type==='camp'||d.type==='walk')?4:1), start:d.start, end:d.start, place:d.place, site:'', people:['ムー'], pets:d.type==='camp'||d.type==='walk'?['コタ']:[], cost:{}, notes:d.notes, goals:[] };
-      state.projects.push(proj); state.prep.push(...defaultPrep(id, proj.type)); state.activeProjectId = id; state.selectedDate = d.start || state.selectedDate; state.view = kind==='past'?'memories':'plans';
-      if (kind==='past') saveRecord('memo', `過去実績登録：${d.notes||d.title}`, id);
-      toast(kind==='past'?'過去実績を保存':'予定を保存');
-    }
-    if (kind === 'place') { state.places.push({id:uid('place'),name:d.name,kind:d.kind||'場所',area:d.area,dog:d.dog,water:'',view:'',score:{dog:3,view:3,summer:3,facility:3},notes:d.notes,favorite:true,photos:[]}); toast('場所カードを保存'); }
-    if (kind === 'prep') { state.prep.push({id:uid('prep'), projectId:p?.id, group:d.group||'準備', text:d.text, status:d.status||'未', done:false, source:'manual'}); toast('準備を追加'); }
-    if (kind === 'gear') { state.gear.push({id:uid('gear'),name:d.name,category:d.category||'未分類',qty:Number(d.qty||1),status:d.status||'登録',favorite:false,lastUsed:'',cost:Number(d.cost||0),notes:d.notes}); toast('ギアを保存'); }
-    if (kind === 'meal') { state.meals.push({id:uid('meal'),name:d.name,timing:d.timing||'未定',rating:0,ingredients:String(d.ingredients||'').split(/[、,]/).map(x=>x.trim()).filter(Boolean),notes:d.notes}); toast('料理を保存'); }
-    if (kind === 'weather') { state.weather.push({id:uid('weather'),projectId:p?.id,place:d.place,date:d.date,risk:Number(d.risk||0),wind:d.wind,text:d.text,at:new Date().toISOString()}); saveRecord('weather', `${d.place} ${d.date} ${d.text || ''} 雨${d.risk||0}% 風${d.wind||''}`); toast('天気を保存'); }
-    if (kind === 'importText') { importText(d.text); }
-    if (kind === 'restore') { restoreJson(d.json); return; }
-    state.modal = null; render();
+  function defaultRecordText(type) {
+    const map = { note:'今メモ', poo:'コタ うんち', pee:'コタ おしっこ', dog:'犬友達候補', spot:'スポット候補', gps:'位置記録' };
+    return map[type] || `${recLabel(type)}を記録`;
   }
-  function togglePrep(id) { const x=state.prep.find(p=>p.id===id); if(x){x.done=!x.done; x.status=x.done?'完了':'未'; toast(x.done?'完了':'未完了に戻した'); render();} }
-  function generatePrep() { const p=activeProject(); const existing = new Set(projectPrep(p).map(x=>`${x.group}:${x.text}`)); defaultPrep(p.id,p.type).forEach(x=>{ if(!existing.has(`${x.group}:${x.text}`)) state.prep.push(x); }); toast('不足準備を補完'); render(); }
-  function saveRecord(type, text, projectId=state.activeProjectId, extra={}) { state.records.push({id:uid('rec'),projectId,type,text,at:new Date().toISOString(),date:today(),time:nowTime(),location:extra.location||null,media:extra.media||[]}); }
-  function quickMemo() { const text = prompt('残すメモ'); if(text){ saveRecord('memo', text); toast('メモ保存'); render(); } }
-  function voiceMemo() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { const text = prompt('音声認識が使えないため、文字メモとして保存'); if(text){saveRecord('voice', text); toast('音声メモ保存'); render();} return; }
-    const rec = new SR(); rec.lang='ja-JP'; rec.interimResults=false; rec.maxAlternatives=1;
-    toast('聞き取り中');
-    rec.onresult = (ev) => { const text = ev.results[0][0].transcript; saveRecord('voice', text); toast('文字起こし保存'); render(); };
-    rec.onerror = () => toast('音声認識に失敗'); rec.start();
-  }
-  function saveGps() {
-    if (!navigator.geolocation) { saveRecord('gps','GPS非対応'); toast('GPS非対応'); render(); return; }
-    toast('位置取得中');
-    navigator.geolocation.getCurrentPosition(pos => { const loc={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy}; saveRecord('gps',`位置保存 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} / ±${Math.round(loc.accuracy)}m`, state.activeProjectId, {location:loc}); toast('位置保存'); render(); }, () => { saveRecord('gps','位置取得失敗'); toast('位置取得失敗'); render(); }, {enableHighAccuracy:true,timeout:8000});
-  }
-  function friendRecord() { const text=prompt('犬友達メモ（名前不明OK）','犬種・色・特徴・飼い主さんメモ'); if(text){ state.friends.push({id:uid('friend'),text,projectId:state.activeProjectId,at:new Date().toISOString()}); saveRecord('friend', text); toast('犬友達を保存'); render(); } }
-  function spotRecord() { const text=prompt('スポット名・特徴','管理棟 / トイレ / 景色 / 日陰 / 散歩道など'); if(text){ saveRecord('spot', text); toast('スポット保存'); render(); } }
-  function setupLog(step) { saveRecord('setup', step); toast(`${step} を保存`); render(); }
-  function useGear(id) { const g=state.gear.find(x=>x.id===id); if(g){g.lastUsed=today(); saveRecord('gear', `${g.name} 使用`); toast('ギア使用履歴を保存'); render();} }
-  function mealRecord(id) { const m=state.meals.find(x=>x.id===id); if(m){ saveRecord('meal', `${m.name} を作る/作った`); toast('料理記録を保存'); render(); } }
-  function placeToProject(id) { const x=state.places.find(p=>p.id===id); if(!x) return; const pid=uid('project'); const proj={id:pid,title:`${x.name}へ行く`,type:x.kind?.includes('散歩')?'walk':'camp',status:'候補',level:3,start:'',end:'',place:x.name,site:'',people:['ムー'],pets:['コタ'],cost:{},notes:x.notes,goals:['犬可確認','天気確認','準備']}; state.projects.push(proj); state.prep.push(...defaultPrep(pid,proj.type)); state.activeProjectId=pid; state.view='plans'; toast('場所から予定候補を作成'); render(); }
-  function approveCheck(id) { const c=state.checks.find(x=>x.id===id); if(!c) return; if(c.create==='gear') state.gear.push(c.payload); if(c.create==='place') state.places.push(c.payload); if(c.create==='project') { state.projects.push(c.payload); state.prep.push(...defaultPrep(c.payload.id,c.payload.type)); } saveRecord('import', `候補承認：${c.title}`); state.checks=state.checks.filter(x=>x.id!==id); toast('候補を承認'); render(); }
-  async function handleMediaFiles(files) {
-    const media=[];
-    for (const file of [...files]) {
-      const isVideo = file.type.startsWith('video/');
-      const item = {name:file.name,type:file.type,size:file.size,kind:isVideo?'video':'photo'};
-      if (file.size < 900000) item.dataUrl = await readAsDataURL(file); else item.note = '大容量のためメタ情報のみ保存';
-      media.push(item);
-    }
-    if (media.length) { saveRecord(media.some(m=>m.kind==='video')?'video':'photo', `${media.length}件のメディアを保存`, state.activeProjectId, {media}); toast('メディア保存'); render(); }
-  }
-  async function handleImportFiles(files) {
-    for (const file of [...files]) {
-      let text = '';
-      if (file.type.startsWith('text/') || /\.(txt|csv|md|json)$/i.test(file.name)) text = await file.text();
-      state.imports.push({id:uid('import'),name:file.name,type:file.type,size:file.size,at:new Date().toISOString()});
-      importText(text || file.name, file.name);
-    }
-    toast('ファイルを候補化'); render();
-  }
-  function readAsDataURL(file) { return new Promise((resolve) => { const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=()=>resolve(''); r.readAsDataURL(file); }); }
-  function importText(text='', name='貼付') {
-    const t = String(text||'').trim(); if(!t) return;
-    const lower = t.toLowerCase();
-    const checks=[];
-    if (/キャンプ|予約|サイト|宿泊|snow peak|スノーピーク|camp/.test(t)) checks.push({title:`キャンプ場/予約候補：${name}`, kind:'import', reason:t.slice(0,80), create:'project', payload:{id:uid('project'),title:t.match(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z0-9\- ]{3,30})(キャンプ|Camp|CAMP)/u)?.[0] || '取込キャンプ予定',type:'camp',status:'候補',level:4,start:'',end:'',place:'取込候補',site:'',people:['ムー'],pets:['コタ'],cost:{},notes:t.slice(0,200),goals:['取込内容確認']}});
-    if (/ギア|snow peak|スノーピーク|購入|¥|円|gear|igt|ランタン|テント|タープ/i.test(t)) checks.push({title:`ギア候補：${name}`, kind:'import', reason:t.slice(0,80), create:'gear', payload:{id:uid('gear'),name:t.split(/\n|,|、/)[0].slice(0,32)||'取込ギア',category:'取込',qty:1,status:'候補',favorite:false,lastUsed:'',cost:Number((t.match(/[0-9,]{4,}/)?.[0]||'0').replaceAll(',','')),notes:t.slice(0,200)}});
-    if (/天気|降水|雨|風|気温|weather|wind|℃/.test(t)) checks.push({title:`Weather Watch候補：${name}`, kind:'import', reason:t.slice(0,80), create:'weather', payload:null});
-    if (/公園|道の駅|湖|森|散歩|ドッグ|犬/.test(t)) checks.push({title:`場所カード候補：${name}`, kind:'import', reason:t.slice(0,80), create:'place', payload:{id:uid('place'),name:t.split(/\n|,|、/)[0].slice(0,32)||'取込場所',kind:'場所候補',area:'未設定',dog:'犬条件確認',water:'',view:'',score:{dog:3,view:3,summer:3,facility:3},notes:t.slice(0,200),favorite:false,photos:[]}});
-    if (!checks.length) checks.push({title:`メモ候補：${name}`, kind:'import', reason:t.slice(0,80), create:null, payload:null});
-    checks.forEach(c=>state.checks.push({id:uid('check'), ...c}));
-    saveRecord('import', `取込候補化：${name}`);
-  }
-  function exportJson() { downloadText(`outbase-backup-${today()}.json`, JSON.stringify(state, null, 2), 'application/json'); toast('JSONを書き出し'); }
-  function restoreJson(text) { try { const next=normalize(JSON.parse(text)); state=next; state.modal=null; save(); toast('復元完了'); render(); } catch(e){ toast('復元失敗'); } }
-  function copySummary() { const p=activeProject(); const txt = `OUTBASE共有\n${p?.title}\n${p?.start || ''} ${p?.place || ''}\n準備:${progressFor(p)}% 記録:${projectRecords(p).length}件\n次:${chappySuggestions(p).join(' / ')}`; navigator.clipboard?.writeText(txt).then(()=>toast('共有用まとめをコピー')).catch(()=>downloadText('outbase-summary.txt', txt, 'text/plain')); }
-  function exportIcs(id) { const p=projectById(id); if(!p?.start){toast('日付がないためICS未作成');return;} const dt = p.start.replaceAll('-',''); const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//OUTBASE//JP\nBEGIN:VEVENT\nUID:${p.id}@outbase\nDTSTAMP:${dt}T000000Z\nDTSTART;VALUE=DATE:${dt}\nSUMMARY:${p.title}\nLOCATION:${p.place||''}\nDESCRIPTION:${p.notes||''}\nEND:VEVENT\nEND:VCALENDAR`; downloadText(`${p.title}.ics`, ics, 'text/calendar'); toast('ICSを書き出し'); }
-  function downloadText(name, text, type) { const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url), 1000); }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  mediaInput.addEventListener('change', e => { if (e.target.files?.length) handleMedia(e.target.files); e.target.value = ''; });
+  importInput.addEventListener('change', e => { if (e.target.files?.length) handleImports(e.target.files); e.target.value = ''; });
+
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js?v=' + VERSION).catch(() => {});
+  }
+
   render();
 })();
