@@ -2332,3 +2332,182 @@ body{
   .forecastGrid{grid-template-columns:repeat(4,1fr)}
   .decisionButtons{grid-template-columns:1fr}
 }
+
+
+/* ===== OUTBASE FAMILY PRO =====
+   家族・ペットを準備/現地/共有へ接続。
+*/
+.familyHero{
+  border-radius:28px;
+  padding:16px;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(185,154,102,.22), transparent 32%),
+    linear-gradient(135deg, rgba(17,19,15,.97), rgba(39,58,48,.94));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.familyHeroTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.familyHero b{font-size:23px;letter-spacing:-.05em}
+.familyHero small{display:block;margin-top:5px;color:rgba(255,248,237,.70);font-size:11px;font-weight:850;line-height:1.45}
+.familyScore{
+  width:58px;height:58px;border-radius:50%;
+  flex:0 0 auto;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--brass) calc(var(--score,0)*1%), rgba(255,248,237,.12) 0);
+  box-shadow:inset 0 0 0 8px rgba(17,19,15,.38);
+  color:var(--milk);
+  font-weight:950;
+}
+.familyCommand{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:14px;
+}
+.familyCommand button{
+  min-height:48px;
+  border-radius:18px;
+  padding:11px 12px;
+  text-align:left;
+  font-weight:950;
+}
+.familyCommand .mainCmd{
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+}
+.familyCommand .subCmd{
+  background:rgba(255,248,237,.10);
+  color:var(--milk);
+  border:1px solid rgba(255,248,237,.12);
+}
+.petGrid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:9px;
+}
+.petCard{
+  min-height:126px;
+  border-radius:24px;
+  padding:14px;
+  background:rgba(255,248,237,.68);
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.petTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.petAvatar{
+  width:42px;height:42px;border-radius:16px;
+  display:grid;place-items:center;
+  background:rgba(63,94,76,.13);
+  color:var(--green);
+  font-weight:950;
+}
+.petCard b{font-size:16px}
+.petCard small{display:block;margin-top:5px;color:var(--muted);font-size:11px;line-height:1.42;font-weight:760}
+.petOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin-top:11px;
+}
+.petOps button{
+  min-height:38px;
+  border-radius:14px;
+  background:rgba(17,19,15,.07);
+  font-size:11px;
+  font-weight:950;
+}
+.petChecklist{
+  border-radius:26px;
+  overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,248,237,.74),rgba(239,230,213,.62));
+  border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);
+}
+.petCheckHead{
+  padding:14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  border-bottom:1px solid rgba(17,19,15,.08);
+}
+.petCheckHead b{font-size:17px}
+.petCheckHead small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.45;font-weight:800}
+.petCheckBody{
+  padding:6px 14px 14px;
+}
+.petCheckRow{
+  min-height:54px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  border-top:1px solid rgba(17,19,15,.08);
+  text-align:left;
+  width:100%;
+}
+.petCheckRow:first-child{border-top:0}
+.petCheckRow b{font-size:14px}
+.petCheckRow small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.42;font-weight:760}
+.sharePanel{
+  border-radius:25px;
+  padding:14px;
+  background:linear-gradient(135deg,rgba(17,19,15,.94),rgba(39,58,48,.92));
+  color:var(--milk);
+  box-shadow:var(--softShadow);
+}
+.sharePanel b{font-size:16px}
+.sharePanel p{margin-top:7px;color:rgba(255,248,237,.73);font-size:12px;line-height:1.7;white-space:pre-wrap}
+.shareOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:12px;
+}
+.shareOps button{
+  min-height:44px;
+  border-radius:16px;
+  background:rgba(255,248,237,.10);
+  color:var(--milk);
+  border:1px solid rgba(255,248,237,.12);
+  font-size:12px;
+  font-weight:950;
+}
+.shareOps .primary{
+  background:linear-gradient(135deg,var(--brass),#e4c78f);
+  color:#15120e;
+}
+.familyRail{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:12px;
+}
+.familyRail button{
+  min-height:60px;
+  border-radius:18px;
+  background:rgba(255,248,237,.62);
+  border:1px solid rgba(17,19,15,.08);
+  padding:8px 6px;
+  text-align:center;
+}
+.familyRail b{display:block;font-size:15px}
+.familyRail span{display:block;margin-top:5px;color:var(--muted);font-size:9.5px;font-weight:900}
+.familyRail button.good{background:rgba(63,94,76,.13)}
+.familyRail button.warn{background:rgba(185,154,102,.15)}
+@media(max-width:430px){
+  .familyCommand,.shareOps{grid-template-columns:1fr}
+  .petGrid{grid-template-columns:1fr}
+  .familyRail{grid-template-columns:repeat(4,1fr);gap:6px}
+  .familyRail button{min-height:56px;border-radius:16px}
+}

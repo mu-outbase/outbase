@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-weatherpro-20260707';
+  const VERSION = 'outbase-genius-ui-familypro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-weatherpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-familypro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,25 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', drawer:null, toast:null, importMode:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', drawer:null, toast:null, importMode:null,
+      pets:[
+        {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
+        {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
+        {id:'ela',name:'エラ',kind:'メインクーン',role:'猫',age:'4歳',note:'一人好き。留守番確認。',active:true},
+        {id:'yuki',name:'ユキ',kind:'アメショ',role:'猫',age:'4歳',note:'最小。留守番確認。',active:true}
+      ],
+      family:[
+        {id:'mu',name:'ムー',role:'夫',share:true},
+        {id:'rin',name:'リン',role:'妻',share:true}
+      ],
+      petPrep:[
+        {id:'pp1',petId:'kota',name:'フード',qty:'日数+予備',group:'コタ',done:false},
+        {id:'pp2',petId:'kota',name:'水・ボウル',qty:'1式',group:'コタ',done:false},
+        {id:'pp3',petId:'kota',name:'ドッグオフトン',qty:'1',group:'コタ',done:false},
+        {id:'pp4',petId:'kota',name:'リード/首輪/カート',qty:'1式',group:'コタ',done:false},
+        {id:'pp5',petId:'cats',name:'猫留守番チェック',qty:'フード/水/トイレ/室温',group:'猫',done:false}
+      ],
+      shares:[],
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -232,6 +250,8 @@
     state.notes.forEach(n=>items.push({type:'note',id:n.id,icon:n.private?'非':'メ',title:n.title,sub:n.private?'非公開メモ':'共有メモ',text:n.text||''}));
     publicRecords().forEach(r=>items.push({type:'record',id:r.id,icon:'記',title:r.title||recordKindLabel(r.kind),sub:`${r.date||''} ${r.time||''} / ${r.mode||''}`,text:r.text||''}));
     state.weather.forEach(w=>items.push({type:'weather',id:w.id,icon:'天',title:w.when,sub:`${w.done?'確認済':'未確認'} / 天気判断`,text:w.check||''}));
+    (state.pets||[]).forEach(p=>items.push({type:'pet',id:p.id,icon:petAvatar(p),title:p.name,sub:`${p.kind} / ${p.age}`,text:p.note||''}));
+    (state.petPrep||[]).forEach(x=>items.push({type:'petPrep',id:x.id,icon:'犬',title:x.name,sub:`${x.done?'完了':'未完'} / ${x.group}`,text:x.qty||''}));
     return items;
   }
   function filteredCenterItems(){
@@ -282,6 +302,7 @@
     if(st.loaded<state.gear.length)warn.push(['ギア未積込',`${state.gear.length-st.loaded}件`]);
     if(st.wdone<state.weather.length)warn.push(['天気未確認',`${state.weather.length-st.wdone}件`]);
     if(Object.values(weatherPlan().decisions||{}).some(v=>v==='未判断'))warn.push(['天気判断未決定','設営/撤収/コタ/幕体']);
+    const ps=petPrepStats(); if(ps.done<ps.all.length)warn.push(['ペット準備未完',`${ps.all.length-ps.done}件`]);
     const leak=(state.records||[]).filter(r=>!r.private && /うんち|おしっこ|排泄|体調/.test(`${r.title||''} ${r.text||''}`));
     if(leak.length)issues.push(['非公開メモ混入',`${leak.length}件`]);
     if(!state.boxes.length)issues.push(['BOXなし','ギア収納先がない']);
@@ -614,6 +635,48 @@
     return `【OUTBASE 天気判断】\\n${current().title}\\nリスク:${weatherRiskScore()}（${lv[0]}） ${lv[1]}\\n更新:${wp.updated||'未更新'} / ${wp.source||'手入力'}\\n\\n■判断\\n設営:${d.setup||'未判断'}\\n撤収:${d.withdraw||'未判断'}\\nコタ:${d.kota||'未判断'}\\n幕体:${d.tent||'未判断'}\\n\\n■予報メモ\\n${forecast}\\n\\n■確認タイミング\\n${checks}`;
   }
 
+
+  function petPrepStats(){
+    const all=state.petPrep||[];
+    const done=all.filter(x=>x.done).length;
+    const score=Math.round(done/Math.max(1,all.length)*100);
+    const kota=all.filter(x=>x.petId==='kota');
+    const cats=all.filter(x=>x.petId==='cats'||x.petId!=='kota');
+    return {all,done,score,kota,cats};
+  }
+  function familyNextTarget(){
+    const ps=petPrepStats();
+    if(ps.done<ps.all.length)return ['pets','ペット準備を終わらせる',`${ps.all.length-ps.done}件残り`];
+    if(Object.values(weatherPlan().decisions||{}).some(v=>v==='未判断'))return ['weather','コタ天気判断を決める','暑さ寒さと散歩時間を決める'];
+    return ['share','リンに共有する','非公開を除いて共有できる'];
+  }
+  function petAvatar(p){
+    if(p.id==='kota')return '犬';
+    if(p.id==='ao')return '青';
+    if(p.id==='ela')return 'エ';
+    if(p.id==='yuki')return '雪';
+    return '家';
+  }
+  function buildFamilyShare(){
+    const p=current();
+    const ps=petPrepStats();
+    const petLines=(state.petPrep||[]).map(x=>`${x.done?'✓':'□'} ${x.group}：${x.name} ${x.qty}`).join('\\n');
+    const weather=`コタ判断：${weatherPlan().decisions?.kota||'未判断'} / ${weatherSuggestion('kota')}`;
+    const shop=state.shopping.filter(s=>!s.done).slice(0,8).map(s=>`□ ${s.name}：${s.qty}`).join('\\n') || '買い物残なし';
+    const gear=state.gear.filter(g=>g.status!=='loaded').slice(0,8).map(g=>`□ ${g.name}`).join('\\n') || 'ギア未積込なし';
+    return `【OUTBASE 共有】\\n${p.title}\\n${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'}\\n\\n■ペット準備 ${ps.done}/${ps.all.length}\\n${petLines}\\n\\n■コタ天気\\n${weather}\\n\\n■買い物\\n${shop}\\n\\n■ギア\\n${gear}\\n\\n※体調/うんち/おしっこ等の非公開メモは含めない`;
+  }
+  function familyPanelHtml(){
+    const ps=petPrepStats(), next=familyNextTarget();
+    return `<section class="section"><div class="familyHero"><div class="familyHeroTop"><span><b>${next[1]}</b><small>${next[2]}。家族とペットは、準備・現地・共有に分けて軽く扱う。</small></span><span class="familyScore" style="--score:${ps.score}">${ps.score}</span></div><div class="familyCommand"><button class="mainCmd" data-family="${next[0]}">次をやる</button><button class="subCmd" data-act="copyFamilyShare">リンに共有</button></div></div><div class="familyRail"><button class="${ps.done===ps.all.length?'good':'warn'}" data-family="pets"><b>${ps.done}/${ps.all.length}</b><span>ペット準備</span></button><button data-family="health"><b>${state.walk.health.length}</b><span>非公開</span></button><button data-family="share"><b>${state.family?.length||0}</b><span>共有先</span></button><button data-prep="weather"><b>天</b><span>コタ判断</span></button></div></section>`;
+  }
+  function familyBody(){
+    const tab=state.familyTab||'pets', ps=petPrepStats();
+    if(tab==='health')return `<section class="section"><details class="privateHealth" open><summary>非公開の体調メモ</summary><div class="healthOps"><button data-act="health" data-type="体調">体調</button><button data-act="health" data-type="うんち">うんち</button><button data-act="health" data-type="おしっこ">おしっこ</button></div><div class="eventStack">${state.walk.health.slice().reverse().slice(0,10).map(h=>`<div class="eventMini"><span class="typeIcon">非</span><span style="min-width:0;flex:1"><strong>${esc(h.type)}</strong><small>${esc(h.time)} / ${esc(h.mode)} / 共有しない</small></span><span class="pill private">非公開</span></div>`).join('')||`<div class="eventMini"><span class="typeIcon">非</span><span style="min-width:0;flex:1"><strong>まだなし</strong><small>ここだけに保存。</small></span><span class="pill private">非公開</span></div>`}</div></details></section>`;
+    if(tab==='share')return `<section class="section"><div class="sharePanel"><b>共有プレビュー</b><p>${esc(buildFamilyShare())}</p><div class="shareOps"><button class="primary" data-act="copyFamilyShare">LINE用コピー</button><button data-act="saveFamilyShare">共有履歴保存</button></div></div></section>`;
+    return `<section class="section"><div class="head"><div><h2>家族・ペット</h2><p>ペットの準備は、買い物・ギア・天気へつなげる。</p></div><span class="pill ${ps.done===ps.all.length?'dark':'wood'}">${ps.done}/${ps.all.length}</span></div><div class="petGrid">${(state.pets||[]).map(p=>`<div class="petCard"><div class="petTop"><span><b>${esc(p.name)}</b><small>${esc(p.kind)} / ${esc(p.age)}<br>${esc(p.note)}</small></span><span class="petAvatar">${petAvatar(p)}</span></div><div class="petOps"><button data-act="petToPrep" data-id="${p.id}">準備へ</button><button data-family="health">体調</button></div></div>`).join('')}</div><div class="petChecklist" style="margin-top:12px"><div class="petCheckHead"><span><b>ペット準備チェック</b><small>押すだけで完了。コタ用品は買い物/ギアにも連動。</small></span><span class="pill">${ps.done}/${ps.all.length}</span></div><div class="petCheckBody">${(state.petPrep||[]).map(x=>`<button class="petCheckRow" data-act="togglePetPrep" data-id="${x.id}"><span><b>${x.done?'✓ ':''}${esc(x.name)}</b><small>${esc(x.group)} / ${esc(x.qty)}</small></span><span class="roundMark ${x.done?'done':''}">${x.done?'✓':'□'}</span></button>`).join('')}</div></div></section>`;
+  }
+
   function prepNextTarget(){
     const st=prepStats();
     if(state.meals.length===0)return ['meals','献立を決める','料理を1つ入れる'];
@@ -712,7 +775,7 @@
         <button class="${st.wdone===state.weather.length?'done':'warn'}" data-prep="weather"><b>${st.wdone}/${state.weather.length}</b><span>天気</span></button>
       </div>
 
-      <section class="section"><div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="section"><div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
       ${prepBody()}
     `)
   }
@@ -737,6 +800,8 @@
     </section>`;}
 
     if(state.prepTab==='gear')return gearView();
+
+    if(state.prepTab==='pets')return `${familyPanelHtml()}${familyBody()}`;
 
     if(state.prepTab==='weather')return weatherView();
 
@@ -1075,7 +1140,7 @@
         <button class="good" data-memory="data"><b>${ms.privateHealth}</b><span>非公開</span></button>
       </div>
 
-      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','notes:メモ','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','notes:メモ','family:家族','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
       ${memoryBody()}
     `)
   }
@@ -1095,6 +1160,8 @@
       const list=improveNotes();
       return `<section class="section"><div class="head"><div><h2>次回改善</h2><p>思い出で終わらせず、次回の準備に戻す。</p></div><button class="btn primary" data-act="createImprove">改善追加</button></div><div class="improveList">${list.map(n=>`<div class="improveCard"><b>${esc(n.title)}</b><small>${esc(n.text)}</small><div class="improveOps"><button data-act="improveToPrep" data-id="${n.id}">準備へ送る</button><button data-act="doneImprove" data-id="${n.id}">完了</button></div></div>`).join('')||`<div class="dataPanel"><b>改善なし</b><p>「次はこうする」を1つ残すと、次回の準備に戻せる。</p></div>`}</div></section>`;
     }
+
+    if(state.memoryTab==='family')return `${familyPanelHtml()}${familyBody()}`;
 
     if(state.memoryTab==='notes'){
       return `<section class="section"><div class="head"><div><h2>メモ</h2><p>共有可と非公開を分ける。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="list">${state.notes.map(n=>`<div class="row"><span><strong>${esc(n.title)}</strong><small>${esc(n.text)}</small></span><span class="pill ${n.private?'private':''}">${n.private?'非公開':'共有可'}</span></div>`).join('')}</div></section>`;
@@ -1135,6 +1202,7 @@
     document.querySelectorAll('[data-walk]').forEach(el=>el.onclick=()=>{state.walkMode=el.dataset.walk;save();render()});
     document.querySelectorAll('[data-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.memoryTab=el.dataset.memory;save();render()});
     document.querySelectorAll('[data-discover]').forEach(el=>el.onclick=()=>{state.route='discover';state.discoverTab=el.dataset.discover;save();render()});
+    document.querySelectorAll('[data-family]').forEach(el=>el.onclick=()=>{state.familyTab=el.dataset.family;if(state.route!=='prep'&&state.route!=='memory')state.route='prep';state.prepTab='pets';save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -1161,6 +1229,11 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='togglePetPrep')return togglePetPrep(el.dataset.id);
+    if(a==='petToPrep')return petToPrep(el.dataset.id);
+    if(a==='copyFamilyShare')return copyFamilyShare();
+    if(a==='saveFamilyShare')return saveFamilyShare();
 
     if(a==='copyWeatherReport')return copyWeatherReport();
     if(a==='weatherSource')return weatherSource();
@@ -1322,6 +1395,7 @@
     else if(type==='note'){state.route='memory';state.memoryTab='notes';}
     else if(type==='record'){state.route='memory';state.memoryTab='timeline';}
     else if(type==='weather'){state.route='prep';state.prepTab='weather';}
+    else if(type==='pet'||type==='petPrep'){state.route='prep';state.prepTab='pets';}
     save();render();
   }
   function resolveCenterItem(type,id){
@@ -1330,6 +1404,7 @@
     if(type==='gear')state.gear=state.gear.map(g=>g.id===id?{...g,status:'loaded'}:g);
     if(type==='weather')state.weather=state.weather.map(w=>w.id===id?{...w,done:true}:w);
     if(type==='candidate')return candidateToPlan(id);
+    if(type==='petPrep')state.petPrep=state.petPrep.map(x=>x.id===id?{...x,done:true}:x);
     save();render();toast('処理した');
   }
   function clearCenterSearch(){
@@ -1564,6 +1639,42 @@
   function clearDoneShop(){
     state.shopping=state.shopping.filter(s=>!s.done);
     save();render();toast('購入済みを整理');
+  }
+
+
+  function togglePetPrep(id){
+    state.petPrep=state.petPrep.map(x=>x.id===id?{...x,done:!x.done}:x);
+    const item=state.petPrep.find(x=>x.id===id);
+    if(item && item.done && item.group==='コタ'){
+      if(!state.shopping.some(s=>s.name===item.name))state.shopping.push({id:uid('shop'),name:item.name,qty:item.qty,group:'コタ',source:'ペット準備',done:false});
+    }
+    save();render();toast('ペット準備更新');
+  }
+  function petToPrep(id){
+    state.familyTab='pets';
+    state.route='prep';
+    state.prepTab='pets';
+    if(id==='kota'){
+      const names=new Set(state.shopping.map(s=>s.name));
+      (state.petPrep||[]).filter(x=>x.petId==='kota').forEach(x=>{
+        if(!names.has(x.name)){
+          state.shopping.push({id:uid('shop'),name:x.name,qty:x.qty,group:'コタ',source:'ペット準備',done:false});
+          names.add(x.name);
+        }
+      });
+    }
+    save();render();toast('準備へ反映');
+  }
+  async function copyFamilyShare(){
+    const text=buildFamilyShare();
+    try{await navigator.clipboard.writeText(text);toast('共有をコピー')}catch(e){prompt('コピー',text)}
+  }
+  function saveFamilyShare(){
+    const text=buildFamilyShare();
+    state.shares=state.shares||[];
+    state.shares.push({id:uid('share'),time:new Date().toLocaleString('ja-JP'),text});
+    state.notes.push({id:uid('note'),title:'共有メモ',text,private:false});
+    save();render();toast('共有履歴保存');
   }
 
   async function copyWeatherReport(){
