@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild04-20260707';
+  const VERSION = 'outbase-field-rebuild05-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild04-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild05-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -3054,16 +3054,40 @@ ${starterPanelHtml()}
     }
   }
 
+
+  function g05Modes(){return [
+    {id:'kota',label:'コタ散歩',sub:'出発→ピン/写真/動画/話す→帰宅'},
+    {id:'drive',label:'ドライブ',sub:'Google Mapsはナビ。OUTBASEはピン/話すだけ'},
+    {id:'campWalk',label:'場内散歩',sub:'キャンプ場内を歩きながらピン/写真/動画'},
+    {id:'site',label:'サイト調査',sub:'サイトMAP、候補、設備、場所ピン'},
+    {id:'setup',label:'設営',sub:'設営開始、休憩、再開、完了'},
+    {id:'withdraw',label:'撤収',sub:'撤収開始、乾燥待ち、積込、完了'}
+  ]}
+  function g05Mode(){const id=state.fieldFixedMode||'kota';return g05Modes().find(m=>m.id===id)||g05Modes()[0]}
+  function g05ActiveSession(id=g05Mode().id){return (state.fieldSessions||[]).find(s=>s.modeId===id&&!s.endedAt)||null}
+  function g05AnyActive(){return (state.fieldSessions||[]).find(s=>!s.endedAt)||null}
+  function g05Status(){const s=g05AnyActive(); if(s)return `${s.label} ${s.status==='paused'?'休憩中':'記録中'}`; if(state.campRun?.active)return '実行中'; return 'まだ開始していません'}
+  function g05SetMode(id){state.fieldFixedMode=id;if(id==='drive')state.drivePanelOpen=false;save();render()}
+  function g05Start(id){state.fieldFixedMode=id;fw03StartMode()}
+  function g05Pause(){fw03PauseMode('休憩')}
+  function g05Resume(){fw03ResumeMode()}
+  function g05End(){fw03EndMode()}
+  function g05StartLabel(){const id=g05Mode().id; if(id==='kota')return '散歩出発'; if(id==='campWalk')return '場内散歩開始'; if(id==='drive')return '出発'; if(id==='site')return '調査開始'; if(id==='setup')return '設営開始'; if(id==='withdraw')return '撤収開始'; return '開始'}
+  function g05EndLabel(){const id=g05Mode().id; if(id==='kota')return '帰宅'; if(id==='campWalk')return 'サイト帰着'; if(id==='drive')return '到着'; if(id==='site')return '調査終了'; if(id==='setup')return '設営完了'; if(id==='withdraw')return '撤収完了'; return '終了'}
+  function g05PrimaryText(){const id=g05Mode().id; if(id==='drive')return '運転中は操作しない。停車中に「ピン」か「話す」だけ。'; if(id==='kota'||id==='campWalk')return 'やることは、開始して、ピン/写真/動画/話す、最後に終了だけ。'; if(id==='site')return 'まずサイトMAP。気になる場所はピン。細かい整理は帰宅後。'; if(id==='setup')return '設営は時間を残す。迷ったら写真か話すで残す。'; if(id==='withdraw')return '撤収は乾燥待ち、積込、忘れそうなことを残す。'; return '必要なことだけ押す。'}
+  function g05ModeCards(){const cur=g05Mode().id;return `<section class="guide05ModeCards">${g05Modes().map(m=>`<button class="guide05ModeCard ${cur===m.id?'active':''}" data-g05-mode="${m.id}"><b>${esc(m.label)}</b><small>${esc(m.sub)}</small></button>`).join('')}</section>`}
+  function g05StatusCard(){const gps=state.walk.track.length;const gaps=(state.visibilityLog?.gaps||[]).length;return `<section class="guide05Status"><div class="guide05StatusTop"><span><b>今の状態：${esc(g05Status())}</b><small>画面を見て、上から順番に押せばいい。開始・記録・終了だけに整理。</small></span><span class="guide05Badge">GUIDE</span></div><div class="guide05Now"><div><strong>選択中</strong><span>${esc(g05Mode().label)}</span></div><div><strong>GPS</strong><span>${gps}点 / 欠測 ${gaps}件</span></div><div><strong>次にやること</strong><span>${esc(g05StartLabel())} → 記録 → ${esc(g05EndLabel())}</span></div></div></section>`}
+  function g05Steps(){const s=g05ActiveSession();const on=!!s;const paused=s?.status==='paused';return `<section class="guide05Steps"><button class="primary" data-g05-start="${g05Mode().id}"><b>${esc(g05StartLabel())}</b><small>${on?'開始済み':'ここから始める'}</small></button><button data-act="g05Pause"><b>休憩</b><small>${paused?'休憩中':'一時停止'}</small></button><button data-act="g05Resume"><b>再開</b><small>休憩後に押す</small></button><button data-act="g05End"><b>${esc(g05EndLabel())}</b><small>これで閉じる</small></button></section>`}
+  function g05RecordButtons(){const id=g05Mode().id;const sec=Number(state.settings?.driveAutoOffSec||3); if(id==='drive'&&!state.drivePanelOpen)return `<section class="guide05Record"><button class="driveOff" data-act="openDrivePanel"><b>操作OFF</b><small>押すと${sec}秒だけピン/話すを表示</small></button><button data-act="openMap"><b>Google Maps</b><small>ナビは地図アプリで使う</small></button></section>`; if(id==='drive')return `<section class="guide05Record"><button data-act="drivePin"><b>ピン</b><small>${sec}秒後にOFF</small></button><button class="voice" data-hold-voice><b>話す</b><small>長押し音声メモ/文字起こし</small></button><button data-act="setDriveAutoOff"><b>${sec}秒OFF</b><small>1〜10秒で変更</small></button><button data-act="openMap"><b>Maps</b><small>ナビ起動</small></button></section>`; if(id==='site')return `<section class="guide05Record"><button data-act="loadSiteMap"><b>MAP</b><small>サイトMAP読込</small></button><button data-act="quickPin"><b>ピン</b><small>場所を残す</small></button><button data-act="captureCamera"><b>写真</b><small>写真+位置</small></button><button class="voice" data-hold-voice><b>話す</b><small>長押し文字起こし</small></button></section>`; return `<section class="guide05Record"><button data-act="quickPin"><b>ピン</b><small>今の場所を残す</small></button><button data-act="captureCamera"><b>写真</b><small>写真+位置</small></button><button data-act="captureMedia" data-kind="video"><b>動画</b><small>動画+位置</small></button><button class="voice" data-hold-voice><b>話す</b><small>長押し文字起こし</small></button></section>`}
+  function g05MapAndLog(){const p=state.walk.track[state.walk.track.length-1];const rec=planRecords().slice().reverse().slice(0,4);const map=p?`<iframe loading="lazy" src="https://maps.google.com/maps?q=${p.lat},${p.lng}&z=16&output=embed"></iframe>`:`<div class="guide05MapEmpty">現在地を押すと地図表示。<br>ピン・写真・音声はここに紐づく。</div>`;return `<section class="guide05MapRow"><div class="guide05MapBox">${map}</div><div class="guide05Log"><b>直近の記録</b><small>何を押したかだけ見ればいい。</small><div class="guide05MiniList">${rec.length?rec.map(r=>`<div>${esc(r.time||'')} ${esc(r.title||r.kind||'記録')} / ${esc(r.target||'')}</div>`).join(''):'<div>まだ記録なし</div>'}</div></div></section>`}
+  function g05Work(){const s=g05ActiveSession();return `<section class="guide05Work"><div class="guide05WorkHead"><span><b>${esc(g05Mode().label)}</b><small>${esc(g05PrimaryText())}</small></span><span class="guide05WorkState ${s?'on':''}">${s?(s.status==='paused'?'休憩中':'記録中'):'未開始'}</span></div>${g05Steps()}${g05RecordButtons()}${g05MapAndLog()}</section>`}
   function field(){
     return shell(`
-      <section class="fieldWork03">
-        ${fw03HeaderHtml()}
-        ${fw03ControlsHtml()}
-        <section class="fw03Middle">
-          ${fw03MapHtml()}
-          ${fw03PanelHtml()}
-        </section>
-        ${fw03FooterHtml()}
+      <section class="fieldGuide05">
+        ${g05StatusCard()}
+        <section class="guide05Help"><b>使い方</b><small>① 何をしているか選ぶ → ② 開始する → ③ ピン/写真/動画/話すで残す → ④ 終了する。細かい整理はあとで。</small></section>
+        ${g05ModeCards()}
+        ${g05Work()}
       </section>
     `);
   }
@@ -3312,6 +3336,8 @@ ${starterPanelHtml()}
     }
   }
   function bind(){
+    document.querySelectorAll('[data-g05-mode]').forEach(el=>el.onclick=()=>g05SetMode(el.dataset.g05Mode));
+    document.querySelectorAll('[data-g05-start]').forEach(el=>el.onclick=()=>g05Start(el.dataset.g05Start));
     document.querySelectorAll('[data-fw03-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.fw03Mode;if(el.dataset.fw03Mode==='drive')state.drivePanelOpen=false;save();render()});
     document.querySelectorAll('[data-fw03-item]').forEach(el=>el.onclick=()=>fw03ClickItem(el.dataset.fw03Item));
     document.querySelectorAll('[data-fw02-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.fw02Mode;save();render()});
@@ -3362,6 +3388,9 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+    if(a==='g05Pause')return g05Pause();
+    if(a==='g05Resume')return g05Resume();
+    if(a==='g05End')return g05End();
     if(a==='openDrivePanel')return openDrivePanel();
     if(a==='drivePin')return drivePin();
     if(a==='setDriveAutoOff')return setDriveAutoOff();
