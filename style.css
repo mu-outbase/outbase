@@ -3873,3 +3873,20 @@ body{
   .safeSaveGrid{grid-template-columns:repeat(4,1fr)}
   .safeSaveOps,.safeGuideOps{grid-template-columns:1fr}
 }
+
+
+/* ===== OUTBASE FINAL RC =====
+   新機能追加停止。実機確認・不具合修正用の完成候補。
+*/
+.finalRcBadge{
+  display:inline-grid;
+  place-items:center;
+  min-height:24px;
+  padding:4px 9px;
+  border-radius:999px;
+  background:rgba(185,154,102,.16);
+  color:var(--brass);
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.06em;
+}
