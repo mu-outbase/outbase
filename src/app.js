@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc8-20260707';
+  const VERSION = 'outbase-finalrc9-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc8-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc9-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1716,40 +1716,43 @@ ${starterPanelHtml()}
 
 
   function quickMapHtml(){
-    return `<section class="quickMapPanel">
-      <div class="quickMapHead">
-        <span><b>地図：歩いた線を見る</b><small>正確な道路地図ではなく、現在地を残した軌跡の確認用。</small></span>
+    return `<section class="mapOpenPanel">
+      <div class="mapOpenHead">
+        <span><b>地図はGoogle Mapで見る</b><small>OUTBASE内に線だけの地図は出さない。場所を確認したい時はGoogle Mapを開く。</small></span>
         <span class="pill">${state.walk.track.length} GPS</span>
       </div>
-      <canvas class="quickMapCanvas" id="quickWalkMap" width="680" height="220"></canvas>
-      <div class="mapPurpose"><b>この地図でわかること：</b>歩いた方向、戻った場所、現在地を残した点。<br>正確な場所確認は Google Map を押す。</div>
-      <div class="quickMapOps">
-        <button class="primary" data-act="gps">現在地追加</button>
-        <button data-act="openMap">Google Map</button>
-        <button data-act="copyRouteSummary">ルートコピー</button>
+      <div class="mapOpenNotice"><b>ここでやること：</b>現在地を記録する / Google Mapで正確な場所を見る。<br>歩いた線・GPS履歴は下の「詳細機能」に移動。</div>
+      <div class="mapOpenOps">
+        <button class="primary" data-act="openMap">Google Mapを開く</button>
+        <button data-act="gps">現在地を記録</button>
       </div>
     </section>`;
   }
 
   function fieldFirstPanelHtml(){
     const nt=timerNext(), tid=nt[3]||'';
-    return `<section class="fieldFirstPanel simpleField">
-      <div class="fieldFirstHead">
-        <span><b>現地タブは記録する場所</b><small>あとで忘れることだけ残す。迷ったらこの4つ。</small></span>
-        <span class="fieldFirstBadge">FIELD</span>
+    return `<section class="fieldUsePanel">
+      <div class="fieldUseHead">
+        <span><b>現地で忘れないために残す</b><small>ここは読む画面ではなく、押して残す画面。あとで整理できるように、今だけ記録する。</small></span>
+        <span class="fieldUseBadge">FIELD</span>
       </div>
-      <div class="fieldFirstGrid">
-        <button class="fieldFirstBtn primary" data-act="gps"><b>現在地</b><small>GPSを1点保存</small></button>
-        <button class="fieldFirstBtn" data-act="captureCamera"><b>カメラ</b><small>カメラを起動して撮影</small></button>
-        <button class="fieldFirstBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中。もう一度押す':'押して録音 / 押して停止'}</small></button>
-        <button class="fieldFirstBtn map" data-act="openMap"><b>地図</b><small>現在地をGoogle Mapで開く</small></button>
+      <div class="fieldUseSteps">
+        <div class="fieldUseStep"><i>1</i><span><b>気づいたら音声</b><span>「このサイト日陰が良い」みたいに喋って残す。</span></span></div>
+        <div class="fieldUseStep"><i>2</i><span><b>見た目はカメラ</b><span>サイト・設営・料理・ギア配置を写真で残す。</span></span></div>
+        <div class="fieldUseStep"><i>3</i><span><b>場所は現在地</b><span>後で「どこだった？」にならないようにGPSを残す。</span></span></div>
       </div>
-      <div class="fieldFirstMini">
+      <div class="fieldUseGrid">
+        <button class="fieldUseBtn primary" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声メモ'}</b><small>${voiceRecorder?'録音中。もう一度押す':'押して録音、もう一度で保存'}</small></button>
+        <button class="fieldUseBtn" data-act="captureCamera"><b>カメラ</b><small>撮影して記録</small></button>
+        <button class="fieldUseBtn" data-act="gps"><b>現在地</b><small>GPSを1点保存</small></button>
+        <button class="fieldUseBtn" data-act="openMap"><b>地図</b><small>Google Mapを開く</small></button>
+      </div>
+      <div class="fieldUseMini">
         <button data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
         <button data-act="${tid?'startTimer':'addTimerTemplate'}" data-id="${tid}" data-kind="meal">タイマー</button>
-        <button data-act="quickRecord" data-kind="memo">メモ</button>
+        <button data-act="quickRecord" data-kind="memo">文字メモ</button>
+        <button data-act="copyFieldSummary">まとめコピー</button>
       </div>
-      <div class="fieldFirstHint">写真はカメラ起動。音声は押して録音・もう一度押して停止。地図は歩いた線を見る場所。<div class="fieldPurpose">この画面でやること：現在地・カメラ・音声・地図。管理や一覧確認は下の「詳細機能」に隠す。</div></div>
     </section>`;
   }
 
@@ -1764,7 +1767,7 @@ ${starterPanelHtml()}
   function fieldDetailsHtml(){
     return `<section class="section">
       <details class="fieldMore">
-        <summary>詳細機能</summary>
+        <summary>詳細機能・履歴を見る</summary>
         <div class="fieldMoreBody">
           ${timerPanelHtml()}
           ${timerBodyHtml()}
@@ -2044,7 +2047,7 @@ ${starterPanelHtml()}
     try{
       app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
       bind();
-      if(state.route==='field'){drawMap();drawQuickMap();}
+      if(state.route==='field')drawMap();
       bindSwipe();
       if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
     }catch(err){
