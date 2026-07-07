@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc9-20260707';
+  const VERSION = 'outbase-finalrc10-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc9-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc10-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -25,7 +25,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null, lastError:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', fieldActionMode:'kota', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null, lastError:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -121,6 +121,7 @@
     s={...base,...(s||{})};
     s.settings={...base.settings,...(s.settings||{})};
     s.walk={...base.walk,...(s.walk||{})};
+    s.fieldActionMode=s.fieldActionMode||base.fieldActionMode||'kota';
     s.walk.track=s.walk.track||[];s.walk.spots=s.walk.spots||[];s.walk.friends=s.walk.friends||[];s.walk.health=s.walk.health||[];s.walk.sessions=s.walk.sessions||[];
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
@@ -1729,6 +1730,129 @@ ${starterPanelHtml()}
     </section>`;
   }
 
+
+  function fieldModeKey(){return state.fieldActionMode||'kota'}
+  function fieldModeDef(key=fieldModeKey()){
+    return {
+      kota:{title:'コタ散歩',sub:'コタの散歩・体調・危険を残す',use:'コタ散歩では、歩いた場所・暑さ寒さ・うんち/おしっこ・危険ポイント・犬友達を残す。体調系は非公開。',walk:'normal'},
+      campwalk:{title:'キャンプ場散歩',sub:'サイト候補・木陰・水場・危険を残す',use:'キャンプ場散歩では、次回使える場所を残す。サイト候補、木陰、水場、景色、トイレ、炊事場、危険ポイントを場所カード化する。',walk:'camp'},
+      setup:{title:'設営',sub:'配置・不足・困ったことを残す',use:'設営では、配置写真、足りなかったギア、困ったこと、次回改善を残す。タイマーだけではなく設営の記録として残す。'},
+      withdraw:{title:'撤収',sub:'乾燥・忘れ物・汚れ/故障を残す',use:'撤収では、乾燥、忘れ物、ゴミ、積込、壊れた/汚れたギア、次回改善を残す。帰宅後の整理につなげる。'},
+      drive:{title:'ドライブ',sub:'出発・休憩・寄り道・到着を残す',use:'ドライブでは、出発、休憩、給油、買い物寄り道、渋滞、到着、コンビニ/道の駅を残す。次回の出発時間や寄り道計画に使う。'},
+      free:{title:'自由記録',sub:'迷った時のなんでも記録',use:'自由記録では、分類に迷うことを音声・カメラ・現在地・文字メモで残す。あとで整理する。'}
+    }[key]||{title:'自由記録',sub:'なんでも記録',use:'迷ったら音声で残す。'};
+  }
+  function fieldModeSelectorHtml(){
+    const modes=['kota','campwalk','setup','withdraw','drive','free'];
+    return `<section class="modeSelectPanel"><div class="modeSelectHead"><span><b>今なにしてる？</b><small>最初に行動を選ぶ。選んだ行動に必要なボタンだけ出す。</small></span><span class="modeBadge">MODE</span></div><div class="modeGrid">${modes.map(k=>{const d=fieldModeDef(k);return `<button class="modeBtn ${fieldModeKey()===k?'active':''}" data-act="setFieldMode" data-mode="${k}"><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></button>`}).join('')}</div></section>`;
+  }
+  function modeActionButton(label,sub,code,primary=false){return `<button class="${primary?'primary':''}" data-act="fieldModeAction" data-code="${code}"><b>${esc(label)}</b><small>${esc(sub||'')}</small></button>`}
+  function fieldModeActionsHtml(){
+    const k=fieldModeKey(), d=fieldModeDef(k);
+    const walkText=state.walk.active?'散歩終了':'散歩開始';
+    const nt=timerNext(), tid=nt[3]||'';
+    let buttons=[];
+    if(k==='kota') buttons=[
+      modeActionButton(walkText,'コタ散歩の開始/終了','walk',true),
+      modeActionButton('音声メモ','気づいたことを喋る','voice'),
+      modeActionButton('カメラ','コタ/道/危険を撮る','camera'),
+      modeActionButton('現在地','場所を1点保存','gps'),
+      modeActionButton('Google Map','正確な地図を見る','map'),
+      modeActionButton('うんち','非公開で体調記録','health:うんち'),
+      modeActionButton('おしっこ','非公開で体調記録','health:おしっこ'),
+      modeActionButton('体調','非公開でメモ','health:体調'),
+      modeActionButton('犬友達','名前を残す','friend'),
+      modeActionButton('危険ポイント','危ない場所を残す','spot:危険')
+    ];
+    else if(k==='campwalk') buttons=[
+      modeActionButton(walkText,'キャンプ場散歩の開始/終了','walk',true),
+      modeActionButton('音声メモ','サイト感想を喋る','voice'),
+      modeActionButton('カメラ','サイト/景色を撮る','camera'),
+      modeActionButton('現在地','場所を1点保存','gps'),
+      modeActionButton('Google Map','正確な地図を見る','map'),
+      modeActionButton('サイト候補','泊まりたい場所','spot:サイト候補'),
+      modeActionButton('景色','景色が良い場所','spot:景色'),
+      modeActionButton('木陰','コタ休憩候補','spot:木陰'),
+      modeActionButton('水場','水場/炊事場','spot:水場'),
+      modeActionButton('トイレ','トイレの場所','spot:トイレ'),
+      modeActionButton('炊事場','炊事場の場所','spot:炊事場'),
+      modeActionButton('危険','段差/ぬかるみ','spot:危険')
+    ];
+    else if(k==='setup') buttons=[
+      modeActionButton('設営開始','設営を始めた時刻','record:setup:設営開始',true),
+      modeActionButton('設営完了','終わった時刻','record:setup:設営完了'),
+      modeActionButton('配置写真','テント/タープ/IGTを撮る','camera'),
+      modeActionButton('音声メモ','困ったことを喋る','voice'),
+      modeActionButton('タイマー','設営タイマー','timer'),
+      modeActionButton('足りないギア','準備へ戻すメモ','note:足りないギア'),
+      modeActionButton('困ったこと','改善メモにする','note:設営で困った'),
+      modeActionButton('次回改善','次回に活かす','note:次回改善')
+    ];
+    else if(k==='withdraw') buttons=[
+      modeActionButton('撤収開始','撤収を始めた時刻','record:withdraw:撤収開始',true),
+      modeActionButton('撤収完了','終わった時刻','record:withdraw:撤収完了'),
+      modeActionButton('乾燥メモ','幕/ギア乾燥','note:乾燥メモ'),
+      modeActionButton('忘れ物確認','忘れた/注意点','note:忘れ物確認'),
+      modeActionButton('ゴミ','ゴミ処理メモ','note:ゴミ'),
+      modeActionButton('積込','積込の反省','note:積込'),
+      modeActionButton('壊れた/汚れた','ギアケアへ','note:ギアケア'),
+      modeActionButton('タイマー','撤収タイマー','timer')
+    ];
+    else if(k==='drive') buttons=[
+      modeActionButton('出発','出発時刻を残す','record:memo:出発',true),
+      modeActionButton('休憩','SA/PA/休憩','record:memo:休憩'),
+      modeActionButton('給油','給油メモ','note:給油'),
+      modeActionButton('買い物寄り道','買い忘れ/店','note:買い物寄り道'),
+      modeActionButton('渋滞','渋滞/道路メモ','note:渋滞'),
+      modeActionButton('到着','到着時刻を残す','record:memo:到着'),
+      modeActionButton('道の駅/コンビニ','次回用メモ','spot:道の駅/コンビニ'),
+      modeActionButton('Google Map','現在地を開く','map')
+    ];
+    else buttons=[
+      modeActionButton('音声メモ','まず喋る','voice',true),
+      modeActionButton('カメラ','見たものを撮る','camera'),
+      modeActionButton('現在地','場所を残す','gps'),
+      modeActionButton('Google Map','正確な地図を見る','map'),
+      modeActionButton('文字メモ','一言入力','memo'),
+      modeActionButton('タイマー','必要なら開始','timer')
+    ];
+    return `<section class="modeWorkPanel"><div class="modeWorkHead"><span><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="pill dark">${esc(k==='kota'?'コタ':k==='campwalk'?'場内':k==='setup'?'設営':k==='withdraw'?'撤収':k==='drive'?'車':'自由')}</span></div><div class="modeUseText"><b>このモードでやること：</b>${esc(d.use)}</div><div class="modeActionGrid">${buttons.join('')}</div><div class="modeQuickStats"><div><b>${state.walk.track.length}</b><span>GPS</span></div><div><b>${planRecords().length}</b><span>記録</span></div><div><b>${state.walk.spots.length}</b><span>場所</span></div><div><b>${timerStats().running}</b><span>タイマー</span></div></div></section>`;
+  }
+  function setFieldMode(mode){
+    state.fieldActionMode=mode||'free';
+    if(mode==='campwalk')state.walkMode='camp';
+    if(mode==='kota')state.walkMode='normal';
+    save();render();toast(`${fieldModeDef(mode).title}へ`);
+  }
+  function addFieldNote(title){
+    const text=prompt(`${title}を一言`, '')||'';
+    if(!text)return;
+    state.notes.push({id:uid('note'),title,text,private:false});
+    addPublicRecord('memo',`${title}：${text}`,title);
+    save();render();toast('メモ保存');
+  }
+  function fieldModeAction(code){
+    const k=fieldModeKey();
+    if(k==='campwalk')state.walkMode='camp';
+    if(k==='kota')state.walkMode='normal';
+    if(code==='walk')return toggleWalk();
+    if(code==='voice')return toggleVoice();
+    if(code==='camera')return captureCamera();
+    if(code==='gps')return gps();
+    if(code==='map')return openMap();
+    if(code==='friend')return friend();
+    if(code==='timer')return startTimer(timerNext()[3]||'');
+    if(code==='memo')return quickRecord('memo');
+    if(code.startsWith('health:'))return health(code.split(':')[1]);
+    if(code.startsWith('spot:'))return spotQuick(code.slice(5));
+    if(code.startsWith('note:'))return addFieldNote(code.slice(5));
+    if(code.startsWith('record:')){
+      const [,kind,title]=code.split(':');
+      addPublicRecord(kind||'memo',title,title);
+      save();render();toast(`${title}を記録`);return;
+    }
+  }
+
   function fieldFirstPanelHtml(){
     const nt=timerNext(), tid=nt[3]||'';
     return `<section class="fieldUsePanel">
@@ -1813,7 +1937,8 @@ ${starterPanelHtml()}
 
   function field(){
     return shell(`
-      ${fieldFirstPanelHtml()}
+      ${fieldModeSelectorHtml()}
+      ${fieldModeActionsHtml()}
       ${quickMapHtml()}
       ${fieldRecentHtml()}
       ${fieldDetailsHtml()}
@@ -2102,6 +2227,8 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+    if(a==='setFieldMode')return setFieldMode(el.dataset.mode);
+    if(a==='fieldModeAction')return fieldModeAction(el.dataset.code);
 
     if(a==='saveSnapshot')return saveSnapshot();
     if(a==='restoreSnapshot')return restoreSnapshot();

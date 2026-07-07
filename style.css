@@ -4390,3 +4390,44 @@ body{
   .fieldUseGrid{grid-template-columns:1fr 1fr;gap:8px}
   .fieldUseMini,.mapOpenOps{grid-template-columns:1fr}
 }
+
+
+/* ===== OUTBASE FINAL RC10 =====
+   現地モードを明確化。コタ散歩・キャンプ場散歩・設営・撤収・ドライブ・自由記録。
+*/
+.modeSelectPanel{
+  border-radius:30px;
+  padding:16px;
+  margin:0 0 14px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(185,154,102,.24), transparent 30%),
+    linear-gradient(135deg, rgba(17,19,15,.98), rgba(39,58,48,.95));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.modeSelectHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.modeSelectHead b{display:block;font-size:25px;letter-spacing:-.05em}
+.modeSelectHead small{display:block;margin-top:6px;color:rgba(255,248,237,.74);font-size:12px;line-height:1.55;font-weight:850}
+.modeBadge{min-width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--brass),#e4c78f);color:#15120e;font-size:12px;font-weight:950}
+.modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.modeBtn{min-height:74px;border-radius:22px;padding:13px;text-align:left;background:rgba(255,248,237,.10);border:1px solid rgba(255,248,237,.12);color:var(--milk)}
+.modeBtn.active{background:linear-gradient(135deg,var(--brass),#e4c78f);color:#15120e}
+.modeBtn b{display:block;font-size:17px;letter-spacing:-.03em}
+.modeBtn small{display:block;margin-top:6px;color:rgba(255,248,237,.68);font-size:10.5px;line-height:1.38;font-weight:850}
+.modeBtn.active small{color:rgba(21,18,14,.68)}
+.modeWorkPanel{border-radius:30px;overflow:hidden;margin:0 0 14px;background:rgba(255,248,237,.72);border:1px solid rgba(17,19,15,.09);box-shadow:var(--softShadow)}
+.modeWorkHead{padding:15px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid rgba(17,19,15,.08)}
+.modeWorkHead b{font-size:22px;letter-spacing:-.04em}
+.modeWorkHead small{display:block;margin-top:5px;color:var(--muted);font-size:11.5px;line-height:1.55;font-weight:850}
+.modeActionGrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(17,19,15,.08)}
+.modeActionGrid button{min-height:68px;padding:12px;text-align:left;background:rgba(255,248,237,.72);font-weight:950}
+.modeActionGrid button.primary{background:linear-gradient(135deg,var(--black),var(--green2));color:var(--milk)}
+.modeActionGrid b{display:block;font-size:17px;letter-spacing:-.03em}
+.modeActionGrid small{display:block;margin-top:5px;color:var(--muted);font-size:10.5px;line-height:1.35;font-weight:850}
+.modeActionGrid button.primary small{color:rgba(255,248,237,.70)}
+.modeUseText{padding:13px 15px;color:var(--muted);font-size:11.5px;line-height:1.65;font-weight:850;background:rgba(255,248,237,.48)}
+.modeUseText b{color:var(--black)}
+.modeQuickStats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(17,19,15,.08)}
+.modeQuickStats div{min-height:58px;text-align:center;padding:9px 5px;background:rgba(255,248,237,.70)}
+.modeQuickStats b{display:block;font-size:15px}.modeQuickStats span{display:block;margin-top:4px;color:var(--muted);font-size:9.5px;font-weight:900}
+@media(max-width:430px){.modeGrid,.modeActionGrid{grid-template-columns:1fr 1fr}.modeActionGrid button{min-height:66px}}
