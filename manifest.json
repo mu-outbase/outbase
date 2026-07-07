@@ -1,9 +1,9 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-total-redesign-20260707",
+  "start_url": "./?v=outbase-genius-ui-20260707",
   "display": "standalone",
-  "background_color": "#ece7db",
-  "theme_color": "#1f211d",
+  "background_color": "#11130f",
+  "theme_color": "#11130f",
   "icons": []
 }
