@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-mealpro-20260707';
+  const VERSION = 'outbase-genius-ui-planpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-mealpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-planpro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -148,12 +148,66 @@
   function dayOcc(date){return state.events.flatMap(e=>occ(e,date.slice(0,7))).filter(o=>o.date===date)}
   function unscheduled(){return state.events.filter(e=>!e.start)}
 
+
+  function planRecords(id=state.currentPlanId){
+    return publicRecords().filter(r=>r.eventId===id);
+  }
+  function planReviews(id=state.currentPlanId){
+    return (state.reviews||[]).filter(r=>!r.eventId || r.eventId===id);
+  }
+  function planSpan(e){
+    if(!e)return '日付なし';
+    if(!e.start)return '日付未設定';
+    return `${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''}`;
+  }
+  function planProgress(e=current()){
+    const id=e?.id||state.currentPlanId;
+    const st=prepStats(), ps=petPrepStats();
+    const rec=planRecords(id).length;
+    const score=Math.round((st.score + (rec?100:25) + ps.score)/3);
+    return {score,records:rec,reviews:planReviews(id).length,prep:st.score,pet:ps.score};
+  }
+  function sortedPlans(){
+    const cur=state.currentPlanId;
+    const rank=e=>{
+      if(e.id===cur)return -100000;
+      if(!e.start)return 1000000;
+      return Math.abs((dObj(e.start)-dObj(state.selectedDate||today()))/86400000);
+    };
+    return state.events.slice().sort((a,b)=>rank(a)-rank(b));
+  }
+  function planSwitchCard(e){
+    const p=planProgress(e), cur=e.id===state.currentPlanId;
+    return `<div class="planSwitchCard ${cur?'current':''}">
+      <div class="planSwitchTop"><span><b>${esc(e.title)}</b><small>${esc(typeName[e.type]||e.type)} / ${esc(planSpan(e))} / ${esc(e.place||'場所未設定')}</small></span><span class="pill ${cur?'dark':'wood'}">${cur?'主役':p.score}</span></div>
+      <div class="planMiniStats"><span>準備<br>${p.prep}%</span><span>ペット<br>${p.pet}%</span><span>記録<br>${p.records}</span><span>整理<br>${p.reviews}</span></div>
+      <div class="planDrawerOps">
+        <button data-act="selectPlan" data-id="${e.id}">${cur?'表示中':'主役にする'}</button>
+        <button data-act="openEvent" data-id="${e.id}">予定変更</button>
+      </div>
+    </div>`;
+  }
+  function planSwitchHtml(){
+    return `<div class="form"><div class="head"><div><h2>主役プラン切替</h2><p>全画面の上部から同じ操作。邪魔にしないため、一覧はここに閉じる。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div>
+      <div class="planSwitchList">${sortedPlans().map(planSwitchCard).join('')}</div>
+      <div class="actions"><button class="btn primary" type="button" data-act="addEvent">予定追加</button><button class="btn" type="button" data-act="copyPlanContext">現在の主役コピー</button></div>
+    </div>`;
+  }
+  function buildPlanContext(){
+    const p=current(), pr=planProgress(p);
+    return `【OUTBASE 主役プラン】\\n${p.title}\\n${planSpan(p)} / ${typeName[p.type]||p.type}\\n場所:${p.place||'未設定'}\\n進捗:${pr.score}% / 準備:${pr.prep}% / ペット:${pr.pet}% / 記録:${pr.records}\\n\\n${p.memo||''}`;
+  }
+  function planBoardHtml(){
+    const p=current(), pr=planProgress(p);
+    return `<section class="section"><div class="planBoard"><div class="planBoardHead"><span><b>${esc(p.title)}</b><small>${esc(planSpan(p))} / ${esc(typeName[p.type]||p.type)} / ${esc(p.place||'場所未設定')}</small></span><span class="pill ${pr.score>=70?'dark':'wood'}">${pr.score}%</span></div><div class="planBoardOps"><button class="primary" data-act="planSwitch">プラン切替</button><button data-act="editPlan">予定変更</button><button data-act="copyPlanContext">コピー</button></div></div></section>`;
+  }
+
   function top(){
     const p=current();
     return `<div class="top">
       <div class="top-row">
         <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button>
-        <button class="plan" data-act="editPlan"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)} / ${typeName[p.type]}`:'日付未設定'}</small></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)} / ${typeName[p.type]}`:'日付未設定'}</small></button>
       </div>
       <div class="stage">
         ${[['before','準備前'],['prep','準備中'],['field','現地'],['after','帰宅後']].map(([id,label])=>`<button class="${state.stage===id?'active':''}" data-stage="${id}">${label}</button>`).join('')}
@@ -332,6 +386,7 @@
     const warn=[];
     const p=current();
     if(!p)issues.push(['主役プランなし','予定を1つ主役にする']);
+    if(p && p.type==='camp' && planRecords(p.id).length===0)warn.push(['主役記録なし','現地記録がまだない']);
     if(state.events.some(e=>!e.start))warn.push(['日付未設定予定',`${state.events.filter(e=>!e.start).length}件`]);
     const gs=gearStats();
     if(gs.noBox)warn.push(['BOX未設定ギア',`${gs.noBox}件`]);
@@ -408,6 +463,7 @@
         ${[['before','予定'],['prep','準備'],['field','現地'],['after','整理']].map(([id,label])=>`<button class="flowStep ${state.stage===id?'active':''}" data-stage="${id}">${label}</button>`).join('')}
       </div>
 ${starterPanelHtml()}
+      ${planBoardHtml()}
 
       <section class="section">
         <div class="head"><div><h2>テンプレート</h2><p>考えずに型から作る。あとで変更できる。</p></div></div>
@@ -1091,7 +1147,7 @@ ${starterPanelHtml()}
   }
 
   function fieldStats(){
-    const publicRecords=(state.records||[]).filter(r=>!r.private);
+    const publicRecords=planRecords();
     return {
       gps:state.walk.track.length,
       spots:state.walk.spots.length,
@@ -1105,7 +1161,7 @@ ${starterPanelHtml()}
   }
   function buildFieldSummary(){
     const fs=fieldStats();
-    const recent=(state.records||[]).filter(r=>!r.private).slice(-6).map(r=>`・${r.time} ${r.kind}：${r.text||r.title}`).join('\\n') || '公開記録なし';
+    const recent=planRecords().slice(-6).map(r=>`・${r.time} ${r.kind}：${r.text||r.title}`).join('\\n') || '公開記録なし';
     const spots=state.walk.spots.map(s=>`・${s.time||''} ${s.type||'スポット'}：${s.name}`).join('\\n') || 'スポットなし';
     const friends=state.walk.friends.map(f=>`・${f.time||''} ${f.name}`).join('\\n') || '犬友達なし';
     return `【OUTBASE 現地まとめ】\\n${current().title}\\n${fieldModeName()} / GPS:${fs.gps} / スポット:${fs.spots} / 犬友達:${fs.friends}\\n\\n■記録\\n${recent}\\n\\n■スポット\\n${spots}\\n\\n■犬友達\\n${friends}\\n\\n※体調メモは非公開`;
@@ -1195,7 +1251,7 @@ ${starterPanelHtml()}
 
       <section class="section">
         <div class="head"><div><h2>現地タイムライン</h2><p>公開できる記録だけ。非公開体調メモは混ぜない。</p></div><button class="btn primary" data-act="copyFieldSummary">コピー</button></div>
-        <div class="fieldTimeline">${(state.records||[]).filter(r=>!r.private).slice().reverse().slice(0,8).map(r=>`<div class="recordCard"><div class="recordTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.time)} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<div class="recordBody">${esc(r.text)}</div>`:''}${mediaPreviewHtml(r)}</div>`).join('')||`<div class="fieldReport"><b>まだ公開記録なし</b><p>メモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div>
+        <div class="fieldTimeline">${planRecords().slice().reverse().slice(0,8).map(r=>`<div class="recordCard"><div class="recordTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.time)} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<div class="recordBody">${esc(r.text)}</div>`:''}${mediaPreviewHtml(r)}</div>`).join('')||`<div class="fieldReport"><b>まだ公開記録なし</b><p>メモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div>
       </section>
     `)
   }
@@ -1304,7 +1360,7 @@ ${starterPanelHtml()}
   }
 
   function memoryStats(){
-    const pub=publicRecords();
+    const pub=planRecords();
     const places=state.places||[];
     const imp=improveNotes();
     const reviews=state.reviews||[];
@@ -1320,7 +1376,7 @@ ${starterPanelHtml()}
   }
   function buildTripReport(){
     const p=current();
-    const pub=publicRecords();
+    const pub=planRecords();
     const spots=state.walk.spots||[];
     const friends=state.walk.friends||[];
     const imp=improveNotes();
@@ -1379,7 +1435,7 @@ ${starterPanelHtml()}
 
   function memoryBody(){
     if(state.memoryTab==='timeline'){
-      const list=publicRecords().slice().reverse();
+      const list=planRecords().slice().reverse();
       return `<section class="section"><div class="head"><div><h2>公開記録</h2><p>体調メモは混ぜない。レビューに使える記録だけ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="memoryTimeline">${list.map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<p>${esc(r.text)}</p>`:''}${mediaPreviewHtml(r)}<div class="improveOps"><button data-act="recordToImprove" data-id="${r.id}">改善へ</button><button data-act="recordToPlace" data-id="${r.id}">場所へ</button></div></div>`).join('')||`<div class="dataPanel"><b>公開記録なし</b><p>現地画面でメモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div></section>`;
     }
 
@@ -1412,6 +1468,7 @@ ${starterPanelHtml()}
   }
   function drawerBody(){
     const d=state.drawer;
+    if(d.type==='planSwitch')return planSwitchHtml();
     if(d.type==='event'){const e=state.events.find(x=>x.id===d.id)||{id:'',title:'',type:'normal',start:d.date||state.selectedDate,end:d.date||state.selectedDate,repeat:'none',place:'',memo:''};return `<form class="form" data-form="event" data-id="${e.id}"><div class="head"><div><h2>${e.id?'予定変更':'予定追加'}</h2><p>単体・連日・繰り返し。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div><div class="field"><label>予定名</label><input name="title" value="${esc(e.title)}" required></div><div class="two"><div class="field"><label>種類</label><select name="type">${Object.entries(typeName).map(([k,v])=>`<option value="${k}" ${e.type===k?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>繰り返し</label><select name="repeat">${Object.entries(repeatName).map(([k,v])=>`<option value="${k}" ${e.repeat===k?'selected':''}>${v}</option>`).join('')}</select></div></div><div class="two"><div class="field"><label>開始日</label><input type="date" name="start" value="${esc(e.start)}"></div><div class="field"><label>終了日</label><input type="date" name="end" value="${esc(e.end)}"></div></div><div class="field"><label>場所</label><input name="place" value="${esc(e.place)}"></div><div class="field"><label>メモ</label><textarea name="memo">${esc(e.memo)}</textarea></div><div class="actions"><button class="btn primary" type="submit">保存</button>${e.id?`<button class="btn wood" type="button" data-act="setCurrentPlan" data-id="${e.id}">主役にする</button><button class="btn danger" type="button" data-act="deleteEvent" data-id="${e.id}">削除</button>`:''}</div></form>`}
     if(d.type==='gear'){const g=state.gear.find(x=>x.id===d.id)||{id:'',name:'',cat:'',qty:1,boxId:state.boxes[0]?.id||'',car:'',status:'home',note:''};return `<form class="form" data-form="gear" data-id="${g.id}"><div class="head"><div><h2>${g.id?'ギア変更':'ギア登録'}</h2></div><button class="btn" type="button" data-act="close">閉じる</button></div><div class="field"><label>ギア名</label><input name="name" value="${esc(g.name)}" required></div><div class="two"><div class="field"><label>カテゴリ</label><input name="cat" value="${esc(g.cat)}"></div><div class="field"><label>数量</label><input type="number" min="1" name="qty" value="${g.qty}"></div></div><div class="two"><div class="field"><label>ボックス</label><select name="boxId">${state.boxes.map(b=>`<option value="${b.id}" ${g.boxId===b.id?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div><div class="field"><label>状態</label><select name="status">${Object.entries(gearStatus).map(([k,v])=>`<option value="${k}" ${g.status===k?'selected':''}>${v}</option>`).join('')}</select></div></div><div class="field"><label>車載位置</label><input name="car" value="${esc(g.car)}"></div><div class="field"><label>メモ</label><textarea name="note">${esc(g.note)}</textarea></div><button class="btn primary" type="submit">保存</button></form>`}
     if(d.type==='box'){const b=state.boxes.find(x=>x.id===d.id)||{id:'',name:'',home:'',car:'',role:''};return `<form class="form" data-form="box" data-id="${b.id}"><div class="head"><div><h2>${b.id?'BOX変更':'BOX追加'}</h2></div><button class="btn" type="button" data-act="close">閉じる</button></div><div class="field"><label>BOX名</label><input name="name" value="${esc(b.name)}" required></div><div class="two"><div class="field"><label>家の場所</label><input name="home" value="${esc(b.home)}"></div><div class="field"><label>車の場所</label><input name="car" value="${esc(b.car)}"></div></div><div class="field"><label>役割</label><input name="role" value="${esc(b.role)}"></div><button class="btn primary" type="submit">保存</button></form>`}
@@ -1463,6 +1520,10 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='planSwitch')return planSwitch();
+    if(a==='selectPlan')return selectPlan(el.dataset.id);
+    if(a==='copyPlanContext')return copyPlanContext();
 
     if(a==='addMealTemplate')return addMealTemplate(el.dataset.kind||'shrimp');
     if(a==='mealToShopAll')return mealToShopAll();
@@ -1585,7 +1646,7 @@ ${starterPanelHtml()}
   }
   function submit(e){
     e.preventDefault();const f=e.target,type=f.dataset.form,id=f.dataset.id,data=Object.fromEntries(new FormData(f).entries());
-    if(type==='event'){const obj={id:id||uid('evt'),title:data.title,type:data.type,start:data.start,end:data.end||data.start,repeat:data.repeat,place:data.place,memo:data.memo,level:1};state.events=id?state.events.map(x=>x.id===id?obj:x):[...state.events,obj];if(obj.type==='camp')state.currentPlanId=obj.id;state.drawer=null;toast('予定保存')}
+    if(type==='event'){const obj={id:id||uid('evt'),title:data.title,type:data.type,start:data.start,end:data.end||data.start,repeat:data.repeat,place:data.place,memo:data.memo,level:1};state.events=id?state.events.map(x=>x.id===id?obj:x):[...state.events,obj];if(obj.type==='camp'||!state.currentPlanId)state.currentPlanId=obj.id;if(obj.start){state.selectedDate=obj.start;state.currentMonth=obj.start.slice(0,7)}state.drawer=null;toast('予定保存')}
     if(type==='gear'){const obj={id:id||uid('gear'),name:data.name,cat:data.cat,qty:+data.qty||1,boxId:data.boxId,car:data.car,status:data.status,note:data.note};state.gear=id?state.gear.map(x=>x.id===id?obj:x):[...state.gear,obj];state.drawer=null;toast('ギア保存')}
     if(type==='box'){const obj={id:id||uid('box'),name:data.name,home:data.home,car:data.car,role:data.role};state.boxes=id?state.boxes.map(x=>x.id===id?obj:x):[...state.boxes,obj];state.drawer=null;toast('BOX保存')}
     if(type==='meal'){const obj={id:id||uid('meal'),name:data.name,slot:data.slot,ingredients:data.ingredients.split('\n').map(x=>x.trim()).filter(Boolean),gear:data.gear.split('\n').map(x=>x.trim()).filter(Boolean),note:data.note};state.meals=id?state.meals.map(x=>x.id===id?obj:x):[...state.meals,obj];state.drawer=null;toast('料理保存')}
@@ -2146,9 +2207,33 @@ ${starterPanelHtml()}
     state.events=state.events.map(e=>e.id===id?{...e,start:state.selectedDate,end:state.selectedDate}:e);
     save();render();toast('日付を付けた');
   }
+
+  function planSwitch(){
+    state.drawer={type:'planSwitch'};
+    save();render();
+  }
+  function selectPlan(id){
+    const e=state.events.find(x=>x.id===id);
+    if(!e)return;
+    state.currentPlanId=id;
+    if(e.start){
+      state.selectedDate=e.start;
+      state.currentMonth=e.start.slice(0,7);
+    }
+    state.stage=e.type==='camp'?'prep':state.stage;
+    state.drawer=null;
+    save();render();toast('主役にした');
+  }
+  async function copyPlanContext(){
+    const text=buildPlanContext();
+    try{await navigator.clipboard.writeText(text);toast('主役コピー')}catch(e){prompt('コピー',text)}
+  }
+
   function setCurrentPlan(id){
-    if(state.events.some(e=>e.id===id)){
+    const e=state.events.find(x=>x.id===id);
+    if(e){
       state.currentPlanId=id;
+      if(e.start){state.selectedDate=e.start;state.currentMonth=e.start.slice(0,7)}
       state.drawer=null;
       save();render();toast('主役にした');
     }
