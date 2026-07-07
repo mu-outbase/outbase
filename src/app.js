@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc7-20260707';
+  const VERSION = 'outbase-finalrc8-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc7-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc8-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1680,6 +1680,18 @@ ${starterPanelHtml()}
     const friends=state.walk.friends.map(f=>`・${f.time||''} ${f.name}`).join('\\n') || '犬友達なし';
     return `【OUTBASE 現地まとめ】\\n${current().title}\\n${fieldModeName()} / GPS:${fs.gps} / スポット:${fs.spots} / 犬友達:${fs.friends}\\n\\n■記録\\n${recent}\\n\\n■スポット\\n${spots}\\n\\n■犬友達\\n${friends}\\n\\n※体調メモは非公開`;
   }
+
+  function fieldRecordCard(r){
+    const title=esc(r.title||recordKindLabel(r.kind));
+    const meta=`${esc(r.time||'')} / ${esc(r.mode||'')}`;
+    const text=esc(r.text||'');
+    const badge=esc(recordKindLabel(r.kind));
+    const media=r.dataUrl&&r.kind==='photo'?`<div class="mediaPreview"><img src="${r.dataUrl}" alt=""></div>`:
+      r.dataUrl&&(r.kind==='voice'||r.kind==='audio')?`<div class="mediaPreview"><audio controls src="${r.dataUrl}"></audio></div>`:
+      r.dataUrl&&r.kind==='video'?`<div class="mediaPreview"><video controls src="${r.dataUrl}"></video></div>`:'';
+    return `<div class="fieldRecentCard"><b>${title}</b><small>${meta}<br>${text}</small>${media}<span class="pill">${badge}</span></div>`;
+  }
+
   function recordKindLabel(kind){
     return {memo:'メモ',photo:'写真',video:'動画',voice:'音声',audio:'音声',site:'場所',meal:'料理',weather:'天気',setup:'設営',withdraw:'撤収'}[kind]||kind;
   }
@@ -1789,7 +1801,7 @@ ${starterPanelHtml()}
 
           <section class="section">
             <div class="head"><div><h2>現地タイムライン</h2><p>公開できる記録だけ。非公開体調メモは混ぜない。</p></div><button class="btn" data-act="copyFieldSummary">コピー</button></div>
-            ${planRecords().slice().reverse().slice(0,10).map(r=>recordCard(r)).join('')||'<div class="row"><span><strong>記録なし</strong><small>現地で押す場所から記録する。</small></span></div>'}
+            ${planRecords().slice().reverse().slice(0,10).map(r=>fieldRecordCard(r)).join('')||'<div class="row"><span><strong>記録なし</strong><small>現地で押す場所から記録する。</small></span></div>'}
           </section>
         </div>
       </details>
