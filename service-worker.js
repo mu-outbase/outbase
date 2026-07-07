@@ -1,4 +1,4 @@
-const CACHE_NAME = 'outbase-v147-ui-keep-all-event-mvp-lock';
+const CACHE_NAME = 'outbase-v148-forward-37-40-design-fix-lock';
 const ASSETS = ['./', './index.html', './style.css', './src/app.js', './manifest.json'];
 self.addEventListener('install', (event) => {
   self.skipWaiting();

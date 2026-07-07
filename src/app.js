@@ -1,10 +1,10 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v147-ui-keep-all-event-mvp-lock';
-  const STORAGE_KEY = 'outbase_v147_state';
+  const VERSION = 'v148-forward-37-40-design-fix-lock';
+  const STORAGE_KEY = 'outbase_v148_state';
   const LEGACY_KEYS = [
-    'outbase_v145_state','outbase_v144_state','outbase_v143_state','outbase_restart_43_state','outbase_restart_42_state','outbase_restart_35_state'
+    'outbase_v148_state','outbase_v145_state','outbase_v144_state','outbase_v143_state','outbase_restart_43_state','outbase_restart_42_state','outbase_restart_35_state'
   ];
   const MAX_PREVIEW_BYTES = 520000;
   const app = document.getElementById('app');
@@ -106,16 +106,34 @@
     window.clearTimeout(setToast.timer);
     setToast.timer = window.setTimeout(() => { state.ui.toast = ''; save(); render(); }, 1900);
   }
-  function activeEvent() { return state.events.find(e => e.id === state.activeEventId) || nextEvent() || null; }
-  function nextEvent() { return state.events.filter(e => (e.end || e.start || today()) >= today() && e.status !== 'archived').sort((a,b) => String(a.start).localeCompare(String(b.start)))[0] || null; }
-  function currentSession() { return state.sessions.find(s => s.id === state.activeSessionId && s.status === 'active') || null; }
+  function activeEvent() {
+    const current = state.events.find(e => e.id === state.activeEventId);
+    if (current && current.start) return current;
+    return nextEvent() || null;
+  }
+  function nextEvent() {
+    return state.events
+      .filter(e => e.start && (e.end || e.start) >= today() && e.status !== 'archived' && e.status !== 'actual')
+      .sort((a,b) => String(a.start).localeCompare(String(b.start)))[0] || null;
+  }
+  function currentSession() {
+    const s = state.sessions.find(x => x.id === state.activeSessionId && x.status === 'active');
+    if (!s) return null;
+    const started = Date.parse(s.startedAt || '');
+    if (Number.isFinite(started) && Date.now() - started > 1000 * 60 * 60 * 12) return null;
+    return s;
+  }
   function eventById(id) { return state.events.find(e => e.id === id); }
   function placeById(id) { return state.places.find(p => p.id === id); }
   function recordsForEvent(id) { return state.records.filter(r => r.eventId === id); }
   function prepForEvent(id) { return state.prep.filter(p => p.eventId === id); }
   function sessionsForEvent(id) { return state.sessions.filter(s => s.parentEventId === id); }
-  function upcomingEvents(limit = 6) { return state.events.filter(e => (e.end || e.start || '') >= today() && e.status !== 'actual').sort((a,b) => String(a.start).localeCompare(String(b.start))).slice(0, limit); }
-  function eventsOnDate(iso) { return state.events.filter(e => inRange(iso, e.start, e.end)); }
+  function upcomingEvents(limit = 6) {
+    return state.events
+      .filter(e => e.start && (e.end || e.start) >= today() && e.status !== 'actual' && e.status !== 'archived')
+      .sort((a,b) => String(a.start).localeCompare(String(b.start))).slice(0, limit);
+  }
+  function eventsOnDate(iso) { return state.events.filter(e => e.start && inRange(iso, e.start, e.end)); }
   function isDeepEvent(e) { return Number(e.level || 1) >= 3 || ['camp','walk','travel','outing','pet'].includes(e.type); }
 
   function render() {
@@ -126,15 +144,18 @@
   function renderTopbar() {
     const ae = activeEvent();
     const current = ae ? `${typeLabels[ae.type] || '予定'} / ${jpDate(ae.start)}` : '予定未選択';
-    return `<header class="topbar">
-      <div class="logoRow">
-        <div class="logo"><div class="logoMark">OB</div><div class="logoText"><strong>OUTBASE</strong><small>RESTART-35 / v147 MVP</small></div></div>
+    return `<header class="topbar restartHead">
+      <div class="restartHeadRow">
+        <div class="restartTitleBlock">
+          <div class="kicker">OUTBASE / RESTART-35</div>
+          <h1>今日は何する？</h1>
+          <p>カレンダーを見ながら、どの画面でもプランを切り替えます。</p>
+        </div>
         <div class="topActions"><button data-action="openBackup">控え</button><button class="dark" data-action="openImport">取込</button></div>
       </div>
       <div class="planChip"><button data-action="openPlanSelect"><span class="label">現在</span><strong>${esc(ae?.title || '予定・出来事を選択')}</strong><small>${esc(current)}</small><i>切替</i></button></div>
     </header>`;
   }
-
   function renderContent(tab) {
     if (tab === 'schedule') return renderSchedulePage();
     if (tab === 'search') return renderSearchPage();
@@ -146,10 +167,9 @@
 
   function renderBottomNav() {
     const active = state.ui.tab;
-    const btn = (id, icon, label, cls='') => `<button class="navBtn ${active===id?'active':''} ${cls}" data-tab="${id}"><b>${icon}</b><span>${label}</span></button>`;
-    return `<nav class="bottomNav">${btn('schedule','📅','予定')}${btn('search','🔎','探す')}${btn('prep','🎒','準備')}${btn('add','＋','＋','plus')}${btn('memory','🕰️','思い出')}</nav>`;
+    const btn = (id, label, cls='') => `<button class="navBtn ${active===id?'active':''} ${cls}" data-tab="${id}"><span>${label}</span></button>`;
+    return `<nav class="bottomNav">${btn('schedule','予定')}${btn('search','探す')}${btn('prep','準備')}${btn('add','＋','plus')}${btn('memory','思い出')}</nav>`;
   }
-
   function renderHomePage() {
     const next = nextEvent();
     const openChecks = state.checks.filter(c => c.status !== 'done');
@@ -206,7 +226,7 @@
     const cal = days.map(d => {
       const iso = isoDate(d);
       const evs = eventsOnDate(iso);
-      return `<button class="day ${d.getMonth()!==m-1?'out':''} ${sameDay(iso,today())?'today':''} ${sameDay(iso,state.ui.selectedDate)?'selected':''}" data-action="selectDate" data-date="${iso}"><b>${d.getDate()}</b><span class="dots">${evs.slice(0,4).map(e => `<i class="dot ${esc(e.type)}"></i>`).join('')}</span></button>`;
+      return `<button class="day ${d.getMonth()!==m-1?'out':''} ${sameDay(iso,today())?'today':''} ${sameDay(iso,state.ui.selectedDate)?'selected':''}" data-action="selectDate" data-date="${iso}"><b>${d.getDate()}</b><span class="dots">${evs.slice(0,3).map(e => `<i class="dot ${esc(e.type)}"></i>`).join('')}</span></button>`;
     }).join('');
     const selectedEvents = eventsOnDate(state.ui.selectedDate);
     return `<section class="card">
@@ -219,17 +239,18 @@
   }
 
   function renderSchedulePage() {
-    const evs = [...state.events].sort((a,b) => String(a.start || '').localeCompare(String(b.start || '')));
+    const dated = [...state.events].filter(e => e.start).sort((a,b) => String(a.start || '').localeCompare(String(b.start || '')));
+    const noDate = [...state.events].filter(e => !e.start && e.status !== 'archived').sort((a,b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
     return `<main>
       ${renderCalendarCard()}
       <section class="card subtle">
         <div class="sectionTitle"><h2>予定・出来事</h2><button class="miniBtn dark" data-action="openEventForm">追加</button></div>
         <div class="tabs">${Object.entries(typeLabels).map(([k,v]) => `<button class="tabBtn" data-action="filterSchedule" data-type="${k}">${v}</button>`).join('')}</div>
-        <div class="list">${evs.length ? evs.map(e => renderEventItem(e)).join('') : `<div class="empty">＋から予定を作成</div>`}</div>
+        <div class="list">${dated.length ? dated.map(e => renderEventItem(e)).join('') : `<div class="empty">日付のある予定はまだない</div>`}</div>
+        ${noDate.length ? `<div class="sectionTitle"><h2>日付未設定</h2><small>${noDate.length}件</small></div><div class="list">${noDate.map(e => renderEventItem(e)).join('')}</div>` : ''}
       </section>
     </main>`;
   }
-
   function renderEventItem(e, expanded=false) {
     const progress = eventProgress(e);
     const checks = state.checks.filter(c => c.eventId === e.id && c.status !== 'done').length;

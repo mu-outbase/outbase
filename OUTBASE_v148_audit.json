@@ -1,0 +1,33 @@
+{
+  "version": "v148-forward-37-40-design-fix-lock",
+  "base": "v147 forward fix",
+  "rollback": false,
+  "kept_features": [
+    "all-event calendar",
+    "normal events",
+    "prep",
+    "onsite records",
+    "past actuals",
+    "memo start",
+    "context candidates",
+    "checks",
+    "gear",
+    "meals",
+    "backup/import"
+  ],
+  "design_fixes": [
+    "37-40 style top header",
+    "emoji-free bottom nav",
+    "single plus",
+    "no-date events separated",
+    "calendar dots max 3",
+    "date-less events excluded from calendar"
+  ],
+  "files": [
+    "index.html",
+    "style.css",
+    "src/app.js",
+    "manifest.json",
+    "service-worker.js"
+  ]
+}
