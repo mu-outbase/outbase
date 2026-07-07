@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-gearpro-20260707';
+  const VERSION = 'outbase-genius-ui-fieldpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -512,37 +512,111 @@
 
   function gearRow(g){return gearCard(g)}
 
+
+  function fieldStats(){
+    const publicRecords=(state.records||[]).filter(r=>!r.private);
+    return {
+      gps:state.walk.track.length,
+      spots:state.walk.spots.length,
+      friends:state.walk.friends.length,
+      records:publicRecords.length,
+      health:state.walk.health.length
+    };
+  }
+  function fieldModeName(){
+    return state.walkMode==='camp'?'キャンプ場散歩':'通常散歩';
+  }
+  function buildFieldSummary(){
+    const fs=fieldStats();
+    const recent=(state.records||[]).filter(r=>!r.private).slice(-6).map(r=>`・${r.time} ${r.kind}：${r.text||r.title}`).join('\\n') || '公開記録なし';
+    const spots=state.walk.spots.map(s=>`・${s.time||''} ${s.type||'スポット'}：${s.name}`).join('\\n') || 'スポットなし';
+    const friends=state.walk.friends.map(f=>`・${f.time||''} ${f.name}`).join('\\n') || '犬友達なし';
+    return `【OUTBASE 現地まとめ】\\n${current().title}\\n${fieldModeName()} / GPS:${fs.gps} / スポット:${fs.spots} / 犬友達:${fs.friends}\\n\\n■記録\\n${recent}\\n\\n■スポット\\n${spots}\\n\\n■犬友達\\n${friends}\\n\\n※体調メモは非公開`;
+  }
+  function recordKindLabel(kind){
+    return {memo:'メモ',photo:'写真',video:'動画',voice:'音声',site:'場所',meal:'料理',weather:'天気',setup:'設営',withdraw:'撤収'}[kind]||kind;
+  }
+  function addPublicRecord(kind,text,title){
+    const p=state.walk.track[state.walk.track.length-1];
+    state.records=state.records||[];
+    state.records.push({
+      id:uid('rec'),
+      eventId:state.currentPlanId,
+      kind,
+      title:title||recordKindLabel(kind),
+      text:text||'',
+      mode:fieldModeName(),
+      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      date:today(),
+      lat:p?.lat||null,
+      lng:p?.lng||null,
+      private:false
+    });
+  }
+
   function field(){
-    const modeText=state.walkMode==='camp'?'キャンプ場散歩':'通常散歩';
+    const fs=fieldStats();
     return shell(`
-      <section class="nextAction">
-        <div class="nextActionIn">
-          <div class="nextLabel"><span>FIELD MODE</span><span>${modeText}</span></div>
-          <h1>${state.walk.active?'記録中':'現地は3秒。'}</h1>
-          <p>表に出すのは散歩・場所・スポット。体調メモは非公開だけ。</p>
-          <div class="nextButtons">
-            <button class="bigGo" data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}<small>まずここだけ押す</small></button>
-            <button class="subGo" data-act="gps">現在地を記録</button>
-          </div>
+      <section class="fieldHero2">
+        <div class="fieldHeroTop2">
+          <span><b>${state.walk.active?'記録中':'現地は3秒。'}</b><small>${fieldModeName()}。考えずに押す。公開する記録と非公開の体調メモは分ける。</small></span>
+          <span class="liveBadge ${state.walk.active?'on':''}">${state.walk.active?'LIVE':'READY'}</span>
+        </div>
+        <div class="fieldCommand2">
+          <button class="mainCmd" data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
+          <button class="subCmd" data-act="gps">現在地</button>
         </div>
       </section>
+
+      <div class="fieldStats2">
+        <button data-act="gps"><b>${fs.gps}</b><span>GPS</span></button>
+        <button data-act="spotQuick" data-type="スポット"><b>${fs.spots}</b><span>スポット</span></button>
+        <button data-act="friend"><b>${fs.friends}</b><span>犬友達</span></button>
+        <button data-act="copyFieldSummary"><b>${fs.records}</b><span>記録</span></button>
+      </div>
 
       <section class="section">
         <div class="segment"><button class="${state.walkMode==='normal'?'active':''}" data-walk="normal">通常散歩</button><button class="${state.walkMode==='camp'?'active':''}" data-walk="camp">キャンプ場散歩</button></div>
-        <div class="metricGrid" style="margin-top:12px"><div class="metricBox"><small>GPS</small><b>${state.walk.track.length}</b></div><div class="metricBox"><small>スポット</small><b>${state.walk.spots.length}</b></div><div class="metricBox"><small>犬友達</small><b>${state.walk.friends.length}</b></div></div>
       </section>
 
       <section class="section">
-        <div class="fieldGrid">
-          <button class="fieldBig primary" data-act="gps"><b>現在地</b><small>地図に1点追加</small></button>
-          <button class="fieldBig" data-act="spot"><b>スポット</b><small>良い場所を残す</small></button>
-          <button class="fieldBig" data-act="friend"><b>犬友達</b><small>名前未確認でもOK</small></button>
-          <button class="fieldBig" data-act="addNote"><b>メモ</b><small>後で整理へ送る</small></button>
+        <div class="head"><div><h2>ワンタップ記録</h2><p>現地では細かく書かない。種類だけ残して、必要なら一言。</p></div></div>
+        <div class="captureGrid">
+          <button class="captureBtn primary" data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言だけ残す</small></button>
+          <button class="captureBtn" data-act="quickRecord" data-kind="photo"><b>写真</b><small>撮った前提で記録</small></button>
+          <button class="captureBtn" data-act="quickRecord" data-kind="voice"><b>音声</b><small>話した内容を後で整理</small></button>
+          <button class="captureBtn" data-act="quickRecord" data-kind="meal"><b>料理</b><small>食べた/作った記録</small></button>
         </div>
       </section>
 
-      <section class="section"><div class="map"><canvas id="walkMap" width="600" height="226"></canvas>${state.walk.track.length?'':'<div class="empty">現在地を押すと<br>簡易ルートを描く</div>'}</div><div class="actions"><button class="btn" data-act="map">Google Map</button></div></section>
-      <section class="section"><details class="privateBox"><summary>非公開の体調メモ</summary><div class="actions"><button class="btn" data-act="health" data-type="体調">体調</button><button class="btn" data-act="health" data-type="うんち">うんち</button><button class="btn" data-act="health" data-type="おしっこ">おしっこ</button></div><div class="list" style="margin-top:12px">${state.walk.health.slice().reverse().map(h=>`<div class="row"><span><strong>${esc(h.type)}</strong><small>${esc(h.time)} / ${esc(h.mode)} / 非公開</small></span><span class="pill private">非公開</span></div>`).join('')||'<div class="row"><span><strong>まだなし</strong><small>表には出さない。</small></span></div>'}</div></details></section>
+      <section class="section">
+        <div class="head"><div><h2>場所を残す</h2><p>キャンプ場散歩でも通常散歩でも、再訪に使える形で残す。</p></div></div>
+        <div class="spotRail">
+          <button data-act="spotQuick" data-type="景色">景色</button>
+          <button data-act="spotQuick" data-type="木陰">木陰</button>
+          <button data-act="spotQuick" data-type="水場">水場</button>
+          <button data-act="spotQuick" data-type="危険">危険</button>
+        </div>
+        <div class="spotList">${state.walk.spots.slice().reverse().slice(0,6).map(s=>`<div class="spotItem"><span><b>${esc(s.name)}</b><small>${esc(s.type||'スポット')} / ${esc(s.time||'')}</small></span><span class="pill">場所</span></div>`).join('')||`<div class="spotItem"><span><b>まだなし</b><small>景色・木陰・水場・危険を押すだけ。</small></span><span class="pill">0</span></div>`}</div>
+      </section>
+
+      <section class="section">
+        <div class="map"><canvas id="walkMap" width="600" height="226"></canvas>${state.walk.track.length?'':'<div class="empty">現在地を押すと<br>簡易ルートを描く</div>'}</div>
+        <div class="fieldMapOps"><button data-act="gps">現在地追加</button><button data-act="map">Google Map</button><button data-act="copyFieldSummary">現地まとめ</button></div>
+      </section>
+
+      <section class="section">
+        <details class="privateHealth">
+          <summary>非公開の体調メモ</summary>
+          <div class="healthOps"><button data-act="health" data-type="体調">体調</button><button data-act="health" data-type="うんち">うんち</button><button data-act="health" data-type="おしっこ">おしっこ</button></div>
+          <div class="eventStack">${state.walk.health.slice().reverse().slice(0,8).map(h=>`<div class="eventMini"><span class="typeIcon">非</span><span style="min-width:0;flex:1"><strong>${esc(h.type)}</strong><small>${esc(h.time)} / ${esc(h.mode)} / 表示・レビューには出さない</small></span><span class="pill private">非公開</span></div>`).join('')||`<div class="eventMini"><span class="typeIcon">非</span><span style="min-width:0;flex:1"><strong>まだなし</strong><small>ここだけに保存。場所カードやレビューには出さない。</small></span><span class="pill private">非公開</span></div>`}</div>
+        </details>
+      </section>
+
+      <section class="section">
+        <div class="head"><div><h2>現地タイムライン</h2><p>公開できる記録だけ。非公開体調メモは混ぜない。</p></div><button class="btn primary" data-act="copyFieldSummary">コピー</button></div>
+        <div class="fieldTimeline">${(state.records||[]).filter(r=>!r.private).slice().reverse().slice(0,8).map(r=>`<div class="recordCard"><div class="recordTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.time)} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<div class="recordBody">${esc(r.text)}</div>`:''}</div>`).join('')||`<div class="fieldReport"><b>まだ公開記録なし</b><p>メモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div>
+      </section>
     `)
   }
 
@@ -603,6 +677,10 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='quickRecord')return quickRecord(el.dataset.kind);
+    if(a==='spotQuick')return spotQuick(el.dataset.type);
+    if(a==='copyFieldSummary')return copyFieldSummary();
 
     if(a==='copyGearSummary')return copyGearSummary();
     if(a==='boxCare')return boxCare(el.dataset.id);
@@ -672,9 +750,9 @@
   async function copyShop(){const text=state.shopping.map(s=>`${s.done?'☑':'□'} ${s.name}：${s.qty}`).join('\n');try{await navigator.clipboard.writeText(text);toast('コピー')}catch(e){prompt('コピー',text)}}
   function toggleBox(id){const gs=state.gear.filter(g=>g.boxId===id),all=gs.length&&gs.every(g=>g.status==='loaded');state.gear=state.gear.map(g=>g.boxId===id?{...g,status:all?'home':'loaded'}:g);save();render()}
   function toggleWalk(){state.walk.active=!state.walk.active;toast(state.walk.active?'散歩開始':'散歩終了');save();render()}
-  function gps(){const push=(lat,lng)=>{state.walk.track.push({lat,lng,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render();toast('現在地記録')}; if(!navigator.geolocation)return push(35.867+Math.random()/1000,139.975+Math.random()/1000); navigator.geolocation.getCurrentPosition(p=>push(p.coords.latitude,p.coords.longitude),()=>push(35.867+Math.random()/1000,139.975+Math.random()/1000),{enableHighAccuracy:true,timeout:4000})}
+  function gps(){const push=(lat,lng)=>{state.walk.track.push({lat,lng,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});addPublicRecord('site','現在地を記録','現在地');save();render();toast('現在地記録')}; if(!navigator.geolocation)return push(35.867+Math.random()/1000,139.975+Math.random()/1000); navigator.geolocation.getCurrentPosition(p=>push(p.coords.latitude,p.coords.longitude),()=>push(35.867+Math.random()/1000,139.975+Math.random()/1000),{enableHighAccuracy:true,timeout:4000})}
   function spot(){const name=prompt('スポット名');if(!name)return;state.walk.spots.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render()}
-  function friend(){const name=prompt('犬友達名');if(!name)return;state.walk.friends.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render()}
+  function friend(){const name=prompt('犬友達名');if(!name)return;state.walk.friends.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),mode:fieldModeName()});addPublicRecord('memo',`犬友達：${name}`,'犬友達');save();render();toast('犬友達保存')}
   function health(type){state.walk.health.push({type,mode:state.walkMode==='camp'?'キャンプ場散歩':'通常散歩',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render();toast('非公開保存')}
   function openMap(){const p=state.walk.track[state.walk.track.length-1];if(!p)return toast('先に現在地');window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`,'_blank')}
   function backup(){const blob=new Blob([JSON.stringify({version:VERSION,state},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`outbase_backup_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
@@ -682,6 +760,30 @@
 
 
 
+
+
+  function quickRecord(kind){
+    const label=recordKindLabel(kind);
+    let text='';
+    if(kind==='memo'||kind==='voice'||kind==='meal') text=prompt(`${label}を一言`, '')||'';
+    if(kind==='photo') text=prompt('写真メモ', '写真を撮った')||'写真を撮った';
+    addPublicRecord(kind,text,label);
+    save();render();toast(`${label}記録`);
+  }
+  function spotQuick(type){
+    const name=prompt(`${type||'スポット'}名`, type||'スポット');
+    if(!name)return;
+    const p=state.walk.track[state.walk.track.length-1];
+    const item={name,type:type||'スポット',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),lat:p?.lat||null,lng:p?.lng||null,mode:fieldModeName()};
+    state.walk.spots.push(item);
+    state.places.push({id:uid('place'),name,kind:item.mode,note:`${type||'スポット'}として記録`,visits:1});
+    addPublicRecord('site',`${type||'スポット'}：${name}`,name);
+    save();render();toast('場所を保存');
+  }
+  async function copyFieldSummary(){
+    const text=buildFieldSummary();
+    try{await navigator.clipboard.writeText(text);toast('現地まとめをコピー')}catch(e){prompt('コピー',text)}
+  }
 
   async function copyGearSummary(){
     const text=buildGearSummary();
