@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-finalrc2-20260707';
+  const VERSION = 'outbase-finalrc3-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc2-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-finalrc3-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -1713,6 +1713,14 @@ ${starterPanelHtml()}
           <button class="mainCmd" data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button>
           <button class="subCmd" data-act="gps">現在地</button>
         </div>
+      </section>
+
+      <section class="section">
+        <button class="locBigButton" data-act="gps">
+          <span><b>現在地を記録</b><small>ここを押すとGPSを1点保存。許可が出たら許可する。</small></span>
+          <span class="locMark">◎</span>
+        </button>
+        <div class="locHint">場所が分からなくなったら、現地画面ではまずこのボタン。散歩開始とは別に、手動で現在地だけ残せる。</div>
       </section>
 
       <div class="fieldStats2">
