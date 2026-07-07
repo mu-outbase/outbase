@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-auditpro-20260707';
+  const VERSION = 'outbase-genius-ui-mediapro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-auditpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-mediapro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -23,7 +23,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', drawer:null, toast:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', drawer:null, toast:null, importMode:null,
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -79,6 +79,7 @@
   }
 
   let state=load();
+  let voiceRecorder=null, voiceChunks=[], voiceStartedAt=0;
   function load(){try{const raw=localStorage.getItem(KEY); if(raw)return {...seed(),...JSON.parse(raw)}}catch(e){} return seed()}
   function save(){localStorage.setItem(KEY,JSON.stringify(state))}
   function toast(msg){state.toast=msg;render();setTimeout(()=>{if(state.toast===msg){state.toast=null;render()}},1600)}
@@ -735,6 +736,49 @@
   function gearRow(g){return gearCard(g)}
 
 
+
+  function fileSizeLabel(bytes){
+    if(!bytes && bytes!==0)return '';
+    return bytes>1024*1024?`${(bytes/1024/1024).toFixed(1)}MB`:`${Math.round(bytes/1024)}KB`;
+  }
+  function readFileAsDataURL(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(r.result);
+      r.onerror=reject;
+      r.readAsDataURL(file);
+    });
+  }
+  function mediaPreviewHtml(r){
+    if(!r.mediaType)return '';
+    const meta=`${r.mediaName||''} ${r.mediaSize?'/ '+fileSizeLabel(r.mediaSize):''}`;
+    if(r.mediaType.startsWith('image/') && r.dataUrl)return `<div class="mediaStrip"><div class="mediaBox"><img src="${esc(r.dataUrl)}" alt=""><div class="mediaMeta">${esc(meta)}</div></div></div>`;
+    if(r.mediaType.startsWith('video/') && r.dataUrl)return `<div class="mediaStrip"><div class="mediaBox"><video controls src="${esc(r.dataUrl)}"></video><div class="mediaMeta">${esc(meta)}</div></div></div>`;
+    if(r.mediaType.startsWith('audio/') && r.dataUrl)return `<div class="mediaStrip"><div class="mediaBox"><audio controls src="${esc(r.dataUrl)}"></audio><div class="mediaMeta">${esc(meta)}</div></div></div>`;
+    return r.mediaName?`<div class="mediaStrip"><div class="mediaNotice">${esc(meta)}<br>大きいファイルは名前だけ保存。</div></div>`:'';
+  }
+  function addMediaRecord(kind,file,dataUrl){
+    const p=state.walk.track[state.walk.track.length-1];
+    state.records=state.records||[];
+    state.records.push({
+      id:uid('rec'),
+      eventId:state.currentPlanId,
+      kind,
+      title:recordKindLabel(kind),
+      text:file?.name?`${file.name} を記録`:'',
+      mode:fieldModeName(),
+      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      date:today(),
+      lat:p?.lat||null,
+      lng:p?.lng||null,
+      private:false,
+      mediaName:file?.name||'',
+      mediaType:file?.type||'',
+      mediaSize:file?.size||0,
+      dataUrl:dataUrl||''
+    });
+  }
+
   function fieldStats(){
     const publicRecords=(state.records||[]).filter(r=>!r.private);
     return {
@@ -756,7 +800,7 @@
     return `【OUTBASE 現地まとめ】\\n${current().title}\\n${fieldModeName()} / GPS:${fs.gps} / スポット:${fs.spots} / 犬友達:${fs.friends}\\n\\n■記録\\n${recent}\\n\\n■スポット\\n${spots}\\n\\n■犬友達\\n${friends}\\n\\n※体調メモは非公開`;
   }
   function recordKindLabel(kind){
-    return {memo:'メモ',photo:'写真',video:'動画',voice:'音声',site:'場所',meal:'料理',weather:'天気',setup:'設営',withdraw:'撤収'}[kind]||kind;
+    return {memo:'メモ',photo:'写真',video:'動画',voice:'音声',audio:'音声',site:'場所',meal:'料理',weather:'天気',setup:'設営',withdraw:'撤収'}[kind]||kind;
   }
   function addPublicRecord(kind,text,title){
     const p=state.walk.track[state.walk.track.length-1];
@@ -805,10 +849,13 @@
         <div class="head"><div><h2>ワンタップ記録</h2><p>現地では細かく書かない。種類だけ残して、必要なら一言。</p></div></div>
         <div class="captureGrid">
           <button class="captureBtn primary" data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言だけ残す</small></button>
-          <button class="captureBtn" data-act="quickRecord" data-kind="photo"><b>写真</b><small>撮った前提で記録</small></button>
-          <button class="captureBtn" data-act="quickRecord" data-kind="voice"><b>音声</b><small>話した内容を後で整理</small></button>
+          <button class="captureBtn" data-act="captureMedia" data-kind="photo"><b>写真</b><small>画像を選んで記録</small></button>
+          <button class="captureBtn" data-act="captureMedia" data-kind="video"><b>動画</b><small>動画ファイルを記録</small></button>
+          <button class="captureBtn ${voiceRecorder?'recording':''}" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声'}</b><small>${voiceRecorder?'録音中':'その場で録音'}</small></button>
           <button class="captureBtn" data-act="quickRecord" data-kind="meal"><b>料理</b><small>食べた/作った記録</small></button>
+          <button class="captureBtn" data-act="import"><b>ファイル</b><small>資料・メモ取込</small></button>
         </div>
+        ${voiceRecorder?`<div class="voiceLive">録音中。もう一度「音声停止」を押すと保存。</div>`:''}
       </section>
 
       <section class="section">
@@ -837,7 +884,7 @@
 
       <section class="section">
         <div class="head"><div><h2>現地タイムライン</h2><p>公開できる記録だけ。非公開体調メモは混ぜない。</p></div><button class="btn primary" data-act="copyFieldSummary">コピー</button></div>
-        <div class="fieldTimeline">${(state.records||[]).filter(r=>!r.private).slice().reverse().slice(0,8).map(r=>`<div class="recordCard"><div class="recordTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.time)} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<div class="recordBody">${esc(r.text)}</div>`:''}</div>`).join('')||`<div class="fieldReport"><b>まだ公開記録なし</b><p>メモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div>
+        <div class="fieldTimeline">${(state.records||[]).filter(r=>!r.private).slice().reverse().slice(0,8).map(r=>`<div class="recordCard"><div class="recordTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.time)} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<div class="recordBody">${esc(r.text)}</div>`:''}${mediaPreviewHtml(r)}</div>`).join('')||`<div class="fieldReport"><b>まだ公開記録なし</b><p>メモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div>
       </section>
     `)
   }
@@ -927,7 +974,7 @@
   function memoryBody(){
     if(state.memoryTab==='timeline'){
       const list=publicRecords().slice().reverse();
-      return `<section class="section"><div class="head"><div><h2>公開記録</h2><p>体調メモは混ぜない。レビューに使える記録だけ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="memoryTimeline">${list.map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<p>${esc(r.text)}</p>`:''}<div class="improveOps"><button data-act="recordToImprove" data-id="${r.id}">改善へ</button><button data-act="recordToPlace" data-id="${r.id}">場所へ</button></div></div>`).join('')||`<div class="dataPanel"><b>公開記録なし</b><p>現地画面でメモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div></section>`;
+      return `<section class="section"><div class="head"><div><h2>公開記録</h2><p>体調メモは混ぜない。レビューに使える記録だけ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="memoryTimeline">${list.map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<p>${esc(r.text)}</p>`:''}${mediaPreviewHtml(r)}<div class="improveOps"><button data-act="recordToImprove" data-id="${r.id}">改善へ</button><button data-act="recordToPlace" data-id="${r.id}">場所へ</button></div></div>`).join('')||`<div class="dataPanel"><b>公開記録なし</b><p>現地画面でメモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div></section>`;
     }
 
     if(state.memoryTab==='places'){
@@ -1005,6 +1052,9 @@
   }
   function act(a,el){
 
+    if(a==='captureMedia')return captureMedia(el.dataset.kind);
+    if(a==='toggleVoice')return toggleVoice();
+
     if(a==='copyAudit')return copyAudit();
     if(a==='repairData')return repairData();
 
@@ -1075,7 +1125,7 @@
     if(a==='addBox')state.drawer={type:'box'};
     if(a==='editBox')state.drawer={type:'box',id:el.dataset.id};
     if(a==='toggleBox')return toggleBox(el.dataset.id);
-    if(a==='import')return fileInput.click();
+    if(a==='import'){state.importMode=null;fileInput.accept='.json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*';fileInput.multiple=true;return fileInput.click();}
     if(a==='backup')return backup();
     if(a==='addNote')state.drawer={type:'note'};
     if(a==='toggleWalk')return toggleWalk();
@@ -1277,6 +1327,50 @@
     toast(`整理 ${before-after}件`);
   }
 
+
+  function captureMedia(kind){
+    state.importMode=`media:${kind}`;
+    fileInput.accept=kind==='video'?'video/*':'image/*';
+    fileInput.multiple=true;
+    fileInput.click();
+  }
+  async function toggleVoice(){
+    if(voiceRecorder && voiceRecorder.state==='recording'){
+      voiceRecorder.stop();
+      return;
+    }
+    if(!navigator.mediaDevices || !window.MediaRecorder){
+      const text=prompt('音声メモ（録音非対応のため文字で保存）','');
+      if(text){addPublicRecord('voice',text,'音声メモ');save();render();toast('音声メモ保存')}
+      return;
+    }
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      voiceChunks=[];
+      voiceStartedAt=Date.now();
+      voiceRecorder=new MediaRecorder(stream);
+      voiceRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data)};
+      voiceRecorder.onstop=()=>{
+        const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||'audio/webm'});
+        stream.getTracks().forEach(t=>t.stop());
+        const file={name:`voice_${Date.now()}.webm`,type:blob.type,size:blob.size};
+        const reader=new FileReader();
+        reader.onload=()=>{
+          addMediaRecord('voice',file,reader.result);
+          voiceRecorder=null;voiceChunks=[];
+          save();render();toast('音声保存');
+        };
+        reader.readAsDataURL(blob);
+      };
+      voiceRecorder.start();
+      render();
+      toast('録音開始');
+    }catch(e){
+      const text=prompt('音声メモ（マイク許可なし）','');
+      if(text){addPublicRecord('voice',text,'音声メモ');save();render();toast('音声メモ保存')}
+    }
+  }
+
   function quickRecord(kind){
     const label=recordKindLabel(kind);
     let text='';
@@ -1422,6 +1516,39 @@
     try{await navigator.clipboard.writeText(text);toast('レビューをコピー')}catch(e){prompt('コピー',text)}
   }
 
-  fileInput.onchange=async()=>{const files=[...fileInput.files||[]];if(!files.length)return;const f=files[0];try{const text=await f.text();if(f.name.endsWith('.json')){const obj=JSON.parse(text);if(obj.state)state={...seed(),...obj.state};}else{state.notes.push({id:uid('note'),title:'取込候補',text:f.name,private:false});}save();render();toast('取込保存')}catch(e){toast('読込失敗')}fileInput.value=''};
+  fileInput.onchange=async()=>{
+    const files=[...fileInput.files||[]];
+    if(!files.length)return;
+    const mode=state.importMode||'import';
+    try{
+      if(mode.startsWith('media:')){
+        const kind=mode.split(':')[1]==='video'?'video':'photo';
+        for(const f of files){
+          let dataUrl='';
+          const keepPreview=(f.type.startsWith('image/') && f.size<850000) || (f.type.startsWith('video/') && f.size<1400000);
+          if(keepPreview)dataUrl=await readFileAsDataURL(f);
+          addMediaRecord(kind,f,dataUrl);
+        }
+        state.importMode=null;
+        save();render();toast(`${files.length}件メディア記録`);
+      }else{
+        const f=files[0];
+        const text=await f.text();
+        if(f.name.endsWith('.json')){
+          const obj=JSON.parse(text);
+          if(obj.state)state={...seed(),...obj.state};
+        }else{
+          state.notes.push({id:uid('note'),title:'取込候補',text:f.name,private:false});
+        }
+        save();render();toast('取込保存');
+      }
+    }catch(e){
+      state.importMode=null;
+      toast('読込失敗');
+    }
+    fileInput.value='';
+    fileInput.accept='.json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*';
+    fileInput.multiple=true;
+  };
   render();
 })();
