@@ -1,12 +1,12 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-timerpro-20260707';
+  const VERSION = 'outbase-genius-ui-gpspro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-timerpro-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-genius-ui-gpspro-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -104,11 +104,14 @@
 
   let state=load();
   let voiceRecorder=null, voiceChunks=[], voiceStartedAt=0;
+  let gpsWatchId=null, gpsAutoTimer=null;
+  const GPS_INTERVAL_MS=10000, GPS_JUMP_LIMIT_KM=1;
   function migrateState(s){
     const base=seed();
     s={...base,...(s||{})};
     s.settings={...base.settings,...(s.settings||{})};
     s.walk={...base.walk,...(s.walk||{})};
+    s.walk.track=s.walk.track||[];s.walk.spots=s.walk.spots||[];s.walk.friends=s.walk.friends||[];s.walk.health=s.walk.health||[];s.walk.sessions=s.walk.sessions||[];
     s.weatherPlan=s.weatherPlan||{source:'手入力',updated:'',decisions:{setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断'},forecast:[]};
     s.weatherPlan.decisions={setup:'未判断',withdraw:'未判断',kota:'未判断',tent:'未判断',...(s.weatherPlan.decisions||{})};
     s.weatherPlan.forecast=s.weatherPlan.forecast||[];
@@ -352,6 +355,7 @@
     (state.pets||[]).forEach(p=>items.push({type:'pet',id:p.id,icon:petAvatar(p),title:p.name,sub:`${p.kind} / ${p.age}`,text:p.note||''}));
     (state.petPrep||[]).forEach(x=>items.push({type:'petPrep',id:x.id,icon:'犬',title:x.name,sub:`${x.done?'完了':'未完'} / ${x.group}`,text:x.qty||''}));
     (state.timers||[]).forEach(t=>items.push({type:'timer',id:t.id,icon:'時',title:t.name,sub:`${timerLabel(t.kind)} / ${formatTimer(timerLeft(t))} / ${t.status}`,text:t.note||''}));
+    if(state.walk.track.length)items.push({type:'route',id:'current',icon:'歩',title:'現在のルート',sub:`${walkDistance().toFixed(2)}km / ${fmtDuration(walkDurationSec())}`,text:buildRouteSummary()});
     return items;
   }
   function filteredCenterItems(){
@@ -395,6 +399,7 @@
     if(!p)issues.push(['主役プランなし','予定を1つ主役にする']);
     if(p && p.type==='camp' && planRecords(p.id).length===0)warn.push(['主役記録なし','現地記録がまだない']);
     const ts=timerStats(); if(ts.running)warn.push(['タイマー実行中',`${ts.running}件`]);
+    if(state.walk.active)warn.push(['散歩記録中',`${walkDistance().toFixed(2)}km`]);
     if(state.events.some(e=>!e.start))warn.push(['日付未設定予定',`${state.events.filter(e=>!e.start).length}件`]);
     const gs=gearStats();
     if(gs.noBox)warn.push(['BOX未設定ギア',`${gs.noBox}件`]);
@@ -1245,6 +1250,88 @@ ${starterPanelHtml()}
     }
   }
 
+
+  function haversine(a,b){
+    if(!a||!b||a.lat==null||b.lat==null)return 0;
+    const R=6371, toRad=x=>x*Math.PI/180;
+    const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
+    const la1=toRad(a.lat), la2=toRad(b.lat);
+    const h=Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+    return 2*R*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  }
+  function walkDistance(track=state.walk.track){
+    let km=0;
+    for(let i=1;i<track.length;i++)km+=haversine(track[i-1],track[i]);
+    return km;
+  }
+  function currentWalkSession(){
+    state.walk.sessions=state.walk.sessions||[];
+    return state.walk.sessions.find(s=>s.active) || state.walk.sessions[state.walk.sessions.length-1] || null;
+  }
+  function walkDurationSec(){
+    const s=currentWalkSession();
+    if(!s)return 0;
+    const end=s.active?Date.now():(s.endedAt||Date.now());
+    return Math.max(0,Math.floor((end-(s.startedAt||end))/1000));
+  }
+  function walkAvgSpeed(){
+    const h=walkDurationSec()/3600;
+    return h?walkDistance()/h:0;
+  }
+  function fmtDuration(sec){
+    sec=Math.max(0,Math.floor(sec||0));
+    const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+    return h?`${h}:${pad(m)}:${pad(s)}`:`${m}:${pad(s)}`;
+  }
+  function pushGpsPoint(lat,lng,source='gps'){
+    const p={lat,lng,source,mode:fieldModeName(),time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),ts:Date.now(),eventId:state.currentPlanId};
+    const last=state.walk.track[state.walk.track.length-1];
+    if(last && haversine(last,p)>GPS_JUMP_LIMIT_KM){
+      state.notes.push({id:uid('note'),title:'GPSジャンプ除外',text:`${haversine(last,p).toFixed(2)}km / ${p.time}`,private:false});
+      return false;
+    }
+    state.walk.track.push(p);
+    return true;
+  }
+  function ensureWalkSession(){
+    state.walk.sessions=state.walk.sessions||[];
+    let s=state.walk.sessions.find(x=>x.active);
+    if(!s){
+      s={id:uid('walk'),eventId:state.currentPlanId,mode:fieldModeName(),startedAt:Date.now(),endedAt:0,active:true,startCount:state.walk.track.length};
+      state.walk.sessions.push(s);
+    }
+    return s;
+  }
+  function startGpsAuto(){
+    stopGpsAuto(false);
+    if(navigator.geolocation && navigator.geolocation.watchPosition){
+      gpsWatchId=navigator.geolocation.watchPosition(pos=>{
+        if(pushGpsPoint(pos.coords.latitude,pos.coords.longitude,'watch')){save(); if(state.route==='field')render();}
+      },()=>{}, {enableHighAccuracy:true,timeout:8000,maximumAge:5000});
+    }
+    gpsAutoTimer=setInterval(()=>{ if(state.walk.active) gps(true); }, GPS_INTERVAL_MS);
+  }
+  function stopGpsAuto(saveState=true){
+    if(gpsWatchId!==null && navigator.geolocation){try{navigator.geolocation.clearWatch(gpsWatchId)}catch(e){}}
+    gpsWatchId=null;
+    if(gpsAutoTimer){clearInterval(gpsAutoTimer);gpsAutoTimer=null}
+    if(saveState)save();
+  }
+  function buildRouteSummary(){
+    const km=walkDistance(), sec=walkDurationSec(), sp=walkAvgSpeed(), pts=state.walk.track.length;
+    const s=currentWalkSession();
+    return `【OUTBASE ルート】\\n${current().title}\\n${fieldModeName()}\\n距離:${km.toFixed(2)}km\\n時間:${fmtDuration(sec)}\\n平均:${sp.toFixed(1)}km/h\\nGPS:${pts}点\\n開始:${s?.startedAt?new Date(s.startedAt).toLocaleString('ja-JP'):''}\\n終了:${s?.endedAt?new Date(s.endedAt).toLocaleString('ja-JP'):''}`;
+  }
+  function buildGpx(){
+    const pts=state.walk.track||[];
+    const name=esc(current().title);
+    return `<?xml version="1.0" encoding="UTF-8"?>\\n<gpx version="1.1" creator="OUTBASE">\\n<trk><name>${name}</name><trkseg>\\n${pts.map(p=>`<trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.ts||Date.now()).toISOString()}</time></trkpt>`).join('\\n')}\\n</trkseg></trk>\\n</gpx>`;
+  }
+  function gpsPanelHtml(){
+    const km=walkDistance(), sec=walkDurationSec(), sp=walkAvgSpeed();
+    return `<section class="section"><div class="gpsPanel"><div class="gpsHead"><span><b>${state.walk.active?'ルート記録中':'ルート記録'}</b><small>10秒ごとに現在地を拾う。1km以上の急ジャンプは除外。</small></span><span class="gpsLive ${state.walk.active?'on':''}">${state.walk.active?'AUTO':'STOP'}</span></div><div class="gpsGrid"><div class="gpsMetric"><b>${km.toFixed(2)}</b><span>km</span></div><div class="gpsMetric"><b>${fmtDuration(sec)}</b><span>時間</span></div><div class="gpsMetric"><b>${sp.toFixed(1)}</b><span>km/h</span></div><div class="gpsMetric"><b>${state.walk.track.length}</b><span>GPS</span></div></div><div class="gpsOps"><button class="primary" data-act="toggleWalk">${state.walk.active?'終了':'開始'}</button><button data-act="gps">手動追加</button><button data-act="copyRouteSummary">コピー</button><button data-act="exportGpx">GPX</button></div></div></section>`;
+  }
+
   function fieldStats(){
     const publicRecords=planRecords();
     return {
@@ -1252,7 +1339,10 @@ ${starterPanelHtml()}
       spots:state.walk.spots.length,
       friends:state.walk.friends.length,
       records:publicRecords.length,
-      health:state.walk.health.length
+      health:state.walk.health.length,
+      km:walkDistance(),
+      duration:walkDurationSec(),
+      speed:walkAvgSpeed()
     };
   }
   function fieldModeName(){
@@ -1301,7 +1391,7 @@ ${starterPanelHtml()}
       </section>
 
       <div class="fieldStats2">
-        <button data-act="gps"><b>${fs.gps}</b><span>GPS</span></button>
+        <button data-act="gps"><b>${fs.km.toFixed(2)}</b><span>km</span></button>
         <button data-act="spotQuick" data-type="スポット"><b>${fs.spots}</b><span>スポット</span></button>
         <button data-act="friend"><b>${fs.friends}</b><span>犬友達</span></button>
         <button data-act="copyFieldSummary"><b>${fs.records}</b><span>記録</span></button>
@@ -1310,6 +1400,8 @@ ${starterPanelHtml()}
       <section class="section">
         <div class="segment"><button class="${state.walkMode==='normal'?'active':''}" data-walk="normal">通常散歩</button><button class="${state.walkMode==='camp'?'active':''}" data-walk="camp">キャンプ場散歩</button></div>
       </section>
+
+      ${gpsPanelHtml()}
 
       ${timerPanelHtml()}
       ${timerBodyHtml()}
@@ -1340,7 +1432,12 @@ ${starterPanelHtml()}
 
       <section class="section">
         <div class="map"><canvas id="walkMap" width="600" height="226"></canvas>${state.walk.track.length?'':'<div class="empty">現在地を押すと<br>簡易ルートを描く</div>'}</div>
-        <div class="fieldMapOps"><button data-act="gps">現在地追加</button><button data-act="map">Google Map</button><button data-act="copyFieldSummary">現地まとめ</button></div>
+        <div class="fieldMapOps"><button data-act="gps">現在地追加</button><button data-act="openMap">Google Map</button><button data-act="copyRouteSummary">ルート</button></div>
+      </section>
+
+      <section class="section">
+        <div class="head"><div><h2>GPS履歴</h2><p>最新の位置だけを軽く確認。</p></div><button class="btn" data-act="clearTrack">クリア</button></div>
+        <div class="trackList">${state.walk.track.slice().reverse().slice(0,8).map((p,i)=>`<div class="trackPoint"><span><b>${esc(p.time||'')}</b><small>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)} / ${esc(p.source||'gps')}</small></span><span class="pill">${i===0?'最新':'GPS'}</span></div>`).join('')||`<div class="routeBox"><b>GPSなし</b><p>散歩開始または現在地追加で記録。</p></div>`}</div>
       </section>
 
       <section class="section">
@@ -1624,6 +1721,11 @@ ${starterPanelHtml()}
   }
   function act(a,el){
 
+    if(a==='copyRouteSummary')return copyRouteSummary();
+    if(a==='exportGpx')return exportGpx();
+    if(a==='clearTrack')return clearTrack();
+    if(a==='openMap')return openMap();
+
     if(a==='addTimerTemplate')return addTimerTemplate(el.dataset.kind||'meal');
     if(a==='timerPrompt')return timerPrompt();
     if(a==='startTimer')return startTimer(el.dataset.id);
@@ -1774,13 +1876,61 @@ ${starterPanelHtml()}
     try{await navigator.clipboard.writeText(text);toast('買い物コピー')}catch(e){prompt('コピー',text)}
   }
   function toggleBox(id){const gs=state.gear.filter(g=>g.boxId===id),all=gs.length&&gs.every(g=>g.status==='loaded');state.gear=state.gear.map(g=>g.boxId===id?{...g,status:all?'home':'loaded'}:g);save();render()}
-  function toggleWalk(){state.walk.active=!state.walk.active;toast(state.walk.active?'散歩開始':'散歩終了');save();render()}
-  function gps(){const push=(lat,lng)=>{state.walk.track.push({lat,lng,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});addPublicRecord('site','現在地を記録','現在地');save();render();toast('現在地記録')}; if(!navigator.geolocation)return push(35.867+Math.random()/1000,139.975+Math.random()/1000); navigator.geolocation.getCurrentPosition(p=>push(p.coords.latitude,p.coords.longitude),()=>push(35.867+Math.random()/1000,139.975+Math.random()/1000),{enableHighAccuracy:true,timeout:4000})}
+
+  async function copyRouteSummary(){
+    const text=buildRouteSummary();
+    try{await navigator.clipboard.writeText(text);toast('ルートコピー')}catch(e){prompt('コピー',text)}
+  }
+  function exportGpx(){
+    downloadText(`outbase_route_${today()}.gpx`,buildGpx(),'application/gpx+xml');
+    toast('GPX書き出し');
+  }
+  function clearTrack(){
+    if(!confirm('GPS履歴をクリアする？'))return;
+    state.walk.track=[];
+    state.walk.sessions=[];
+    state.walk.active=false;
+    stopGpsAuto(false);
+    save();render();toast('GPSクリア');
+  }
+
+  function toggleWalk(){
+    state.walk.active=!state.walk.active;
+    if(state.walk.active){
+      ensureWalkSession();
+      addPublicRecord('memo',`${fieldModeName()}開始`,'散歩開始');
+      startGpsAuto();
+      gps(true);
+      toast('散歩開始');
+    }else{
+      const s=currentWalkSession();
+      if(s){s.active=false;s.endedAt=Date.now();s.distance=walkDistance();s.duration=walkDurationSec();}
+      stopGpsAuto(false);
+      addPublicRecord('memo',`散歩終了：${walkDistance().toFixed(2)}km / ${fmtDuration(walkDurationSec())}`,'散歩終了');
+      toast('散歩終了');
+    }
+    save();render()
+  }
+  function gps(silent=false){
+    const push=(lat,lng,source='gps')=>{
+      const ok=pushGpsPoint(lat,lng,source);
+      if(ok && !silent)addPublicRecord('site','現在地を記録','現在地');
+      save();
+      if(!silent){render();toast(ok?'現在地記録':'GPSジャンプ除外')}
+      return ok;
+    };
+    if(!navigator.geolocation)return push(35.867+Math.random()/1000,139.975+Math.random()/1000,'demo');
+    navigator.geolocation.getCurrentPosition(p=>push(p.coords.latitude,p.coords.longitude,'manual'),()=>push(35.867+Math.random()/1000,139.975+Math.random()/1000,'demo'),{enableHighAccuracy:true,timeout:6000,maximumAge:5000})
+  }
   function spot(){const name=prompt('スポット名');if(!name)return;state.walk.spots.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render()}
   function friend(){const name=prompt('犬友達名');if(!name)return;state.walk.friends.push({name,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),mode:fieldModeName()});addPublicRecord('memo',`犬友達：${name}`,'犬友達');save();render();toast('犬友達保存')}
   function health(type){state.walk.health.push({type,mode:state.walkMode==='camp'?'キャンプ場散歩':'通常散歩',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();render();toast('非公開保存')}
-  function openMap(){const p=state.walk.track[state.walk.track.length-1];if(!p)return toast('先に現在地');window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`,'_blank')}
-  function backup(){const blob=new Blob([JSON.stringify({version:VERSION,state},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`outbase_backup_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+  function openMap(){
+    const p=state.walk.track[state.walk.track.length-1];
+    if(!p)return toast('現在地なし');
+    const url=`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+    window.open(url,'_blank');
+  }
   function drawMap(){const c=document.getElementById('walkMap');if(!c)return;const ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.strokeStyle='rgba(17,19,15,.08)';for(let x=0;x<w;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}const pts=state.walk.track;if(!pts.length)return;const lats=pts.map(p=>p.lat),lngs=pts.map(p=>p.lng),minLa=Math.min(...lats),maxLa=Math.max(...lats),minLn=Math.min(...lngs),maxLn=Math.max(...lngs);const mp=p=>({x:28+(w-56)*((p.lng-minLn)/((maxLn-minLn)||.001)),y:h-28-(h-56)*((p.lat-minLa)/((maxLa-minLa)||.001))});ctx.strokeStyle='#273a30';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();pts.forEach((p,i)=>{const m=mp(p);i?ctx.lineTo(m.x,m.y):ctx.moveTo(m.x,m.y)});ctx.stroke();pts.forEach((p,i)=>{const m=mp(p);ctx.fillStyle=i===pts.length-1?'#b99a66':'#3f5e4c';ctx.beginPath();ctx.arc(m.x,m.y,5,0,Math.PI*2);ctx.fill()})}
 
 
@@ -1828,6 +1978,7 @@ ${starterPanelHtml()}
     else if(type==='weather'){state.route='prep';state.prepTab='weather';}
     else if(type==='pet'||type==='petPrep'){state.route='prep';state.prepTab='pets';}
     else if(type==='timer'){state.route='prep';state.prepTab='timer';state.timerTab='active';}
+    else if(type==='route'){state.route='field';}
     save();render();
   }
   function resolveCenterItem(type,id){
@@ -2478,5 +2629,6 @@ ${starterPanelHtml()}
     fileInput.multiple=true;
   };
   setInterval(updateTimers,1000);
+  if(state.walk.active)startGpsAuto();
   render();
 })();
