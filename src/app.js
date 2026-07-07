@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-memorypro-20260707';
+  const VERSION = 'outbase-genius-ui-discoverpro-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -20,7 +20,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', drawer:null, toast:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', drawer:null, toast:null,
       events:[
         {id:'akagi',title:'スノーピーク赤城山CF',type:'camp',start:'2026-07-18',end:'2026-07-20',repeat:'none',place:'群馬県 前橋市',memo:'リン友達夫婦と。雨なら乾燥サービス活用。',level:4},
         {id:'walk1',title:'コタ散歩',type:'walk',start:'2026-07-12',end:'2026-07-12',repeat:'weekly',place:'自宅周辺',memo:'通常散歩。体調ログは非公開。',level:2},
@@ -61,6 +61,13 @@
       notes:[
         {id:'n1',title:'次回改善',text:'雨予報なら直営・乾燥サービス優先。',private:false},
         {id:'n2',title:'体調メモ',text:'排泄記録は表に出さず、非公開だけ。',private:true}
+      ],
+      candidates:[
+        {id:'c1',name:'スノーピーク赤城山CF',kind:'camp',area:'群馬県 前橋市',drive:'約2.5h',price:'やや高め',flags:['犬可','直営','乾燥','景色','標高'],memo:'雨や梅雨時期でも乾燥サービスが安心。夏は涼しめ。',wish:true},
+        {id:'c2',name:'スノーピーク鹿沼CF',kind:'camp',area:'栃木県 鹿沼市',drive:'約2h',price:'やや高め',flags:['犬可','直営','講習','買物便利'],memo:'設営講習やランドロックMFS確認に向く。',wish:false},
+        {id:'c3',name:'にこにこキャンプ場',kind:'camp',area:'茨城県 笠間市',drive:'約1.5h',price:'普通',flags:['犬可','ドッグフリー','景色'],memo:'下段ペットフリー候補。雨撤収経験あり。',wish:false},
+        {id:'c4',name:'月館オートキャンプベース',kind:'camp',area:'福島県 伊達市',drive:'約3.5h',price:'普通',flags:['犬可','温水','景色'],memo:'実績あり。下り方面候補。',wish:false},
+        {id:'c5',name:'柏の葉公園',kind:'walk',area:'千葉県 柏市',drive:'約20m',price:'駐車場',flags:['散歩','駐車場','近い'],memo:'コタ通常散歩候補。',wish:true}
       ],
       walk:{active:false,track:[],spots:[],friends:[],health:[]},
       records:[],
@@ -115,7 +122,7 @@
     </div>`;
   }
   function nav(){
-    return `<nav class="bottomNav">${[['home','⌂','今日'],['calendar','▦','予定'],['prep','◫','準備'],['field','＋','現地'],['memory','○','整理']].map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
+    return `<nav class="bottomNav">${[['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','現地'],['memory','○','整理']].map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
   }
   function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
 
@@ -151,6 +158,61 @@
     const shop=state.shopping.filter(s=>!s.done).map(s=>`□ ${s.name}：${s.qty}`).join('\\n') || '買い物未完なし';
     const gear=state.gear.filter(g=>g.status!=='loaded').map(g=>`□ ${g.name}（${state.boxes.find(b=>b.id===g.boxId)?.name||'未収納'}）`).join('\\n') || 'ギア未積込なし';
     return `【OUTBASE 準備まとめ】\\n${p.title}\\n${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'}\\n\\n■買い物\\n${shop}\\n\\n■ギア\\n${gear}\\n\\n■天気判断\\n${state.weather.map(w=>`${w.done?'✓':'□'} ${w.when}：${w.check}`).join('\\n')}`;
+  }
+
+
+  function candidateScore(c){
+    let s=0;
+    const f=c.flags||[];
+    if(f.includes('犬可'))s+=25;
+    if(f.includes('温水'))s+=15;
+    if(f.includes('ドッグフリー'))s+=15;
+    if(f.includes('景色'))s+=12;
+    if(f.includes('直営'))s+=10;
+    if(f.includes('乾燥'))s+=10;
+    if(String(c.drive||'').includes('20m')||String(c.drive||'').includes('1.5')||String(c.drive||'').includes('2h'))s+=8;
+    if(c.wish)s+=5;
+    return Math.min(100,s);
+  }
+  function filteredCandidates(){
+    const tab=state.discoverTab||'camp';
+    let list=(state.candidates||[]);
+    if(tab==='camp')list=list.filter(c=>c.kind==='camp');
+    if(tab==='walk')list=list.filter(c=>c.kind==='walk');
+    if(tab==='wish')list=list.filter(c=>c.wish);
+    return list.slice().sort((a,b)=>candidateScore(b)-candidateScore(a));
+  }
+  function bestCandidate(){
+    return filteredCandidates()[0] || (state.candidates||[])[0];
+  }
+  function candidateReason(c){
+    if(!c)return '候補なし';
+    const f=c.flags||[];
+    const rs=[];
+    if(f.includes('犬可'))rs.push('犬可');
+    if(f.includes('温水'))rs.push('温水');
+    if(f.includes('ドッグフリー'))rs.push('ドッグフリー');
+    if(f.includes('直営'))rs.push('直営');
+    if(f.includes('乾燥'))rs.push('乾燥安心');
+    if(f.includes('景色'))rs.push('景色');
+    return rs.join(' / ') || '条件メモあり';
+  }
+  function candidateCard(c){
+    const score=candidateScore(c);
+    return `<div class="candidateCard">
+      <div class="candidateTop"><span><b>${esc(c.name)}</b><small>${esc(c.area)} / ${esc(c.drive)} / ${esc(c.price)}<br>${esc(c.memo)}</small></span><span class="candidateScore">${score}</span></div>
+      <div class="candidateTags">${(c.flags||[]).map(f=>`<span>${esc(f)}</span>`).join('')}</div>
+      <div class="candidateOps"><button data-act="candidateToPlan" data-id="${c.id}">予定化</button><button data-act="toggleCandidateWish" data-id="${c.id}">${c.wish?'候補解除':'候補保存'}</button><button data-act="copyCandidate" data-id="${c.id}">コピー</button></div>
+    </div>`;
+  }
+  function buildCandidateText(c){
+    if(!c)return '';
+    return `【候補】\\n${c.name}\\n${c.area}\\n移動:${c.drive}\\n価格:${c.price}\\n条件:${(c.flags||[]).join(' / ')}\\nメモ:${c.memo}\\n点数:${candidateScore(c)}`;
+  }
+  function buildCompareText(){
+    const list=filteredCandidates().slice(0,3);
+    if(!list.length)return '候補なし';
+    return list.map((c,i)=>`${i+1}. ${c.name}（${candidateScore(c)}）\\n${c.area} / ${c.drive}\\n${candidateReason(c)}\\n${c.memo}`).join('\\n\\n');
   }
 
   function home(){
@@ -259,6 +321,44 @@
       <span style="min-width:0;flex:1"><strong>${esc(e.title)}</strong><small>${typeName[e.type]||e.type} / ${range}${rep}<br>${esc(e.place||'場所未設定')}</small></span>
       <span class="pill ${state.currentPlanId===e.id?'dark':''}">${state.currentPlanId===e.id?'主役':'編集'}</span>
     </button>`;
+  }
+
+
+  function discover(){
+    const best=bestCandidate();
+    const list=filteredCandidates();
+    const campCount=(state.candidates||[]).filter(c=>c.kind==='camp').length;
+    const walkCount=(state.candidates||[]).filter(c=>c.kind==='walk').length;
+    const wishCount=(state.candidates||[]).filter(c=>c.wish).length;
+    return shell(`
+      <section class="discoverHero">
+        <div class="discoverHeroTop">
+          <span><b>${best?esc(best.name):'候補を探す'}</b><small>${best?esc(candidateReason(best)):'犬可・温水・ドッグフリー・景色・距離で絞る'}。探すだけで終わらせず、予定化まで進める。</small></span>
+          <span class="discoverScore" style="--score:${best?candidateScore(best):0}">${best?candidateScore(best):0}</span>
+        </div>
+        <div class="discoverCommand">
+          <button class="mainCmd" data-act="candidateToPlan" data-id="${best?best.id:''}">この候補で予定化</button>
+          <button class="subCmd" data-act="compareCandidates">上位比較</button>
+        </div>
+      </section>
+
+      <div class="conditionRail">
+        <button data-discover="camp"><b>${campCount}</b><span>キャンプ</span></button>
+        <button data-discover="walk"><b>${walkCount}</b><span>散歩</span></button>
+        <button data-discover="wish"><b>${wishCount}</b><span>保存</span></button>
+        <button data-discover="conditions"><b>条件</b><span>基準</span></button>
+      </div>
+
+      <section class="section"><div class="tabs">${['camp:キャンプ','walk:散歩','wish:保存','conditions:条件','compare:比較'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.discoverTab===id?'active':''}" data-discover="${id}">${l}</button>`}).join('')}</div></section>
+      ${discoverBody()}
+    `)
+  }
+  function discoverBody(){
+    if(state.discoverTab==='conditions')return `<section class="section"><div class="conditionPanel"><div class="conditionHead"><b>探す基準</b><small>ムーの条件を点数化。外部検索APIではなく、候補メモを判断しやすくする画面。</small></div><div class="conditionList">
+      ${[['犬可','最優先。犬不可は候補にしない'],['温水','冬キャンプ優先条件'],['ドッグフリー','次点で強い条件'],['景色','満足度に効く'],['4時間以内','下り方面希望。遠すぎる候補を避ける'],['暑期','エアコン付き・1泊2万円以下なら候補']].map(r=>`<div class="conditionRow"><span><b>${r[0]}</b><small>${r[1]}</small></span><span class="pill dark">基準</span></div>`).join('')}
+      </div></div><div class="commandDock"><button class="btn primary" data-act="addCandidate">候補追加</button><button class="btn" data-act="compareCandidates">比較コピー</button></div></section>`;
+    if(state.discoverTab==='compare')return `<section class="section"><div class="compareBox"><b>上位比較</b><p>${esc(buildCompareText())}</p><div class="compareGrid"><button class="primary" data-act="compareCandidates">コピー</button><button data-act="addCandidate">候補追加</button></div></div></section>`;
+    return `<section class="section"><div class="head"><div><h2>${state.discoverTab==='walk'?'散歩候補':state.discoverTab==='wish'?'保存候補':'キャンプ候補'}</h2><p>候補を見て、良ければそのまま予定へ入れる。</p></div><button class="btn primary" data-act="addCandidate">追加</button></div><div class="candidateList">${list.map(candidateCard).join('')||`<div class="compareBox"><b>候補なし</b><p>候補を追加するとここに出る。</p></div>`}</div></section>`;
   }
 
   function calendar(){
@@ -743,7 +843,7 @@
   }
 
   function render(){
-    app.innerHTML = state.route==='calendar'?calendar():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
+    app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
     bind();
     if(state.route==='field')drawMap();
     bindSwipe();
@@ -755,6 +855,7 @@
     document.querySelectorAll('[data-gear]').forEach(el=>el.onclick=()=>{state.gearTab=el.dataset.gear;save();render()});
     document.querySelectorAll('[data-walk]').forEach(el=>el.onclick=()=>{state.walkMode=el.dataset.walk;save();render()});
     document.querySelectorAll('[data-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.memoryTab=el.dataset.memory;save();render()});
+    document.querySelectorAll('[data-discover]').forEach(el=>el.onclick=()=>{state.route='discover';state.discoverTab=el.dataset.discover;save();render()});
     document.querySelectorAll('[data-day]').forEach(el=>{let last=0;el.onclick=()=>{const now=Date.now();if(now-last<320)state.drawer={type:'event',date:el.dataset.day};else{state.selectedDate=el.dataset.day;state.currentMonth=el.dataset.day.slice(0,7)}last=now;save();render()}});
     document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
     document.querySelectorAll('form[data-form]').forEach(f=>f.onsubmit=submit);
@@ -767,6 +868,12 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='addCandidate')return addCandidate();
+    if(a==='candidateToPlan')return candidateToPlan(el.dataset.id);
+    if(a==='toggleCandidateWish')return toggleCandidateWish(el.dataset.id);
+    if(a==='copyCandidate')return copyCandidate(el.dataset.id);
+    if(a==='compareCandidates')return compareCandidates();
 
     if(a==='copyTripReport')return copyTripReport();
     if(a==='saveTripReport')return saveTripReport();
@@ -864,6 +971,45 @@
 
 
 
+
+
+  function addCandidate(){
+    const name=prompt('候補名'); if(!name)return;
+    const kind=confirm('キャンプ候補？ OK=キャンプ / キャンセル=散歩')?'camp':'walk';
+    const area=prompt('場所/エリア','')||'';
+    const drive=prompt('移動時間','')||'';
+    const flags=(prompt('条件タグ（/区切り）','犬可/温水/景色')||'').split('/').map(x=>x.trim()).filter(Boolean);
+    const memo=prompt('メモ','')||'';
+    state.candidates=state.candidates||[];
+    state.candidates.push({id:uid('cand'),name,kind,area,drive,price:'要確認',flags,memo,wish:true});
+    state.discoverTab=kind;
+    save();render();toast('候補追加');
+  }
+  function candidateToPlan(id){
+    const c=(state.candidates||[]).find(x=>x.id===id) || bestCandidate();
+    if(!c)return toast('候補なし');
+    const date=state.selectedDate||today();
+    const ev={id:uid('evt'),title:c.name,type:c.kind==='camp'?'camp':'walk',start:date,end:c.kind==='camp'?addDays(date,1):date,repeat:'none',place:c.area,memo:`候補から追加：${c.memo} / 条件:${(c.flags||[]).join('・')}`,level:c.kind==='camp'?4:1};
+    state.events.push(ev);
+    state.currentPlanId=ev.id;
+    state.route='calendar';
+    state.currentMonth=date.slice(0,7);
+    state.selectedDate=date;
+    save();render();toast('予定へ追加');
+  }
+  function toggleCandidateWish(id){
+    state.candidates=(state.candidates||[]).map(c=>c.id===id?{...c,wish:!c.wish}:c);
+    save();render();toast('保存状態を変更');
+  }
+  async function copyCandidate(id){
+    const c=(state.candidates||[]).find(x=>x.id===id); if(!c)return;
+    const text=buildCandidateText(c);
+    try{await navigator.clipboard.writeText(text);toast('候補コピー')}catch(e){prompt('コピー',text)}
+  }
+  async function compareCandidates(){
+    const text=buildCompareText();
+    try{await navigator.clipboard.writeText(text);toast('比較をコピー')}catch(e){prompt('コピー',text)}
+  }
 
   async function copyTripReport(){
     const text=buildTripReport();
