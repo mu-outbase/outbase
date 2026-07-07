@@ -1,7 +1,7 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-genius-ui-easyflow-20260707';
+  const VERSION = 'outbase-genius-ui-linkedcore-20260707';
   const KEY = 'outbase_genius_ui_state';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
@@ -62,7 +62,9 @@
         {id:'n1',title:'次回改善',text:'雨予報なら直営・乾燥サービス優先。',private:false},
         {id:'n2',title:'体調メモ',text:'排泄記録は表に出さず、非公開だけ。',private:true}
       ],
-      walk:{active:false,track:[],spots:[],friends:[],health:[]}
+      walk:{active:false,track:[],spots:[],friends:[],health:[]},
+      records:[],
+      reviews:[{id:'rv1',eventId:'akagi',title:'次回改善',text:'雨予報なら直営・乾燥サービス優先。買い物とギアは前日までに終わらせる。'}]
     }
   }
 
@@ -117,6 +119,40 @@
   }
   function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
 
+
+  function prepStats(){
+    const undoneShop=state.shopping.filter(s=>!s.done).length;
+    const loaded=state.gear.filter(g=>g.status==='loaded').length;
+    const care=state.gear.filter(g=>['dry','repair','replace'].includes(g.status)).length;
+    const wdone=state.weather.filter(w=>w.done).length;
+    const score=Math.round(((state.shopping.length-undoneShop)+(loaded)+(wdone))/(Math.max(1,state.shopping.length+state.gear.length+state.weather.length))*100);
+    return {undoneShop,loaded,care,wdone,score};
+  }
+  function planFlowHtml(){
+    const st=prepStats();
+    const steps=[
+      ['予定', state.events.filter(e=>e.start).length, 'カレンダー確認', true],
+      ['料理', state.meals.length, '献立あり', state.meals.length>0],
+      ['買物', state.shopping.length-st.undoneShop, `${st.undoneShop}件未完`, st.undoneShop===0],
+      ['ギア', st.loaded, `${state.gear.length-st.loaded}件未積込`, st.loaded===state.gear.length]
+    ];
+    return `<div class="linkPanel"><div class="linkPanelHead"><span><b>つながり</b><small>予定→準備→現地→整理を分断しない</small></span><span class="pill ${st.score>=80?'dark':'wood'}">${st.score}%</span></div><div class="linkFlow">${steps.map(s=>`<button class="linkStep ${s[3]?'done':''}" data-prep="${s[0]==='料理'?'meals':s[0]==='買物'?'shopping':s[0]==='ギア'?'gear':'overview'}"><strong>${s[0]}</strong><small>${s[2]}</small></button>`).join('')}</div></div>`;
+  }
+  function smartPrepRows(){
+    const st=prepStats();
+    return `<div class="smartList">
+      <button class="smartRow" data-prep="shopping"><span class="smartMain"><b>買い物を終わらせる</b><small>献立から不足食材を足して、LINEコピーまで。</small></span><span class="roundMark ${st.undoneShop===0?'done':'warn'}">${st.undoneShop===0?'✓':st.undoneShop}</span></button>
+      <button class="smartRow" data-prep="gear"><span class="smartMain"><b>ギアを積む</b><small>ボックス単位で積込。乾燥・修理もここで見る。</small></span><span class="roundMark ${st.loaded===state.gear.length?'done':''}">${st.loaded}/${state.gear.length}</span></button>
+      <button class="smartRow" data-prep="weather"><span class="smartMain"><b>天気で判断する</b><small>設営・撤収・コタ・幕体をまとめて確認。</small></span><span class="roundMark ${st.wdone===state.weather.length?'done':''}">${st.wdone}/${state.weather.length}</span></button>
+    </div>`;
+  }
+  function buildPlanSummary(){
+    const p=current();
+    const shop=state.shopping.filter(s=>!s.done).map(s=>`□ ${s.name}：${s.qty}`).join('\\n') || '買い物未完なし';
+    const gear=state.gear.filter(g=>g.status!=='loaded').map(g=>`□ ${g.name}（${state.boxes.find(b=>b.id===g.boxId)?.name||'未収納'}）`).join('\\n') || 'ギア未積込なし';
+    return `【OUTBASE 準備まとめ】\\n${p.title}\\n${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'}\\n\\n■買い物\\n${shop}\\n\\n■ギア\\n${gear}\\n\\n■天気判断\\n${state.weather.map(w=>`${w.done?'✓':'□'} ${w.when}：${w.check}`).join('\\n')}`;
+  }
+
   function home(){
     const p=current();
     const undoneShop=state.shopping.filter(s=>!s.done).length;
@@ -144,6 +180,11 @@
 
       <div class="flowRail">
         ${[['before','予定'],['prep','準備'],['field','現地'],['after','整理']].map(([id,label])=>`<button class="flowStep ${state.stage===id?'active':''}" data-stage="${id}">${label}</button>`).join('')}
+      </div>
+      ${planFlowHtml()}
+      <div class="commandDock">
+        <button class="btn primary" data-act="copyPlanSummary">準備まとめコピー</button>
+        <button class="btn" data-act="autoNext">次に進める</button>
       </div>
 
       <section class="section">
@@ -231,7 +272,7 @@
     if(state.prepTab==='shopping')return `<section class="section"><div class="head"><div><h2>買い物</h2><p>LINEへ送れる形まで整える。</p></div><button class="btn primary" data-act="addShop">追加</button></div><div class="list">${state.shopping.map(s=>`<button class="row" data-act="toggleShop" data-id="${s.id}"><span><strong>${s.done?'✓ ':''}${esc(s.name)}</strong><small>${esc(s.qty)} / ${esc(s.group)} / ${esc(s.source)}</small></span><span class="pill ${s.done?'dark':''}">${s.done?'済':'未'}</span></button>`).join('')}</div><div class="actions"><button class="btn primary" data-act="copyShop">LINE用コピー</button></div></section>`;
     if(state.prepTab==='gear')return gearView();
     if(state.prepTab==='weather')return `<section class="section"><div class="head"><div><h2>天気</h2><p>表示ではなく、設営・撤収・コタ・幕体の判断。</p></div></div><div class="list">${state.weather.map(w=>`<button class="row" data-act="toggleWeather" data-id="${w.id}"><span><strong>${w.done?'✓ ':''}${esc(w.when)}</strong><small>${esc(w.check)}</small></span><span class="pill ${w.done?'dark':''}">${w.done?'済':'確認'}</span></button>`).join('')}</div></section>`;
-    return `<section class="section"><div class="grid2"><button class="tile" data-prep="meals"><strong>料理</strong><small>献立・材料・必要ギア</small></button><button class="tile" data-prep="shopping"><strong>買い物</strong><small>LINEコピー対応</small></button><button class="tile" data-prep="gear"><strong>ギア</strong><small>ボックス・積込・乾燥</small></button><button class="tile" data-prep="weather"><strong>天気</strong><small>設営/撤収/コタ判断</small></button></div></section>`;
+    return `<section class="section">${planFlowHtml()}<div class="linkPanel"><div class="linkPanelHead"><span><b>次にやること</b><small>画面を探さず、ここから押す</small></span><span class="pill">自動整理</span></div><div style="padding:0 14px 14px">${smartPrepRows()}<div class="commandDock"><button class="btn primary" data-act="copyPlanSummary">準備まとめコピー</button><button class="btn" data-act="markAllLoaded">全部積込済みにする</button></div></div></div><div class="grid2" style="margin-top:12px"><button class="tile" data-prep="meals"><strong>料理</strong><small>献立・材料・必要ギア</small></button><button class="tile" data-prep="shopping"><strong>買い物</strong><small>LINEコピー対応</small></button><button class="tile" data-prep="gear"><strong>ギア</strong><small>ボックス・積込・乾燥</small></button><button class="tile" data-prep="weather"><strong>天気</strong><small>設営/撤収/コタ判断</small></button></div></section>`;
   }
   function gearView(){
     return `<section class="section"><div class="head"><div><h2>ギア</h2><p>登録・変更・ボックス・車載位置を一体で管理。</p></div><button class="btn primary" data-act="addGear">登録</button></div><div class="tabs">${['list:一覧','boxes:ボックス','load:積込','care:乾燥/修理','import:取込'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.gearTab===id?'active':''}" data-gear="${id}">${l}</button>`}).join('')}</div></section>${gearBody()}`
@@ -281,10 +322,21 @@
 
   function memory(){
     return shell(`
+      <section class="section"><div class="reportBox"><b>自動レビュー</b><p>${esc(buildReviewText())}</p><div class="actions"><button class="btn wood" data-act="saveReview">レビュー保存</button><button class="btn" data-act="copyReview">コピー</button></div></div></section>
       <section class="section"><div class="head"><div><h2>整理</h2><p>記録を見返し、次回に使える形へ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="list">${state.notes.map(n=>`<div class="row"><span><strong>${esc(n.title)}</strong><small>${esc(n.text)}</small></span><span class="pill ${n.private?'private':''}">${n.private?'非公開':'共有可'}</span></div>`).join('')}</div></section>
       <section class="section"><div class="head"><div><h2>場所カード</h2><p>散歩先・キャンプ場・再訪候補。</p></div></div><div class="list">${state.places.map(p=>`<div class="row"><span><strong>${esc(p.name)}</strong><small>${esc(p.kind)} / 訪問${p.visits}回<br>${esc(p.note)}</small></span><span class="pill">場所</span></div>`).join('')}</div></section>
       <section class="section"><div class="actions"><button class="btn primary" data-act="backup">バックアップ</button><button class="btn" data-act="import">復元/取込</button></div></section>
     `)
+  }
+
+
+  function buildReviewText(){
+    const p=current();
+    const st=prepStats();
+    const walk=`散歩GPS ${state.walk.track.length}点、スポット ${state.walk.spots.length}件、犬友達 ${state.walk.friends.length}件。体調メモは非公開。`;
+    const prep=`買い物未完 ${st.undoneShop}件、ギア積込 ${st.loaded}/${state.gear.length}、天気確認 ${st.wdone}/${state.weather.length}。`;
+    const next=state.notes.filter(n=>!n.private).slice(-2).map(n=>n.text).join(' / ') || '次回改善は未整理。';
+    return `${p.title}：${prep} ${walk} 次回メモ：${next}`;
   }
 
   function drawer(){
@@ -323,6 +375,12 @@
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+
+    if(a==='copyPlanSummary')return copyPlanSummary();
+    if(a==='markAllLoaded')return markAllLoaded();
+    if(a==='autoNext')return autoNext();
+    if(a==='saveReview')return saveReview();
+    if(a==='copyReview')return copyReview();
     if(a==='editPlan')state.drawer={type:'event',id:state.currentPlanId};
     if(a==='openEvent')state.drawer={type:'event',id:el.dataset.id};
     if(a==='addEvent')state.drawer={type:'event',date:el.dataset.date||state.selectedDate};
@@ -376,6 +434,35 @@
   function openMap(){const p=state.walk.track[state.walk.track.length-1];if(!p)return toast('先に現在地');window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`,'_blank')}
   function backup(){const blob=new Blob([JSON.stringify({version:VERSION,state},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`outbase_backup_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
   function drawMap(){const c=document.getElementById('walkMap');if(!c)return;const ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.strokeStyle='rgba(17,19,15,.08)';for(let x=0;x<w;x+=34){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}const pts=state.walk.track;if(!pts.length)return;const lats=pts.map(p=>p.lat),lngs=pts.map(p=>p.lng),minLa=Math.min(...lats),maxLa=Math.max(...lats),minLn=Math.min(...lngs),maxLn=Math.max(...lngs);const mp=p=>({x:28+(w-56)*((p.lng-minLn)/((maxLn-minLn)||.001)),y:h-28-(h-56)*((p.lat-minLa)/((maxLa-minLa)||.001))});ctx.strokeStyle='#273a30';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();pts.forEach((p,i)=>{const m=mp(p);i?ctx.lineTo(m.x,m.y):ctx.moveTo(m.x,m.y)});ctx.stroke();pts.forEach((p,i)=>{const m=mp(p);ctx.fillStyle=i===pts.length-1?'#b99a66':'#3f5e4c';ctx.beginPath();ctx.arc(m.x,m.y,5,0,Math.PI*2);ctx.fill()})}
+
+  async function copyPlanSummary(){
+    const text=buildPlanSummary();
+    try{await navigator.clipboard.writeText(text);toast('準備まとめをコピー')}catch(e){prompt('コピー',text)}
+  }
+  function markAllLoaded(){
+    state.gear=state.gear.map(g=>({...g,status:'loaded'}));
+    save();render();toast('全ギアを積込済みにした');
+  }
+  function autoNext(){
+    const st=prepStats();
+    if(st.undoneShop>0){state.route='prep';state.prepTab='shopping';}
+    else if(st.loaded<state.gear.length){state.route='prep';state.prepTab='gear';state.gearTab='load';}
+    else if(st.wdone<state.weather.length){state.route='prep';state.prepTab='weather';}
+    else {state.stage='field';state.route='field';}
+    save();render();
+  }
+  function saveReview(){
+    const text=buildReviewText();
+    state.reviews=state.reviews||[];
+    state.reviews.push({id:uid('rv'),eventId:state.currentPlanId,title:'自動レビュー',text});
+    state.notes.push({id:uid('note'),title:'自動レビュー',text,private:false});
+    save();render();toast('レビューを保存');
+  }
+  async function copyReview(){
+    const text=buildReviewText();
+    try{await navigator.clipboard.writeText(text);toast('レビューをコピー')}catch(e){prompt('コピー',text)}
+  }
+
   fileInput.onchange=async()=>{const files=[...fileInput.files||[]];if(!files.length)return;const f=files[0];try{const text=await f.text();if(f.name.endsWith('.json')){const obj=JSON.parse(text);if(obj.state)state={...seed(),...obj.state};}else{state.notes.push({id:uid('note'),title:'取込候補',text:f.name,private:false});}save();render();toast('取込保存')}catch(e){toast('読込失敗')}fileInput.value=''};
   render();
 })();
