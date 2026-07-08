@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore03-5-field03-plan-linked-departure-20260709';
-  const KEY = 'outbase_restore03_5_field03_state';
-  const SNAP_KEY = 'outbase_restore03_5_field03_snapshot';
-  const ERR_KEY = 'outbase_restore03_5_field03_last_error';
+  const VERSION = 'outbase-restore03-6-field03-api-less-mvp-20260709';
+  const KEY = 'outbase_restore03_6_field03_state';
+  const SNAP_KEY = 'outbase_restore03_6_field03_snapshot';
+  const ERR_KEY = 'outbase_restore03_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-5-field03-plan-linked-departure-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-6-field03-api-less-mvp-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -5118,5 +5118,59 @@ ${starterPanelHtml()}
     };
   }
   function saveSimpleRoutePlan(){return saveRoutePlan()}
+
+
+
+  /* RESTORE03.6: APIなしMVP整理 */
+  function currentSavedRoutePlan(){
+    const ev=activeCampForRoute();
+    const eid=ev?.id||current().id;
+    return (state.savedRoutePlans||[]).find(p=>p.eventId===eid) || null;
+  }
+  function apiLessStepHeaderHtml(){
+    return `<div class="routeFlow">
+      <div class="done"><b>1</b><span>予定</span><small>予定から選ぶ</small></div>
+      <div class="done"><b>2</b><span>移動</span><small>当日想定分</small></div>
+      <div class="now"><b>3</b><span>寄り道</span><small>時間だけ足す</small></div>
+      <div class="goal"><b>4</b><span>出発</span><small>保存して当日へ</small></div>
+    </div>`;
+  }
+  function savedRouteStrongHtml(){
+    const p=currentSavedRoutePlan();
+    if(!p)return `<section class="section savedRouteStrong empty"><div><b>保存済みの出発計画はまだない</b><small>移動時間と寄り道を決めたら「この計画を保存」。当日はここから出発する。</small></div></section>`;
+    return `<section class="section savedRouteStrong">
+      <div><b>保存済み出発計画</b><small>${esc(p.destination)} / ${esc(p.createdAt||'')}</small></div>
+      <div class="savedRouteTime"><span>自宅出発</span><b>${esc(p.depart)}</b></div>
+      <div class="savedRouteOps"><button data-act="useSavedRoute" data-id="${p.id}">この計画で出発</button><button data-act="openSavedRoute" data-id="${p.id}">Google Maps確認</button></div>
+    </section>`;
+  }
+  function routePrepHero(){
+    const opt=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    return `<section class="prepHero routeOnlyHero simpleRouteHero">
+      <div class="prepHeroTop"><span><b>出発時間を決める</b><small>APIなし版。予定・当日想定の移動時間・寄り道時間だけで、自宅出発を決める。</small></span><span class="prepScore routeScoreMini">${opt.depart}</span></div>
+      <div class="prepCommand"><button class="mainCmd" data-act="openSimpleRoute">Google Mapsで当日想定を確認</button><button class="subCmd" data-act="saveSimpleRoute">この計画を保存</button></div>
+    </section>`;
+  }
+  function routePrepView(){
+    const plan=activeCampForRoute();
+    if(plan && !state.routePlan.destination)syncRouteFromPlan(plan.id);
+    const optA=simpleDepartOption('余裕あり','buffer',30);
+    const optB=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    const optC=simpleDepartOption('ギリギリ','exact',0);
+    const rows=simpleRouteRows();
+    return `<section class="section simpleRoute route036">
+      <div class="simpleRouteLead"><b>APIなしルート計画</b><p>ルート検索アプリではなく、キャンプ当日の「何時に家を出るか」を決める道具。細かい店探しと渋滞はGoogle Maps、OUTBASEは予定連動・逆算・保存・当日記録を担当。</p></div>
+      ${apiLessStepHeaderHtml()}
+      ${savedRouteStrongHtml()}
+      <section class="routePanel"><div class="routePanelHead"><b>1. 予定と自宅</b><small>自宅は登録制。キャンプ場とチェックインは予定から反映。</small></div><div class="routeFormGrid routeBasics compact"><label><span>登録済み自宅</span><input data-route-field="home" value="${esc(routeOrigin())}" placeholder="例：千葉県柏市"></label>${routePlanSelectHtml()}<label><span>予定のキャンプ場</span><input value="${esc(routeTarget())}" readonly></label><label><span>チェックイン</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label></div></section>
+      <section class="routeDriveTime compact"><div><b>2. 当日想定の移動時間</b><p>Google Maps側でキャンプ当日の日時を指定して確認し、表示された時間を分で入れる。</p></div><div class="routeDriveOps"><button data-act="markDriveChecked">Google Mapsで確認</button><label><span>移動時間（分）</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label></div><small>確認記録：${esc(driveCheckedText())}</small></section>
+      <section class="routePanel"><div class="routePanelHead"><b>3. 到着目標と寄り道</b><small>寄り道は行く/行かない＋所要時間だけ。</small></div><div class="routeFormGrid routeTargets compact"><label><span>到着目標</span><select data-route-field="arrivalTarget"><option value="exact" ${state.routePlan?.arrivalTarget==='exact'?'selected':''}>チェックインちょうど</option><option value="b15" ${state.routePlan?.arrivalTarget==='b15'?'selected':''}>15分前</option><option value="b30" ${(state.routePlan?.arrivalTarget||'b30')==='b30'?'selected':''}>30分前</option><option value="b60" ${state.routePlan?.arrivalTarget==='b60'?'selected':''}>1時間前</option><option value="late" ${state.routePlan?.arrivalTarget==='late'?'selected':''}>少し遅れてもOK</option></select></label><label><span>追加予備（分）</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label></div><div class="simpleStopGrid compactStops">${simpleStopDefs().map(d=>{const s=simpleStopState(d.id);return `<article class="simpleStop ${s.on?'on':'off'}" data-stop="${d.id}"><button class="simpleStopMain" data-act="toggleSimpleStop" data-stop="${d.id}"><b>${esc(d.label)}</b><small>${esc(d.hint)}</small><em>${s.on?'行く':'行かない'}</em></button><label><span>分</span><input data-simple-min="${d.id}" type="number" value="${Number(s.min||d.defaultMin)}"></label></article>`;}).join('')}</div></section>
+      <section class="simpleCalc routeResult"><div><span>移動</span><b>${Number(state.routePlan?.driveMin||150)}分</b></div><div><span>寄り道</span><b>${simpleStopTotal()}分</b></div><div><span>追加予備</span><b>${Number(state.routePlan?.trafficBuffer||0)}分</b></div><div class="total"><span>自宅出発</span><b>${optB.depart}</b></div></section>
+      <div class="routeDepartures simpleDepartures compactDepartures">${[optA,optB,optC].map(o=>`<button class="routeDeparture ${o.mode===(state.routePlan?.arrivalMode||'buffer')?'active':''}" data-act="setArrivalMode" data-mode="${o.mode}"><b>${esc(o.depart)}</b><span>${esc(o.label)}</span><small>到着目標 ${esc(o.arrival)} / 合計 ${o.total}分</small></button>`).join('')}</div>
+      <details class="routeDetails simplePlanDetail"><summary><b>計画の内訳</b><small>出発から到着目標まで</small></summary><div class="routeTimeline simpleTimeline">${rows.map(r=>`<div class="routeStep fixed"><time>${esc(r.time)}</time><span><b>${esc(r.label)}</b><small>${esc(r.memo)}</small></span><em>計画</em></div>`).join('')}</div></details>
+      <div class="routeCommand bottom"><button class="mainCmd" data-act="saveSimpleRoute">この計画を保存</button><button class="subCmd" data-act="openSimpleRoute">Google Maps確認</button></div>
+      <div class="routeNote">APIなし版では、Google Mapsの移動時間や渋滞を自動取得しない。Google Mapsで当日想定を確認し、OUTBASEには出発逆算と計画だけ残す。</div>
+    </section>${savedRouteHtml()}`;
+  }
 
 })();
