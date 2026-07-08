@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild05-20260707';
+  const VERSION = 'outbase-field-rebuild06-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild05-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild06-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -121,6 +121,9 @@
     s={...base,...(s||{})};
     s.settings={...base.settings,...(s.settings||{})};
     s.settings.driveAutoOffSec=Math.min(10,Math.max(1,Number(s.settings.driveAutoOffSec||3)));
+    s.planStages=s.planStages||{};
+    s.fieldPage=s.fieldPage||'home';
+    s.externalSearchQuery=s.externalSearchQuery||'';
     s.walk={...base.walk,...(s.walk||{})};
     s.fieldActionMode=s.fieldActionMode||base.fieldActionMode||'kota';
     s.walk.track=s.walk.track||[];s.walk.spots=s.walk.spots||[];s.walk.friends=s.walk.friends||[];s.walk.health=s.walk.health||[];s.walk.sessions=s.walk.sessions||[];
@@ -205,7 +208,8 @@
     }
     return out;
   }
-  function dayOcc(date){return state.events.flatMap(e=>occ(e,date.slice(0,7))).filter(o=>o.date===date)}
+  function dayOcc(date){return calendarEvents().flatMap(e=>occ(e,date.slice(0,7))).filter(o=>o.date===date)}
+
   function unscheduled(){return state.events.filter(e=>!e.start)}
 
 
@@ -262,18 +266,41 @@
     return `<section class="section"><div class="planBoard"><div class="planBoardHead"><span><b>${esc(p.title)}</b><small>${esc(planSpan(p))} / ${esc(typeName[p.type]||p.type)} / ${esc(p.place||'場所未設定')}</small></span><span class="pill ${pr.score>=70?'dark':'wood'}">${pr.score}%</span></div><div class="planBoardOps"><button class="primary" data-act="planSwitch">プラン切替</button><button data-act="editPlan">予定変更</button><button data-act="copyPlanContext">コピー</button></div></div></section>`;
   }
 
+
+  function projectStage(id=state.currentPlanId){
+    state.planStages=state.planStages||{};
+    return state.planStages[id]||state.stage||'before';
+  }
+  function setProjectStage(stage){
+    state.planStages=state.planStages||{};
+    state.planStages[state.currentPlanId]=stage;
+    state.stage=stage;
+    save();render();
+  }
+  function stageTextJP(stage){return {before:'準備前',prep:'準備中',field:'現地',after:'帰宅後',done:'完了'}[stage]||stage}
+  function projectStatusRail(){
+    const cur=projectStage();
+    return `<div class="projectStage"><span>このプランの状態</span>${[['before','準備前'],['prep','準備中'],['field','現地'],['after','帰宅後']].map(([id,label])=>`<button class="${cur===id?'active':''}" data-project-stage="${id}">${label}</button>`).join('')}</div>`;
+  }
+  function isRegularWalkEvent(e){
+    if(!e || e.type!=='walk')return false;
+    const t=`${e.title||''} ${e.memo||''}`;
+    return /通常散歩|コタ散歩/.test(t) && (!e.place || /自宅|周辺/.test(e.place||''));
+  }
+  function calendarEvents(){return (state.events||[]).filter(e=>!isRegularWalkEvent(e));}
+
   function top(){
     const p=current();
+    const pr=planProgress(p);
     return `<div class="top">
       <div class="top-row">
         <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button>
-        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)} / ${typeName[p.type]}`:'日付未設定'}</small></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)} / ${typeName[p.type]}`:'日付未設定'} / ${stageTextJP(projectStage(p.id))}</small></button>
       </div>
-      <div class="stage">
-        ${[['before','準備前'],['prep','準備中'],['field','現地'],['after','帰宅後']].map(([id,label])=>`<button class="${state.stage===id?'active':''}" data-stage="${id}">${label}</button>`).join('')}
-      </div>
+      ${projectStatusRail()}
     </div>`;
   }
+
   function nav(){
     return `<nav class="bottomNav">${[['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','現地'],['memory','○','整理']].map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
   }
@@ -854,8 +881,9 @@ ${starterPanelHtml()}
     return ['camp','walk','payment'].includes(type)?type:'';
   }
   function monthAllEvents(){
-    return state.events.filter(e=>e.start && occ(e,state.currentMonth).length).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+    return calendarEvents().filter(e=>e.start && occ(e,state.currentMonth).length).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
   }
+
   function dayRisk(date){
     const os=dayOcc(date);
     const multi=os.filter(o=>o.multi).length;
@@ -882,6 +910,29 @@ ${starterPanelHtml()}
   }
 
 
+
+  function externalQuery(){return (state.externalSearchQuery||current()?.title||'キャンプ場').trim()||'キャンプ場'}
+  function externalSearchUrl(kind){
+    const q=encodeURIComponent(externalQuery());
+    if(kind==='maps')return `https://www.google.com/maps/search/?api=1&query=${q}`;
+    if(kind==='napp')return `https://www.google.com/search?q=${encodeURIComponent(externalQuery()+' site:nap-camp.com')}`;
+    if(kind==='official')return `https://www.google.com/search?q=${encodeURIComponent(externalQuery()+' 公式 キャンプ場')}`;
+    if(kind==='snowpeak')return `https://www.google.com/search?q=${encodeURIComponent(externalQuery()+' site:snowpeak.co.jp')}`;
+    return `https://www.google.com/search?q=${q}`;
+  }
+  function openExternalSearch(kind){window.open(externalSearchUrl(kind),'_blank')}
+  function saveExternalUrl(){
+    const url=prompt('保存するURL','https://');
+    if(!url)return;
+    const title=prompt('候補名',externalQuery())||externalQuery();
+    state.candidates=state.candidates||[];
+    state.candidates.push({id:uid('cand'),kind:'camp',name:title,place:'Web候補',drive:'未確認',price:'未確認',flags:['Web保存'],memo:url,wish:true,url});
+    save();render();toast('Web候補を保存');
+  }
+  function externalSearchPanel(){
+    return `<section class="section"><div class="externalSearch"><div class="externalHead"><span><b>外部から探す</b><small>OUTBASE内だけでなく、公式・なっぷ・Google Mapsを開いて候補保存する。</small></span><button class="btn" data-act="saveExternalUrl">URL保存</button></div><input id="externalSearchInput" value="${esc(state.externalSearchQuery||'')}" placeholder="キャンプ場名・地域・ギア名で検索"><div class="externalOps"><button data-act="openExternalSearch" data-kind="web">Web</button><button data-act="openExternalSearch" data-kind="official">公式</button><button data-act="openExternalSearch" data-kind="napp">なっぷ</button><button data-act="openExternalSearch" data-kind="maps">Google Maps</button><button data-act="openExternalSearch" data-kind="snowpeak">Snow Peak</button></div></div></section>`;
+  }
+
   function discover(){
     const best=bestCandidate();
     const list=filteredCandidates();
@@ -889,6 +940,7 @@ ${starterPanelHtml()}
     const walkCount=(state.candidates||[]).filter(c=>c.kind==='walk').length;
     const wishCount=(state.candidates||[]).filter(c=>c.wish).length;
     return shell(`
+      ${externalSearchPanel()}
       <section class="discoverHero">
         <div class="discoverHeroTop">
           <span><b>${best?esc(best.name):'候補を探す'}</b><small>${best?esc(candidateReason(best)):'犬可・温水・ドッグフリー・景色・距離で絞る'}。探すだけで終わらせず、予定化まで進める。</small></span>
@@ -944,7 +996,7 @@ ${starterPanelHtml()}
           <div class="quickAdd">
             <button data-act="quickAdd" data-type="camp"><b>幕</b><span>キャンプ</span></button>
             <button data-act="quickAdd" data-type="normal"><b>予</b><span>予定</span></button>
-            <button data-act="quickAdd" data-type="walk"><b>犬</b><span>散歩</span></button>
+            <button data-act="quickAdd" data-type="walk"><b>特</b><span>特別散歩</span></button>
             <button data-act="quickAdd" data-type="payment"><b>¥</b><span>支払い</span></button>
           </div>
           <div class="eventStack">
@@ -967,13 +1019,13 @@ ${starterPanelHtml()}
   }
 
   function dayCell(c){
-    const multis=c.occ.filter(o=>o.multi).slice(0,2), singles=c.occ.filter(o=>!o.multi).slice(0,2), tops=[22,38];
+    const occs=c.occ.slice(0,3), more=Math.max(0,c.occ.length-3);
     return `<button class="day ${c.inMonth?'':'out'} ${c.date===today()?'today':''} ${c.date===state.selectedDate?'selected':''}" data-day="${c.date}">
       <span class="num">${Number(c.date.slice(8,10))}</span>
-      ${multis.map((o,i)=>`<span class="multi ${o.event.type==='camp'?'camp':''} ${o.start?'start':''} ${o.end?'end':''}" style="top:${tops[i]}px">${o.start?esc(o.event.title):''}${o.event.repeat!=='none'?' ↻':''}</span>`).join('')}
-      ${singles.map(o=>`<span class="single ${o.event.repeat!=='none'?'repeat':''}">${esc(o.event.title)}</span>`).join('')}
+      <span class="dayEvents">${occs.map(o=>`<i class="calItem ${o.event.type==='camp'?'camp':''}">${esc(o.start?o.event.title:(o.event.title||''))}${o.event.repeat!=='none'?' ↻':''}</i>`).join('')}${more?`<i class="calMore">+${more}件</i>`:''}</span>
     </button>`
   }
+
   function eventRow(e,o=null){
     const kind=o?(o.multi?'連日':'単体'):(e.start&&e.end&&e.start!==e.end?'連日':'単体'), rep=e.repeat&&e.repeat!=='none'?` / ${repeatName[e.repeat]}`:'';
     return `<button class="row" data-act="openEvent" data-id="${e.id}"><span><strong>${esc(e.title)}</strong><small>${typeName[e.type]||e.type} / ${e.start?`${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''}`:'日付未設定'} / ${kind}${rep}<br>${esc(e.place||'場所未設定')}</small></span><span class="pill ${kind==='連日'?'wood':''}">${kind}</span></button>`
@@ -1249,7 +1301,7 @@ ${starterPanelHtml()}
         <button class="${st.wdone===state.weather.length?'done':'warn'}" data-prep="weather"><b>${st.wdone}/${state.weather.length}</b><span>天気</span></button>
       </div>
 
-      <section class="section"><div class="tabs">${['overview:全体','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット','timer:タイマー'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="prepMenu06">${['shopping:買い物:店で押すだけ','meals:料理:献立とLINEコピー','gear:ギア積込:BOX単位で積む','weather:天気判断:設営/撤収/コタ','pets:ペット準備:家族と共有','timer:タイマー:料理/設営'].map(x=>{const [id,l,s]=x.split(':');return `<button class="${state.prepTab===id?'active':''}" data-prep="${id}"><b>${l}</b><small>${s}</small></button>`}).join('')}</section>
       ${prepBody()}
     `)
   }
@@ -3067,7 +3119,8 @@ ${starterPanelHtml()}
   function g05ActiveSession(id=g05Mode().id){return (state.fieldSessions||[]).find(s=>s.modeId===id&&!s.endedAt)||null}
   function g05AnyActive(){return (state.fieldSessions||[]).find(s=>!s.endedAt)||null}
   function g05Status(){const s=g05AnyActive(); if(s)return `${s.label} ${s.status==='paused'?'休憩中':'記録中'}`; if(state.campRun?.active)return '実行中'; return 'まだ開始していません'}
-  function g05SetMode(id){state.fieldFixedMode=id;if(id==='drive')state.drivePanelOpen=false;save();render()}
+  function g05SetMode(id){state.fieldFixedMode=id;state.fieldPage=id;if(id==='drive')state.drivePanelOpen=false;save();render(false)}
+
   function g05Start(id){state.fieldFixedMode=id;fw03StartMode()}
   function g05Pause(){fw03PauseMode('休憩')}
   function g05Resume(){fw03ResumeMode()}
@@ -3075,6 +3128,22 @@ ${starterPanelHtml()}
   function g05StartLabel(){const id=g05Mode().id; if(id==='kota')return '散歩出発'; if(id==='campWalk')return '場内散歩開始'; if(id==='drive')return '出発'; if(id==='site')return '調査開始'; if(id==='setup')return '設営開始'; if(id==='withdraw')return '撤収開始'; return '開始'}
   function g05EndLabel(){const id=g05Mode().id; if(id==='kota')return '帰宅'; if(id==='campWalk')return 'サイト帰着'; if(id==='drive')return '到着'; if(id==='site')return '調査終了'; if(id==='setup')return '設営完了'; if(id==='withdraw')return '撤収完了'; return '終了'}
   function g05PrimaryText(){const id=g05Mode().id; if(id==='drive')return '運転中は操作しない。停車中に「ピン」か「話す」だけ。'; if(id==='kota'||id==='campWalk')return 'やることは、開始して、ピン/写真/動画/話す、最後に終了だけ。'; if(id==='site')return 'まずサイトMAP。気になる場所はピン。細かい整理は帰宅後。'; if(id==='setup')return '設営は時間を残す。迷ったら写真か話すで残す。'; if(id==='withdraw')return '撤収は乾燥待ち、積込、忘れそうなことを残す。'; return '必要なことだけ押す。'}
+
+  function g06FieldHome(){
+    return `<section class="fieldHome06">
+      ${g05StatusCard()}
+      <section class="fieldHomeGuide"><b>何を始める？</b><small>ここは入口。やることを選ぶと専用ページに入る。通常のコタ散歩はカレンダー管理しない。</small></section>
+      <section class="fieldModeGrid06">${g05Modes().map(m=>`<button class="fieldModeCard06" data-g06-mode="${m.id}"><b>${esc(m.label)}</b><small>${esc(m.sub)}</small><span>開く</span></button>`).join('')}</section>
+    </section>`;
+  }
+  function g06ModePage(){
+    return `<section class="fieldPage06">
+      <section class="fieldPageHead06"><button data-act="g06Back">← 現地ホーム</button><span><b>${esc(g05Mode().label)}</b><small>${esc(g05PrimaryText())}</small></span></section>
+      ${g05Work()}
+    </section>`;
+  }
+  function g06Back(){state.fieldPage='home';save();render(false)}
+
   function g05ModeCards(){const cur=g05Mode().id;return `<section class="guide05ModeCards">${g05Modes().map(m=>`<button class="guide05ModeCard ${cur===m.id?'active':''}" data-g05-mode="${m.id}"><b>${esc(m.label)}</b><small>${esc(m.sub)}</small></button>`).join('')}</section>`}
   function g05StatusCard(){const gps=state.walk.track.length;const gaps=(state.visibilityLog?.gaps||[]).length;return `<section class="guide05Status"><div class="guide05StatusTop"><span><b>今の状態：${esc(g05Status())}</b><small>画面を見て、上から順番に押せばいい。開始・記録・終了だけに整理。</small></span><span class="guide05Badge">GUIDE</span></div><div class="guide05Now"><div><strong>選択中</strong><span>${esc(g05Mode().label)}</span></div><div><strong>GPS</strong><span>${gps}点 / 欠測 ${gaps}件</span></div><div><strong>次にやること</strong><span>${esc(g05StartLabel())} → 記録 → ${esc(g05EndLabel())}</span></div></div></section>`}
   function g05Steps(){const s=g05ActiveSession();const on=!!s;const paused=s?.status==='paused';return `<section class="guide05Steps"><button class="primary" data-g05-start="${g05Mode().id}"><b>${esc(g05StartLabel())}</b><small>${on?'開始済み':'ここから始める'}</small></button><button data-act="g05Pause"><b>休憩</b><small>${paused?'休憩中':'一時停止'}</small></button><button data-act="g05Resume"><b>再開</b><small>休憩後に押す</small></button><button data-act="g05End"><b>${esc(g05EndLabel())}</b><small>これで閉じる</small></button></section>`}
@@ -3082,14 +3151,7 @@ ${starterPanelHtml()}
   function g05MapAndLog(){const p=state.walk.track[state.walk.track.length-1];const rec=planRecords().slice().reverse().slice(0,4);const map=p?`<iframe loading="lazy" src="https://maps.google.com/maps?q=${p.lat},${p.lng}&z=16&output=embed"></iframe>`:`<div class="guide05MapEmpty">現在地を押すと地図表示。<br>ピン・写真・音声はここに紐づく。</div>`;return `<section class="guide05MapRow"><div class="guide05MapBox">${map}</div><div class="guide05Log"><b>直近の記録</b><small>何を押したかだけ見ればいい。</small><div class="guide05MiniList">${rec.length?rec.map(r=>`<div>${esc(r.time||'')} ${esc(r.title||r.kind||'記録')} / ${esc(r.target||'')}</div>`).join(''):'<div>まだ記録なし</div>'}</div></div></section>`}
   function g05Work(){const s=g05ActiveSession();return `<section class="guide05Work"><div class="guide05WorkHead"><span><b>${esc(g05Mode().label)}</b><small>${esc(g05PrimaryText())}</small></span><span class="guide05WorkState ${s?'on':''}">${s?(s.status==='paused'?'休憩中':'記録中'):'未開始'}</span></div>${g05Steps()}${g05RecordButtons()}${g05MapAndLog()}</section>`}
   function field(){
-    return shell(`
-      <section class="fieldGuide05">
-        ${g05StatusCard()}
-        <section class="guide05Help"><b>使い方</b><small>① 何をしているか選ぶ → ② 開始する → ③ ピン/写真/動画/話すで残す → ④ 終了する。細かい整理はあとで。</small></section>
-        ${g05ModeCards()}
-        ${g05Work()}
-      </section>
-    `);
+    return shell(state.fieldPage&&state.fieldPage!=='home'?g06ModePage():g06FieldHome());
   }
 
   function publicRecords(){
@@ -3336,6 +3398,7 @@ ${starterPanelHtml()}
     }
   }
   function bind(){
+    document.querySelectorAll('[data-g06-mode]').forEach(el=>el.onclick=()=>g05SetMode(el.dataset.g06Mode));
     document.querySelectorAll('[data-g05-mode]').forEach(el=>el.onclick=()=>g05SetMode(el.dataset.g05Mode));
     document.querySelectorAll('[data-g05-start]').forEach(el=>el.onclick=()=>g05Start(el.dataset.g05Start));
     document.querySelectorAll('[data-fw03-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.fw03Mode;if(el.dataset.fw03Mode==='drive')state.drivePanelOpen=false;save();render()});
@@ -3351,6 +3414,7 @@ ${starterPanelHtml()}
     document.querySelectorAll('[data-field-mode]').forEach(el=>el.onclick=()=>{state.fieldMode=el.dataset.fieldMode;state.walkMode=el.dataset.fieldMode==='campWalk'?'camp':'normal';save();render()});
     document.querySelectorAll('[data-field-action]').forEach(el=>el.onclick=()=>handleFieldAction(el.dataset.fieldAction));
     document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;save();render()});
+    document.querySelectorAll('[data-project-stage]').forEach(el=>el.onclick=()=>setProjectStage(el.dataset.projectStage));
     document.querySelectorAll('[data-stage]').forEach(el=>el.onclick=()=>{state.stage=el.dataset.stage;save();render()});
     document.querySelectorAll('[data-prep]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepTab=el.dataset.prep;save();render()});
     document.querySelectorAll('[data-gear]').forEach(el=>el.onclick=()=>{state.gearTab=el.dataset.gear;save();render()});
@@ -3373,6 +3437,10 @@ ${starterPanelHtml()}
         if(box){const list=filteredGear();box.innerHTML=list.map(gearCard).join('')||`<div class="gearReport"><b>該当なし</b><p>検索条件に合うギアがない。</p></div>`;box.querySelectorAll('[data-act]').forEach(x=>x.onclick=()=>act(x.dataset.act,x));}
       }
     }
+    const externalSearch=document.getElementById('externalSearchInput');
+    if(externalSearch){
+      externalSearch.oninput=()=>{state.externalSearchQuery=externalSearch.value;save();}
+    }
     const centerSearch=document.getElementById('centerSearchInput');
     if(centerSearch){
       centerSearch.oninput=()=>{
@@ -3391,6 +3459,9 @@ ${starterPanelHtml()}
     if(a==='g05Pause')return g05Pause();
     if(a==='g05Resume')return g05Resume();
     if(a==='g05End')return g05End();
+    if(a==='openExternalSearch')return openExternalSearch(el.dataset.kind||'web');
+    if(a==='saveExternalUrl')return saveExternalUrl();
+    if(a==='g06Back')return g06Back();
     if(a==='openDrivePanel')return openDrivePanel();
     if(a==='drivePin')return drivePin();
     if(a==='setDriveAutoOff')return setDriveAutoOff();
