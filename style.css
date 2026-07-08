@@ -6029,3 +6029,75 @@ body{
 .simpleCalc .total span{color:rgba(246,236,217,.72)}.simpleCalc .total b{font-size:22px}
 .simpleTimeline .routeStep{cursor:default}
 @media(max-width:560px){.simpleStopGrid{grid-template-columns:1fr}.simpleCalc{grid-template-columns:repeat(2,1fr)}}
+
+
+/* RESTORE03.5 予定連動・APIなし出発逆算 */
+.route035 .simpleRouteLead b{font-size:22px}
+.routeBasics input[readonly]{
+  color:#11130f;
+  background:rgba(255,248,235,.72);
+}
+.routeDriveTime{
+  display:grid;
+  gap:10px;
+  border-radius:24px;
+  padding:14px;
+  background:linear-gradient(135deg,rgba(17,19,15,.08),rgba(198,161,93,.16));
+  border:1px solid rgba(17,19,15,.08);
+}
+.routeDriveTime b{
+  display:block;
+  font-size:18px;
+  letter-spacing:-.05em;
+}
+.routeDriveTime p{
+  margin:7px 0 0;
+  color:#5f574b;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.55;
+}
+.routeDriveOps{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  align-items:stretch;
+}
+.routeDriveOps button{
+  min-height:52px;
+  border-radius:18px;
+  background:linear-gradient(135deg,#c6a15d,#e3c77f);
+  color:#11130f;
+  font-weight:950;
+}
+.routeDriveOps label{
+  display:grid;
+  gap:6px;
+  border-radius:18px;
+  padding:10px;
+  background:rgba(251,244,231,.78);
+  border:1px solid rgba(16,19,14,.08);
+}
+.routeDriveOps span{
+  font-size:10px;
+  font-weight:950;
+  color:#746b5f;
+}
+.routeDriveOps input{
+  width:100%;
+  border:0;
+  border-radius:14px;
+  padding:11px;
+  background:#fff8eb;
+  color:#11130f;
+  font-weight:900;
+}
+.routeDriveTime small{
+  color:#746b5f;
+  font-size:10px;
+  font-weight:850;
+}
+.routeTargets{grid-template-columns:1fr 1fr}
+@media(max-width:560px){
+  .routeDriveOps,.routeTargets{grid-template-columns:1fr}
+}

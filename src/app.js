@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore03-4-field03-api-less-departure-20260709';
-  const KEY = 'outbase_restore03_4_field03_state';
-  const SNAP_KEY = 'outbase_restore03_4_field03_snapshot';
-  const ERR_KEY = 'outbase_restore03_4_field03_last_error';
+  const VERSION = 'outbase-restore03-5-field03-plan-linked-departure-20260709';
+  const KEY = 'outbase_restore03_5_field03_state';
+  const SNAP_KEY = 'outbase_restore03_5_field03_snapshot';
+  const ERR_KEY = 'outbase_restore03_5_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-4-field03-api-less-departure-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-5-field03-plan-linked-departure-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -188,6 +188,8 @@
       tour:{on:false,min:45}
     };
     s.simpleStops={gas:{on:true,min:10},conv:{on:true,min:10},super:{on:false,min:25},sa:{on:true,min:20},kota:{on:true,min:15},michi:{on:false,min:20},tour:{on:false,min:45},...(s.simpleStops||{})};
+    s.routePlan.arrivalTarget=s.routePlan.arrivalTarget||'b30';
+    s.routePlan.driveCheckedAt=s.routePlan.driveCheckedAt||'';
     Object.keys(s.simpleStops).forEach(k=>{s.simpleStops[k]={on:!!s.simpleStops[k].on,min:Number(s.simpleStops[k].min||0)}});
     ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins','dismissedInsights'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
     if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
@@ -3633,6 +3635,7 @@ ${starterPanelHtml()}
     if(a==='toggleSimpleStop')return toggleSimpleStop(el.dataset.stop);
     if(a==='saveSimpleRoute')return saveSimpleRoutePlan();
     if(a==='openSimpleRoute')return window.open(simpleRouteGoogleUrl(),'_blank');
+    if(a==='markDriveChecked')return markDriveChecked();
     if(a==='saveRoutePlan')return saveRoutePlan();
     if(a==='useSavedRoute')return useSavedRoute(el.dataset.id);
     if(a==='openSavedRoute')return openSavedRoute(el.dataset.id);
@@ -4911,6 +4914,207 @@ ${starterPanelHtml()}
       selectedStops:simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>`${d.label} ${simpleStopState(d.id).min}分`),
       selectedLabels:simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>d.label),
       url:simpleRouteGoogleUrl(), mode:'api-less', createdAt:new Date().toLocaleString('ja-JP')
+    };
+  }
+  function saveSimpleRoutePlan(){return saveRoutePlan()}
+
+
+
+  /* RESTORE03.5: 予定連動・APIなし出発逆算 */
+  function campRouteEvents(){
+    return (state.events||[]).filter(e=>e.type==='camp' || /キャンプ|camp|スノーピーク|CF|フィールド/i.test((e.title||'')+(e.place||'')));
+  }
+  function activeCampForRoute(){
+    const camps=campRouteEvents();
+    return camps.find(e=>e.id===state.currentPlanId)||camps[0]||current();
+  }
+  function planDestination(e=activeCampForRoute()){
+    return e?.place || e?.title || state.routePlan?.destination || 'キャンプ場';
+  }
+  function syncRouteFromPlan(id){
+    const e=(state.events||[]).find(x=>x.id===id)||activeCampForRoute();
+    if(!e)return;
+    state.currentPlanId=e.id;
+    state.routePlan.destination=planDestination(e);
+    state.routePlan.planTitle=e.title||'';
+    if(e.checkin)state.routePlan.checkin=e.checkin;
+  }
+  function routeOrigin(){
+    return state.settings?.home || state.routePlan?.origin || '千葉県柏市';
+  }
+  function routeTarget(){
+    return state.routePlan?.destination || planDestination();
+  }
+  function setRouteField(k,v,doRender=false){
+    state.routePlan=state.routePlan||{};
+    if(k==='origin'||k==='home'){
+      state.settings.home=v;
+      state.routePlan.origin=v;
+    }else if(k==='currentPlanId'){
+      syncRouteFromPlan(v);
+      doRender=true;
+    }else if(k==='arrivalTarget'){
+      state.routePlan.arrivalTarget=v;
+      if(v==='exact'){state.routePlan.arrivalMode='exact';state.routePlan.customBuffer=0}
+      else if(v==='late'){state.routePlan.arrivalMode='late';state.routePlan.lateAllowance=30}
+      else {state.routePlan.arrivalMode='buffer';state.routePlan.customBuffer=Number(String(v).replace('b',''))||30}
+      doRender=true;
+    }else{
+      state.routePlan[k]=v;
+    }
+    save();
+    if(doRender)render();
+  }
+  function routeArrivalLabel(){
+    const v=state.routePlan?.arrivalTarget||'b30';
+    if(v==='exact')return 'チェックインちょうど';
+    if(v==='b15')return '15分前到着';
+    if(v==='b30')return '30分前到着';
+    if(v==='b60')return '1時間前到着';
+    if(v==='late')return '少し遅れてもOK';
+    return `${state.routePlan?.customBuffer||30}分前到着`;
+  }
+  function simpleArrivalBufferFor(mode){
+    const v=state.routePlan?.arrivalTarget||'b30';
+    if(v==='exact')return 0;
+    if(v==='b15')return 15;
+    if(v==='b30')return 30;
+    if(v==='b60')return 60;
+    if(v==='late')return -30;
+    if(mode==='exact')return 0;
+    if(mode==='late')return -30;
+    return Number(state.routePlan?.customBuffer||30);
+  }
+  function simpleDepartOption(label,mode,extra=0){
+    const check=routeCheckinDate();
+    const target=new Date(check.getTime()-(simpleArrivalBufferFor(mode)+Number(extra||0))*60000);
+    const total=(Number(state.routePlan?.driveMin)||150)+simpleStopTotal()+Number(state.routePlan?.trafficBuffer||0);
+    const dep=new Date(target.getTime()-total*60000);
+    return {label,mode,depart:`${pad(dep.getHours())}:${pad(dep.getMinutes())}`,arrival:`${pad(target.getHours())}:${pad(target.getMinutes())}`,total};
+  }
+  function simpleRouteGoogleUrl(){
+    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(routeOrigin())}&destination=${encodeURIComponent(routeTarget())}&travelmode=driving`;
+  }
+  function routePlanSelectHtml(){
+    const camps=campRouteEvents();
+    if(!camps.length)return `<div class="routePlanCard"><b>予定が未登録</b><small>先に予定へキャンプ場を登録すると、ここに反映される。</small></div>`;
+    return `<label><span>予定から選ぶ</span><select data-route-field="currentPlanId">
+      ${camps.map(e=>`<option value="${e.id}" ${e.id===(activeCampForRoute()?.id||state.currentPlanId)?'selected':''}>${esc(e.title)}${e.start?` / ${esc(e.start)}`:''}</option>`).join('')}
+    </select></label>`;
+  }
+  function driveCheckedText(){
+    return state.routePlan?.driveCheckedAt || '未記録';
+  }
+  function markDriveChecked(){
+    state.routePlan.driveCheckedAt=new Date().toLocaleString('ja-JP');
+    save();render();
+    window.open(simpleRouteGoogleUrl(),'_blank');
+  }
+  function routePrepHero(){
+    const opt=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    return `<section class="prepHero routeOnlyHero simpleRouteHero">
+      <div class="prepHeroTop">
+        <span><b>出発時間を決める</b><small>予定のキャンプ場とチェックインを使い、当日想定の移動時間＋寄り道時間で逆算する。</small></span>
+        <span class="prepScore routeScoreMini">${opt.depart}</span>
+      </div>
+      <div class="prepCommand">
+        <button class="mainCmd" data-act="openSimpleRoute">Google Mapsで当日想定を確認</button>
+        <button class="subCmd" data-act="saveSimpleRoute">計画保存</button>
+      </div>
+    </section>`;
+  }
+  function routePrepView(){
+    const plan=activeCampForRoute();
+    if(plan && !state.routePlan.destination)syncRouteFromPlan(plan.id);
+    const optA=simpleDepartOption('余裕あり','buffer',30);
+    const optB=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    const optC=simpleDepartOption('ギリギリ','exact',0);
+    const rows=simpleRouteRows();
+    return `<section class="section simpleRoute route035">
+      <div class="simpleRouteLead">
+        <b>APIなし出発逆算</b>
+        <p>自宅は登録制。キャンプ場とチェックインは予定から選ぶ。Google Mapsの当日想定時間だけ入力し、OUTBASEは出発時刻を計算して保存する。</p>
+      </div>
+
+      <div class="routeFormGrid routeBasics">
+        <label><span>登録済み自宅</span><input data-route-field="home" value="${esc(routeOrigin())}" placeholder="例：千葉県柏市"></label>
+        ${routePlanSelectHtml()}
+        <label><span>予定のキャンプ場</span><input value="${esc(routeTarget())}" readonly></label>
+        <label><span>チェックイン</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label>
+      </div>
+
+      <section class="routeDriveTime">
+        <div>
+          <b>当日想定の移動時間</b>
+          <p>Google Maps側でキャンプ当日の出発/到着日時を指定して確認し、その分数をここに入れる。OUTBASE側では自動取得しない。</p>
+        </div>
+        <div class="routeDriveOps">
+          <button data-act="markDriveChecked">Google Mapsで確認</button>
+          <label><span>移動時間（分）</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label>
+        </div>
+        <small>確認記録：${esc(driveCheckedText())}</small>
+      </section>
+
+      <div class="routeFormGrid routeTargets">
+        <label><span>到着目標</span><select data-route-field="arrivalTarget">
+          <option value="exact" ${state.routePlan?.arrivalTarget==='exact'?'selected':''}>チェックインちょうど</option>
+          <option value="b15" ${state.routePlan?.arrivalTarget==='b15'?'selected':''}>15分前</option>
+          <option value="b30" ${(state.routePlan?.arrivalTarget||'b30')==='b30'?'selected':''}>30分前</option>
+          <option value="b60" ${state.routePlan?.arrivalTarget==='b60'?'selected':''}>1時間前</option>
+          <option value="late" ${state.routePlan?.arrivalTarget==='late'?'selected':''}>少し遅れてもOK</option>
+        </select></label>
+        <label><span>追加予備（任意）</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label>
+      </div>
+      <div class="routeNote">追加予備は、Google Mapsの移動時間に入らないトイレ・コタ・受付前の余白。渋滞はGoogle Maps側で当日時刻を指定して確認する前提。</div>
+
+      <div class="routeDepartures simpleDepartures">
+        ${[optA,optB,optC].map(o=>`<button class="routeDeparture ${o.mode===(state.routePlan?.arrivalMode||'buffer')?'active':''}" data-act="setArrivalMode" data-mode="${o.mode}"><b>${esc(o.depart)}</b><span>${esc(o.label)}</span><small>到着目標 ${esc(o.arrival)} / 合計 ${o.total}分</small></button>`).join('')}
+      </div>
+
+      <section class="simpleStops">
+        <div class="head"><b>寄り道時間</b><small>行く/行かないと所要時間だけ。店名や細かい検索はGoogle Mapsで確認。</small></div>
+        <div class="simpleStopGrid">
+          ${simpleStopDefs().map(d=>{
+            const s=simpleStopState(d.id);
+            return `<article class="simpleStop ${s.on?'on':'off'}" data-stop="${d.id}">
+              <button class="simpleStopMain" data-act="toggleSimpleStop" data-stop="${d.id}">
+                <b>${esc(d.label)}</b><small>${esc(d.hint)}</small><em>${s.on?'行く':'行かない'}</em>
+              </button>
+              <label><span>分</span><input data-simple-min="${d.id}" type="number" value="${Number(s.min||d.defaultMin)}"></label>
+            </article>`;
+          }).join('')}
+        </div>
+      </section>
+
+      <section class="simpleCalc">
+        <div><span>移動</span><b>${Number(state.routePlan?.driveMin||150)}分</b></div>
+        <div><span>寄り道</span><b>${simpleStopTotal()}分</b></div>
+        <div><span>追加予備</span><b>${Number(state.routePlan?.trafficBuffer||0)}分</b></div>
+        <div class="total"><span>自宅出発</span><b>${optB.depart}</b></div>
+      </section>
+
+      <div class="routeTimeline simpleTimeline">
+        ${rows.map(r=>`<div class="routeStep fixed"><time>${esc(r.time)}</time><span><b>${esc(r.label)}</b><small>${esc(r.memo)}</small></span><em>計画</em></div>`).join('')}
+      </div>
+
+      <div class="routeCommand bottom">
+        <button class="mainCmd" data-act="openSimpleRoute">Google Mapsで確認</button>
+        <button class="subCmd" data-act="saveSimpleRoute">この計画を保存</button>
+      </div>
+      <div class="routeNote">APIなし版では、Google Mapsの移動時間は自動取得しない。予定連動・出発逆算・寄り道時間・保存・当日ナビ連携をOUTBASEで担当する。</div>
+    </section>${savedRouteHtml()}`;
+  }
+  function snapshotRoutePlan(){
+    const opt=simpleDepartOption('採用',state.routePlan?.arrivalMode||'buffer',0);
+    const rows=simpleRouteRows();
+    return {
+      id:uid('route'), eventId:activeCampForRoute()?.id||current().id, name:`${activeCampForRoute()?.title||current().title} ${opt.depart}出発`,
+      origin:routeOrigin(), destination:routeTarget(), checkin:state.routePlan?.checkin||'13:00',
+      arrivalMode:state.routePlan?.arrivalMode||'buffer', arrivalLabel:routeArrivalLabel(),
+      depart:opt.depart, arrival:opt.arrival, total:opt.total, rows,
+      selectedStops:simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>`${d.label} ${simpleStopState(d.id).min}分`),
+      selectedLabels:simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>d.label),
+      url:simpleRouteGoogleUrl(), mode:'api-less-plan-linked', driveCheckedAt:state.routePlan?.driveCheckedAt||'', createdAt:new Date().toLocaleString('ja-JP')
     };
   }
   function saveSimpleRoutePlan(){return saveRoutePlan()}
