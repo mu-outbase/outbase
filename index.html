@@ -1,1 +1,30 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#161914"><title>OUTBASE</title><link rel="manifest" href="./manifest.json?v=outbase-rebuild12-unified-ui-20260708"><link rel="stylesheet" href="./style.css?v=outbase-rebuild12-unified-ui-20260708"><script>(async()=>{try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}}catch(e){}})();</script></head><body><div id="app"></div><script src="./src/app.js?v=outbase-rebuild12-unified-ui-20260708"></script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#151812">
+  <title>OUTBASE</title>
+  <link rel="stylesheet" href="./style.css?v=outbase-rebuild13-map-backfix-20260708">
+  <link rel="manifest" href="./manifest.json?v=outbase-rebuild13-map-backfix-20260708">
+  <script>
+    (async()=>{
+      try{
+        if('serviceWorker' in navigator){
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if('caches' in window){
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      }catch(e){}
+    })();
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <input id="fileInput" type="file" hidden multiple>
+  <script src="./src/app.js?v=outbase-rebuild13-map-backfix-20260708"></script>
+</body>
+</html>
