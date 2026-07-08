@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-rebuild10-simple-20260708';
+  const VERSION = 'outbase-rebuild11-premium-simple-20260708';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-rebuild10-simple-20260708').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-rebuild11-premium-simple-20260708').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -5073,6 +5073,324 @@ ${starterPanelHtml()}
       </section>
       <section class="simpleTitle"><b>タイムライン</b><small>押したことが時系列で残る。</small></section>
       <section class="simpleList">${rec.slice(0,20).map(r=>`<div class="simpleRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.text||r.target||'')}</small></span><span>${esc(r.kind||'')}</span></div>`).join('')||'<div class="simpleInfo">履歴なし</div>'}</section>
+    </section>`);
+  }
+
+  function bind(){
+    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;if(el.dataset.kidField)state.kidFieldPage=el.dataset.kidField;if(el.dataset.kidPrep)state.kidPrepPage=el.dataset.kidPrep;if(el.dataset.kidMemory)state.kidMemoryPage=el.dataset.kidMemory;save();render(false)});
+    document.querySelectorAll('[data-kid-field]').forEach(el=>el.onclick=()=>{state.route='field';state.kidFieldPage=el.dataset.kidField;save();render(false)});
+    document.querySelectorAll('[data-kid-prep]').forEach(el=>el.onclick=()=>{state.route='prep';state.kidPrepPage=el.dataset.kidPrep;save();render(false)});
+    document.querySelectorAll('[data-kid-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.kidMemoryPage=el.dataset.kidMemory;save();render(false)});
+    document.querySelectorAll('[data-kid-day]').forEach(el=>el.onclick=()=>{const d=el.dataset.kidDay, now=Date.now(); if(kidLastTapDate===d && now-kidLastTapAt<450){kidLastTapAt=0;kidAddEvent(d)}else{kidLastTapDate=d;kidLastTapAt=now;state.selectedDate=d;save();render(false)}});
+    document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
+    document.querySelectorAll('[data-hold-voice]').forEach(el=>{
+      el.onpointerdown=e=>{e.preventDefault();startHoldVoice()};
+      el.onpointerup=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointercancel=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointerleave=e=>{if(voiceRecorder&&voiceRecorder.state==='recording')stopHoldVoice()};
+    });
+    const search=document.getElementById('externalSearchInput');
+    if(search){search.oninput=()=>{state.externalSearchQuery=search.value;save()}}
+  }
+
+  function render(keepScroll=true){
+    const sx=window.scrollX||0, sy=window.scrollY||0;
+    try{
+      app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():state.route==='routeplan'?routePlan09():state.route==='historyDetail'?historyDetail09():home();
+      bind();
+      if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
+    }catch(err){
+      console.error(err);
+      state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};
+      try{save()}catch(e){}
+      app.innerHTML=recoveryHtml(err);
+    }
+  }
+
+
+  // ===== REBUILD11 final override: 上質で分かりやすいモード =====
+  function activeRibbon03(){return ''}
+
+  function top(){
+    const p=current();
+    return `<div class="top premiumTop">
+      <div class="top-row">
+        <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>premium simple</small></span></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'} / ${kidNowText()}</small></button>
+      </div>
+      <div class="premiumChips">
+        <span class="${kidCampOn()?'on':''}">${kidCampOn()?'キャンプ中':'未開始'}</span>
+        <span>${kidRunningMode()?`いま：${esc(kidRunningMode())}`:'いま：なし'}</span>
+        <span>操作は少なく</span>
+      </div>
+    </div>`;
+  }
+
+  function nav(){
+    const items=[['home','⌂','ホーム'],['calendar','▦','予定'],['prep','◫','準備'],['field','＋','残す'],['memory','○','思い出']];
+    return `<nav class="premiumNav">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b>${l}</button>`).join('')}</nav>`;
+  }
+
+  function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
+
+  function premiumBack(route='home',label='ホーム'){return `<div class="premiumBack"><button data-route="${route}">← ${esc(label)}</button></div>`}
+  function premiumTitle(title,sub){return `<section class="premiumTitle"><b>${esc(title)}</b><small>${esc(sub)}</small></section>`}
+
+  function home(){
+    return shell(`<section class="premiumPage">
+      <section class="premiumHero">
+        <div class="eyebrow"><span>OUTBASE</span><span>迷わない / でも上質</span></div>
+        <h1>今日やることだけ。</h1>
+        <p>大きくしすぎず、必要な操作だけを見えるようにした。</p>
+        <div class="premiumNow"><div><b>${esc(kidNowText())}</b><small>キャンプは出発から帰宅まで</small></div><span>今</span></div>
+      </section>
+
+      <section class="primaryPanel">
+        <div class="panelTitle"><span><b>まず選ぶ</b><small>主役の行動だけを置く</small></span></div>
+        <div class="premiumCardGrid">
+          <button class="premiumCard" data-route="field" data-kid-field="camp"><b>キャンプに行く</b><small>出発・記録・帰宅</small></button>
+          <button class="premiumCard" data-route="field" data-kid-field="kota"><b>コタ散歩する</b><small>出発・ピン・写真・帰宅</small></button>
+          <button class="premiumCard" data-route="prep" data-kid-prep="home"><b>準備する</b><small>買うもの・持ち物・ルート</small></button>
+          <button class="premiumCard" data-route="memory" data-kid-memory="home"><b>思い出を見る</b><small>履歴と写真を見返す</small></button>
+        </div>
+      </section>
+
+      <section class="premiumMiniRow">
+        <button data-route="prep" data-kid-prep="gear">ギア</button>
+        <button data-route="discover">探す</button>
+        <button data-route="calendar">予定</button>
+      </section>
+    </section>`);
+  }
+
+  function field(){
+    const page=state.kidFieldPage||'camp';
+    if(page==='kota')return premiumWalkPage();
+    if(page==='drive')return premiumDrivePage();
+    if(page==='setup')return premiumWorkPage('setup','設営','設営開始','設営完了','休憩しながら設営時間を残す。');
+    if(page==='withdraw')return premiumWorkPage('withdraw','撤収','撤収開始','撤収完了','乾燥待ち・積込を残す。');
+    if(page==='campWalk')return premiumWalkPage('campWalk','場内散歩','サイト帰着');
+    if(page==='site')return premiumSitePage();
+    return premiumCampPage();
+  }
+
+  function premiumCampPage(){
+    const on=kidCampOn();
+    return shell(`<section class="premiumPage">
+      ${premiumBack('home','ホーム')}
+      <section class="premiumHero">
+        <div class="eyebrow"><span>キャンプ</span><span>${on?'実行中':'開始前'}</span></div>
+        <h1>${on?'キャンプ中':'キャンプに行く'}</h1>
+        <p>${on?'いま必要なことだけ押す。帰宅したら終わる。':'まず出発する。ルートや準備は出発前に確認。'}</p>
+        <div class="premiumNow"><div><b>${on?(kidRunningMode()||'いま：何もしていない'):'まだ出発していない'}</b><small>${on?`出発 ${new Date(state.campRun.startedAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`:'出発から帰宅までを1本で残す'}</small></div><span>${on?'中':'前'}</span></div>
+      </section>
+      ${on?`<section class="primaryPanel">
+        <div class="panelTitle"><span><b>今できること</b><small>主役操作は少なめに</small></span></div>
+        <div class="primaryActions">
+          <button class="premiumBtn dark" data-kid-field="drive"><b>ドライブ</b><small>Google Mapsと併用</small></button>
+          <button class="premiumBtn" data-act="captureCamera"><b>写真</b><small>今を残す</small></button>
+          <button class="premiumBtn" data-act="quickPin"><b>ピン</b><small>場所だけ残す</small></button>
+          <button class="premiumBtn dark" data-hold-voice><b>話す</b><small>長押し音声</small></button>
+          <button class="premiumBtn" data-kid-field="setup"><b>設営</b><small>開始・休憩・完了</small></button>
+          <button class="premiumBtn" data-kid-field="kota"><b>コタ散歩</b><small>寄り道散歩もここ</small></button>
+          <button class="premiumBtn" data-kid-field="withdraw"><b>撤収</b><small>乾燥・積込</small></button>
+          <button class="premiumBtn red" data-act="kidEndCamp"><b>帰宅した</b><small>キャンプ終了</small></button>
+        </div>
+      </section>`:`<section class="primaryPanel">
+        <div class="panelTitle"><span><b>出発前</b><small>必要なものだけ確認</small></span></div>
+        <div class="primaryActions">
+          <button class="premiumBtn main" data-act="kidStartCamp"><b>出発する</b><small>キャンプ開始</small></button>
+          <button class="premiumBtn" data-route="routeplan"><b>行き先・寄り道</b><small>ルートと買い出し</small></button>
+          <button class="premiumBtn" data-route="prep"><b>準備を見る</b><small>買うもの・持ち物</small></button>
+          <button class="premiumBtn" data-route="calendar"><b>予定を見る</b><small>日付確認</small></button>
+        </div>
+      </section>`}
+    </section>`);
+  }
+
+  function premiumWalkPage(mode='kota', title='コタ散歩', end='帰宅'){
+    const running=(state.fieldSessions||[]).find(s=>s.modeId===mode&&!s.endedAt);
+    return shell(`<section class="premiumPage">
+      ${premiumBack('field','キャンプ')}
+      ${premiumTitle(title,'出発して、ピン・写真・動画・話す。終わったら帰宅。')}
+      <section class="premiumHero"><div class="eyebrow"><span>WALK</span><span>${running?'記録中':'未開始'}</span></div><h1>${running?'散歩中':'まだ出発していない'}</h1><p>細かい分類はしない。残すのは場所と写真と声だけ。</p></section>
+      <section class="primaryPanel">
+        <div class="primaryActions">
+          <button class="premiumBtn main" data-act="kidStartMode" data-mode="${mode}"><b>出発</b><small>散歩開始</small></button>
+          <button class="premiumBtn" data-act="quickPin"><b>ピン</b><small>場所を残す</small></button>
+          <button class="premiumBtn" data-act="captureCamera"><b>写真</b><small>写真+位置</small></button>
+          <button class="premiumBtn" data-act="captureMedia" data-kind="video"><b>動画</b><small>動画+位置</small></button>
+          <button class="premiumBtn dark" data-hold-voice><b>話す</b><small>長押し文字起こし</small></button>
+          <button class="premiumBtn red" data-act="kidEndMode"><b>${esc(end)}</b><small>散歩終了</small></button>
+        </div>
+      </section>
+      <section class="premiumInfo">通常のコタ散歩はカレンダーに入れない。行った時だけ記録する。</section>
+    </section>`);
+  }
+
+  function premiumDrivePage(){
+    return shell(`<section class="premiumPage">
+      ${premiumBack('field','キャンプ')}
+      ${premiumTitle('ドライブ','Google Mapsはナビ。OUTBASEは停車中のピンと話すだけ。')}
+      <section class="premiumHero"><div class="eyebrow"><span>DRIVE</span><span>画面分割推奨</span></div><h1>地図はGoogle Maps。</h1><p>OUTBASEは記録係。停車中にピンか話すだけでいい。</p></section>
+      <section class="primaryPanel">
+        <div class="primaryActions">
+          <button class="premiumBtn main" data-act="kidStartMode" data-mode="drive"><b>出発</b><small>ドライブ開始</small></button>
+          <button class="premiumBtn dark" data-act="openMap"><b>Google Maps</b><small>ナビを開く</small></button>
+          <button class="premiumBtn" data-act="quickPin"><b>ピン</b><small>停車中に押す</small></button>
+          <button class="premiumBtn dark" data-hold-voice><b>話す</b><small>長押し音声メモ</small></button>
+          <button class="premiumBtn" data-route="routeplan"><b>寄り道</b><small>トイレ/コンビニ/スーパー</small></button>
+          <button class="premiumBtn red" data-act="kidEndMode"><b>到着</b><small>ドライブ終了</small></button>
+        </div>
+      </section>
+    </section>`);
+  }
+
+  function premiumWorkPage(mode,title,start,end,sub){
+    const running=(state.fieldSessions||[]).find(s=>s.modeId===mode&&!s.endedAt);
+    return shell(`<section class="premiumPage">
+      ${premiumBack('field','キャンプ')}
+      ${premiumTitle(title,sub)}
+      <section class="premiumHero"><div class="eyebrow"><span>WORK</span><span>${running?'記録中':'未開始'}</span></div><h1>${running?title+'中':'まだ始めていない'}</h1><p>細かく書かず、写真か声で残す。</p></section>
+      <section class="primaryPanel">
+        <div class="primaryActions">
+          <button class="premiumBtn main" data-act="kidStartMode" data-mode="${mode}"><b>${esc(start)}</b><small>開始</small></button>
+          <button class="premiumBtn" data-act="g05Pause"><b>休憩</b><small>一時停止</small></button>
+          <button class="premiumBtn" data-act="g05Resume"><b>再開</b><small>続き</small></button>
+          <button class="premiumBtn" data-act="captureCamera"><b>写真</b><small>状況を残す</small></button>
+          <button class="premiumBtn dark" data-hold-voice><b>話す</b><small>長押し音声</small></button>
+          <button class="premiumBtn red" data-act="kidEndMode"><b>${esc(end)}</b><small>終了</small></button>
+        </div>
+      </section>
+    </section>`);
+  }
+
+  function premiumSitePage(){
+    return shell(`<section class="premiumPage">
+      ${premiumBack('field','キャンプ')}
+      ${premiumTitle('サイト調査','サイトMAP、気になる場所、設備をピンで残す。')}
+      <section class="primaryPanel"><div class="primaryActions">
+        <button class="premiumBtn main" data-act="loadSiteMap"><b>MAP</b><small>サイトMAP読込</small></button>
+        <button class="premiumBtn" data-act="quickPin"><b>ピン</b><small>場所を残す</small></button>
+        <button class="premiumBtn" data-act="captureCamera"><b>写真</b><small>サイト写真</small></button>
+        <button class="premiumBtn dark" data-hold-voice><b>話す</b><small>長押しメモ</small></button>
+      </div></section>
+    </section>`);
+  }
+
+  function prep(){
+    const page=state.kidPrepPage||'home';
+    if(page==='shop')return premiumPrepShop();
+    if(page==='load')return premiumPrepLoad();
+    if(page==='meal')return premiumPrepMeal();
+    if(page==='route')return routePlan09();
+    if(page==='weather')return premiumPrepWeather();
+    if(page==='gear')return premiumGearPage();
+    return shell(`<section class="premiumPage">
+      ${premiumBack('home','ホーム')}
+      ${premiumTitle('準備','出発前に見るのはこれだけ。')}
+      <section class="premiumCardGrid">
+        <button class="premiumCard" data-kid-prep="shop"><b>買うもの</b><small>${state.shopping.filter(s=>!s.done).length}件残り</small></button>
+        <button class="premiumCard" data-kid-prep="load"><b>持っていくもの</b><small>今回の積込チェック</small></button>
+        <button class="premiumCard" data-kid-prep="meal"><b>ごはん</b><small>料理と材料</small></button>
+        <button class="premiumCard" data-route="routeplan"><b>ルート</b><small>寄り道とチェックイン</small></button>
+        <button class="premiumCard" data-kid-prep="weather"><b>天気</b><small>雨・風・暑さ</small></button>
+        <button class="premiumCard" data-kid-prep="gear"><b>ギア</b><small>登録/BOX/修理</small></button>
+      </section>
+    </section>`);
+  }
+
+  function premiumPrepShop(){return shell(`<section class="premiumPage">${premiumBack('prep','準備')}${premiumTitle('買うもの','買ったら消す。LINEコピーもここ。')}<section class="premiumList">${state.shopping.slice(0,20).map(s=>`<button class="premiumRow" data-act="toggleShop" data-id="${s.id}"><span><b>${esc(s.name)}</b><small>${esc(s.qty||'')}</small></span><span>${s.done?'済':'まだ'}</span></button>`).join('')||'<div class="premiumInfo">買うものなし</div>'}</section><button class="premiumBtn dark" data-act="copyShop"><b>LINEコピー</b><small>買い物リストをコピー</small></button></section>`)}
+  function premiumPrepLoad(){return shell(`<section class="premiumPage">${premiumBack('prep','準備')}${premiumTitle('持っていくもの','今回の積込チェック。ギア登録とは別。')}<section class="premiumList">${state.gear.slice(0,30).map(g=>`<button class="premiumRow" data-act="setGearStatus" data-id="${g.id}" data-status="${g.status==='loaded'?'home':'loaded'}"><span><b>${esc(g.name)}</b><small>${esc(g.cat||'ギア')} / ${esc(g.boxId||'BOXなし')}</small></span><span>${g.status==='loaded'?'積んだ':'まだ'}</span></button>`).join('')}</section></section>`)}
+  function premiumPrepMeal(){return shell(`<section class="premiumPage">${premiumBack('prep','準備')}${premiumTitle('ごはん','料理と材料を見る。')}<section class="premiumList">${state.meals.map(m=>`<div class="premiumRow"><span><b>${esc(m.name)}</b><small>${esc((m.ingredients||[]).slice(0,4).join(' / '))}</small></span><span>${esc(m.slot||'')}</span></div>`).join('')||'<div class="premiumInfo">料理なし</div>'}</section></section>`)}
+  function premiumPrepWeather(){return shell(`<section class="premiumPage">${premiumBack('prep','準備')}${premiumTitle('天気','雨・風・暑さだけ見る。')}<section class="premiumList">${state.weather.map(w=>`<button class="premiumRow" data-act="toggleWeather" data-id="${w.id}"><span><b>${esc(w.when||'確認')}</b><small>${esc(w.check||'')}</small></span><span>${w.done?'見た':'まだ'}</span></button>`).join('')}</section></section>`)}
+  function premiumGearPage(){return shell(`<section class="premiumPage">${premiumBack('prep','準備')}${premiumTitle('ギア','登録・BOX・修理。積込は「持っていくもの」。')}<section class="primaryActions"><button class="premiumBtn main" data-act="kidGearNew"><b>新しく登録</b><small>ギアを足す</small></button><button class="premiumBtn" data-act="addBox"><b>BOX</b><small>収納を登録</small></button></section><section class="premiumList">${state.gear.slice(0,40).map(g=>`<div class="premiumRow"><span><b>${esc(g.name)}</b><small>${esc(g.cat||'')} / ${esc(g.status||'')}</small></span><span>${esc(g.qty||1)}</span></div>`).join('')}</section></section>`)}
+
+  function routePlan09(){
+    const p=current();
+    return shell(`<section class="premiumPage">
+      ${premiumBack('home','ホーム')}
+      ${premiumTitle('行き先と寄り道','チェックインに合わせて、トイレ・コンビニ・スーパー・観光を決める。')}
+      <section class="premiumHero"><div class="eyebrow"><span>ROUTE</span><span>Google Maps</span></div><h1>${esc(p.place||p.title||'行き先')}</h1><p>キャンプ場へのルート検索はここ。必要な寄り道だけ開く。</p></section>
+      <section class="premiumCardGrid">
+        <button class="premiumCard" data-act="openRouteSearch" data-kind="camp"><b>キャンプ場へ</b><small>ルート検索</small></button>
+        <button class="premiumCard" data-act="openRouteSearch" data-kind="toilet"><b>トイレ休憩</b><small>途中で探す</small></button>
+        <button class="premiumCard" data-act="openRouteSearch" data-kind="convenience"><b>コンビニ</b><small>寄り道</small></button>
+        <button class="premiumCard" data-act="openRouteSearch" data-kind="supermarket"><b>スーパー</b><small>買い出し</small></button>
+        <button class="premiumCard" data-act="openRouteSearch" data-kind="sightseeing"><b>観光</b><small>周辺候補</small></button>
+        <button class="premiumCard" data-act="openRouteSearch" data-kind="gas"><b>給油</b><small>ガソリン</small></button>
+      </section>
+      <button class="premiumBtn dark" data-act="saveRoutePlan"><b>この計画を保存</b><small>候補として残す</small></button>
+    </section>`);
+  }
+
+  function discover(){
+    const q=externalQuery();
+    return shell(`<section class="premiumPage">
+      ${premiumBack('home','ホーム')}
+      ${premiumTitle('探す','自分の中を探すか、外を探すか。')}
+      <input class="premiumInput" id="externalSearchInput" value="${esc(q)}" placeholder="千葉 キャンプ場 など">
+      <section class="premiumSearch">
+        <button class="premiumBtn" data-act="kidSearch" data-kind="outbase"><b>OUTBASE内</b><small>自分の記録・ギア・料理・ピン</small></button>
+        <button class="premiumBtn" data-act="kidSearch" data-kind="web"><b>Web</b><small>普通にWeb検索</small></button>
+        <button class="premiumBtn" data-act="kidSearch" data-kind="maps"><b>地図</b><small>Google Mapsで場所/経路</small></button>
+        <button class="premiumBtn" data-act="kidSearch" data-kind="napp"><b>なっぷ</b><small>キャンプ場検索</small></button>
+      </section>
+      <button class="premiumBtn main" data-act="saveExternalUrl"><b>候補に保存</b><small>見つけたURLをOUTBASEに残す</small></button>
+    </section>`);
+  }
+
+  function memory(){
+    const rec=planRecords().slice().reverse().slice(0,8);
+    return shell(`<section class="premiumPage">
+      ${premiumBack('home','ホーム')}
+      ${premiumTitle('思い出','まず履歴を見る。レビューはあとでいい。')}
+      <section class="premiumCardGrid">
+        <button class="premiumCard" data-route="historyDetail"><b>今回のキャンプ</b><small>出発から帰宅まで</small></button>
+        <button class="premiumCard" data-act="goHistoryDetail" data-mode="walk"><b>コタ散歩</b><small>ルート・ピン・写真</small></button>
+        <button class="premiumCard" data-act="goHistoryDetail" data-mode="drive"><b>ドライブ</b><small>ルート・ピン・音声</small></button>
+        <button class="premiumCard" data-act="goHistoryDetail" data-mode="media"><b>写真・動画</b><small>記録メディア</small></button>
+      </section>
+      ${premiumTitle('最近の記録','履歴詳細は上のボタンから見る。')}
+      <section class="premiumList">${rec.length?rec.map(r=>`<div class="premiumRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||today())} ${esc(r.time||'')} / ${esc(r.target||'')}</small></span><span>見る</span></div>`).join(''):'<div class="premiumInfo">まだ記録なし</div>'}</section>
+    </section>`);
+  }
+
+  function historyDetail09(){
+    const mode=state.historyMode||'camp';
+    const rec=planRecords().slice().reverse();
+    const pins=planPins?planPins():((state.mapPins||[]).filter(p=>!p.eventId||p.eventId===state.currentPlanId));
+    return shell(`<section class="premiumPage">
+      ${premiumBack('memory','思い出')}
+      ${premiumTitle('詳細履歴','ここでルート・ピン・写真・音声を見る。')}
+      <section class="premiumHero"><div class="eyebrow"><span>HISTORY</span><span>${mode}</span></div><h1>${mode==='drive'?'ドライブ詳細':mode==='walk'?'散歩詳細':'キャンプ詳細'}</h1><p>GPS ${state.walk.track.length}点 / 距離 ${walkDistance().toFixed(2)}km / ピン ${pins.length}件 / 記録 ${rec.length}件</p></section>
+      <section class="premiumList">
+        <div class="premiumRow"><span><b>自宅出発</b><small>${state.campRun?.startedAt?new Date(state.campRun.startedAt).toLocaleString('ja-JP'):'未記録'}</small></span><span>開始</span></div>
+        <div class="premiumRow"><span><b>帰宅到着</b><small>${state.campRun?.endedAt?new Date(state.campRun.endedAt).toLocaleString('ja-JP'):'未記録'}</small></span><span>終了</span></div>
+        <div class="premiumRow"><span><b>ルート</b><small>GPS点数 ${state.walk.track.length} / 欠測 ${(state.visibilityLog?.gaps||[]).length}</small></span><span>地図</span></div>
+        <div class="premiumRow"><span><b>ピン</b><small>${pins.slice(0,5).map(p=>p.name||p.kind).join(' / ')||'なし'}</small></span><span>${pins.length}</span></div>
+      </section>
+      ${premiumTitle('タイムライン','押したことが時系列で残る。')}
+      <section class="premiumList">${rec.slice(0,20).map(r=>`<div class="premiumRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.text||r.target||'')}</small></span><span>${esc(r.kind||'')}</span></div>`).join('')||'<div class="premiumInfo">履歴なし</div>'}</section>
+    </section>`);
+  }
+
+  function kidDayCell(c){
+    const ev=kidDayEvents(c.date);
+    return `<button class="premiumDay ${c.inMonth?'':'out'} ${c.date===today()?'today':''} ${c.date===state.selectedDate?'selected':''}" data-kid-day="${c.date}">
+      <span class="premiumDayNum">${Number(c.date.slice(8,10))}</span>
+      <span class="premiumBarWrap">${ev.map(e=>`<i class="premiumEventBar ${kidEventState(e,c.date)}">${(kidEventState(e,c.date)==='start'||kidEventState(e,c.date)==='single')?esc(e.title||'予定'):''}</i>`).join('')}</span>
+    </button>`;
+  }
+  function calendar(){
+    const [y,m]=state.currentMonth.split('-').map(Number), first=new Date(y,m-1,1), start=new Date(first); start.setDate(1-start.getDay());
+    const cells=[]; for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i); const s=iso(d); cells.push({date:s,inMonth:d.getMonth()===m-1})}
+    return shell(`<section class="premiumCal">
+      <section class="premiumCalHead"><button data-act="prevMonth">‹</button><div class="premiumCalTitle"><b>${y}.${pad(m)}</b><small>日付枠を2回タップで追加</small></div><button data-act="nextMonth">›</button><button data-act="kidToday">今日</button></section>
+      <div class="premiumWeek">${['日','月','火','水','木','金','土'].map(w=>`<span>${w}</span>`).join('')}</div>
+      <div class="premiumDays">${cells.map(kidDayCell).join('')}</div>
+      <section class="premiumInfo">連続予定はバーでつながる。通常のコタ散歩は予定に入れない。</section>
+      <button class="premiumBtn main" data-act="kidAddEvent"><b>予定を足す</b><small>${fmt(state.selectedDate)}</small></button>
     </section>`);
   }
 
