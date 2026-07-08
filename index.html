@@ -3,28 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#151812">
+  <meta name="theme-color" content="#12150f">
   <title>OUTBASE</title>
-  <link rel="stylesheet" href="./style.css?v=outbase-rebuild14-back-map-safe-20260708">
-  <link rel="manifest" href="./manifest.json?v=outbase-rebuild14-back-map-safe-20260708">
+  <link rel="manifest" href="./manifest.json?v=outbase-rebuild15-field-design-map-20260708">
+  <link rel="stylesheet" href="./style.css?v=outbase-rebuild15-field-design-map-20260708">
   <script>
-    (async()=>{
-      try{
-        if('serviceWorker' in navigator){
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map(r => r.unregister()));
-        }
-        if('caches' in window){
-          const keys = await caches.keys();
-          await Promise.all(keys.map(k => caches.delete(k)));
-        }
-      }catch(e){}
-    })();
+    (async()=>{try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(r=>r.unregister()));}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}}catch(e){}})();
   </script>
 </head>
 <body>
   <div id="app"></div>
   <input id="fileInput" type="file" hidden multiple>
-  <script src="./src/app.js?v=outbase-rebuild14-back-map-safe-20260708"></script>
+  <script src="./src/app.js?v=outbase-rebuild15-field-design-map-20260708"></script>
 </body>
 </html>
