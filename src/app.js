@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild09-20260708';
+  const VERSION = 'outbase-rebuild10-simple-20260708';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild09-20260708').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-rebuild10-simple-20260708').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -2999,13 +2999,8 @@ ${starterPanelHtml()}
       <div class="fw03Card"><b>直近</b><small>${rec?`${esc(rec.time||'')} ${esc(rec.title||'記録')}`:'まだなし'}</small><div class="fw03Line">${rec?esc(rec.target||rec.text||'現地メモ'):'話す/撮る/場所で残す'}</div></div>
     </section>`;
   }
-  function activeRibbon03(){
-    const fs=fw03Session&&fw03Session();
-    const active=state.walk.active||state.drive?.active||state.campRun?.active||fs;
-    if(!active||state.route==='field')return '';
-    const label=fs?`${fs.label} ${fs.status==='paused'?'休憩中':'実行中'}`:(state.drive?.active?'ドライブ中':'キャンプ実行中');
-    return `<div class="activeRibbon03"><span><b>${esc(label)}</b><small>OUTBASE内の画面切替では継続。GPS欠測は記録。</small></span><button data-route="field">現地へ</button></div>`;
-  }
+  function activeRibbon03(){return ''}
+
   function autoPin(kind='ピン',name='記録',note=''){
     const p=state.walk.track[state.walk.track.length-1];
     state.mapPins=state.mapPins||[];
@@ -3425,27 +3420,354 @@ ${starterPanelHtml()}
     return '';
   }
 
+
+  // ===== REBUILD10 かんたんモード =====
+  let kidLastTapDate='', kidLastTapAt=0;
+
+  function kidCampOn(){return !!state.campRun?.active}
+  function kidRunningMode(){
+    const s=(state.fieldSessions||[]).find(x=>!x.endedAt);
+    if(!s)return '';
+    return s.label||({kota:'コタ散歩',drive:'ドライブ',campWalk:'場内散歩',site:'サイト調査',setup:'設営',withdraw:'撤収'}[s.modeId]||'記録');
+  }
+  function kidNowText(){
+    if(kidCampOn())return `キャンプ中${kidRunningMode()?' / いま：'+kidRunningMode():' / いま：何もしていない'}`;
+    return 'まだ始めていない';
+  }
+  function kidRoute(route,page=''){
+    state.route=route;
+    if(route==='field')state.kidFieldPage=page||'camp';
+    if(route==='prep')state.kidPrepPage=page||'home';
+    if(route==='memory')state.kidMemoryPage=page||'home';
+    save();render(false);
+  }
+  function kidBackHome(){state.route='home';save();render(false)}
+  function kidStartCamp(){
+    if(!state.campRun?.active)startCampRun();
+    state.route='field';state.kidFieldPage='camp';
+    save();render(false);
+  }
+  function kidEndCamp(){
+    if(state.campRun?.active)endCampRun();
+    state.route='memory';state.kidMemoryPage='home';
+    save();render(false);
+  }
+  function kidStartMode(mode){
+    state.fieldFixedMode=mode;
+    state.kidFieldPage=mode;
+    const exists=(state.fieldSessions||[]).find(s=>s.modeId===mode&&!s.endedAt);
+    if(!exists)fw03StartMode();
+    save();render(false);
+  }
+  function kidEndMode(){
+    fw03EndMode();
+    save();render(false);
+  }
+  function kidGearNew(){state.drawer={type:'gear'};save();render(false)}
+  function kidAddEvent(date){state.selectedDate=date||state.selectedDate||today();state.drawer={type:'event',date:state.selectedDate};save();render(false)}
+  function kidToday(){state.selectedDate=today();state.currentMonth=today().slice(0,7);save();render(false)}
+  function kidSearch(kind){
+    if(kind==='outbase'){state.discoverTab='outbase';save();render(false);return}
+    if(kind==='web')return openExternalSearch('web');
+    if(kind==='maps')return openExternalSearch('maps');
+    if(kind==='napp')return openExternalSearch('napp');
+  }
+
+  function top(){
+    const p=current();
+    return `<div class="top simpleTop">
+      <div class="top-row">
+        <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>かんたんモード</small></span></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'} / ${kidNowText()}</small></button>
+      </div>
+      <div class="simpleStatusChip">
+        <span class="${kidCampOn()?'on':''}">${kidCampOn()?'キャンプ中':'未開始'}</span>
+        <span>${kidRunningMode()?`いま：${esc(kidRunningMode())}`:'いま：なし'}</span>
+        <span>押すだけ</span>
+      </div>
+    </div>`;
+  }
+
+  function nav(){
+    const items=[['home','⌂','ホーム'],['calendar','▦','予定'],['prep','◫','準備'],['field','＋','残す'],['memory','○','思い出']];
+    return `<nav class="simpleNav">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b>${l}</button>`).join('')}</nav>`;
+  }
+
+  function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
+
+  function home(){
+    return shell(`<section class="simpleMain">
+      <section class="simpleHero"><b>何をする？</b><small>むずかしい管理は隠した。大きいボタンを押せばいい。</small><div class="nowLine"><strong>${esc(kidNowText())}</strong><span>キャンプは「出発する」から「帰宅した」まで。</span></div></section>
+      <section class="bigChoiceGrid">
+        <button class="bigChoice primary" data-route="field" data-kid-field="camp"><b>キャンプに行く</b><small>出発・ドライブ・設営・散歩・撤収・帰宅</small><span>開く</span></button>
+        <button class="bigChoice" data-route="field" data-kid-field="kota"><b>コタ散歩する</b><small>出発・ピン・写真・動画・話す・帰宅</small><span>開く</span></button>
+        <button class="bigChoice" data-route="prep" data-kid-prep="home"><b>準備する</b><small>買うもの・持っていくもの・ごはん・ルート・天気</small><span>開く</span></button>
+        <button class="bigChoice" data-route="memory" data-kid-memory="home"><b>思い出を見る</b><small>履歴・ルート・写真・ピンを見返す</small><span>開く</span></button>
+      </section>
+      <section class="simpleSmallGrid">
+        <button data-route="prep" data-kid-prep="gear">ギア</button>
+        <button data-route="discover">探す</button>
+        <button data-route="calendar">予定</button>
+      </section>
+    </section>`);
+  }
+
+  function kidPageTitle(title,sub,backRoute='home',backLabel='ホーム'){
+    return `<section class="simpleBack"><button data-route="${backRoute}">← ${backLabel}</button></section><section class="simpleTitle"><b>${esc(title)}</b><small>${esc(sub)}</small></section>`;
+  }
+
+  function field(){
+    const page=state.kidFieldPage||'camp';
+    if(page==='kota')return kidWalkPage();
+    if(page==='drive')return kidDrivePage();
+    if(page==='setup')return kidWorkPage('setup','設営','設営開始','設営完了','休憩しながら設営時間を残す。迷ったら写真か話す。');
+    if(page==='withdraw')return kidWorkPage('withdraw','撤収','撤収開始','撤収完了','乾燥待ち・積込・忘れそうなことを残す。');
+    if(page==='campWalk')return kidWalkPage('campWalk','場内散歩','サイトに戻る');
+    if(page==='site')return kidSitePage();
+    return kidCampPage();
+  }
+
+  function kidCampPage(){
+    const on=kidCampOn();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle(on?'キャンプ中':'キャンプに行く', on?'いま何をするか選ぶだけ。':'まず「出発する」。キャンプは帰宅するまで続く。','home','ホーム')}
+      <section class="simpleHero"><b>${on?'いま：'+(kidRunningMode()||'何もしていない'):'まだ出発していない'}</b><small>${on?`出発 ${new Date(state.campRun.startedAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} / 帰宅したら終わり。`:'出発したら、ドライブ・設営・散歩・撤収を選べる。'}</small></section>
+      ${on?`<section class="actionGrid">
+        <button class="actionBtn dark" data-kid-field="drive"><b>ドライブ</b><small>Google Mapsと一緒に使う</small></button>
+        <button class="actionBtn" data-act="captureCamera"><b>写真</b><small>今を残す</small></button>
+        <button class="actionBtn" data-act="quickPin"><b>ピン</b><small>場所を残す</small></button>
+        <button class="actionBtn voice" data-hold-voice><b>話す</b><small>長押し音声メモ</small></button>
+        <button class="actionBtn" data-kid-field="setup"><b>設営</b><small>開始・休憩・完了</small></button>
+        <button class="actionBtn" data-kid-field="kota"><b>コタ散歩</b><small>寄り道散歩もここ</small></button>
+        <button class="actionBtn" data-kid-field="withdraw"><b>撤収</b><small>乾燥・積込・完了</small></button>
+        <button class="actionBtn red" data-act="kidEndCamp"><b>帰宅した</b><small>キャンプを終わる</small></button>
+      </section>`:`<section class="actionGrid">
+        <button class="actionBtn gold" data-act="kidStartCamp"><b>出発する</b><small>キャンプ開始</small></button>
+        <button class="actionBtn" data-route="routeplan"><b>行き先・寄り道</b><small>ルート、トイレ、コンビニ、スーパー</small></button>
+        <button class="actionBtn" data-route="prep"><b>準備を見る</b><small>買うもの・持ち物</small></button>
+        <button class="actionBtn" data-route="calendar"><b>予定を見る</b><small>日付確認</small></button>
+      </section>`}
+    </section>`);
+  }
+
+  function kidWalkPage(mode='kota', title='コタ散歩', end='帰宅'){
+    const running=(state.fieldSessions||[]).find(s=>s.modeId===mode&&!s.endedAt);
+    return shell(`<section class="simplePage">
+      ${kidPageTitle(title,'出発して、ピン・写真・動画・話す。終わったら帰宅。','field','キャンプ')}
+      <section class="simpleHero"><b>${running?'散歩中':'まだ出発していない'}</b><small>細かい分類はしない。残すのはピン・写真・動画・音声だけ。</small></section>
+      <section class="actionGrid three">
+        <button class="actionBtn gold" data-act="kidStartMode" data-mode="${mode}"><b>出発</b><small>散歩開始</small></button>
+        <button class="actionBtn" data-act="quickPin"><b>ピン</b><small>場所を残す</small></button>
+        <button class="actionBtn" data-act="captureCamera"><b>写真</b><small>写真+位置</small></button>
+        <button class="actionBtn" data-act="captureMedia" data-kind="video"><b>動画</b><small>動画+位置</small></button>
+        <button class="actionBtn dark" data-hold-voice><b>話す</b><small>長押し文字起こし</small></button>
+        <button class="actionBtn red" data-act="kidEndMode"><b>${esc(end)}</b><small>散歩終了</small></button>
+      </section>
+      <section class="simpleInfo">散歩はカレンダーに入れない。行った時だけ記録する。</section>
+    </section>`);
+  }
+
+  function kidDrivePage(){
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('ドライブ','Google Mapsはナビ。OUTBASEは停車中のピンと話すだけ。','field','キャンプ')}
+      <section class="simpleHero"><b>画面分割がおすすめ</b><small>Google Mapsを見ながら、OUTBASEは小さく開いておく。OUTBASEが隠れたら欠測候補として残す。</small></section>
+      <section class="actionGrid">
+        <button class="actionBtn gold" data-act="kidStartMode" data-mode="drive"><b>出発</b><small>ドライブ開始</small></button>
+        <button class="actionBtn dark" data-act="openMap"><b>Google Maps</b><small>ナビを開く</small></button>
+        <button class="actionBtn" data-act="quickPin"><b>ピン</b><small>停車中に押す</small></button>
+        <button class="actionBtn dark" data-hold-voice><b>話す</b><small>長押し音声メモ</small></button>
+        <button class="actionBtn" data-route="routeplan"><b>行き先・寄り道</b><small>トイレ/コンビニ/スーパー</small></button>
+        <button class="actionBtn red" data-act="kidEndMode"><b>到着</b><small>ドライブ終了</small></button>
+      </section>
+    </section>`);
+  }
+
+  function kidWorkPage(mode,title,start,end,sub){
+    const running=(state.fieldSessions||[]).find(s=>s.modeId===mode&&!s.endedAt);
+    return shell(`<section class="simplePage">
+      ${kidPageTitle(title,sub,'field','キャンプ')}
+      <section class="simpleHero"><b>${running?title+'中':'まだ始めていない'}</b><small>時間を残す。細かく書かずに写真か話すでいい。</small></section>
+      <section class="actionGrid">
+        <button class="actionBtn gold" data-act="kidStartMode" data-mode="${mode}"><b>${esc(start)}</b><small>開始</small></button>
+        <button class="actionBtn" data-act="g05Pause"><b>休憩</b><small>一時停止</small></button>
+        <button class="actionBtn" data-act="g05Resume"><b>再開</b><small>続き</small></button>
+        <button class="actionBtn" data-act="captureCamera"><b>写真</b><small>状況を残す</small></button>
+        <button class="actionBtn dark" data-hold-voice><b>話す</b><small>長押し音声メモ</small></button>
+        <button class="actionBtn red" data-act="kidEndMode"><b>${esc(end)}</b><small>終了</small></button>
+      </section>
+    </section>`);
+  }
+
+  function kidSitePage(){
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('サイト調査','サイトMAP、気になる場所、設備をピンで残す。','field','キャンプ')}
+      <section class="actionGrid">
+        <button class="actionBtn gold" data-act="loadSiteMap"><b>MAP</b><small>サイトMAP読込</small></button>
+        <button class="actionBtn" data-act="quickPin"><b>ピン</b><small>場所を残す</small></button>
+        <button class="actionBtn" data-act="captureCamera"><b>写真</b><small>サイト写真</small></button>
+        <button class="actionBtn dark" data-hold-voice><b>話す</b><small>長押しメモ</small></button>
+      </section>
+    </section>`);
+  }
+
+  function prep(){
+    const page=state.kidPrepPage||'home';
+    if(page==='shop')return kidPrepShop();
+    if(page==='load')return kidPrepLoad();
+    if(page==='meal')return kidPrepMeal();
+    if(page==='route')return routePlan09();
+    if(page==='weather')return kidPrepWeather();
+    if(page==='gear')return kidGearPage();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('準備','出発前に見るのはこれだけ。','home','ホーム')}
+      <section class="bigChoiceGrid">
+        <button class="bigChoice primary" data-kid-prep="shop"><b>買うもの</b><small>${state.shopping.filter(s=>!s.done).length}件残り</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="load"><b>持っていくもの</b><small>今回の積込チェック</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="meal"><b>ごはん</b><small>料理と材料</small><span>開く</span></button>
+        <button class="bigChoice" data-route="routeplan"><b>ルート</b><small>寄り道とチェックイン</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="weather"><b>天気</b><small>雨・風・暑さ</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="gear"><b>ギア</b><small>登録/BOX/修理</small><span>開く</span></button>
+      </section>
+    </section>`);
+  }
+
+  function kidPrepShop(){return shell(`<section class="simplePage">${kidPageTitle('買うもの','買ったら消す。LINEコピーもここ。','prep','準備')}<section class="simpleList">${state.shopping.slice(0,20).map(s=>`<button class="simpleRow" data-act="toggleShop" data-id="${s.id}"><span><b>${esc(s.name)}</b><small>${esc(s.qty||'')}</small></span><span>${s.done?'済':'まだ'}</span></button>`).join('')||'<div class="simpleInfo">買うものなし</div>'}</section><button class="actionBtn dark" data-act="copyShop"><b>LINEコピー</b><small>買い物リストをコピー</small></button></section>`)}
+  function kidPrepLoad(){return shell(`<section class="simplePage">${kidPageTitle('持っていくもの','今回の積込チェック。ギア登録とは別。','prep','準備')}<section class="simpleList">${state.gear.slice(0,30).map(g=>`<button class="simpleRow" data-act="setGearStatus" data-id="${g.id}" data-status="${g.status==='loaded'?'home':'loaded'}"><span><b>${esc(g.name)}</b><small>${esc(g.cat||'ギア')} / ${esc(g.boxId||'BOXなし')}</small></span><span>${g.status==='loaded'?'積んだ':'まだ'}</span></button>`).join('')}</section></section>`)}
+  function kidPrepMeal(){return shell(`<section class="simplePage">${kidPageTitle('ごはん','料理と材料を見る。','prep','準備')}<section class="simpleList">${state.meals.map(m=>`<div class="simpleRow"><span><b>${esc(m.name)}</b><small>${esc((m.ingredients||[]).slice(0,4).join(' / '))}</small></span><span>${esc(m.slot||'')}</span></div>`).join('')||'<div class="simpleInfo">料理なし</div>'}</section></section>`)}
+  function kidPrepWeather(){return shell(`<section class="simplePage">${kidPageTitle('天気','雨・風・暑さだけ見る。','prep','準備')}<section class="simpleList">${state.weather.map(w=>`<button class="simpleRow" data-act="toggleWeather" data-id="${w.id}"><span><b>${esc(w.when||'確認')}</b><small>${esc(w.check||'')}</small></span><span>${w.done?'見た':'まだ'}</span></button>`).join('')}</section></section>`)}
+  function kidGearPage(){return shell(`<section class="simplePage">${kidPageTitle('ギア','登録・BOX・修理。積込は「持っていくもの」。','prep','準備')}<section class="actionGrid"><button class="actionBtn gold" data-act="kidGearNew"><b>新しく登録</b><small>ギアを足す</small></button><button class="actionBtn" data-act="addBox"><b>BOX</b><small>収納を登録</small></button></section><section class="simpleList">${state.gear.slice(0,40).map(g=>`<div class="simpleRow"><span><b>${esc(g.name)}</b><small>${esc(g.cat||'')} / ${esc(g.status||'')}</small></span><span>${esc(g.qty||1)}</span></div>`).join('')}</section></section>`)}
+
+  function routePlan09(){
+    const p=current();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('行き先と寄り道','チェックインに合わせて、トイレ・コンビニ・スーパー・観光を決める。','home','ホーム')}
+      <section class="simpleHero"><b>${esc(p.place||p.title||'行き先')}</b><small>キャンプ場へのルート検索はここ。Google Mapsで開いて確認する。</small></section>
+      <section class="actionGrid">
+        <button class="actionBtn gold" data-act="openRouteSearch" data-kind="camp"><b>キャンプ場へ</b><small>ルート検索</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="toilet"><b>トイレ休憩</b><small>途中で探す</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="convenience"><b>コンビニ</b><small>寄り道</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="supermarket"><b>スーパー</b><small>買い出し</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="sightseeing"><b>観光</b><small>周辺候補</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="gas"><b>給油</b><small>ガソリン</small></button>
+      </section>
+      <section class="simpleInfo">チェックイン時刻から逆算して、出発目安・休憩・買い出しを決める。今は検索と保存の入口。</section>
+      <button class="actionBtn dark" data-act="saveRoutePlan"><b>この計画を保存</b><small>候補として残す</small></button>
+    </section>`);
+  }
+
+  function discover(){
+    const q=externalQuery();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('探す','まず選ぶ。自分の中を探すか、外を探すか。','home','ホーム')}
+      <input class="simpleInput" id="externalSearchInput" value="${esc(q)}" placeholder="千葉 キャンプ場 など">
+      <section class="searchChoices">
+        <button data-act="kidSearch" data-kind="outbase"><b>OUTBASE内</b><small>自分の記録・ギア・料理・ピン</small></button>
+        <button data-act="kidSearch" data-kind="web"><b>Web</b><small>普通にWeb検索</small></button>
+        <button data-act="kidSearch" data-kind="maps"><b>地図</b><small>Google Mapsで場所/経路</small></button>
+        <button data-act="kidSearch" data-kind="napp"><b>なっぷ</b><small>なっぷでキャンプ場検索</small></button>
+      </section>
+      <button class="actionBtn gold" data-act="saveExternalUrl"><b>候補に保存</b><small>見つけたURLをOUTBASEに残す</small></button>
+    </section>`);
+  }
+
+  function memory(){
+    const page=state.kidMemoryPage||'home';
+    if(page==='detail')return historyDetail09();
+    const rec=planRecords().slice().reverse().slice(0,8);
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('思い出','まず履歴を見る。レビューはあとでいい。','home','ホーム')}
+      <section class="bigChoiceGrid">
+        <button class="bigChoice primary" data-route="historyDetail"><b>今回のキャンプ</b><small>出発から帰宅まで</small><span>詳細</span></button>
+        <button class="bigChoice" data-act="goHistoryDetail" data-mode="walk"><b>コタ散歩</b><small>ルート・ピン・写真</small><span>見る</span></button>
+        <button class="bigChoice" data-act="goHistoryDetail" data-mode="drive"><b>ドライブ</b><small>ルート・ピン・音声</small><span>見る</span></button>
+        <button class="bigChoice" data-act="goHistoryDetail" data-mode="media"><b>写真・動画</b><small>記録メディア</small><span>見る</span></button>
+      </section>
+      <section class="simpleTitle"><b>最近の記録</b><small>履歴詳細は上のボタンから見る。</small></section>
+      <section class="simpleList">${rec.length?rec.map(r=>`<div class="simpleRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||today())} ${esc(r.time||'')} / ${esc(r.target||'')}</small></span><span>見る</span></div>`).join(''):'<div class="simpleInfo">まだ記録なし</div>'}</section>
+    </section>`);
+  }
+
+  function historyDetail09(){
+    const mode=state.historyMode||'camp';
+    const rec=planRecords().slice().reverse();
+    const pins=planPins?planPins():((state.mapPins||[]).filter(p=>!p.eventId||p.eventId===state.currentPlanId));
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('詳細履歴','ここでルート・ピン・写真・音声を見る。','memory','思い出')}
+      <section class="simpleHero"><b>${mode==='drive'?'ドライブ詳細':mode==='walk'?'散歩詳細':'キャンプ詳細'}</b><small>GPS ${state.walk.track.length}点 / 距離 ${walkDistance().toFixed(2)}km / ピン ${pins.length}件 / 記録 ${rec.length}件</small></section>
+      <section class="simpleList">
+        <div class="simpleRow"><span><b>自宅出発</b><small>${state.campRun?.startedAt?new Date(state.campRun.startedAt).toLocaleString('ja-JP'):'未記録'}</small></span><span>開始</span></div>
+        <div class="simpleRow"><span><b>帰宅到着</b><small>${state.campRun?.endedAt?new Date(state.campRun.endedAt).toLocaleString('ja-JP'):'未記録'}</small></span><span>終了</span></div>
+        <div class="simpleRow"><span><b>ルート</b><small>GPS点数 ${state.walk.track.length} / 欠測 ${(state.visibilityLog?.gaps||[]).length}</small></span><span>地図</span></div>
+        <div class="simpleRow"><span><b>ピン</b><small>${pins.slice(0,5).map(p=>p.name||p.kind).join(' / ')||'なし'}</small></span><span>${pins.length}</span></div>
+      </section>
+      <section class="simpleTitle"><b>タイムライン</b><small>押したことが時系列で残る。</small></section>
+      <section class="simpleList">${rec.slice(0,20).map(r=>`<div class="simpleRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.text||r.target||'')}</small></span><span>${esc(r.kind||'')}</span></div>`).join('')||'<div class="simpleInfo">履歴なし</div>'}</section>
+    </section>`);
+  }
+
+  function kidEventState(e,date){
+    const s=e.start||date, en=e.end||s;
+    if(s===en)return 'single';
+    if(date===s)return 'start';
+    if(date===en)return 'end';
+    return 'mid';
+  }
+  function kidDayEvents(date){
+    return calendarEvents().filter(e=>{
+      const s=e.start||date, en=e.end||s;
+      return s<=date && date<=en;
+    }).slice(0,2);
+  }
+  function kidDayCell(c){
+    const ev=kidDayEvents(c.date);
+    return `<button class="simpleDay ${c.inMonth?'':'out'} ${c.date===today()?'today':''} ${c.date===state.selectedDate?'selected':''}" data-kid-day="${c.date}">
+      <span class="simpleDayNum">${Number(c.date.slice(8,10))}</span>
+      <span class="simpleBarWrap">${ev.map(e=>`<i class="simpleEventBar ${kidEventState(e,c.date)}">${(kidEventState(e,c.date)==='start'||kidEventState(e,c.date)==='single')?esc(e.title||'予定'):''}</i>`).join('')}</span>
+    </button>`;
+  }
+  function calendar(){
+    const [y,m]=state.currentMonth.split('-').map(Number), first=new Date(y,m-1,1), start=new Date(first); start.setDate(1-start.getDay());
+    const cells=[]; for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i); const s=iso(d); cells.push({date:s,inMonth:d.getMonth()===m-1})}
+    return shell(`<section class="simpleCalendar">
+      <section class="simpleCalHead"><button data-act="prevMonth">‹</button><div class="simpleCalTitle"><b>${y}.${pad(m)}</b><small>日付枠を2回タップで追加</small></div><button data-act="nextMonth">›</button><button class="todayBtn" data-act="kidToday">今日</button></section>
+      <div class="simpleWeek">${['日','月','火','水','木','金','土'].map(w=>`<span>${w}</span>`).join('')}</div>
+      <div class="simpleDays">${cells.map(kidDayCell).join('')}</div>
+      <section class="simpleInfo">連続予定はバーでつながる。通常のコタ散歩は予定に入れない。</section>
+      <button class="actionBtn gold" data-act="kidAddEvent"><b>予定を足す</b><small>${fmt(state.selectedDate)}</small></button>
+    </section>`);
+  }
+
+  function bind(){
+    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;if(el.dataset.kidField)state.kidFieldPage=el.dataset.kidField;if(el.dataset.kidPrep)state.kidPrepPage=el.dataset.kidPrep;if(el.dataset.kidMemory)state.kidMemoryPage=el.dataset.kidMemory;save();render(false)});
+    document.querySelectorAll('[data-kid-field]').forEach(el=>el.onclick=()=>{state.route='field';state.kidFieldPage=el.dataset.kidField;save();render(false)});
+    document.querySelectorAll('[data-kid-prep]').forEach(el=>el.onclick=()=>{state.route='prep';state.kidPrepPage=el.dataset.kidPrep;save();render(false)});
+    document.querySelectorAll('[data-kid-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.kidMemoryPage=el.dataset.kidMemory;save();render(false)});
+    document.querySelectorAll('[data-kid-day]').forEach(el=>el.onclick=()=>{const d=el.dataset.kidDay, now=Date.now(); if(kidLastTapDate===d && now-kidLastTapAt<450){kidLastTapAt=0;kidAddEvent(d)}else{kidLastTapDate=d;kidLastTapAt=now;state.selectedDate=d;save();render(false)}});
+    document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
+    document.querySelectorAll('[data-hold-voice]').forEach(el=>{
+      el.onpointerdown=e=>{e.preventDefault();startHoldVoice()};
+      el.onpointerup=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointercancel=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointerleave=e=>{if(voiceRecorder&&voiceRecorder.state==='recording')stopHoldVoice()};
+    });
+    const search=document.getElementById('externalSearchInput');
+    if(search){search.oninput=()=>{state.externalSearchQuery=search.value;save()}}
+  }
+
   function render(keepScroll=true){
     const sx=window.scrollX||0, sy=window.scrollY||0;
     try{
-      app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():home();
+      app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():state.route==='routeplan'?routePlan09():state.route==='historyDetail'?historyDetail09():home();
       bind();
-      if(state.route==='field')drawMap();
-      bindSwipe();
       if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
     }catch(err){
       console.error(err);
       state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};
       try{save()}catch(e){}
       app.innerHTML=recoveryHtml(err);
-      const repair=document.getElementById('recoverRepair');
-      const media=document.getElementById('recoverMedia');
-      const backup=document.getElementById('recoverBackup');
-      if(repair)repair.onclick=()=>{state.route='home';safeRepair()};
-      if(media)media.onclick=()=>clearMediaPreviews();
-      if(backup)backup.onclick=()=>exportDebugBundle();
     }
   }
+
   function bind(){
     document.querySelectorAll('[data-g09-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.g09Mode;state.fieldPage=el.dataset.g09Mode;if(el.dataset.g09Mode==='drive')state.drivePanelOpen=false;save();render(true)});
     document.querySelectorAll('[data-prep09]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepPage=el.dataset.prep09;save();render(true)});
@@ -3508,6 +3830,15 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+    if(a==='kidStartCamp')return kidStartCamp();
+    if(a==='kidEndCamp')return kidEndCamp();
+    if(a==='kidStartMode')return kidStartMode(el.dataset.mode||state.kidFieldPage||state.fieldFixedMode||'kota');
+    if(a==='kidEndMode')return kidEndMode();
+    if(a==='kidGearNew')return kidGearNew();
+    if(a==='kidAddEvent')return kidAddEvent(state.selectedDate);
+    if(a==='kidToday')return kidToday();
+    if(a==='kidSearch')return kidSearch(el.dataset.kind||'web');
+
     if(a==='goRoutePlan'){state.route='routeplan';save();return render(true)}
     if(a==='goHistoryDetail'){state.route='historyDetail';state.historyMode=el.dataset.mode||'camp';save();return render(true)}
     if(a==='openRouteSearch')return openRouteSearch09(el.dataset.kind||'camp')
@@ -4589,6 +4920,190 @@ ${starterPanelHtml()}
       if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
     }catch(err){
       console.error(err);state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};try{save()}catch(e){};app.innerHTML=recoveryHtml(err);
+    }
+  }
+
+
+  // ===== REBUILD10 final override: かんたんモードを最後に優先 =====
+  function activeRibbon03(){return ''}
+
+  function top(){
+    const p=current();
+    return `<div class="top simpleTop">
+      <div class="top-row">
+        <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>かんたんモード</small></span></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)}`:'日付未設定'} / ${kidNowText()}</small></button>
+      </div>
+      <div class="simpleStatusChip">
+        <span class="${kidCampOn()?'on':''}">${kidCampOn()?'キャンプ中':'未開始'}</span>
+        <span>${kidRunningMode()?`いま：${esc(kidRunningMode())}`:'いま：なし'}</span>
+        <span>押すだけ</span>
+      </div>
+    </div>`;
+  }
+
+  function nav(){
+    const items=[['home','⌂','ホーム'],['calendar','▦','予定'],['prep','◫','準備'],['field','＋','残す'],['memory','○','思い出']];
+    return `<nav class="simpleNav">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b>${l}</button>`).join('')}</nav>`;
+  }
+
+  function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
+
+  function home(){
+    return shell(`<section class="simpleMain">
+      <section class="simpleHero"><b>何をする？</b><small>むずかしい管理は隠した。大きいボタンを押せばいい。</small><div class="nowLine"><strong>${esc(kidNowText())}</strong><span>キャンプは「出発する」から「帰宅した」まで。</span></div></section>
+      <section class="bigChoiceGrid">
+        <button class="bigChoice primary" data-route="field" data-kid-field="camp"><b>キャンプに行く</b><small>出発・ドライブ・設営・散歩・撤収・帰宅</small><span>開く</span></button>
+        <button class="bigChoice" data-route="field" data-kid-field="kota"><b>コタ散歩する</b><small>出発・ピン・写真・動画・話す・帰宅</small><span>開く</span></button>
+        <button class="bigChoice" data-route="prep" data-kid-prep="home"><b>準備する</b><small>買うもの・持っていくもの・ごはん・ルート・天気</small><span>開く</span></button>
+        <button class="bigChoice" data-route="memory" data-kid-memory="home"><b>思い出を見る</b><small>履歴・ルート・写真・ピンを見返す</small><span>開く</span></button>
+      </section>
+      <section class="simpleSmallGrid">
+        <button data-route="prep" data-kid-prep="gear">ギア</button>
+        <button data-route="discover">探す</button>
+        <button data-route="calendar">予定</button>
+      </section>
+    </section>`);
+  }
+
+  function field(){
+    const page=state.kidFieldPage||'camp';
+    if(page==='kota')return kidWalkPage();
+    if(page==='drive')return kidDrivePage();
+    if(page==='setup')return kidWorkPage('setup','設営','設営開始','設営完了','休憩しながら設営時間を残す。迷ったら写真か話す。');
+    if(page==='withdraw')return kidWorkPage('withdraw','撤収','撤収開始','撤収完了','乾燥待ち・積込・忘れそうなことを残す。');
+    if(page==='campWalk')return kidWalkPage('campWalk','場内散歩','サイトに戻る');
+    if(page==='site')return kidSitePage();
+    return kidCampPage();
+  }
+
+  function prep(){
+    const page=state.kidPrepPage||'home';
+    if(page==='shop')return kidPrepShop();
+    if(page==='load')return kidPrepLoad();
+    if(page==='meal')return kidPrepMeal();
+    if(page==='route')return routePlan09();
+    if(page==='weather')return kidPrepWeather();
+    if(page==='gear')return kidGearPage();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('準備','出発前に見るのはこれだけ。','home','ホーム')}
+      <section class="bigChoiceGrid">
+        <button class="bigChoice primary" data-kid-prep="shop"><b>買うもの</b><small>${state.shopping.filter(s=>!s.done).length}件残り</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="load"><b>持っていくもの</b><small>今回の積込チェック</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="meal"><b>ごはん</b><small>料理と材料</small><span>開く</span></button>
+        <button class="bigChoice" data-route="routeplan"><b>ルート</b><small>寄り道とチェックイン</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="weather"><b>天気</b><small>雨・風・暑さ</small><span>開く</span></button>
+        <button class="bigChoice" data-kid-prep="gear"><b>ギア</b><small>登録/BOX/修理</small><span>開く</span></button>
+      </section>
+    </section>`);
+  }
+
+  function routePlan09(){
+    const p=current();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('行き先と寄り道','チェックインに合わせて、トイレ・コンビニ・スーパー・観光を決める。','home','ホーム')}
+      <section class="simpleHero"><b>${esc(p.place||p.title||'行き先')}</b><small>キャンプ場へのルート検索はここ。Google Mapsで開いて確認する。</small></section>
+      <section class="actionGrid">
+        <button class="actionBtn gold" data-act="openRouteSearch" data-kind="camp"><b>キャンプ場へ</b><small>ルート検索</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="toilet"><b>トイレ休憩</b><small>途中で探す</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="convenience"><b>コンビニ</b><small>寄り道</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="supermarket"><b>スーパー</b><small>買い出し</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="sightseeing"><b>観光</b><small>周辺候補</small></button>
+        <button class="actionBtn" data-act="openRouteSearch" data-kind="gas"><b>給油</b><small>ガソリン</small></button>
+      </section>
+      <section class="simpleInfo">チェックイン時刻から逆算して、出発目安・休憩・買い出しを決める。今は検索と保存の入口。</section>
+      <button class="actionBtn dark" data-act="saveRoutePlan"><b>この計画を保存</b><small>候補として残す</small></button>
+    </section>`);
+  }
+
+  function discover(){
+    const q=externalQuery();
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('探す','まず選ぶ。自分の中を探すか、外を探すか。','home','ホーム')}
+      <input class="simpleInput" id="externalSearchInput" value="${esc(q)}" placeholder="千葉 キャンプ場 など">
+      <section class="searchChoices">
+        <button data-act="kidSearch" data-kind="outbase"><b>OUTBASE内</b><small>自分の記録・ギア・料理・ピン</small></button>
+        <button data-act="kidSearch" data-kind="web"><b>Web</b><small>普通にWeb検索</small></button>
+        <button data-act="kidSearch" data-kind="maps"><b>地図</b><small>Google Mapsで場所/経路</small></button>
+        <button data-act="kidSearch" data-kind="napp"><b>なっぷ</b><small>なっぷでキャンプ場検索</small></button>
+      </section>
+      <button class="actionBtn gold" data-act="saveExternalUrl"><b>候補に保存</b><small>見つけたURLをOUTBASEに残す</small></button>
+    </section>`);
+  }
+
+  function memory(){
+    const rec=planRecords().slice().reverse().slice(0,8);
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('思い出','まず履歴を見る。レビューはあとでいい。','home','ホーム')}
+      <section class="bigChoiceGrid">
+        <button class="bigChoice primary" data-route="historyDetail"><b>今回のキャンプ</b><small>出発から帰宅まで</small><span>詳細</span></button>
+        <button class="bigChoice" data-act="goHistoryDetail" data-mode="walk"><b>コタ散歩</b><small>ルート・ピン・写真</small><span>見る</span></button>
+        <button class="bigChoice" data-act="goHistoryDetail" data-mode="drive"><b>ドライブ</b><small>ルート・ピン・音声</small><span>見る</span></button>
+        <button class="bigChoice" data-act="goHistoryDetail" data-mode="media"><b>写真・動画</b><small>記録メディア</small><span>見る</span></button>
+      </section>
+      <section class="simpleTitle"><b>最近の記録</b><small>履歴詳細は上のボタンから見る。</small></section>
+      <section class="simpleList">${rec.length?rec.map(r=>`<div class="simpleRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||today())} ${esc(r.time||'')} / ${esc(r.target||'')}</small></span><span>見る</span></div>`).join(''):'<div class="simpleInfo">まだ記録なし</div>'}</section>
+    </section>`);
+  }
+
+  function calendar(){
+    const [y,m]=state.currentMonth.split('-').map(Number), first=new Date(y,m-1,1), start=new Date(first); start.setDate(1-start.getDay());
+    const cells=[]; for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i); const s=iso(d); cells.push({date:s,inMonth:d.getMonth()===m-1})}
+    return shell(`<section class="simpleCalendar">
+      <section class="simpleCalHead"><button data-act="prevMonth">‹</button><div class="simpleCalTitle"><b>${y}.${pad(m)}</b><small>日付枠を2回タップで追加</small></div><button data-act="nextMonth">›</button><button class="todayBtn" data-act="kidToday">今日</button></section>
+      <div class="simpleWeek">${['日','月','火','水','木','金','土'].map(w=>`<span>${w}</span>`).join('')}</div>
+      <div class="simpleDays">${cells.map(kidDayCell).join('')}</div>
+      <section class="simpleInfo">連続予定はバーでつながる。通常のコタ散歩は予定に入れない。</section>
+      <button class="actionBtn gold" data-act="kidAddEvent"><b>予定を足す</b><small>${fmt(state.selectedDate)}</small></button>
+    </section>`);
+  }
+
+  function historyDetail09(){
+    const mode=state.historyMode||'camp';
+    const rec=planRecords().slice().reverse();
+    const pins=planPins?planPins():((state.mapPins||[]).filter(p=>!p.eventId||p.eventId===state.currentPlanId));
+    return shell(`<section class="simplePage">
+      ${kidPageTitle('詳細履歴','ここでルート・ピン・写真・音声を見る。','memory','思い出')}
+      <section class="simpleHero"><b>${mode==='drive'?'ドライブ詳細':mode==='walk'?'散歩詳細':'キャンプ詳細'}</b><small>GPS ${state.walk.track.length}点 / 距離 ${walkDistance().toFixed(2)}km / ピン ${pins.length}件 / 記録 ${rec.length}件</small></section>
+      <section class="simpleList">
+        <div class="simpleRow"><span><b>自宅出発</b><small>${state.campRun?.startedAt?new Date(state.campRun.startedAt).toLocaleString('ja-JP'):'未記録'}</small></span><span>開始</span></div>
+        <div class="simpleRow"><span><b>帰宅到着</b><small>${state.campRun?.endedAt?new Date(state.campRun.endedAt).toLocaleString('ja-JP'):'未記録'}</small></span><span>終了</span></div>
+        <div class="simpleRow"><span><b>ルート</b><small>GPS点数 ${state.walk.track.length} / 欠測 ${(state.visibilityLog?.gaps||[]).length}</small></span><span>地図</span></div>
+        <div class="simpleRow"><span><b>ピン</b><small>${pins.slice(0,5).map(p=>p.name||p.kind).join(' / ')||'なし'}</small></span><span>${pins.length}</span></div>
+      </section>
+      <section class="simpleTitle"><b>タイムライン</b><small>押したことが時系列で残る。</small></section>
+      <section class="simpleList">${rec.slice(0,20).map(r=>`<div class="simpleRow"><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.text||r.target||'')}</small></span><span>${esc(r.kind||'')}</span></div>`).join('')||'<div class="simpleInfo">履歴なし</div>'}</section>
+    </section>`);
+  }
+
+  function bind(){
+    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;if(el.dataset.kidField)state.kidFieldPage=el.dataset.kidField;if(el.dataset.kidPrep)state.kidPrepPage=el.dataset.kidPrep;if(el.dataset.kidMemory)state.kidMemoryPage=el.dataset.kidMemory;save();render(false)});
+    document.querySelectorAll('[data-kid-field]').forEach(el=>el.onclick=()=>{state.route='field';state.kidFieldPage=el.dataset.kidField;save();render(false)});
+    document.querySelectorAll('[data-kid-prep]').forEach(el=>el.onclick=()=>{state.route='prep';state.kidPrepPage=el.dataset.kidPrep;save();render(false)});
+    document.querySelectorAll('[data-kid-memory]').forEach(el=>el.onclick=()=>{state.route='memory';state.kidMemoryPage=el.dataset.kidMemory;save();render(false)});
+    document.querySelectorAll('[data-kid-day]').forEach(el=>el.onclick=()=>{const d=el.dataset.kidDay, now=Date.now(); if(kidLastTapDate===d && now-kidLastTapAt<450){kidLastTapAt=0;kidAddEvent(d)}else{kidLastTapDate=d;kidLastTapAt=now;state.selectedDate=d;save();render(false)}});
+    document.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>act(el.dataset.act,el));
+    document.querySelectorAll('[data-hold-voice]').forEach(el=>{
+      el.onpointerdown=e=>{e.preventDefault();startHoldVoice()};
+      el.onpointerup=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointercancel=e=>{e.preventDefault();stopHoldVoice()};
+      el.onpointerleave=e=>{if(voiceRecorder&&voiceRecorder.state==='recording')stopHoldVoice()};
+    });
+    const search=document.getElementById('externalSearchInput');
+    if(search){search.oninput=()=>{state.externalSearchQuery=search.value;save()}}
+  }
+
+  function render(keepScroll=true){
+    const sx=window.scrollX||0, sy=window.scrollY||0;
+    try{
+      app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():state.route==='routeplan'?routePlan09():state.route==='historyDetail'?historyDetail09():home();
+      bind();
+      if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
+    }catch(err){
+      console.error(err);
+      state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};
+      try{save()}catch(e){}
+      app.innerHTML=recoveryHtml(err);
     }
   }
 
