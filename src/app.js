@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild08-20260708';
+  const VERSION = 'outbase-field-rebuild09-20260708';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild08-20260708').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild09-20260708').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -127,6 +127,9 @@
     s.planStages=s.planStages||{};
     s.fieldPage=s.fieldPage||'home';
     s.externalSearchQuery=s.externalSearchQuery||'';
+    s.routePlan={checkin:'13:00',depart:'',memo:'',...(s.routePlan||{})};
+    s.prepPage=s.prepPage||'home';
+    s.historyMode=s.historyMode||'camp';
     s.walk={...base.walk,...(s.walk||{})};
     s.fieldActionMode=s.fieldActionMode||base.fieldActionMode||'kota';
     s.walk.track=s.walk.track||[];s.walk.spots=s.walk.spots||[];s.walk.friends=s.walk.friends||[];s.walk.health=s.walk.health||[];s.walk.sessions=s.walk.sessions||[];
@@ -3444,6 +3447,9 @@ ${starterPanelHtml()}
     }
   }
   function bind(){
+    document.querySelectorAll('[data-g09-mode]').forEach(el=>el.onclick=()=>{state.fieldFixedMode=el.dataset.g09Mode;state.fieldPage=el.dataset.g09Mode;if(el.dataset.g09Mode==='drive')state.drivePanelOpen=false;save();render(true)});
+    document.querySelectorAll('[data-prep09]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepPage=el.dataset.prep09;save();render(true)});
+    document.querySelectorAll('[data-history09]').forEach(el=>el.onclick=()=>{state.route='historyDetail';state.historyMode=el.dataset.history09;save();render(true)});
     document.querySelectorAll('[data-g06-mode]').forEach(el=>el.onclick=()=>g05SetMode(el.dataset.g06Mode));
     document.querySelectorAll('[data-g05-mode]').forEach(el=>el.onclick=()=>g05SetMode(el.dataset.g05Mode));
     document.querySelectorAll('[data-g05-start]').forEach(el=>el.onclick=()=>g05Start(el.dataset.g05Start));
@@ -3502,6 +3508,12 @@ ${starterPanelHtml()}
     days.ontouchend=e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)moveMonth(dx<0?1:-1);sx=null}
   }
   function act(a,el){
+    if(a==='goRoutePlan'){state.route='routeplan';save();return render(true)}
+    if(a==='goHistoryDetail'){state.route='historyDetail';state.historyMode=el.dataset.mode||'camp';save();return render(true)}
+    if(a==='openRouteSearch')return openRouteSearch09(el.dataset.kind||'camp')
+    if(a==='saveRoutePlan')return saveRoutePlan09()
+    if(a==='prepHome09'){state.route='prep';state.prepPage='home';save();return render(true)}
+    if(a==='fieldHome09'){state.route='field';state.fieldPage='home';save();return render(true)}
     if(a==='goHistory')return g08GoHistory();
     if(a==='goFieldHome'){state.route='field';state.fieldPage='home';save();return render(false)}
     if(a==='g05Pause')return g05Pause();
@@ -4490,6 +4502,94 @@ ${starterPanelHtml()}
   async function copyReview(){
     const text=buildReviewText();
     try{await navigator.clipboard.writeText(text);toast('レビューをコピー')}catch(e){prompt('コピー',text)}
+  }
+
+
+
+  /* ===== FIELD REBUILD 09 OVERRIDES ===== */
+  function activeRibbon03(){return ''}
+  function sessionMini09(){
+    const parent=g08ParentState?g08ParentState():{active:false,label:'未開始'};
+    const child=g08ActiveChild?g08ActiveChild():null;
+    const active=parent.state==='recording'||!!child;
+    return `<div class="sessionChip09 ${active?'':'idle'}"><span><b>${parent.state==='recording'?'キャンプ実行中':(parent.state==='done'?'キャンプ実行終了':'キャンプ未開始')}</b><small>${active?`子ログ：${child?(child.label||g08ModeLabel(child.modeId)):'なし'} / 記録中でも他画面を邪魔しない`:'自宅出発でキャンプ実行を開始'}</small></span><button class="miniBtn" data-route="field">現地</button></div>`;
+  }
+  function top(){
+    const p=current();
+    return `<div class="top"><div class="top-row"><button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button><button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)} / ${typeName[p.type]}`:'日付未設定'} / ${stageTextJP(projectStage(p.id))}</small></button></div>${projectStatusRail()}${sessionMini09()}</div>`;
+  }
+  function shell(html){return `<div class="shell">${top()}<main class="main">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
+  function routeQuery09(kind='camp'){
+    const p=current();
+    const dest=encodeURIComponent(p.place||p.title||'キャンプ場');
+    const home=encodeURIComponent(state.settings?.home||'柏市');
+    if(kind==='camp')return `https://www.google.com/maps/dir/?api=1&origin=${home}&destination=${dest}&travelmode=driving`;
+    const q={toilet:'トイレ 休憩 道の駅 SA PA',conveni:'コンビニ',super:'スーパー 食材',tour:'観光 犬可',gas:'ガソリンスタンド'}[kind]||kind;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.place||p.title||'キャンプ場')+' 周辺 '+q)}`;
+  }
+  function openRouteSearch09(kind){window.open(routeQuery09(kind),'_blank')}
+  function saveRoutePlan09(){
+    const check=document.getElementById('checkin09')?.value||state.routePlan.checkin||'13:00';
+    const depart=document.getElementById('depart09')?.value||state.routePlan.depart||'';
+    state.routePlan={...(state.routePlan||{}),checkin:check,depart};
+    state.notes.push({id:uid('note'),title:'行程計画',text:`チェックイン ${check} / 出発目安 ${depart||'未設定'} / ルート・休憩・買い物候補を確認`,private:false});
+    save();render(true);toast('行程計画を保存');
+  }
+  function routePlan09(){
+    const p=current(), rp=state.routePlan||{};
+    return shell(`<section class="routePlan09"><button class="topBack09" data-route="prep">← 準備へ</button><section class="hero09"><span class="badge">ROUTE</span><h1>行程計画</h1><p>キャンプ場へのルート、トイレ休憩、コンビニ、スーパー、観光をチェックイン時刻に合わせて確認する画面。</p><div class="statusGrid09"><div><strong>目的地</strong><span>${esc(p.place||p.title)}</span></div><div><strong>チェックイン</strong><span>${esc(rp.checkin||'13:00')}</span></div><div><strong>使い方</strong><span>Google Mapsで候補確認 → OUTBASEに保存</span></div></div></section><section class="panel09"><div class="panelHead09"><span><h2>時刻</h2><p>渋滞込みの正確な到着予測はGoogle Maps側で見る。OUTBASEには計画として残す。</p></span></div><div class="inputRow09"><input id="checkin09" type="time" value="${esc(rp.checkin||'13:00')}"><input id="depart09" type="time" value="${esc(rp.depart||'')}"></div><div class="actionRow09"><button class="primary" data-act="saveRoutePlan"><b>計画保存</b><small>チェックイン/出発目安を保存</small></button><button data-act="openRouteSearch" data-kind="camp"><b>キャンプ場ルート</b><small>Google Mapsで経路を開く</small></button></div></section><section class="panel09"><div class="panelHead09"><span><h2>途中で探す</h2><p>ルート沿い・周辺候補。保存したいURLは探す画面の候補保存へ。</p></span></div><div class="routeTools09"><button data-act="openRouteSearch" data-kind="toilet"><b>トイレ休憩</b><small>SA/PA/道の駅</small></button><button data-act="openRouteSearch" data-kind="conveni"><b>コンビニ</b><small>途中補給</small></button><button data-act="openRouteSearch" data-kind="super"><b>スーパー</b><small>食材買い足し</small></button><button data-act="openRouteSearch" data-kind="tour"><b>観光</b><small>犬可/寄り道</small></button><button data-act="openRouteSearch" data-kind="gas"><b>給油</b><small>ガソリン</small></button><button class="dark" data-route="field"><b>ドライブ記録へ</b><small>停車中にピン/話す</small></button></div></section><section class="panel09"><div class="timeline09"><div class="time09"><i class="dot"></i><span><b>自宅出発</b><small>出発前にGoogle Mapsで所要時間を確認</small></span><span class="pill">親開始</span></div><div class="time09"><i class="dot"></i><span><b>トイレ休憩 / コンビニ / スーパー</b><small>必要な候補だけGoogle Mapsで確認</small></span><span class="pill">途中</span></div><div class="time09"><i class="dot"></i><span><b>チェックイン</b><small>${esc(rp.checkin||'13:00')} に合わせる</small></span><span class="pill">到着</span></div></div></section></section>`)
+  }
+  function parentHero09(){
+    const parent=g08ParentState(), child=g08ActiveChild(), cr=state.campRun||{};
+    const started=cr.startedAt?new Date(cr.startedAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'未開始';
+    return `<section class="hero09"><span class="badge">SESSION</span><h1>親：${parent.state==='recording'?'キャンプ実行中':(parent.state==='done'?'キャンプ実行終了':'キャンプ未開始')}</h1><p>キャンプは「自宅出発〜帰宅到着」が親。ドライブ・散歩・設営・撤収はその中の子ログ。</p><div class="statusGrid09"><div><strong>自宅出発</strong><span>${esc(started)}</span></div><div><strong>現在の子ログ</strong><span>${child?esc(child.label||g08ModeLabel(child.modeId)):'なし'}</span></div><div><strong>次にやること</strong><span>${parent.state==='recording'?'子ログ開始 or 帰宅到着':'自宅出発'}</span></div></div><div class="actionRow09">${parent.state==='recording'?`<button class="dark" disabled><b>自宅出発済み</b><small>${esc(started)}</small></button>`:`<button class="primary" data-act="startCampRun"><b>自宅出発</b><small>キャンプ実行を開始</small></button>`}<button data-act="goRoutePlan"><b>行程計画</b><small>ルート/休憩/買い物/観光</small></button><button data-act="goHistoryDetail" data-mode="camp"><b>詳細履歴</b><small>親と子ログを見る</small></button>${parent.state==='recording'?`<button class="danger" data-act="endCampRun"><b>帰宅到着</b><small>キャンプ実行を終了</small></button>`:`<button data-act="goHistoryDetail" data-mode="camp"><b>過去履歴</b><small>詳細を確認</small></button>`}</div></section>`;
+  }
+  function modeCards09(){return `<section class="panel09"><div class="panelHead09"><span><h2>子ログを始める</h2><p>キャンプ実行中に必要な行動だけ開く。</p></span></div><div class="modeGrid09">${g05Modes().map(m=>`<button class="modeCard09 ${state.fieldFixedMode===m.id?'active':''}" data-g09-mode="${m.id}"><b>${esc(m.label)}</b><small>${esc(m.sub)}</small><span>新しい画面で開く</span></button>`).join('')}</div></section>`}
+  function field(){
+    if(state.fieldPage&&state.fieldPage!=='home')return fieldModePage09();
+    return shell(`<section class="field09">${parentHero09()}${modeCards09()}<section class="panel09"><div class="panelHead09"><span><h2>ドライブ前にやる</h2><p>キャンプ場へのルート、休憩、コンビニ、スーパー、観光は行程計画でまとめる。</p></span></div><div class="actionRow09"><button class="primary" data-act="goRoutePlan"><b>行程計画を開く</b><small>チェックインに合わせる</small></button><button data-act="openRouteSearch" data-kind="camp"><b>キャンプ場ルート</b><small>Google Maps</small></button></div></section></section>`)
+  }
+  function fieldModePage09(){
+    const id=state.fieldPage||state.fieldFixedMode||'kota', m=g05Modes().find(x=>x.id===id)||g05Modes()[0]; state.fieldFixedMode=id;
+    const s=g05ActiveSession(id); const drive=id==='drive';
+    return shell(`<section class="field09"><button class="topBack09" data-act="fieldHome09">← 現地ホーム</button>${parentHero09()}<section class="panel09"><div class="panelHead09"><span><h2>${esc(m.label)}</h2><p>${drive?'画面分割推奨。Google Mapsはナビ、OUTBASEは停車中のピン/話す。':esc(g05PrimaryText())}</p></span><span class="pill ${s?'dark':''}">${s?(s.status==='paused'?'休憩中':'記録中'):'未開始'}</span></div>${drive?g08DriveSplitGuide():''}${g05Steps()}${g05RecordButtons()}<div class="actionRow09"><button data-act="goRoutePlan"><b>行程計画</b><small>ルート/休憩候補</small></button><button data-act="goHistoryDetail" data-mode="${esc(id)}"><b>この詳細履歴</b><small>ルート/ピン/音声</small></button></div>${g05MapAndLog()}</section></section>`)
+  }
+  function prep(){
+    const page=state.prepPage||state.prepTab||'home';
+    if(page!=='home')return prepPage09(page);
+    const st=prepStats();
+    return shell(`<section class="prep09"><section class="hero09"><span class="badge">PREP</span><h1>準備</h1><p>準備は専用ページに分ける。ギア登録と今回の積込は別。</p></section><section class="prepGrid09"><button class="prepCard09" data-prep09="shopping"><b>買い物</b><small>${st.undoneShop}件残り</small></button><button class="prepCard09" data-prep09="meals"><b>料理</b><small>${state.meals.length}品</small></button><button class="prepCard09" data-prep09="load"><b>ギア積込</b><small>${st.loaded}/${state.gear.length}積込</small></button><button class="prepCard09" data-prep09="gear"><b>ギア管理</b><small>登録/BOX/修理</small></button><button class="prepCard09" data-prep09="route"><b>行程計画</b><small>ルート/休憩/買い物</small></button><button class="prepCard09" data-prep09="weather"><b>天気判断</b><small>${st.wdone}/${state.weather.length}</small></button><button class="prepCard09" data-prep09="pets"><b>ペット準備</b><small>家族共有</small></button><button class="prepCard09" data-prep09="timers"><b>タイマー</b><small>料理/設営</small></button></section></section>`)
+  }
+  function prepPage09(page){
+    if(page==='route')return routePlan09();
+    if(page==='gear')return shell(`<section class="prep09"><button class="topBack09" data-act="prepHome09">← 準備ホーム</button><section class="hero09"><span class="badge">GEAR</span><h1>ギア管理</h1><p>登録・編集・BOX・乾燥・修理はここ。今回の積込とは分ける。</p></section><section class="panel09"><div class="actionRow09"><button class="primary" data-act="addGear"><b>ギア新規登録</b><small>まずここから登録</small></button><button data-act="addBox"><b>BOX追加</b><small>収納単位</small></button></div><input id="gearSearchInput" placeholder="ギア検索" value="${esc(state.gearFilter||'')}" style="margin:12px 0;width:100%;border:0;border-radius:18px;padding:14px;background:rgba(255,248,237,.95);font-weight:900"><div id="gearList">${filteredGear().map(gearCard).join('')||'<div class="empty09">ギアなし</div>'}</div></section></section>`);
+    if(page==='load')return shell(`<section class="prep09"><button class="topBack09" data-act="prepHome09">← 準備ホーム</button><section class="hero09"><span class="badge">LOAD</span><h1>ギア積込</h1><p>今回持っていくものを積む場所。ギア登録はギア管理へ。</p></section><section class="panel09"><div class="actionRow09"><button class="primary" data-act="markAllLoaded"><b>全部積込済み</b><small>一括チェック</small></button><button data-prep09="gear"><b>ギア管理へ</b><small>登録/編集</small></button></div>${state.gear.map(gearCard).join('')}</section></section>`)
+    const titles={shopping:'買い物',meals:'料理',weather:'天気判断',pets:'ペット準備',timers:'タイマー'};
+    state.prepTab=page==='load'?'gear':page;
+    return shell(`<section class="prep09"><button class="topBack09" data-act="prepHome09">← 準備ホーム</button><section class="hero09"><span class="badge">PREP</span><h1>${esc(titles[page]||page)}</h1><p>このページだけに集中する。戻る時は準備ホームへ。</p></section>${prepBody()}</section>`)
+  }
+  function historyDetail09(){
+    const mode=state.historyMode||'camp';
+    const rows=mode==='camp'?g08SessionRows():g08SessionRows(mode);
+    const pts=state.walk.track||[], pins=planPins?planPins():(state.mapPins||[]), recs=planRecords();
+    const last=pts[pts.length-1];
+    return shell(`<section class="history09"><button class="topBack09" data-route="memory">← 整理へ</button><section class="hero09"><span class="badge">DETAIL</span><h1>詳細履歴</h1><p>キャンプ実行・ドライブ・散歩・設営・撤収のルートとタイムラインを見る画面。</p><div class="statusGrid09"><div><strong>GPS</strong><span>${pts.length}点</span></div><div><strong>距離</strong><span>${walkDistance().toFixed(2)}km</span></div><div><strong>記録</strong><span>${recs.length}件</span></div></div></section><section class="panel09"><div class="actionRow09"><button class="${mode==='camp'?'primary':''}" data-history09="camp"><b>キャンプ実行</b><small>親と子ログ</small></button><button class="${mode==='drive'?'primary':''}" data-history09="drive"><b>ドライブ</b><small>経路/ピン/音声</small></button><button class="${mode==='walk'?'primary':''}" data-history09="walk"><b>散歩</b><small>ルート/写真/動画</small></button><button class="${mode==='setup'?'primary':''}" data-history09="setup"><b>設営/撤収</b><small>作業時間</small></button></div></section>${mode==='camp'?g08CampDetail():''}<section class="panel09"><div class="panelHead09"><span><h2>ルート詳細</h2><p>GPS、ピン、写真、動画、音声文字起こしをここで見る。</p></span><button class="btn" data-act="exportGpx">GPX</button></div><div class="mapBox09">${last?`<iframe loading="lazy" src="https://maps.google.com/maps?q=${last.lat},${last.lng}&z=15&output=embed"></iframe>`:'<div class="empty09">GPS記録がまだない</div>'}</div><div class="timeline09" style="margin-top:12px">${rows.map(r=>`<div class="time09"><i class="dot"></i><span><b>${esc(r.type)}</b><small>${r.startedAt?new Date(r.startedAt).toLocaleString('ja-JP'):''} / ${g08SessionDuration(r)}</small></span><span class="pill ${r.status==='active'?'dark':''}">${r.status==='active'?'記録中':(r.status==='paused'?'休憩':'履歴')}</span></div>`).join('')||'<div class="empty09">履歴なし。現地で開始するとここに出る。</div>'}</div></section><section class="panel09"><div class="panelHead09"><span><h2>ピン・記録</h2><p>詳細履歴の中身。</p></span></div><div class="timeline09">${pins.slice(-10).map(p=>`<div class="time09"><i class="dot"></i><span><b>${esc(p.name||p.kind||'ピン')}</b><small>${esc(p.note||'')}</small></span><span class="pill">ピン</span></div>`).join('')}${recs.slice(-10).map(r=>`<div class="time09"><i class="dot"></i><span><b>${esc(r.title||r.kind||'記録')}</b><small>${esc(r.text||r.target||'')}</small></span><span class="pill">記録</span></div>`).join('')||''}</div></section></section>`)
+  }
+  function memory(){
+    if(state.memoryTab==='review')state.memoryTab='history';
+    return shell(`<section class="memory09"><section class="hero09"><span class="badge">HISTORY</span><h1>履歴を見る</h1><p>レビューより先に、キャンプ実行・散歩・ドライブの詳細履歴を見る。</p><div class="actionRow09"><button class="primary" data-act="goHistoryDetail" data-mode="camp"><b>詳細履歴</b><small>親/子ログとルート</small></button><button data-act="copyTripReport"><b>レポートコピー</b><small>整理後に使う</small></button></div></section><section class="panel09"><div class="modeGrid09"><button class="modeCard09" data-history09="camp"><b>キャンプ実行履歴</b><small>自宅出発〜帰宅到着</small><span>見る</span></button><button class="modeCard09" data-history09="drive"><b>ドライブ詳細</b><small>経路・ピン・音声</small><span>見る</span></button><button class="modeCard09" data-history09="walk"><b>散歩詳細</b><small>ルート・写真・動画</small><span>見る</span></button><button class="modeCard09" data-history09="setup"><b>設営/撤収詳細</b><small>作業時間・休憩</small><span>見る</span></button></div></section>${g07HistoryView()}</section>`)
+  }
+  function render(keepScroll=true){
+    const sx=window.scrollX||0, sy=window.scrollY||0;
+    try{
+      app.innerHTML = state.route==='calendar'?calendar():state.route==='discover'?discover():state.route==='prep'?prep():state.route==='field'?field():state.route==='memory'?memory():state.route==='routeplan'?routePlan09():state.route==='historyDetail'?historyDetail09():home();
+      bind();
+      if(state.route==='field')drawMap();
+      bindSwipe();
+      if(keepScroll)setTimeout(()=>window.scrollTo(sx,sy),0);
+    }catch(err){
+      console.error(err);state.lastError={message:err.message||String(err),time:new Date().toISOString(),route:state.route};try{save()}catch(e){};app.innerHTML=recoveryHtml(err);
+    }
   }
 
   fileInput.onchange=async()=>{
