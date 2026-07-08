@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore03-field03-route-engine-20260709';
-  const KEY = 'outbase_restore03_field03_state';
-  const SNAP_KEY = 'outbase_restore03_field03_snapshot';
-  const ERR_KEY = 'outbase_restore03_field03_last_error';
+  const VERSION = 'outbase-restore03-1-field03-route-fix-20260709';
+  const KEY = 'outbase_restore03_1_field03_state';
+  const SNAP_KEY = 'outbase_restore03_1_field03_snapshot';
+  const ERR_KEY = 'outbase_restore03_1_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-field03-route-engine-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-1-field03-route-fix-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -175,6 +175,7 @@
     s.routePlan.priority={afterExit:'campNear',super:'routeNear',tour:'smallDetour',...(s.routePlan.priority||{})};
     s.routePlan.analysis=s.routePlan.analysis||null;
     s.savedRoutePlans=s.savedRoutePlans||[];
+    s.routeCandidates=s.routeCandidates||[];
     ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins','dismissedInsights'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
     if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
     if(!s.boxes.length)s.boxes=base.boxes;
@@ -443,7 +444,18 @@
   }
   function routeSegmentHtml(zone,title,caption){
     const defs=routeStopDefs().filter(d=>d.zone===zone);
-    return `<details class="routeDetails" open><summary><b>${esc(title)}</b><small>${esc(caption)}</small></summary><div class="routeChips">${defs.map(d=>`<button class="${state.routePlan?.stops?.[d.id]?'active':''}" data-act="toggleRouteStop" data-stop="${d.id}"><b>${esc(d.label)}</b><small>${esc(d.note)} / ${d.min}分</small></button>`).join('')}</div><div class="routeSearchOps">${defs.slice(0,4).map(d=>`<button data-act="searchRouteStop" data-stop="${d.id}">${esc(d.label)}検索</button>`).join('')}</div></details>`;
+    return `<details class="routeDetails" open><summary><b>${esc(title)}</b><small>${esc(caption)}</small></summary><div class="routeChips">${defs.map(d=>`<button class="${state.routePlan?.stops?.[d.id]?'active':''}" data-act="toggleRouteStop" data-stop="${d.id}"><b>${esc(d.label)}</b><small>${esc(d.note)} / ${d.min}分</small></button>`).join('')}</div><div class="routeSearchOps">${defs.slice(0,4).map(d=>`<button data-act="searchRouteStop" data-stop="${d.id}">${esc(d.label)}をGoogle Mapsで探す</button>`).join('')}</div></details>`;
+  }
+  function routeCandidatesHtml(){
+    const list=state.routeCandidates||[];
+    return `<details class="routeDetails" open><summary><b>Google Mapsで見つけた候補を保存</b><small>Mapsで探した後、OUTBASEに戻って名前だけ残す。</small></summary>
+      <div class="routeFormGrid">
+        <label><span>候補名</span><input data-route-field="candidateName" value="${esc(state.routePlan?.candidateName||'')}" placeholder="例：セブンイレブン、道の駅、スーパー名"></label>
+        <label><span>用途</span><select data-route-field="candidateKind"><option value="給油" ${state.routePlan?.candidateKind==='給油'?'selected':''}>給油</option><option value="コンビニ" ${state.routePlan?.candidateKind==='コンビニ'?'selected':''}>コンビニ</option><option value="スーパー" ${state.routePlan?.candidateKind==='スーパー'?'selected':''}>スーパー</option><option value="道の駅" ${state.routePlan?.candidateKind==='道の駅'?'selected':''}>道の駅</option><option value="観光" ${state.routePlan?.candidateKind==='観光'?'selected':''}>観光</option><option value="コタ散歩" ${state.routePlan?.candidateKind==='コタ散歩'?'selected':''}>コタ散歩</option></select></label>
+      </div>
+      <button class="routeSaveCandidate" data-act="saveRouteCandidate">候補をOUTBASEに保存</button>
+      <div class="routeCandidateList">${list.length?list.map(c=>`<div><span><b>${esc(c.name)}</b><small>${esc(c.kind)} / ${esc(c.time)}</small></span><button data-act="deleteRouteCandidate" data-id="${c.id}">削除</button></div>`).join(''):'<p>保存候補はまだない。</p>'}</div>
+    </details>`;
   }
   function savedRouteHtml(){
     const plans=state.savedRoutePlans||[];
@@ -452,10 +464,10 @@
   function routePrepView(){
     const rows=routeRows(), selected=routeChosenStops(), opts=routeDepartureOptions();
     return `<section class="section routePlanner"><div class="routeHero"><div class="routeHeroTop"><span><b>ルート作戦エンジン</b><small>チェックインから逆算し、自宅→キャンプ場、高速/下道、寄り道、休憩、当日ナビまでつなぐ。</small></span><span class="routeScore">${selected.length}</span></div><div class="routeCommand"><button class="mainCmd" data-act="analyzeRoute">ルート検索/分析</button><button class="subCmd" data-act="saveRoutePlan">計画保存</button></div></div>
-      <div class="routeFormGrid"><label><span>自宅</span><input data-route-field="origin" value="${esc(routeOrigin())}" placeholder="千葉県柏市"></label><label><span>キャンプ場</span><input data-route-field="destination" value="${esc(routeTarget())}" placeholder="キャンプ場名/住所"></label><label><span>チェックイン</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label><label><span>到着設定</span><select data-route-field="arrivalMode"><option value="buffer" ${(state.routePlan?.arrivalMode||'buffer')==='buffer'?'selected':''}>余裕を持つ</option><option value="exact" ${state.routePlan?.arrivalMode==='exact'?'selected':''}>ぴったり</option><option value="late" ${state.routePlan?.arrivalMode==='late'?'selected':''}>遅れてもOK</option></select></label><label><span>余裕分</span><input data-route-field="customBuffer" type="number" value="${Number(state.routePlan?.customBuffer||30)}"></label><label><span>遅刻許容</span><input data-route-field="lateAllowance" type="number" value="${Number(state.routePlan?.lateAllowance||30)}"></label><label><span>想定移動分</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label><label><span>渋滞余裕分</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label><label><span>連続運転上限</span><input data-route-field="maxContinuousDriveMin" type="number" value="${Number(state.routePlan?.maxContinuousDriveMin||120)}"></label><label><span>お気に入り給油</span><input data-route-field="favoriteGas" value="${esc(state.routePlan?.favoriteGas||'')}" placeholder="例：ENEOS ○○店"></label><label class="wide"><span>Google Maps APIキー（任意）</span><input data-route-field="apiKey" value="${esc(state.routePlan?.apiKey||'')}" placeholder="APIキーがある場合だけ"></label></div>
+      <div class="routeFormGrid"><label><span>自宅</span><input data-route-field="origin" value="${esc(routeOrigin())}" placeholder="千葉県柏市"></label><label><span>キャンプ場</span><input data-route-field="destination" value="${esc(routeTarget())}" placeholder="キャンプ場名/住所"></label><label><span>チェックイン</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label><label><span>到着設定</span><select data-route-field="arrivalMode"><option value="buffer" ${(state.routePlan?.arrivalMode||'buffer')==='buffer'?'selected':''}>余裕を持つ</option><option value="exact" ${state.routePlan?.arrivalMode==='exact'?'selected':''}>ぴったり</option><option value="late" ${state.routePlan?.arrivalMode==='late'?'selected':''}>遅れてもOK</option></select></label><label><span>余裕分</span><input data-route-field="customBuffer" type="number" value="${Number(state.routePlan?.customBuffer||30)}"></label><label><span>遅刻許容</span><input data-route-field="lateAllowance" type="number" value="${Number(state.routePlan?.lateAllowance||30)}"></label><label><span>想定移動分</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label><label><span>渋滞余裕分</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label><label><span>連続運転上限</span><input data-route-field="maxContinuousDriveMin" type="number" value="${Number(state.routePlan?.maxContinuousDriveMin||120)}"></label><details class="routeAdvanced"><summary>高度な設定</summary><label><span>Google Maps APIキー（通常は不要）</span><input data-route-field="apiKey" value="${esc(state.routePlan?.apiKey||'')}" placeholder="自動ルート解析を使う場合だけ"></label><p>普段は空欄でOK。Google Mapsに飛ぶだけなら不要。</p></details></div>
       <div class="routeDepartures">${opts.map(routeCandidateCard).join('')}</div><div class="routePriorityPanel"><label><span>降りてから優先</span><select data-route-priority="afterExit"><option value="campNear" ${state.routePlan.priority?.afterExit==='campNear'?'selected':''}>キャンプ場に近い</option><option value="routeNear" ${state.routePlan.priority?.afterExit==='routeNear'?'selected':''}>ルート上</option><option value="smallDetour" ${state.routePlan.priority?.afterExit==='smallDetour'?'selected':''}>寄り道少なめ</option></select></label><label><span>スーパー優先</span><select data-route-priority="super"><option value="routeNear" ${state.routePlan.priority?.super==='routeNear'?'selected':''}>寄り道しない</option><option value="campNear" ${state.routePlan.priority?.super==='campNear'?'selected':''}>キャンプ場に近い</option></select></label><label><span>観光優先</span><select data-route-priority="tour"><option value="smallDetour" ${state.routePlan.priority?.tour==='smallDetour'?'selected':''}>寄り道少なめ</option><option value="timeRich" ${state.routePlan.priority?.tour==='timeRich'?'selected':''}>時間に余裕がある時</option></select></label></div>
-      <div class="routeMapPreview"><iframe loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(routeTarget())}&z=11&output=embed"></iframe></div>${routeAnalysisHtml()}${routeSegmentHtml('beforeHighway','自宅→高速入口','給油/コンビニはここで探す。お気に入り給油も反映。')}${routeSegmentHtml('highway','高速区間','2時間以上ならSA/PA・コタ休憩を提案。')}${routeSegmentHtml('afterExit','高速降りてからキャンプ場まで','コンビニ/スーパー/道の駅/観光は優先度で見る。')}
-      <div class="routeTimeline">${rows.map(r=>`<button class="routeStep ${r.fixed?'fixed':''}" ${r.fixed?'':`data-act="toggleRouteStop" data-stop="${r.id}"`}><time>${r.time}</time><span><b>${esc(r.label)}</b><small>${esc(r.query)}${r.min?` / ${r.min}分`:''}</small></span><em>${esc(r.kind)}</em></button>`).join('')}</div><div class="routeCommand bottom"><button class="mainCmd" data-act="openRouteMap">Google Mapsでナビ準備</button><button class="subCmd" data-act="copyDrivePlan">LINE/メモへコピー</button></div><div class="routeNote">APIキーなし：保存・逆算・優先度設定・Google Maps検索リンク・当日ナビ連携まで。APIキーあり：高速/下道のステップ解析を試行。</div></section>${savedRouteHtml()}`;
+      <div class="routeMapPreview"><iframe loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(routeTarget())}&z=11&output=embed"></iframe></div>${routeAnalysisHtml()}${routeSegmentHtml('beforeHighway','自宅→高速入口','給油/コンビニはここでGoogle Mapsで探す。')}${routeSegmentHtml('highway','高速区間','2時間以上ならSA/PA・コタ休憩を提案。')}${routeSegmentHtml('afterExit','高速降りてからキャンプ場まで','コンビニ/スーパー/道の駅/観光は優先度で見る。')}
+      <div class="routeTimeline">${rows.map(r=>`<button class="routeStep ${r.fixed?'fixed':''}" ${r.fixed?'':`data-act="toggleRouteStop" data-stop="${r.id}"`}><time>${r.time}</time><span><b>${esc(r.label)}</b><small>${esc(r.query)}${r.min?` / ${r.min}分`:''}</small></span><em>${esc(r.kind)}</em></button>`).join('')}</div><div class="routeCommand bottom"><button class="mainCmd" data-act="openRouteMap">Google Mapsでナビ準備</button><button class="subCmd" data-act="copyDrivePlan">LINE/メモへコピー</button></div><div class="routeNote">APIキーなし：保存・逆算・優先度設定・Google Mapsで探す・当日ナビ連携まで。APIキーあり：高速/下道のステップ解析を試行。</div></section>${routeCandidatesHtml()}${savedRouteHtml()}`;
   }
 
   function candidateScore(c){
@@ -3353,7 +3365,15 @@ ${starterPanelHtml()}
       bind();
       if(state.route==='field')drawMap();
       bindSwipe();
-      if(keepScroll)restoreScroll(sy);
+      if(state.routeFocus){
+        const routeFocus=state.routeFocus;
+        state.routeFocus='';
+        save();
+        setTimeout(()=>{
+          const el=document.querySelector(`[data-stop="${routeFocus}"]`)||document.querySelector('.routePlanner');
+          if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});
+        },0);
+      }else if(keepScroll)restoreScroll(sy);
       else{state.__scrollY=0;setTimeout(()=>window.scrollTo(0,0),0)}
     }catch(err){
       console.error(err);
@@ -3471,6 +3491,8 @@ ${starterPanelHtml()}
     if(a==='useSavedRoute')return useSavedRoute(el.dataset.id);
     if(a==='openSavedRoute')return openSavedRoute(el.dataset.id);
     if(a==='deleteSavedRoute')return deleteSavedRoute(el.dataset.id);
+    if(a==='saveRouteCandidate')return saveRouteCandidate();
+    if(a==='deleteRouteCandidate')return deleteRouteCandidate(el.dataset.id);
     if(a==='copyRouteSummary')return copyRouteSummary();
     if(a==='exportGpx')return exportGpx();
     if(a==='clearTrack')return clearTrack();
@@ -3673,10 +3695,24 @@ ${starterPanelHtml()}
   }
   function toggleRouteStop(id){
     if(!id)return;
+    rememberScroll();
     state.routePlan=state.routePlan||{};
     state.routePlan.stops={gas:true,conv:true,sa:true,kota1:true,afterConv:true,super:true,michi:false,tour:false,kota2:true,...(state.routePlan.stops||{})};
     state.routePlan.stops[id]=!state.routePlan.stops[id];
+    state.routeFocus=id;
     save();render();
+  }
+  function saveRouteCandidate(){
+    const name=String(state.routePlan?.candidateName||'').trim();
+    if(!name){toast('候補名を入力');return}
+    const kind=state.routePlan?.candidateKind||'候補';
+    state.routeCandidates=[{id:uid('cand'),name,kind,time:new Date().toLocaleString('ja-JP')},...(state.routeCandidates||[])].slice(0,40);
+    state.routePlan.candidateName='';
+    save();render();toast('候補保存');
+  }
+  function deleteRouteCandidate(id){
+    state.routeCandidates=(state.routeCandidates||[]).filter(c=>c.id!==id);
+    save();render();toast('候補削除');
   }
   async function copyDrivePlan(){
     const text=routeShareText();
@@ -3731,7 +3767,7 @@ ${starterPanelHtml()}
     rememberScroll();
     if(!state.routePlan?.apiKey){
       state.routePlan.analysis={status:'manual',updated:new Date().toLocaleString('ja-JP'),message:'APIキー未設定。自動の高速名/乗口/分岐/降り口/SAサービス取得は未実行。区間別Google Maps検索リンクと保存ルートを使用。',routes:[]};
-      save();render();toast('API未接続モード');return;
+      save();render();toast('APIキーなしで使用');return;
     }
     try{
       toast('ルート分析中');await loadGoogleMapsRouteApi();
