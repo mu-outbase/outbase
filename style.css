@@ -5859,3 +5859,54 @@ body{
 .routeStats07 div{border-radius:15px;padding:9px;background:rgba(17,19,15,.06)}
 .routeStats07 b{display:block;font-size:15px}.routeStats07 small{display:block;margin-top:4px;font-size:9px;color:var(--muted);font-weight:850}
 @media(max-width:560px){.calHeader07{grid-template-columns:38px 1fr 38px 58px}.searchTabs07,.prepCards07,.historyGrid07{grid-template-columns:repeat(2,1fr)}.searchActions07,.gearOps07{grid-template-columns:1fr}.routeStats07{grid-template-columns:repeat(2,1fr)}.day{min-height:58px}}
+
+
+/* ===== OUTBASE FIELD REBUILD 08 =====
+   親セッション / 子セッション / 詳細履歴を明示。
+*/
+.runtime08{
+  border-radius:28px;
+  padding:15px;
+  background:linear-gradient(135deg,rgba(17,19,15,.98),rgba(39,58,48,.94));
+  color:var(--milk);
+  box-shadow:var(--shadow);
+}
+.runtime08Top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.runtime08Top b{display:block;font-size:23px;letter-spacing:-.065em;line-height:1.05}
+.runtime08Top small{display:block;margin-top:6px;color:rgba(255,248,237,.72);font-size:11.2px;line-height:1.4;font-weight:850}
+.runtime08Badge{border-radius:999px;padding:8px 10px;background:var(--brass);color:#15120e;font-size:10px;font-weight:950;white-space:nowrap}
+.runtime08Grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}
+.runtime08Grid div{border-radius:17px;padding:10px;background:rgba(255,248,237,.10);border:1px solid rgba(255,248,237,.13)}
+.runtime08Grid strong{display:block;font-size:13px;line-height:1.1}
+.runtime08Grid span{display:block;margin-top:5px;color:rgba(255,248,237,.66);font-size:10px;line-height:1.3;font-weight:850}
+.runtime08Ops{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:11px}
+.runtime08Ops button{min-height:44px;border-radius:16px;background:rgba(255,248,237,.10);color:rgba(255,248,237,.78);font-size:11px;font-weight:950;border:1px solid rgba(255,248,237,.13)}
+.runtime08Ops button.primary{background:linear-gradient(135deg,var(--brass),#e4c78f);color:#15120e}
+.runtime08Ops button.danger{background:rgba(145,79,62,.85);color:var(--milk)}
+.runtime08Note{margin-top:10px;border-radius:16px;padding:10px;background:rgba(255,248,237,.08);color:rgba(255,248,237,.70);font-size:10.5px;line-height:1.45;font-weight:850}
+.driveGuide08{border-radius:20px;padding:12px;background:rgba(224,232,239,.82);border:1px solid rgba(17,19,15,.08);display:grid;gap:6px}
+.driveGuide08 b{font-size:15px;letter-spacing:-.03em}
+.driveGuide08 small{display:block;color:var(--muted);font-size:10.5px;line-height:1.4;font-weight:850}
+.driveGuide08 .driveGuideOps{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:3px}
+.driveGuide08 button{min-height:38px;border-radius:14px;background:rgba(17,19,15,.08);font-size:10.5px;font-weight:950;color:var(--black)}
+.historyDetail08{display:grid;gap:12px;margin-top:10px}
+.campDetail08{border-radius:24px;padding:14px;background:rgba(255,248,237,.82);box-shadow:var(--softShadow);border:1px solid rgba(17,19,15,.08)}
+.campDetail08Head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.campDetail08Head b{font-size:22px;letter-spacing:-.06em}
+.campDetail08Head small{display:block;margin-top:5px;color:var(--muted);font-size:10.5px;line-height:1.35;font-weight:850}
+.campDetail08Stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}
+.campDetail08Stats div{border-radius:16px;padding:10px;background:rgba(17,19,15,.06);text-align:center}
+.campDetail08Stats b{display:block;font-size:18px}.campDetail08Stats small{display:block;margin-top:4px;color:var(--muted);font-size:9.5px;font-weight:850}
+.childTimeline08{display:grid;gap:7px;margin-top:12px}
+.childRow08{border-radius:16px;padding:10px;background:rgba(17,19,15,.055);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.childRow08 b{font-size:13px}.childRow08 small{display:block;margin-top:3px;color:var(--muted);font-size:9.5px;font-weight:850}.childRow08 .pill{white-space:nowrap}
+.detailCards08{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.detailCards08 button{border-radius:20px;padding:12px;min-height:86px;text-align:left;background:rgba(255,248,237,.76);box-shadow:var(--softShadow);border:1px solid rgba(17,19,15,.08)}
+.detailCards08 b{display:block;font-size:17px;letter-spacing:-.04em}.detailCards08 small{display:block;margin-top:7px;color:var(--muted);font-size:10px;line-height:1.35;font-weight:850}
+.projectStage span{font-size:10px;line-height:1.2;max-width:92px}
+@media(max-width:560px){
+ .runtime08Grid{grid-template-columns:1fr}
+ .runtime08Ops{grid-template-columns:1fr}
+ .campDetail08Stats{grid-template-columns:repeat(2,1fr)}
+ .detailCards08{grid-template-columns:1fr}
+}
