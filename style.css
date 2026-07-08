@@ -5818,3 +5818,22 @@ body{
   .routeMapPreview iframe{min-height:190px}
   .routeSearchOps{grid-template-columns:1fr}
 }
+
+
+/* RESTORE03: route strategy engine */
+.routeFormGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.routeFormGrid label,.routePriorityPanel label{display:grid;gap:6px;border-radius:18px;padding:10px;background:rgba(251,244,231,.78);border:1px solid rgba(16,19,14,.08)}
+.routeFormGrid label.wide{grid-column:1/-1}.routeFormGrid span,.routePriorityPanel span{font-size:10px;font-weight:950;color:#746b5f}
+.routeFormGrid input,.routeFormGrid select,.routePriorityPanel select{width:100%;border:0;border-radius:14px;padding:11px;background:#fff8eb;color:#11130f;font-weight:900}
+.routeDepartures{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.routeDeparture{border-radius:18px;padding:12px;background:rgba(17,19,15,.06);border:1px solid rgba(17,19,15,.08);text-align:left}
+.routeDeparture.active{background:linear-gradient(135deg,#c6a15d,#e3c77f);color:#11130f}.routeDeparture b{display:block;font-size:22px;letter-spacing:-.04em}.routeDeparture span{display:block;font-size:12px;font-weight:950;margin-top:4px}.routeDeparture small{display:block;font-size:10px;font-weight:850;margin-top:5px;color:#746b5f}
+.routePriorityPanel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.routeAnalysis{display:grid;gap:8px}
+.routeMiniHead{border-radius:18px;padding:12px;background:rgba(17,19,15,.06)}.routeMiniHead b{display:block;font-size:15px}.routeMiniHead small{display:block;margin-top:4px;color:#746b5f;font-size:11px;font-weight:850}
+.routeDetails{border-radius:20px;background:rgba(251,244,231,.82);border:1px solid rgba(16,19,14,.08);box-shadow:0 8px 20px rgba(16,19,14,.06);overflow:hidden}
+.routeDetails summary{padding:12px;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer}.routeDetails summary::-webkit-details-marker{display:none}.routeDetails summary b{font-size:15px}.routeDetails summary small{color:#746b5f;font-size:10px;font-weight:850}
+.routeDetailBody{padding:0 12px 12px}.routeBadgeLine{display:flex;gap:6px;overflow:auto;margin-bottom:8px}.routeBadgeLine span{white-space:nowrap;border-radius:999px;background:rgba(198,161,93,.18);padding:6px 8px;font-size:10px;font-weight:900;color:#5b4521}
+.routeSteps{display:grid;gap:6px}.routeSteps p{margin:0;border-radius:14px;background:rgba(17,19,15,.045);padding:9px;font-size:11px;line-height:1.45}.routeSteps b{margin-right:6px}
+.savedRoutes{display:grid;gap:9px}.savedRouteCard{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-radius:18px;padding:12px;background:rgba(251,244,231,.82);border:1px solid rgba(16,19,14,.08)}
+.savedRouteCard b{display:block;font-size:14px}.savedRouteCard small{display:block;margin-top:4px;color:#746b5f;font-size:10px;font-weight:850}.savedRouteCard div{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.savedRouteCard button{border-radius:999px;padding:8px 10px;background:#25382e;color:#f6ecd9;font-size:10px;font-weight:950}.routeCommand.bottom{margin-top:0}
+@media(max-width:560px){.routeFormGrid,.routePriorityPanel,.routeDepartures{grid-template-columns:1fr}.savedRouteCard{grid-template-columns:1fr}.savedRouteCard div{justify-content:flex-start}}
