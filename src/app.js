@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-field-rebuild06-20260707';
+  const VERSION = 'outbase-field-rebuild07-20260707';
   const KEY = 'outbase_genius_ui_state';
   const SNAP_KEY = 'outbase_genius_ui_snapshot';
   const ERR_KEY = 'outbase_genius_ui_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild06-20260707').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field-rebuild07-20260707').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -120,6 +120,9 @@
     const base=seed();
     s={...base,...(s||{})};
     s.settings={...base.settings,...(s.settings||{})};
+    s.discoverTab=s.discoverTab||'outbase';
+    s.prepTab=s.prepTab||'home';
+    s.memoryTab=s.memoryTab||'review';
     s.settings.driveAutoOffSec=Math.min(10,Math.max(1,Number(s.settings.driveAutoOffSec||3)));
     s.planStages=s.planStages||{};
     s.fieldPage=s.fieldPage||'home';
@@ -915,11 +918,11 @@ ${starterPanelHtml()}
   function externalSearchUrl(kind){
     const q=encodeURIComponent(externalQuery());
     if(kind==='maps')return `https://www.google.com/maps/search/?api=1&query=${q}`;
-    if(kind==='napp')return `https://www.google.com/search?q=${encodeURIComponent(externalQuery()+' site:nap-camp.com')}`;
-    if(kind==='official')return `https://www.google.com/search?q=${encodeURIComponent(externalQuery()+' 公式 キャンプ場')}`;
-    if(kind==='snowpeak')return `https://www.google.com/search?q=${encodeURIComponent(externalQuery()+' site:snowpeak.co.jp')}`;
+    if(kind==='napp')return `https://www.nap-camp.com/search?keyword=${q}`;
+    if(kind==='snowpeak')return `https://ec.snowpeak.co.jp/snowpeak/ja/search?q=${q}`;
     return `https://www.google.com/search?q=${q}`;
   }
+
   function openExternalSearch(kind){window.open(externalSearchUrl(kind),'_blank')}
   function saveExternalUrl(){
     const url=prompt('保存するURL','https://');
@@ -934,42 +937,30 @@ ${starterPanelHtml()}
   }
 
   function discover(){
-    const best=bestCandidate();
-    const list=filteredCandidates();
-    const campCount=(state.candidates||[]).filter(c=>c.kind==='camp').length;
-    const walkCount=(state.candidates||[]).filter(c=>c.kind==='walk').length;
-    const wishCount=(state.candidates||[]).filter(c=>c.wish).length;
+    const q=externalQuery();
+    const tab=state.discoverTab||'outbase';
     return shell(`
-      ${externalSearchPanel()}
-      <section class="discoverHero">
-        <div class="discoverHeroTop">
-          <span><b>${best?esc(best.name):'候補を探す'}</b><small>${best?esc(candidateReason(best)):'犬可・温水・ドッグフリー・景色・距離で絞る'}。探すだけで終わらせず、予定化まで進める。</small></span>
-          <span class="discoverScore" style="--score:${best?candidateScore(best):0}">${best?candidateScore(best):0}</span>
-        </div>
-        <div class="discoverCommand">
-          <button class="mainCmd" data-act="candidateToPlan" data-id="${best?best.id:''}">この候補で予定化</button>
-          <button class="subCmd" data-act="compareCandidates">上位比較</button>
-        </div>
+      <section class="discover07Hero"><b>探す</b><small>OUTBASE内・Web・地図・なっぷを分けた。全部Googleへ飛ばすだけの入口はやめる。</small></section>
+      <section class="searchBox07"><input id="externalSearchInput" value="${esc(q)}" placeholder="キャンプ場名・地域・ギア名で探す"></section>
+      <section class="searchTabs07">
+        ${[['outbase','OUTBASE内','自分の記録/ギア/料理/ピン'],['web','Web','普通のWeb検索'],['maps','地図','Google Mapsで場所/経路'],['napp','なっぷ','なっぷ検索へ']].map(x=>`<button class="${tab===x[0]?'active':''}" data-discover="${x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}
       </section>
-
-      <div class="conditionRail">
-        <button data-discover="camp"><b>${campCount}</b><span>キャンプ</span></button>
-        <button data-discover="walk"><b>${walkCount}</b><span>散歩</span></button>
-        <button data-discover="wish"><b>${wishCount}</b><span>保存</span></button>
-        <button data-discover="conditions"><b>条件</b><span>基準</span></button>
-      </div>
-
-      <section class="section"><div class="tabs">${['camp:キャンプ','walk:散歩','wish:保存','conditions:条件','compare:比較'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.discoverTab===id?'active':''}" data-discover="${id}">${l}</button>`}).join('')}</div></section>
       ${discoverBody()}
     `)
   }
+
   function discoverBody(){
+    const tab=state.discoverTab||'outbase';
+    const q=externalQuery();
+    if(tab==='web')return `<section class="section"><div class="searchActions07"><button class="primary" data-act="openExternalSearch" data-kind="web">Webで探す</button><button data-act="saveExternalUrl">URLを候補保存</button><button data-discover="outbase">OUTBASE内へ</button></div><div class="dataPanel"><b>Web検索</b><p>公式・ブログ・レビューなど広く探す。見つけたURLは候補として保存する。</p></div></section>`;
+    if(tab==='maps')return `<section class="section"><div class="searchActions07"><button class="primary" data-act="openExternalSearch" data-kind="maps">Google Mapsを開く</button><button data-act="saveExternalUrl">場所URLを保存</button><button data-discover="outbase">OUTBASE内へ</button></div><div class="dataPanel"><b>地図検索</b><p>経路、周辺スーパー、道の駅、キャンプ場の位置確認はGoogle Mapsへ任せる。</p></div></section>`;
+    if(tab==='napp')return `<section class="section"><div class="searchActions07"><button class="primary" data-act="openExternalSearch" data-kind="napp">なっぷを開く</button><button data-act="saveExternalUrl">候補保存</button><button data-discover="outbase">OUTBASE内へ</button></div><div class="dataPanel"><b>なっぷ検索</b><p>予約・料金・空き状況は外部で確認。OUTBASEには候補URLとメモだけ保存する。</p></div></section>`;
     const list=filteredCandidates();
-    if(state.discoverTab==='conditions')return `<section class="section"><div class="conditionPanel"><div class="conditionHead"><b>探す基準</b><small>ムーの条件を点数化。外部検索APIではなく、候補メモを判断しやすくする画面。</small></div><div class="conditionList">
-      ${[['犬可','最優先。犬不可は候補にしない'],['温水','冬キャンプ優先条件'],['ドッグフリー','次点で強い条件'],['景色','満足度に効く'],['4時間以内','下り方面希望。遠すぎる候補を避ける'],['暑期','エアコン付き・1泊2万円以下なら候補']].map(r=>`<div class="conditionRow"><span><b>${r[0]}</b><small>${r[1]}</small></span><span class="pill dark">基準</span></div>`).join('')}
-      </div></div><div class="commandDock"><button class="btn primary" data-act="addCandidate">候補追加</button><button class="btn" data-act="compareCandidates">比較コピー</button></div></section>`;
-    if(state.discoverTab==='compare')return `<section class="section"><div class="compareBox"><b>上位比較</b><p>${esc(buildCompareText())}</p><div class="compareGrid"><button class="primary" data-act="compareCandidates">コピー</button><button data-act="addCandidate">候補追加</button></div></div></section>`;
-    return `<section class="section"><div class="head"><div><h2>${state.discoverTab==='walk'?'散歩候補':state.discoverTab==='wish'?'保存候補':'キャンプ候補'}</h2><p>候補を見て、良ければそのまま予定へ入れる。</p></div><button class="btn primary" data-act="addCandidate">追加</button></div><div class="candidateList">${list.map(candidateCard).join('')||`<div class="compareBox"><b>候補なし</b><p>候補を追加するとここに出る。</p></div>`}</div></section>`;
+    const records=planRecords().slice(-6).reverse();
+    return `<section class="section"><div class="head"><div><h2>OUTBASE内検索</h2><p>登録済みの候補・ギア・料理・記録から探す。</p></div><button class="btn primary" data-act="addCandidate">候補追加</button></div>
+      <div class="candidateList">${list.slice(0,6).map(candidateCard).join('')||`<div class="compareBox"><b>候補なし</b><p>Webやなっぷで見つけたURLを保存すると候補になる。</p></div>`}</div>
+      <div class="dataPanel" style="margin-top:10px"><b>直近記録</b><p>${records.length?records.map(r=>`・${r.time||''} ${r.title||r.kind} ${r.text||''}`).join('\n'):'記録なし'}</p></div>
+    </section>`;
   }
 
   function calendar(){
@@ -979,18 +970,17 @@ ${starterPanelHtml()}
     const risks=dayRisk(state.selectedDate);
     const monthEvents=monthAllEvents();
     return shell(`
-      <section class="calendarBoard compactCalendar">
-        <div class="calHeader"><button class="calBtn" data-act="prevMonth">‹</button><div class="monthTitle"><b>${y}.${pad(m)}</b><small>タップで日付 / ダブルタップで追加 / 左右スワイプで月移動</small></div><button class="calBtn" data-act="nextMonth">›</button></div>
-        <div class="monthTools"><button data-act="goToday">今日</button><button class="primary" data-act="addEvent" data-date="${state.selectedDate}">予定追加</button><button data-act="autoNext">次へ</button></div>
+      <section class="calendarBoard compactCalendar calendar07">
+        <div class="calHeader calHeader07"><button class="calBtn" data-act="prevMonth">‹</button><div class="monthTitle"><b>${y}.${pad(m)}</b><small>日付枠全体をタップ。同じ日を2回タップで新規追加。</small></div><button class="calBtn" data-act="nextMonth">›</button><button class="todayBtn" data-act="goToday">今日</button></div>
         <div class="week">${['日','月','火','水','木','金','土'].map(w=>`<span>${w}</span>`).join('')}</div>
         <div class="days" id="days">${cells.map(dayCell).join('')}</div>
-        <div class="legend"><span><i class="dot"></i>単体</span><span><i class="bar"></i>連日</span><span><i class="camp"></i>キャンプ</span><span>↻ 繰り返し</span></div>
+        <div class="calHint07">連続した予定はバーでつながる。通常のコタ散歩は予定に入れず、現地の「コタ散歩」から開始する。</div>
       </section>
 
       <section class="section">
         <div class="dayFocus">
           <div class="dayFocusTop">
-            <span><b>${fmt(state.selectedDate)}</b><small>${selected.length?`${selected.length}件の予定`:'空いている日'} / 押すだけで追加</small></span>
+            <span><b>${fmt(state.selectedDate)}</b><small>${selected.length?`${selected.length}件の予定`:'空いている日'} / 同じ日付枠を2回タップで追加</small></span>
             <span class="pill ${risks.length?'wood':''}">${risks.length?`${risks.length}注意`:'OK'}</span>
           </div>
           <div class="quickAdd">
@@ -1000,20 +990,15 @@ ${starterPanelHtml()}
             <button data-act="quickAdd" data-type="payment"><b>¥</b><span>支払い</span></button>
           </div>
           <div class="eventStack">
-            ${selected.length?selected.map(eventMini).join(''):`<div class="eventMini"><span class="typeIcon">空</span><span style="min-width:0;flex:1"><strong>予定なし</strong><small>上のボタンでこの日にすぐ追加。</small></span><span class="pill">空き</span></div>`}
+            ${selected.length?selected.map(eventMini).join(''):`<div class="eventMini"><span class="typeIcon">空</span><span style="min-width:0;flex:1"><strong>予定なし</strong><small>日付枠をもう一度押すか、上のボタンで追加。</small></span><span class="pill">空き</span></div>`}
             ${risks.length?`<div class="warnLine">${risks.map(esc).join(' / ')}</div>`:''}
           </div>
         </div>
       </section>
 
       <section class="section">
-        <div class="head"><div><h2>今月の流れ</h2><p>月全体の予定を下でまとめて見る。</p></div><span class="pill">${monthEvents.length}件</span></div>
-        <div class="timeline">${monthEvents.slice(0,8).map(e=>`<button class="timeItem" data-act="openEvent" data-id="${e.id}"><b>${esc(e.title)}</b><small>${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''} / ${typeName[e.type]||e.type}</small></button>`).join('')||`<div class="timeItem"><b>予定なし</b><small>この月にはまだ予定がない。</small></div>`}</div>
-      </section>
-
-      <section class="section">
-        <div class="head"><div><h2>日付未設定</h2><p>候補はカレンダーに混ぜず、選択中の日付へすぐ入れる。</p></div><span class="pill">${unscheduled().length}件</span></div>
-        <div class="unscheduledDock">${unscheduled().map(e=>`<button class="unscheduledRow" data-act="dateUnscheduled" data-id="${e.id}"><span><b>${esc(e.title)}</b><small>${esc(e.memo||'選択中の日付へ入れる')}</small></span><span class="pill">日付付け</span></button>`).join('')||`<div class="unscheduledRow"><span><b>なし</b><small>未設定の予定はない。</small></span><span class="pill">OK</span></div>`}</div>
+        <div class="head"><div><h2>今月の流れ</h2><p>連続予定は日をまたぐ予定として扱う。</p></div><span class="pill">${monthEvents.length}件</span></div>
+        <div class="timeline">${monthEvents.slice(0,10).map(e=>`<button class="timeItem" data-act="openEvent" data-id="${e.id}"><b>${esc(e.title)}</b><small>${fmt(e.start)}${e.end&&e.end!==e.start?'〜'+fmt(e.end):''} / ${esc(typeName[e.type]||e.type)} / ${esc(e.place||'')}</small></button>`).join('')||'<div class="dataPanel"><b>予定なし</b><p>カレンダーを2回タップして追加。</p></div>'}</div>
       </section>
     `)
   }
@@ -1022,7 +1007,7 @@ ${starterPanelHtml()}
     const occs=c.occ.slice(0,3), more=Math.max(0,c.occ.length-3);
     return `<button class="day ${c.inMonth?'':'out'} ${c.date===today()?'today':''} ${c.date===state.selectedDate?'selected':''}" data-day="${c.date}">
       <span class="num">${Number(c.date.slice(8,10))}</span>
-      <span class="dayEvents">${occs.map(o=>`<i class="calItem ${o.event.type==='camp'?'camp':''}">${esc(o.start?o.event.title:(o.event.title||''))}${o.event.repeat!=='none'?' ↻':''}</i>`).join('')}${more?`<i class="calMore">+${more}件</i>`:''}</span>
+      <span class="dayEvents">${occs.map(o=>`<i class="calItem ${o.multi?'multi':''} ${o.start?'start':''} ${o.end?'end':''} ${o.event.type==='camp'?'camp':''}">${esc(o.start?o.event.title:(o.multi?'':(o.event.title||'')))}${o.event.repeat!=='none'?' ↻':''}</i>`).join('')}${more?`<i class="calMore">+${more}件</i>`:''}</span>
     </button>`
   }
 
@@ -1281,57 +1266,31 @@ ${starterPanelHtml()}
 
   function prep(){
     const st=prepStats();
-    const next=prepNextTarget();
+    const tab=state.prepTab||'home';
     return shell(`
-      <section class="prepHero">
-        <div class="prepHeroTop">
-          <span><b>${next[1]}</b><small>${next[2]}。考えずに、まず下の大きいボタンを押す。</small></span>
-          <span class="prepScore" style="--score:${st.score}">${st.score}</span>
-        </div>
-        <div class="prepCommand">
-          <button class="mainCmd" data-prep="${next[0]}">次をやる</button>
-          <button class="subCmd" data-act="copyPlanSummary">まとめコピー</button>
-        </div>
+      <section class="prep07Hero"><b>準備</b><small>準備ホームから専用ページへ入る。ギア登録と今回の積込は分けた。</small></section>
+      <section class="prepCards07">
+        ${[['shopping','買い物',`${st.undoneShop}件残り`],['meals','料理',`${state.meals.length}品`],['gearLoad','ギア積込',`${st.loaded}/${state.gear.length}積込`],['gearManage','ギア管理','登録/BOX/修理'],['weather','天気判断',`${st.wdone}/${state.weather.length}`],['pets','ペット準備','家族共有'],['timer','タイマー','料理/設営'],['home','準備ホーム','全体確認']].map(x=>`<button class="${tab===x[0]?'active':''}" data-prep="${x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}
       </section>
-
-      <div class="prepLane">
-        <button class="${state.meals.length?'done':'warn'}" data-prep="meals"><b>${state.meals.length}</b><span>料理</span></button>
-        <button class="${st.undoneShop===0?'done':'warn'}" data-prep="shopping"><b>${st.undoneShop}</b><span>買い物残</span></button>
-        <button class="${st.loaded===state.gear.length?'done':'warn'}" data-prep="gear"><b>${st.loaded}/${state.gear.length}</b><span>積込</span></button>
-        <button class="${st.wdone===state.weather.length?'done':'warn'}" data-prep="weather"><b>${st.wdone}/${state.weather.length}</b><span>天気</span></button>
-      </div>
-
-      <section class="prepMenu06">${['shopping:買い物:店で押すだけ','meals:料理:献立とLINEコピー','gear:ギア積込:BOX単位で積む','weather:天気判断:設営/撤収/コタ','pets:ペット準備:家族と共有','timer:タイマー:料理/設営'].map(x=>{const [id,l,s]=x.split(':');return `<button class="${state.prepTab===id?'active':''}" data-prep="${id}"><b>${l}</b><small>${s}</small></button>`}).join('')}</section>
       ${prepBody()}
     `)
   }
 
   function prepBody(){
     const st=prepStats();
-    if(state.prepTab==='meals')return `${mealHeroHtml()}<section class="section"><div class="tabs">${['plan:献立','timeline:調理順','templates:テンプレ','safe:注意','share:共有'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.mealTab===id?'active':''}" data-meal-tab="${id}">${l}</button>`}).join('')}</div></section>${mealBody()}`;
-
-    if(state.prepTab==='shopping'){const groups=groupedShopping();return `<section class="section">
-      <div class="head"><div><h2>買い物</h2><p>店で迷わない。グループごとに消す。</p></div><button class="btn primary" data-act="addShop">追加</button></div>
-      <div class="finishPanel"><div class="finishHead"><span><b>買い物残り ${st.undoneShop}件</b><small>買ったら行ごとに押す。</small></span><span class="pill ${st.undoneShop===0?'dark':'wood'}">${st.undoneShop===0?'完了':'未完'}</span></div>
-      <div class="finishBody">${Object.entries(groups).map(([g,items])=>`<div class="groupHead"><span>${esc(g)}</span><span>${items.filter(i=>!i.done).length}/${items.length}</span></div>${items.map(s=>`<button class="finishRow" data-act="toggleShop" data-id="${s.id}"><span><b>${s.done?'✓ ':''}${esc(s.name)}</b><small>${esc(s.qty)} / ${esc(s.source)}</small></span><span class="roundMark ${s.done?'done':''}">${s.done?'✓':'□'}</span></button>`).join('')}`).join('')}</div></div>
-      <div class="commandDock"><button class="btn primary" data-act="copyShop">LINE用コピー</button><button class="btn" data-act="clearDoneShop">購入済みを隠す</button></div>
-    </section>`;}
-
-    if(state.prepTab==='gear')return gearView();
-
-    if(state.prepTab==='pets')return `${familyPanelHtml()}${familyBody()}`;
-    if(state.prepTab==='timer')return `${timerPanelHtml()}${timerBodyHtml()}`;
-
-    if(state.prepTab==='weather')return weatherView();
-
-    return `<section class="section">
-      ${planFlowHtml()}
-      <div class="finishPanel" style="margin-top:12px"><div class="finishHead"><span><b>準備を終わらせる</b><small>次にやることだけを上から潰す。</small></span><span class="pill ${st.score>=80?'dark':'wood'}">${st.score}%</span></div><div class="finishBody">${smartPrepRows()}</div></div>
-      <div class="commandDock"><button class="btn primary" data-act="autoNext">次に進める</button><button class="btn" data-act="copyPlanSummary">準備まとめコピー</button></div>
-    </section>`;
+    const tab=state.prepTab||'home';
+    if(tab!=='home'){
+      const back=`<button class="prepBack07" data-prep="home">← 準備ホームへ</button>`;
+      if(tab==='meals')return `<section class="prepPage07">${back}${mealHeroHtml()}<section class="section"><div class="tabs">${['plan:献立','timeline:調理順','templates:テンプレ','safe:注意','share:共有'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.mealTab===id?'active':''}" data-meal-tab="${id}">${l}</button>`}).join('')}</div></section>${mealBody()}</section>`;
+      if(tab==='shopping'){const groups=groupedShopping();return `<section class="prepPage07">${back}<section class="section"><div class="head"><div><h2>買い物</h2><p>買ったら押す。LINEコピーもここ。</p></div><button class="btn primary" data-act="addShop">追加</button></div><div class="finishPanel"><div class="finishHead"><span><b>買い物残り ${st.undoneShop}件</b><small>店で上から消す。</small></span><span class="pill ${st.undoneShop===0?'dark':'wood'}">${st.undoneShop===0?'完了':'未完'}</span></div><div class="finishBody">${Object.entries(groups).map(([g,items])=>`<div class="groupHead"><span>${esc(g)}</span><span>${items.filter(i=>!i.done).length}/${items.length}</span></div>${items.map(s=>`<button class="finishRow" data-act="toggleShop" data-id="${s.id}"><span><b>${s.done?'✓ ':''}${esc(s.name)}</b><small>${esc(s.qty)} / ${esc(s.source)}</small></span><span class="roundMark ${s.done?'done':''}">${s.done?'✓':'□'}</span></button>`).join('')}`).join('')}</div></div><div class="commandDock"><button class="btn primary" data-act="copyShop">LINE用コピー</button><button class="btn" data-act="clearDoneShop">購入済みを隠す</button></div></section></section>`;}
+      if(tab==='gearLoad')return `<section class="prepPage07">${back}<section class="section"><div class="head"><div><h2>ギア積込</h2><p>登録ではなく、今回持っていく/積んだを確認。</p></div><button class="btn primary" data-act="markAllLoaded">全積込</button></div><div class="gearManage07">${state.gear.map(g=>`<div class="finishRow"><span><b>${esc(g.name)}</b><small>${esc(g.cat||'')} / ${esc(g.boxId||'BOX未設定')} / ${esc(g.status||'home')}</small></span><span><button data-act="setGearStatus" data-id="${g.id}" data-status="loaded">積んだ</button><button data-act="setGearStatus" data-id="${g.id}" data-status="home">戻す</button></span></div>`).join('')||'<div class="dataPanel"><b>ギア未登録</b><p>ギア管理から登録する。</p></div>'}</div></section></section>`;
+      if(tab==='gearManage')return `<section class="prepPage07">${back}<section class="section"><div class="head"><div><h2>ギア管理</h2><p>登録・編集・BOX・乾燥・修理はここ。準備の積込とは分ける。</p></div></div><div class="gearOps07"><button class="primary" data-act="addGear">ギア新規登録</button><button data-act="addBox">BOX登録</button><button data-act="exportGearCsv">CSV</button></div><div style="margin-top:10px">${gearView()}</div></section></section>`;
+      if(tab==='weather')return `<section class="prepPage07">${back}${weatherView()}</section>`;
+      if(tab==='pets')return `<section class="prepPage07">${back}${familyPanelHtml()}${familyBody()}</section>`;
+      if(tab==='timer')return `<section class="prepPage07">${back}${timerPanelHtml()}${timerBodyHtml()}</section>`;
+    }
+    return `<section class="section"><div class="finishPanel"><div class="finishHead"><span><b>準備ホーム</b><small>やる場所を選んで専用ページへ入る。</small></span><span class="pill ${st.score>=80?'dark':'wood'}">${st.score}%</span></div><div class="finishBody"><button class="smartRow" data-prep="shopping"><span class="smartMain"><b>買い物</b><small>買ったら押す / LINEコピー</small></span><span class="roundMark ${st.undoneShop===0?'done':'warn'}">${st.undoneShop}</span></button><button class="smartRow" data-prep="gearLoad"><span class="smartMain"><b>ギア積込</b><small>今回持っていくギアを積む</small></span><span class="roundMark">${st.loaded}/${state.gear.length}</span></button><button class="smartRow" data-prep="gearManage"><span class="smartMain"><b>ギア管理</b><small>登録/編集/BOX/修理</small></span><span class="roundMark">管理</span></button><button class="smartRow" data-prep="weather"><span class="smartMain"><b>天気判断</b><small>設営/撤収/コタ</small></span><span class="roundMark">${st.wdone}/${state.weather.length}</span></button></div></div></section>`;
   }
-
-
 
   function mealBody(){
     const ms=mealStats();
@@ -3306,31 +3265,15 @@ ${starterPanelHtml()}
     const ms=memoryStats();
     const next=memoryNextTarget();
     return shell(`
-      <section class="memoryHero">
-        <div class="memoryHeroTop">
-          <span><b>${next[1]}</b><small>${next[2]}。記録は残すだけではなく、次回に使える形へ。</small></span>
-          <span class="memoryScore" style="--score:${ms.score}">${ms.score}</span>
-        </div>
-        <div class="memoryCommand">
-          <button class="mainCmd" data-memory="${next[0]}">次をやる</button>
-          <button class="subCmd" data-act="copyTripReport">レポートコピー</button>
-        </div>
-      </section>
-
-      <div class="memoryStats">
-        <button class="${ms.pub?'good':'warn'}" data-memory="timeline"><b>${ms.pub}</b><span>公開記録</span></button>
-        <button class="${ms.places?'good':'warn'}" data-memory="places"><b>${ms.places}</b><span>場所</span></button>
-        <button class="${ms.imp?'good':'warn'}" data-memory="improve"><b>${ms.imp}</b><span>改善</span></button>
-        <button class="good" data-memory="data"><b>${ms.privateHealth}</b><span>非公開</span></button>
-      </div>
-
-      <section class="section"><div class="tabs">${['review:レビュー','timeline:記録','places:場所','improve:改善','insight:提案','notes:メモ','family:家族','connect:連携','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
+      <section class="memoryHero"><div class="memoryHeroTop"><span><b>${next[1]}</b><small>${next[2]}。履歴とルート詳細もここで見る。</small></span><span class="memoryScore" style="--score:${ms.score}">${ms.score}</span></div><div class="memoryCommand"><button class="mainCmd" data-memory="${next[0]}">次をやる</button><button class="subCmd" data-act="copyTripReport">レポートコピー</button></div></section>
+      <div class="memoryStats"><button class="${ms.pub?'good':'warn'}" data-memory="timeline"><b>${ms.pub}</b><span>公開記録</span></button><button class="good" data-memory="history"><b>${(state.walk.sessions||[]).length+(state.fieldSessions||[]).length}</b><span>履歴</span></button><button class="${ms.places?'good':'warn'}" data-memory="places"><b>${ms.places}</b><span>場所</span></button><button class="${ms.imp?'good':'warn'}" data-memory="improve"><b>${ms.imp}</b><span>改善</span></button></div>
+      <section class="section"><div class="tabs">${['review:レビュー','history:履歴','timeline:記録','places:場所','improve:改善','insight:提案','notes:メモ','connect:連携','data:データ'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.memoryTab===id?'active':''}" data-memory="${id}">${l}</button>`}).join('')}</div></section>
       ${memoryBody()}
     `)
   }
 
-
   function memoryBody(){
+    if(state.memoryTab==='history')return g07HistoryView();
     if(state.memoryTab==='timeline'){
       const list=planRecords().slice().reverse();
       return `<section class="section"><div class="head"><div><h2>公開記録</h2><p>体調メモは混ぜない。レビューに使える記録だけ。</p></div><button class="btn primary" data-act="addNote">メモ追加</button></div><div class="memoryTimeline">${list.map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(recordKindLabel(r.kind))}</b><small>${esc(r.date||'')} ${esc(r.time||'')} / ${esc(r.mode||'')}</small></span><span class="pill">${esc(r.title||recordKindLabel(r.kind))}</span></div>${r.text?`<p>${esc(r.text)}</p>`:''}${mediaPreviewHtml(r)}<div class="improveOps"><button data-act="recordToImprove" data-id="${r.id}">改善へ</button><button data-act="recordToPlace" data-id="${r.id}">場所へ</button></div></div>`).join('')||`<div class="dataPanel"><b>公開記録なし</b><p>現地画面でメモ・写真・音声・料理を押すとここに並ぶ。</p></div>`}</div></section>`;
@@ -3359,6 +3302,19 @@ ${starterPanelHtml()}
     }
 
     return `<section class="section"><div class="reportPanel"><div class="reportHead"><span><b>自動レビュー</b><small>公開記録・場所・改善だけで作る。非公開体調メモは除外。</small></span><span class="pill dark">生成</span></div><div class="reportBody">${esc(buildTripReport())}</div><div class="memoryOps"><button class="primary" data-act="saveTripReport">保存</button><button data-act="copyTripReport">コピー</button></div></div></section>`;
+  }
+
+
+  function g07HistoryRows(){
+    const fs=(state.fieldSessions||[]).map(s=>({type:s.label||s.modeId||'実行',startedAt:s.startedAt,endedAt:s.endedAt,status:s.status,modeId:s.modeId,id:s.id}));
+    const ws=(state.walk.sessions||[]).map(s=>({type:s.mode||'散歩',startedAt:s.startedAt,endedAt:s.endedAt,status:s.active?'active':'done',modeId:'walk',id:s.id,startCount:s.startCount||0}));
+    return fs.concat(ws).sort((a,b)=>(b.startedAt||0)-(a.startedAt||0));
+  }
+  function g07HistoryView(){
+    const rows=g07HistoryRows();
+    const pts=state.walk.track||[];
+    const pins=planPins?planPins():(state.mapPins||[]);
+    return `<section class="section"><div class="history07Hero"><b>詳細履歴</b><small>ドライブ・散歩・設営・撤収のルート/時間/ピン/写真/音声はここで見る。</small></div><section class="historyGrid07">${[['walk','散歩履歴','GPS軌跡/ピン/写真/動画/音声'],['drive','ドライブ履歴','ピン/音声/停車メモ'],['setup','設営履歴','開始/休憩/再開/完了'],['withdraw','撤収履歴','乾燥待ち/積込/完了']].map(x=>`<button><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}</section><div class="routeDetail07" style="margin-top:10px"><div class="head"><div><h2>ルート詳細</h2><p>現在のプランに紐づくGPS・ピン・記録。</p></div><button class="btn" data-act="exportGpx">GPX</button></div><div class="routeStats07"><div><b>${pts.length}</b><small>GPS点</small></div><div><b>${walkDistance().toFixed(2)}km</b><small>実測距離</small></div><div><b>${pins.length}</b><small>ピン</small></div><div><b>${planRecords().length}</b><small>記録</small></div></div><div class="memoryTimeline">${rows.slice(0,12).map(r=>`<div class="memoryItem"><div class="memoryItemTop"><span><b>${esc(r.type)}</b><small>${r.startedAt?new Date(r.startedAt).toLocaleString('ja-JP'):''} ${r.endedAt?'〜 '+new Date(r.endedAt).toLocaleTimeString('ja-JP'):''}</small></span><span class="pill ${r.status==='active'?'dark':''}">${r.status==='active'?'記録中':'履歴'}</span></div></div>`).join('')||'<div class="dataPanel"><b>履歴なし</b><p>現地で散歩・ドライブ・設営を開始するとここに出る。</p></div>'}</div></div></section>`;
   }
 
   function drawer(){
@@ -4370,7 +4326,7 @@ ${starterPanelHtml()}
     const map={
       camp:{title:'キャンプ予定',end:addDays(state.selectedDate,2),repeat:'none',place:'',memo:'犬可 / 温水 / 天気 / ギア確認'},
       normal:{title:'予定',end:state.selectedDate,repeat:'none',place:'',memo:''},
-      walk:{title:'コタ散歩',end:state.selectedDate,repeat:'none',place:'',memo:'通常散歩 / 体調メモは非公開'},
+      walk:{title:'特別散歩',end:state.selectedDate,repeat:'none',place:'',memo:'通常散歩はカレンダー管理しない。特別な予定だけ。'},
       payment:{title:'支払い確認',end:state.selectedDate,repeat:'monthly',place:'',memo:'月次確認'}
     };
     const t=map[type]||map.normal;
