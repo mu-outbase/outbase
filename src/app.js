@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore03-3-field03-route-first-20260709';
-  const KEY = 'outbase_restore03_3_field03_state';
-  const SNAP_KEY = 'outbase_restore03_3_field03_snapshot';
-  const ERR_KEY = 'outbase_restore03_3_field03_last_error';
+  const VERSION = 'outbase-restore03-4-field03-api-less-departure-20260709';
+  const KEY = 'outbase_restore03_4_field03_state';
+  const SNAP_KEY = 'outbase_restore03_4_field03_snapshot';
+  const ERR_KEY = 'outbase_restore03_4_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-3-field03-route-first-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-4-field03-api-less-departure-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -178,6 +178,17 @@
     s.routeCandidates=s.routeCandidates||[];
     s.routeSuggestions=s.routeSuggestions||{};
     s.routeBase=s.routeBase||null;
+    s.simpleStops=s.simpleStops||{
+      gas:{on:true,min:10},
+      conv:{on:true,min:10},
+      super:{on:false,min:25},
+      sa:{on:true,min:20},
+      kota:{on:true,min:15},
+      michi:{on:false,min:20},
+      tour:{on:false,min:45}
+    };
+    s.simpleStops={gas:{on:true,min:10},conv:{on:true,min:10},super:{on:false,min:25},sa:{on:true,min:20},kota:{on:true,min:15},michi:{on:false,min:20},tour:{on:false,min:45},...(s.simpleStops||{})};
+    Object.keys(s.simpleStops).forEach(k=>{s.simpleStops[k]={on:!!s.simpleStops[k].on,min:Number(s.simpleStops[k].min||0)}});
     ['events','meals','shopping','weather','boxes','gear','places','notes','candidates','records','reviews','pets','family','petPrep','shares','timers','mapPins','dismissedInsights'].forEach(k=>{if(!Array.isArray(s[k]))s[k]=base[k]||[]});
     if(!s.events.some(e=>e.id===s.currentPlanId) && s.events.length)s.currentPlanId=s.events[0].id;
     if(!s.boxes.length)s.boxes=base.boxes;
@@ -3545,6 +3556,11 @@ ${starterPanelHtml()}
       el.oninput=update;
       el.onchange=()=>{setRouteField(el.dataset.routeField,el.type==='number'?Number(el.value):el.value,true)};
     });
+
+    document.querySelectorAll('[data-simple-min]').forEach(el=>{
+      el.onchange=()=>setSimpleStopMin(el.dataset.simpleMin,Number(el.value||0),true);
+      el.oninput=()=>setSimpleStopMin(el.dataset.simpleMin,Number(el.value||0),false);
+    });
     document.querySelectorAll('[data-route-priority]').forEach(el=>{
       el.onchange=()=>{state.routePlan.priority=state.routePlan.priority||{};state.routePlan.priority[el.dataset.routePriority]=el.value;save();render()};
     });
@@ -3614,6 +3630,9 @@ ${starterPanelHtml()}
     if(a==='analyzeRoute')return analyzeRoute();
     if(a==='openBaseRoute')return openBaseRoute();
     if(a==='clearBaseRoute')return clearBaseRoute();
+    if(a==='toggleSimpleStop')return toggleSimpleStop(el.dataset.stop);
+    if(a==='saveSimpleRoute')return saveSimpleRoutePlan();
+    if(a==='openSimpleRoute')return window.open(simpleRouteGoogleUrl(),'_blank');
     if(a==='saveRoutePlan')return saveRoutePlan();
     if(a==='useSavedRoute')return useSavedRoute(el.dataset.id);
     if(a==='openSavedRoute')return openSavedRoute(el.dataset.id);
@@ -4745,4 +4764,155 @@ ${starterPanelHtml()}
   setInterval(updateTimers,1000);
   if(state.walk.active||state.drive?.active)startGpsAuto();
   render();
+
+
+  /* RESTORE03.4: APIなし出発逆算版 */
+  function simpleStopDefs(){
+    return [
+      {id:'gas',label:'給油',hint:'高速前か出発直後',defaultMin:10},
+      {id:'conv',label:'コンビニ',hint:'朝食・氷・飲み物',defaultMin:10},
+      {id:'super',label:'スーパー',hint:'買い足し・生鮮',defaultMin:25},
+      {id:'sa',label:'SA/PA休憩',hint:'トイレ・休憩',defaultMin:20},
+      {id:'kota',label:'コタ休憩',hint:'トイレ・水分',defaultMin:15},
+      {id:'michi',label:'道の駅',hint:'時間に余裕がある時',defaultMin:20},
+      {id:'tour',label:'観光',hint:'寄り道ありの日だけ',defaultMin:45}
+    ];
+  }
+  function simpleStopState(id){
+    state.simpleStops=state.simpleStops||{};
+    const def=simpleStopDefs().find(x=>x.id===id)||{defaultMin:10};
+    state.simpleStops[id]=state.simpleStops[id]||{on:false,min:def.defaultMin};
+    return state.simpleStops[id];
+  }
+  function simpleStopTotal(){
+    return simpleStopDefs().reduce((n,d)=>{
+      const s=simpleStopState(d.id);
+      return n+(s.on?Number(s.min||0):0);
+    },0);
+  }
+  function simpleArrivalBufferFor(mode){
+    if(mode==='exact')return 0;
+    if(mode==='late')return -Number(state.routePlan?.lateAllowance||30);
+    return Number(state.routePlan?.customBuffer||30);
+  }
+  function simpleDepartOption(label,mode,extra=0){
+    const check=routeCheckinDate();
+    const target=new Date(check.getTime()-(simpleArrivalBufferFor(mode)+Number(extra||0))*60000);
+    const total=(Number(state.routePlan?.driveMin)||150)+simpleStopTotal()+Number(state.routePlan?.trafficBuffer||0);
+    const dep=new Date(target.getTime()-total*60000);
+    return {label,mode,depart:`${pad(dep.getHours())}:${pad(dep.getMinutes())}`,arrival:`${pad(target.getHours())}:${pad(target.getMinutes())}`,total};
+  }
+  function simpleRouteGoogleUrl(){
+    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(routeOrigin())}&destination=${encodeURIComponent(routeTarget())}&travelmode=driving`;
+  }
+  function simpleRouteRows(){
+    const opt=simpleDepartOption('採用',state.routePlan?.arrivalMode||'buffer',0);
+    return [
+      {time:opt.depart,label:'自宅出発',memo:`Google Maps移動 ${Number(state.routePlan?.driveMin)||150}分`},
+      ...simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>({time:'＋',label:d.label,memo:`${simpleStopState(d.id).min}分 / ${d.hint}`})),
+      {time:opt.arrival,label:'到着目標',memo:routeArrivalLabel()}
+    ];
+  }
+  function toggleSimpleStop(id){
+    if(!id)return;
+    rememberScroll();
+    const s=simpleStopState(id);
+    s.on=!s.on;
+    state.routeFocus=id;
+    save();render();
+  }
+  function setSimpleStopMin(id,min,doRender=false){
+    if(!id)return;
+    const s=simpleStopState(id);
+    s.min=Math.max(0,Number(min||0));
+    save();
+    if(doRender){state.routeFocus=id;render()}
+  }
+  function routePrepHero(){
+    const opt=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    return `<section class="prepHero routeOnlyHero simpleRouteHero">
+      <div class="prepHeroTop">
+        <span><b>出発時間を決める</b><small>APIなし版。Google Mapsで移動時間を見て入力し、寄り道時間を足して自宅出発時間を出す。</small></span>
+        <span class="prepScore routeScoreMini">${opt.depart}</span>
+      </div>
+      <div class="prepCommand">
+        <button class="mainCmd" data-act="openSimpleRoute">Google Mapsで移動時間確認</button>
+        <button class="subCmd" data-act="saveSimpleRoute">計画保存</button>
+      </div>
+    </section>`;
+  }
+  function routePrepView(){
+    const optA=simpleDepartOption('余裕あり','buffer',30);
+    const optB=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    const optC=simpleDepartOption('ギリギリ','exact',0);
+    const rows=simpleRouteRows();
+    return `<section class="section simpleRoute">
+      <div class="simpleRouteLead">
+        <b>APIなしルート計画</b>
+        <p>細かい店舗検索はGoogle Mapsに任せる。OUTBASEはチェックインから逆算して、寄り道あり/なし込みの出発時間を保存する。</p>
+      </div>
+
+      <div class="routeFormGrid">
+        <label><span>自宅</span><input data-route-field="origin" value="${esc(routeOrigin())}" placeholder="千葉県柏市"></label>
+        <label><span>キャンプ場</span><input data-route-field="destination" value="${esc(routeTarget())}" placeholder="キャンプ場名/住所"></label>
+        <label><span>チェックイン</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label>
+        <label><span>Google Maps移動時間（分）</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label>
+        <label><span>到着設定</span><select data-route-field="arrivalMode"><option value="buffer" ${(state.routePlan?.arrivalMode||'buffer')==='buffer'?'selected':''}>余裕を持つ</option><option value="exact" ${state.routePlan?.arrivalMode==='exact'?'selected':''}>ぴったり</option><option value="late" ${state.routePlan?.arrivalMode==='late'?'selected':''}>遅れてもOK</option></select></label>
+        <label><span>到着余裕（分）</span><input data-route-field="customBuffer" type="number" value="${Number(state.routePlan?.customBuffer||30)}"></label>
+        <label><span>遅刻許容（分）</span><input data-route-field="lateAllowance" type="number" value="${Number(state.routePlan?.lateAllowance||30)}"></label>
+        <label><span>渋滞/トイレ余裕（分）</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label>
+      </div>
+
+      <div class="routeDepartures simpleDepartures">
+        ${[optA,optB,optC].map(o=>`<button class="routeDeparture ${o.mode===(state.routePlan?.arrivalMode||'buffer')?'active':''}" data-act="setArrivalMode" data-mode="${o.mode}"><b>${esc(o.depart)}</b><span>${esc(o.label)}</span><small>到着目標 ${esc(o.arrival)} / 合計 ${o.total}分</small></button>`).join('')}
+      </div>
+
+      <section class="simpleStops">
+        <div class="head"><b>寄り道時間</b><small>行く/行かないと所要時間だけ。店名や細かい検索はGoogle Mapsで確認。</small></div>
+        <div class="simpleStopGrid">
+          ${simpleStopDefs().map(d=>{
+            const s=simpleStopState(d.id);
+            return `<article class="simpleStop ${s.on?'on':'off'}" data-stop="${d.id}">
+              <button class="simpleStopMain" data-act="toggleSimpleStop" data-stop="${d.id}">
+                <b>${esc(d.label)}</b><small>${esc(d.hint)}</small><em>${s.on?'行く':'行かない'}</em>
+              </button>
+              <label><span>分</span><input data-simple-min="${d.id}" type="number" value="${Number(s.min||d.defaultMin)}"></label>
+            </article>`;
+          }).join('')}
+        </div>
+      </section>
+
+      <section class="simpleCalc">
+        <div><span>移動</span><b>${Number(state.routePlan?.driveMin||150)}分</b></div>
+        <div><span>寄り道</span><b>${simpleStopTotal()}分</b></div>
+        <div><span>余裕</span><b>${Number(state.routePlan?.trafficBuffer||0)}分</b></div>
+        <div class="total"><span>自宅出発</span><b>${optB.depart}</b></div>
+      </section>
+
+      <div class="routeTimeline simpleTimeline">
+        ${rows.map(r=>`<div class="routeStep fixed"><time>${esc(r.time)}</time><span><b>${esc(r.label)}</b><small>${esc(r.memo)}</small></span><em>計画</em></div>`).join('')}
+      </div>
+
+      <div class="routeCommand bottom">
+        <button class="mainCmd" data-act="openSimpleRoute">Google Mapsで確認</button>
+        <button class="subCmd" data-act="saveSimpleRoute">この計画を保存</button>
+      </div>
+      <div class="routeNote">APIなし版では高速名・IC名・実店舗名は自動取得しない。Google Mapsで移動時間を確認し、OUTBASEには出発逆算と計画だけ残す。</div>
+    </section>${savedRouteHtml()}`;
+  }
+  function snapshotRoutePlan(){
+    const opt=simpleDepartOption('採用',state.routePlan?.arrivalMode||'buffer',0);
+    const rows=simpleRouteRows();
+    return {
+      id:uid('route'), eventId:current().id, name:`${current().title} ${opt.depart}出発`,
+      origin:routeOrigin(), destination:routeTarget(), checkin:state.routePlan?.checkin||'13:00',
+      arrivalMode:state.routePlan?.arrivalMode||'buffer', arrivalLabel:routeArrivalLabel(),
+      depart:opt.depart, arrival:opt.arrival, total:opt.total, rows,
+      selectedStops:simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>`${d.label} ${simpleStopState(d.id).min}分`),
+      selectedLabels:simpleStopDefs().filter(d=>simpleStopState(d.id).on).map(d=>d.label),
+      url:simpleRouteGoogleUrl(), mode:'api-less', createdAt:new Date().toLocaleString('ja-JP')
+    };
+  }
+  function saveSimpleRoutePlan(){return saveRoutePlan()}
+
 })();
