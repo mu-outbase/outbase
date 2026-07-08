@@ -5941,3 +5941,59 @@ body{
   .routeSuggestOps{grid-template-columns:1fr}
   .routeSuggestOps button:last-child{grid-column:auto}
 }
+
+
+/* RESTORE03.3 route-first memory */
+.routeOnlyHero h2{letter-spacing:-.06em}
+.routeOnlyHero .heroActions button[disabled],.routeOnlyHero button[disabled]{opacity:.45;filter:grayscale(1)}
+.routeScoreMini{display:grid;place-items:center}
+.routeBaseGate{display:grid;gap:10px}
+.routeBaseLead{
+  border-radius:24px;
+  padding:16px;
+  background:linear-gradient(135deg,rgba(17,19,15,.08),rgba(198,161,93,.16));
+  border:1px solid rgba(17,19,15,.08);
+}
+.routeBaseLead b{display:block;font-size:19px;letter-spacing:-.05em}
+.routeBaseLead p{margin:8px 0 0;color:#5f574b;font-size:12px;font-weight:850;line-height:1.55}
+.routeBaseLead button{
+  margin-top:12px;
+  min-height:48px;
+  width:100%;
+  border-radius:17px;
+  background:linear-gradient(135deg,#c6a15d,#e3c77f);
+  color:#11130f;
+  font-weight:950;
+}
+.routeBaseOps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.routeBaseOps button{margin:0}
+.routeBaseOps button:last-child{background:#25382e;color:#f6ecd9}
+.routeBaseSections{display:grid;gap:8px}
+.routeBaseSections div{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:6px;
+  border-radius:18px;
+  background:rgba(251,244,231,.82);
+  border:1px solid rgba(16,19,14,.08);
+  padding:12px;
+}
+.routeBaseSections b{font-size:14px}
+.routeBaseSections span{
+  border-radius:999px;
+  background:rgba(198,161,93,.18);
+  padding:5px 8px;
+  font-size:10px;
+  font-weight:950;
+  color:#5b4521;
+}
+.routeBaseSections small{
+  grid-column:1/-1;
+  color:#746b5f;
+  font-size:10px;
+  font-weight:850;
+}
+.routeSuggestions.locked{opacity:.86}
+@media(max-width:560px){
+  .routeBaseOps{grid-template-columns:1fr}
+}
