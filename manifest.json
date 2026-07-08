@@ -1,7 +1,7 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-rebuild13-map-backfix-20260708",
+  "start_url": "./?v=outbase-rebuild14-back-map-safe-20260708",
   "display": "standalone",
   "background_color": "#efe5d2",
   "theme_color": "#151812",
