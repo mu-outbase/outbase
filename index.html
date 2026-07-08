@@ -1,30 +1,16 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#11140f">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#11130f" />
   <title>OUTBASE</title>
-  <link rel="manifest" href="./manifest.json?v=outbase-rebuild18-1-map-restore-20260708">
-  <link rel="stylesheet" href="./style.css?v=outbase-rebuild18-1-map-restore-20260708">
-  <script>
-    (async()=>{
-      try{
-        if('serviceWorker' in navigator){
-          const regs=await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map(r=>r.unregister()));
-        }
-        if('caches' in window){
-          const keys=await caches.keys();
-          await Promise.all(keys.map(k=>caches.delete(k)));
-        }
-      }catch(e){}
-    })();
-  </script>
+  <link rel="manifest" href="manifest.json?v=outbase-restore01-finalrc6-mainline-20260708" />
+  <link rel="stylesheet" href="style.css?v=outbase-restore01-finalrc6-mainline-20260708" />
 </head>
 <body>
   <div id="app"></div>
-  <input id="mediaInput" type="file" hidden>
-  <script src="./src/app.js?v=outbase-rebuild18-1-map-restore-20260708"></script>
+  <input id="fileInput" type="file" accept=".json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*" multiple hidden />
+  <script src="src/app.js?v=outbase-restore01-finalrc6-mainline-20260708" defer></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-rebuild18-1-map-restore-20260708",
+  "start_url": "./?v=outbase-restore01-finalrc6-mainline-20260708",
   "display": "standalone",
-  "background_color": "#ece0c8",
-  "theme_color": "#11140f",
+  "background_color": "#11130f",
+  "theme_color": "#11130f",
   "icons": []
 }
