@@ -1,7 +1,7 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-rebuild16-design-core-20260708",
+  "start_url": "./?v=outbase-rebuild17-engine-prep-20260708",
   "display": "standalone",
   "background_color": "#ece0c8",
   "theme_color": "#11140f",
