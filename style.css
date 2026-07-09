@@ -7432,3 +7432,27 @@ select:focus{
 .obTop046 + .main:has(.obRoute045){
   padding-bottom:calc(108px + env(safe-area-inset-bottom))!important;
 }
+
+
+/* RESTORE04.8 ルート余白過多・準備タップ上ズレ修正 */
+.obTop046 + .main:has(.obRoute045),
+.obTop046 + .main:has(.obRoute048){
+  padding-bottom:calc(var(--navH) + env(safe-area-inset-bottom) + 6px)!important;
+}
+.obRoute045,
+.obRoute048{
+  padding-bottom:8px!important;
+}
+.obRoute045 .obEdit:last-child,
+.obRoute048 .obEdit:last-child{
+  margin-bottom:4px!important;
+}
+.bottomNav button[data-route="prep"].active{
+  transform:none!important;
+}
+.obRoute048 .obStopMiniGrid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.obRoute048 .obDepartMiniBand{
+  margin-bottom:6px!important;
+}
