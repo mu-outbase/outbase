@@ -6105,3 +6105,478 @@ body{
 
 /* RESTORE03.6 APIなしMVP整理 */
 .route036{display:grid;gap:12px}.route036 .simpleRouteLead b{font-size:22px}.routeFlow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.routeFlow div{border-radius:18px;padding:10px;background:rgba(251,244,231,.78);border:1px solid rgba(16,19,14,.08)}.routeFlow b{display:grid;place-items:center;width:28px;height:28px;border-radius:999px;background:rgba(17,19,15,.08);font-size:13px}.routeFlow .done b,.routeFlow .goal b{background:linear-gradient(135deg,#c6a15d,#e3c77f);color:#11130f}.routeFlow span{display:block;margin-top:7px;font-size:12px;font-weight:950}.routeFlow small{display:block;margin-top:3px;color:#746b5f;font-size:9px;font-weight:850}.savedRouteStrong{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-radius:24px;padding:14px;background:linear-gradient(135deg,#151a14,#2d4436);color:#f6ecd9}.savedRouteStrong.empty{background:rgba(17,19,15,.06);color:#11130f}.savedRouteStrong b{display:block;font-size:17px;letter-spacing:-.04em}.savedRouteStrong small{display:block;margin-top:4px;color:rgba(246,236,217,.7);font-size:10px;font-weight:850}.savedRouteStrong.empty small{color:#746b5f}.savedRouteTime{text-align:right}.savedRouteTime span{display:block;font-size:10px;font-weight:950;color:rgba(246,236,217,.68)}.savedRouteTime b{font-size:28px;letter-spacing:-.06em}.savedRouteOps{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.savedRouteOps button{min-height:45px;border-radius:16px;background:linear-gradient(135deg,#c6a15d,#e3c77f);color:#11130f;font-weight:950}.savedRouteOps button:last-child{background:rgba(246,236,217,.12);color:#f6ecd9}.routePanel{border-radius:24px;padding:14px;background:rgba(251,244,231,.72);border:1px solid rgba(16,19,14,.08)}.routePanelHead{margin-bottom:10px}.routePanelHead b{display:block;font-size:18px;letter-spacing:-.05em}.routePanelHead small{display:block;margin-top:4px;color:#746b5f;font-size:11px;font-weight:850}.routeFormGrid.compact label,.routeDriveTime.compact .routeDriveOps label{background:#fff8eb}.compactStops{margin-top:10px}.compactDepartures .routeDeparture b{font-size:20px}.routeResult{position:sticky;top:0;z-index:5}.simplePlanDetail{border-radius:22px;background:rgba(251,244,231,.82);border:1px solid rgba(16,19,14,.08);overflow:hidden}.simplePlanDetail summary{padding:13px;list-style:none;display:flex;justify-content:space-between;gap:10px;cursor:pointer}.simplePlanDetail summary::-webkit-details-marker{display:none}.simplePlanDetail summary b{font-size:15px}.simplePlanDetail summary small{font-size:10px;color:#746b5f;font-weight:850}.simplePlanDetail .routeTimeline{padding:0 12px 12px}@media(max-width:560px){.routeFlow{grid-template-columns:repeat(2,1fr)}.savedRouteStrong{grid-template-columns:1fr}.savedRouteTime{text-align:left}.savedRouteOps{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   RESTORE04: APP UI整理
+   方針：古いキャンプノートの落ち着き + 新しいPWA/ネイティブアプリUI
+   ロジックは触らず、見た目・可読性・タップ感だけ整理。
+========================================================= */
+:root{
+  --ob-bg:#080c09;
+  --ob-app:#f4ecdf;
+  --ob-card:#fff8ec;
+  --ob-card2:#efe5d6;
+  --ob-ink:#11140f;
+  --ob-sub:#756b5f;
+  --ob-deep:#0f1a14;
+  --ob-green:#193427;
+  --ob-green2:#284a38;
+  --ob-brass:#d6b56e;
+  --ob-brass2:#f0d18a;
+  --ob-border:rgba(17,20,15,.10);
+  --ob-glass:rgba(255,248,236,.72);
+  --ob-shadow:0 16px 40px rgba(20,16,10,.12);
+  --ob-shadow-strong:0 28px 70px rgba(0,0,0,.34);
+  --ob-radius:24px;
+  --ob-radius-lg:32px;
+  --navH:78px;
+  color-scheme:light;
+}
+html{
+  min-height:100%;
+  background:var(--ob-bg);
+  overscroll-behavior:none;
+}
+body{
+  min-height:100dvh;
+  background:
+    radial-gradient(circle at 12% -8%, rgba(214,181,110,.22), transparent 340px),
+    radial-gradient(circle at 92% 2%, rgba(55,90,67,.30), transparent 420px),
+    linear-gradient(180deg,#070b08 0%,#10140f 100%) !important;
+  color:var(--ob-ink);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{
+  -webkit-tap-highlight-color:transparent;
+}
+button{
+  touch-action:manipulation;
+}
+#app{
+  width:min(100%,460px) !important;
+  padding:0 0 calc(var(--navH) + env(safe-area-inset-bottom) + 10px) !important;
+  min-height:100dvh;
+}
+.shell{
+  min-height:100dvh !important;
+  border-radius:0 !important;
+  background:
+    linear-gradient(180deg,rgba(247,240,229,.98) 0%,rgba(238,227,211,.98) 100%) !important;
+  box-shadow:none !important;
+  overflow:hidden;
+}
+.main{
+  padding:14px 12px 18px !important;
+}
+.section{
+  margin:12px 0 !important;
+  border-radius:var(--ob-radius) !important;
+  background:rgba(255,248,236,.72) !important;
+  border:1px solid var(--ob-border) !important;
+  box-shadow:0 8px 22px rgba(25,20,12,.06) !important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  content-visibility:auto;
+  contain-intrinsic-size:260px;
+}
+.section .head,
+.routePanelHead,
+.routeMiniHead{
+  align-items:flex-start;
+}
+.section .head b,
+.routePanelHead b{
+  letter-spacing:-.06em;
+}
+
+/* top / stage */
+.top{
+  position:sticky !important;
+  top:0 !important;
+  z-index:90 !important;
+  border-radius:0 !important;
+  padding:10px 12px 12px !important;
+  background:linear-gradient(180deg,rgba(5,9,6,.98),rgba(10,15,11,.94)) !important;
+  border-bottom:1px solid rgba(255,255,255,.08) !important;
+  box-shadow:0 10px 26px rgba(0,0,0,.28);
+}
+.top-row{
+  min-height:42px;
+}
+.logo{
+  width:34px !important;
+  height:34px !important;
+  border-radius:12px !important;
+  background:linear-gradient(135deg,var(--ob-brass2),var(--ob-brass)) !important;
+  color:#0b0f0c !important;
+}
+.brand b{
+  font-size:15px !important;
+  letter-spacing:.02em !important;
+}
+.brand small{
+  font-size:10px !important;
+  opacity:.68;
+}
+.stage{
+  margin-top:10px !important;
+  padding:4px !important;
+  gap:4px !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.055) !important;
+  border:1px solid rgba(255,255,255,.08);
+}
+.stage button{
+  min-height:42px !important;
+  border-radius:999px !important;
+  border:0 !important;
+  background:transparent !important;
+  color:rgba(255,248,236,.66) !important;
+  font-size:12px !important;
+  letter-spacing:-.03em;
+}
+.stage button.active{
+  background:linear-gradient(135deg,var(--ob-brass2),var(--ob-brass)) !important;
+  color:#11140f !important;
+  box-shadow:0 8px 18px rgba(214,181,110,.18);
+}
+
+/* bottom nav - native app feeling */
+.bottomNav{
+  width:min(100%,460px) !important;
+  gap:5px !important;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom)) !important;
+  background:rgba(244,236,223,.86) !important;
+  border-top:1px solid rgba(17,20,15,.09) !important;
+  backdrop-filter:blur(22px) saturate(1.2) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(1.2) !important;
+  box-shadow:0 -16px 38px rgba(30,24,16,.12);
+}
+.bottomNav button{
+  min-height:54px !important;
+  border-radius:18px !important;
+  color:rgba(17,20,15,.54) !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+}
+.bottomNav button b{
+  font-size:18px !important;
+  line-height:1;
+}
+.bottomNav button.active{
+  background:linear-gradient(135deg,#0f1a14,#214834) !important;
+  color:#fff8ec !important;
+  box-shadow:0 12px 26px rgba(15,26,20,.22);
+}
+
+/* route screen: simple, app-like */
+.route036,
+.simpleRoute{
+  gap:12px !important;
+}
+.simpleRouteLead{
+  border-radius:30px !important;
+  padding:18px !important;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(214,181,110,.30), transparent 120px),
+    linear-gradient(135deg,#0f1a14,#244232) !important;
+  color:#fff8ec !important;
+  border:0 !important;
+  box-shadow:var(--ob-shadow-strong) !important;
+}
+.simpleRouteLead b{
+  font-size:24px !important;
+  letter-spacing:-.08em !important;
+}
+.simpleRouteLead p{
+  color:rgba(255,248,236,.72) !important;
+  font-size:12px !important;
+  line-height:1.65 !important;
+}
+.routeFlow{
+  gap:6px !important;
+}
+.routeFlow div{
+  border-radius:18px !important;
+  padding:9px !important;
+  background:rgba(255,248,236,.70) !important;
+  border:1px solid rgba(17,20,15,.08) !important;
+  box-shadow:0 8px 18px rgba(20,16,10,.04);
+}
+.routeFlow b{
+  width:26px !important;
+  height:26px !important;
+  background:rgba(17,20,15,.06) !important;
+}
+.routeFlow .done b,
+.routeFlow .goal b{
+  background:linear-gradient(135deg,var(--ob-brass2),var(--ob-brass)) !important;
+}
+.routeFlow span{
+  font-size:12px !important;
+  letter-spacing:-.04em;
+}
+.routeFlow small{
+  display:none !important;
+}
+.savedRouteStrong{
+  border-radius:30px !important;
+  padding:16px !important;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(214,181,110,.28), transparent 110px),
+    linear-gradient(135deg,#111a14,#274b37) !important;
+  box-shadow:0 18px 40px rgba(0,0,0,.18) !important;
+}
+.savedRouteStrong.empty{
+  background:rgba(255,248,236,.70) !important;
+  color:var(--ob-ink) !important;
+  box-shadow:0 8px 22px rgba(25,20,12,.06) !important;
+}
+.savedRouteTime b{
+  font-variant-numeric:tabular-nums;
+  font-size:30px !important;
+}
+
+/* panels / forms */
+.routePanel,
+.routeDriveTime,
+.routeDetails,
+.simplePlanDetail{
+  border-radius:28px !important;
+  background:rgba(255,248,236,.76) !important;
+  border:1px solid rgba(17,20,15,.08) !important;
+  box-shadow:0 10px 24px rgba(25,20,12,.06) !important;
+}
+.routePanel{
+  padding:14px !important;
+}
+.routePanelHead b,
+.routeDriveTime b{
+  font-size:18px !important;
+  letter-spacing:-.06em !important;
+}
+.routePanelHead small,
+.routeDriveTime p,
+.routeNote{
+  color:var(--ob-sub) !important;
+  font-size:11px !important;
+  line-height:1.6 !important;
+}
+.routeFormGrid{
+  gap:8px !important;
+}
+.routeFormGrid label,
+.routeDriveOps label,
+.simpleStop label{
+  border-radius:18px !important;
+  background:rgba(255,255,255,.45) !important;
+  border:1px solid rgba(17,20,15,.06) !important;
+  box-shadow:none !important;
+}
+.routeFormGrid span,
+.routeDriveOps span,
+.simpleStop label span{
+  color:rgba(17,20,15,.52) !important;
+  font-size:10px !important;
+  letter-spacing:-.02em;
+}
+input,select,textarea,
+.routeFormGrid input,
+.routeFormGrid select,
+.routeDriveOps input,
+.simpleStop input{
+  min-height:48px !important;
+  border:0 !important;
+  border-radius:16px !important;
+  background:rgba(255,255,255,.72) !important;
+  box-shadow:inset 0 0 0 1px rgba(17,20,15,.045) !important;
+  font-size:16px !important;
+  font-weight:850 !important;
+}
+.routeDriveOps{
+  gap:8px !important;
+}
+.routeDriveOps button,
+.mainCmd,
+.routeCommand .mainCmd,
+.savedRouteOps button,
+.prepCommand .mainCmd{
+  border-radius:18px !important;
+  min-height:50px !important;
+  background:linear-gradient(135deg,var(--ob-brass2),var(--ob-brass)) !important;
+  color:#11140f !important;
+  box-shadow:0 12px 24px rgba(214,181,110,.22) !important;
+}
+.subCmd,
+.routeCommand .subCmd,
+.prepCommand .subCmd{
+  border-radius:18px !important;
+  min-height:50px !important;
+  background:rgba(15,26,20,.10) !important;
+  color:#132018 !important;
+  border:1px solid rgba(17,20,15,.08) !important;
+}
+
+/* departure result */
+.simpleCalc.routeResult,
+.simpleCalc{
+  display:grid !important;
+  grid-template-columns:repeat(4,1fr) !important;
+  gap:7px !important;
+  position:relative !important;
+  top:auto !important;
+  z-index:auto !important;
+}
+.simpleCalc div{
+  border-radius:20px !important;
+  padding:12px 10px !important;
+  background:rgba(255,248,236,.78) !important;
+  border:1px solid rgba(17,20,15,.08) !important;
+  box-shadow:0 8px 18px rgba(25,20,12,.05);
+}
+.simpleCalc span{
+  color:rgba(17,20,15,.55) !important;
+  font-size:10px !important;
+}
+.simpleCalc b{
+  font-variant-numeric:tabular-nums;
+  font-size:17px !important;
+  letter-spacing:-.06em;
+}
+.simpleCalc .total{
+  background:linear-gradient(135deg,#0f1a14,#284a38) !important;
+  color:#fff8ec !important;
+  box-shadow:0 14px 30px rgba(15,26,20,.22);
+}
+.simpleCalc .total b{
+  font-size:24px !important;
+}
+
+/* stops: fewer visual noises */
+.simpleStopGrid{
+  gap:8px !important;
+}
+.simpleStop{
+  grid-template-columns:1fr 70px !important;
+  border-radius:22px !important;
+  background:rgba(255,248,236,.72) !important;
+  border:1px solid rgba(17,20,15,.08) !important;
+  box-shadow:0 8px 18px rgba(25,20,12,.04);
+}
+.simpleStop.on{
+  background:rgba(214,181,110,.18) !important;
+  border-color:rgba(214,181,110,.36) !important;
+}
+.simpleStopMain{
+  border-radius:18px !important;
+  background:transparent !important;
+}
+.simpleStopMain b{
+  font-size:14px !important;
+  letter-spacing:-.04em;
+}
+.simpleStopMain small{
+  color:rgba(17,20,15,.50) !important;
+}
+.simpleStopMain em{
+  border-radius:999px !important;
+  background:#142219 !important;
+  color:#fff8ec !important;
+}
+.simpleStop.on .simpleStopMain em{
+  background:linear-gradient(135deg,var(--ob-brass2),var(--ob-brass)) !important;
+  color:#11140f !important;
+}
+
+/* hero */
+.prepHero{
+  border-radius:30px !important;
+  padding:18px !important;
+  background:
+    radial-gradient(circle at 86% 12%,rgba(214,181,110,.30),transparent 130px),
+    linear-gradient(135deg,#0f1a14,#254735) !important;
+  box-shadow:0 22px 58px rgba(0,0,0,.20) !important;
+}
+.prepHero b{
+  font-size:23px !important;
+  letter-spacing:-.08em !important;
+}
+.prepHero small{
+  color:rgba(255,248,236,.70) !important;
+  line-height:1.6 !important;
+}
+.prepScore{
+  background:linear-gradient(135deg,var(--ob-brass2),var(--ob-brass)) !important;
+  color:#11140f !important;
+  box-shadow:none !important;
+  border-radius:22px !important;
+  width:72px !important;
+  height:56px !important;
+}
+
+/* tabs / chips */
+.prepTabs,
+.chips,
+.routeDepartures{
+  gap:7px !important;
+  overflow:auto;
+  scrollbar-width:none;
+  padding-bottom:2px;
+}
+.prepTabs::-webkit-scrollbar,
+.chips::-webkit-scrollbar,
+.routeDepartures::-webkit-scrollbar{display:none}
+.prepTabs button,
+.chips button,
+.routeDeparture{
+  border-radius:999px !important;
+  background:rgba(17,20,15,.06) !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+.prepTabs button.active,
+.chips button.active,
+.routeDeparture.active{
+  background:linear-gradient(135deg,#0f1a14,#284a38) !important;
+  color:#fff8ec !important;
+}
+
+/* internal timeline */
+.routeStep{
+  border-radius:20px !important;
+  background:rgba(255,248,236,.72) !important;
+  border:1px solid rgba(17,20,15,.07) !important;
+  box-shadow:0 8px 18px rgba(25,20,12,.045) !important;
+}
+.routeStep time,
+.routeStep b{
+  font-variant-numeric:tabular-nums;
+}
+.routeStep em{
+  background:rgba(214,181,110,.18) !important;
+  color:#5d4421 !important;
+}
+
+/* smaller phones */
+@media(max-width:430px){
+  #app{width:100% !important}
+  .main{padding:12px 10px 18px !important}
+  .simpleCalc.routeResult,.simpleCalc{grid-template-columns:repeat(2,1fr) !important}
+  .routeFlow{grid-template-columns:repeat(4,1fr) !important}
+  .routeFlow div{padding:8px 6px !important}
+  .routeFlow span{font-size:11px !important}
+  .simpleStopGrid{grid-template-columns:1fr !important}
+  .routeDriveOps{grid-template-columns:1fr !important}
+  .routeFormGrid,.routeTargets{grid-template-columns:1fr !important}
+  .prepScore{width:70px !important}
+}
+
+/* installed PWA / modern browsers */
+@supports (height:100dvh){
+  .shell{min-height:100dvh !important}
+}
+@supports (backdrop-filter:blur(20px)){
+  .bottomNav,.top,.section{backdrop-filter:blur(20px) saturate(1.15)}
+}

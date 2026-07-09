@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore03-6-field03-api-less-mvp-20260709';
-  const KEY = 'outbase_restore03_6_field03_state';
-  const SNAP_KEY = 'outbase_restore03_6_field03_snapshot';
-  const ERR_KEY = 'outbase_restore03_6_field03_last_error';
+  const VERSION = 'outbase-restore04-field03-app-ui-20260709';
+  const KEY = 'outbase_restore04_field03_state';
+  const SNAP_KEY = 'outbase_restore04_field03_snapshot';
+  const ERR_KEY = 'outbase_restore04_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore03-6-field03-api-less-mvp-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-field03-app-ui-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
