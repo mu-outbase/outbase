@@ -1,7 +1,7 @@
 {
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "start_url": "./?v=outbase-restore04-field03-app-ui-20260709",
+  "start_url": "./?v=outbase-restore04-1-field03-route-dashboard-20260709",
   "display": "standalone",
   "background_color": "#f3eadc",
   "theme_color": "#0b0f0c",
