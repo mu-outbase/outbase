@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-8-field03-route-space-calc-sync-20260709';
+  const VERSION = 'outbase-restore04-9-field03-plan-switch-record-target-20260709';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-8-field03-route-space-calc-sync-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-9-field03-plan-switch-record-target-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -6028,7 +6028,123 @@ ${starterPanelHtml()}
     });
   }
 
-  // RESTORE04.8: ensure first paint uses route spacing and calculation fixes.
+  /* RESTORE04.9: 小型プラン切替シート / 記録保存先保護 */
+  function ob049RecordTarget(){
+    const exact=(state.events||[]).find(e=>e.id===state.currentPlanId);
+    if(exact){
+      return {id:exact.id,title:exact.title||'現在の主役予定',type:exact.type,start:exact.start,end:exact.end,uncertain:false,label:`${exact.title||'現在の主役予定'}に保存`};
+    }
+    return {id:'inbox',title:'未確認箱',type:'memo',start:'',end:'',uncertain:true,label:'未確認箱に仮保存'};
+  }
+  function ob049Status(e){
+    if(!e)return '未確認';
+    if(e.id===state.currentPlanId)return '選択中';
+    if(e.start){
+      const diff=Math.round((dObj(e.start)-dObj(today()))/86400000);
+      if(diff===0)return '今日';
+      if(diff>0 && diff<=14)return `${diff}日後`;
+      if(diff<0 && diff>=-14)return `${Math.abs(diff)}日前`;
+    }
+    return e.type==='camp'?'キャンプ':(typeName[e.type]||'予定');
+  }
+  planSwitchCard = function(e){
+    const cur=e.id===state.currentPlanId;
+    return `<div class="planSwitchCard planSwitch049Card ${cur?'current':''}">
+      <button class="planSwitch049Main" data-act="selectPlan" data-id="${esc(e.id)}">
+        <span><b>${esc(e.title||'無題の予定')}</b><small>${esc(planSpan(e))} / ${esc(typeName[e.type]||e.type)}${e.place?` / ${esc(e.place)}`:''}</small></span>
+        <i>${cur?'選択中':ob049Status(e)}</i>
+      </button>
+      <div class="planSwitch049Ops"><button data-act="openEvent" data-id="${esc(e.id)}">予定変更</button></div>
+    </div>`;
+  }
+  planSwitchHtml = function(){
+    const rt=ob049RecordTarget();
+    return `<div class="form planSwitch049">
+      <div class="head"><div><h2>プラン切替</h2><p>現在の保存先：${esc(rt.label)}。選ぶとこの画面を閉じる。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div>
+      <div class="planSwitch049Notice"><b>保存先保護</b><small>勝手に確定しない。プラン不明なら未確認箱に逃がす。</small></div>
+      <div class="planSwitchList">${sortedPlans().map(planSwitchCard).join('')}</div>
+      <div class="actions"><button class="btn primary" type="button" data-act="addEvent">予定追加</button><button class="btn" type="button" data-act="copyPlanContext">主役コピー</button></div>
+    </div>`;
+  }
+  function ob049RecordTargetHtml(){
+    const rt=ob049RecordTarget();
+    return `<div class="recordTarget049 ${rt.uncertain?'warn':''}">
+      <span><b>保存先</b><small>${esc(rt.label)}${rt.start?` / ${esc(planSpan(rt))}`:''}</small></span>
+      <button data-act="planSwitch">切替</button>
+    </div>`;
+  }
+  const ob049BaseFw03HeaderHtml = fw03HeaderHtml;
+  fw03HeaderHtml = function(){
+    return ob049BaseFw03HeaderHtml().replace('</section>', `${ob049RecordTargetHtml()}</section>`);
+  }
+  addPublicRecord = function(kind,text,title){
+    const p=state.walk.track[state.walk.track.length-1];
+    const rt=ob049RecordTarget();
+    const label=recordKindLabel(kind);
+    state.records=state.records||[];
+    state.records.push({
+      id:uid('rec'),
+      eventId:rt.uncertain?null:rt.id,
+      pendingTarget:rt.uncertain,
+      kind,
+      title:title||label,
+      text:text||'',
+      mode:fieldModeName(),
+      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      date:today(),
+      lat:p?.lat||null,
+      lng:p?.lng||null,
+      private:false,
+      fieldModeId:state.fieldMode||'',
+      target:`${rt.uncertain?'未確認箱':rt.title} / ${label}`,
+      targetPlanTitle:rt.uncertain?'未確認箱':rt.title,
+      flow:(state.fieldMode?currentFieldMode().saveTo:[])||[],
+      tags:[rt.uncertain?'未確認箱':rt.title, currentFieldMode().title, label].filter(Boolean)
+    });
+  }
+  addMediaRecord = function(kind,file,dataUrl){
+    const p=state.walk.track[state.walk.track.length-1];
+    const rt=ob049RecordTarget();
+    const label=recordKindLabel(kind);
+    state.records=state.records||[];
+    state.records.push({
+      id:uid('rec'),
+      eventId:rt.uncertain?null:rt.id,
+      pendingTarget:rt.uncertain,
+      kind,
+      title:label,
+      text:file?.name?`${file.name} を記録`:((kind==='voice'&&voiceLiveText)?voiceLiveText:''),
+      mode:fieldModeName(),
+      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+      date:today(),
+      lat:p?.lat||null,
+      lng:p?.lng||null,
+      private:false,
+      fieldModeId:state.fieldMode||'',
+      target:`${rt.uncertain?'未確認箱':rt.title} / ${kind==='photo'?'現地写真':kind==='video'?'現地動画':'音声メモ'}`,
+      targetPlanTitle:rt.uncertain?'未確認箱':rt.title,
+      flow:(state.fieldMode?currentFieldMode().saveTo:[])||[],
+      tags:[rt.uncertain?'未確認箱':rt.title, fw03CurrentMode?fw03CurrentMode().label:currentFieldMode().title, label].filter(Boolean),
+      mediaName:file?.name||'',
+      mediaType:file?.type||'',
+      mediaSize:file?.size||0,
+      dataUrl:dataUrl||''
+    });
+    if(kind==='photo'||kind==='voice')autoPin(kind==='photo'?'写真':'音声', label, file?.name||voiceLiveText||'');
+    if(mediaSize()>1800000){
+      const packed=compactStateForStorage(state);
+      state=packed.state;
+      state.lastError={message:`メディア容量を自動軽量化: ${packed.removed}件`,time:new Date().toISOString(),route:state.route};
+    }
+  }
+  const OUTBASE_RESTORE04_9_LOCK = Object.freeze({
+    base:'RESTORE04.8',
+    routeApiLess:'RESTORE04.8で一旦OK。04.9ではルート計算に触らない。',
+    planSwitch:'小型プランチップから下部シートで切替。大型常時表示は禁止。',
+    recordTarget:'記録画面では保存先を軽く表示。プラン不明時は未確認箱に仮保存。'
+  });
+
+  // RESTORE04.9: ensure first paint uses plan switch and record target protection.
   render();
 
 })();
