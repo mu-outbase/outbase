@@ -6900,3 +6900,80 @@ input,select,textarea,
   .obDepartBand button{min-height:64px}
   .obDepartBand b{font-size:21px}
 }
+
+
+/* RESTORE04.2 ルート実用修正 */
+.obRoute042 .obHeroTop b{
+  font-size:60px;
+}
+.obPlanSlim{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  border-radius:22px;
+  padding:10px;
+  background:rgba(255,248,236,.76);
+  border:1px solid rgba(17,20,15,.08);
+  box-shadow:0 8px 18px rgba(25,20,12,.05);
+}
+.obPlanSlim label,.obPlanSlim div{
+  display:grid;
+  gap:5px;
+  border-radius:16px;
+  padding:9px;
+  background:rgba(255,255,255,.42);
+}
+.obPlanSlim label:first-child{
+  grid-column:1/-1;
+}
+.obPlanSlim span{
+  color:rgba(17,20,15,.52);
+  font-size:10px;
+  font-weight:950;
+}
+.obPlanSlim b{
+  font-size:13px;
+  line-height:1.35;
+  letter-spacing:-.04em;
+}
+.obPlanSlim select,.obPlanSlim input{
+  min-height:44px!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:rgba(255,255,255,.78)!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  color:#11140f!important;
+}
+.obSavedSlim{
+  grid-template-columns:auto 1fr auto auto;
+}
+.obSavedSlim button{
+  min-width:48px;
+  padding:0 10px;
+}
+.obArrivalBand button.active{
+  background:linear-gradient(135deg,#0f1a14,#284a38);
+  color:#fff8ec;
+}
+.obArrivalBand button{
+  transition:transform .12s ease, background .12s ease;
+}
+.obArrivalBand button:active,
+.obStopChip:active{
+  transform:scale(.98);
+}
+.obStopChip{
+  scroll-margin-top:140px;
+}
+@media(max-width:430px){
+  .obPlanSlim{
+    grid-template-columns:1fr;
+  }
+  .obSavedSlim{
+    grid-template-columns:auto 1fr;
+  }
+  .obSavedSlim button{
+    grid-column:auto;
+  }
+}
