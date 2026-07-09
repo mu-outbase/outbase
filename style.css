@@ -7045,3 +7045,95 @@ input,select,textarea,
     min-height:36px;
   }
 }
+
+
+/* RESTORE04.4 横移動修正 */
+html,body,#app,.shell,.main{
+  overflow-x:hidden!important;
+  max-width:100vw!important;
+}
+*{
+  box-sizing:border-box;
+}
+.obRouteDash,
+.obRouteDash *{
+  max-width:100%;
+}
+.obRouteDash{
+  overflow-x:hidden!important;
+  width:100%!important;
+  contain:layout paint;
+}
+.obStopStrip{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:7px!important;
+  overflow:visible!important;
+  width:100%!important;
+  padding:0!important;
+  scrollbar-width:none!important;
+}
+.obStopChip{
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+  flex:none!important;
+  white-space:normal!important;
+  text-align:left!important;
+}
+.obStopChip span,
+.obStopChip b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.obDepartBand,
+.obArrivalBand{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:7px!important;
+  overflow:visible!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+.obDepartBand button,
+.obArrivalBand button{
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+.obDepartBand b,
+.obArrivalBand b{
+  font-size:clamp(18px,5.4vw,24px)!important;
+  white-space:nowrap!important;
+}
+.obHero,
+.obSavedSlim,
+.obPlanOnly,
+.obEdit,
+.obRouteNote{
+  width:100%!important;
+  max-width:100%!important;
+}
+button:focus,
+input:focus,
+select:focus{
+  outline:none!important;
+}
+.obStopChip:focus,
+.obArrivalBand button:focus,
+.obDepartBand button:focus{
+  scroll-margin:0!important;
+}
+@media(max-width:430px){
+  .obStopStrip{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .obStopChip{
+    min-height:48px!important;
+    padding:8px 10px!important;
+  }
+  .obArrivalBand{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}

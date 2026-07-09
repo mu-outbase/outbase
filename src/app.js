@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-3-field03-route-clean-20260709';
-  const KEY = 'outbase_restore04_3_field03_state';
-  const SNAP_KEY = 'outbase_restore04_3_field03_snapshot';
-  const ERR_KEY = 'outbase_restore04_3_field03_last_error';
+  const VERSION = 'outbase-restore04-4-field03-no-horizontal-shift-20260709';
+  const KEY = 'outbase_restore04_4_field03_state';
+  const SNAP_KEY = 'outbase_restore04_4_field03_snapshot';
+  const ERR_KEY = 'outbase_restore04_4_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-3-field03-route-clean-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-4-field03-no-horizontal-shift-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -5643,6 +5643,91 @@ ${starterPanelHtml()}
       return shell(`${routePrepView()}`);
     }
     return ob041LegacyPrep();
+  }
+
+
+
+  /* RESTORE04.4: 横移動修正 */
+  function ob044ClampX(y){
+    const yy=Number.isFinite(y)?y:scrollYNow();
+    const run=()=>{
+      try{
+        window.scrollTo(0,yy);
+        document.documentElement.scrollLeft=0;
+        document.body.scrollLeft=0;
+        const dash=document.querySelector('.obRouteDash');
+        if(dash)dash.scrollLeft=0;
+        const strip=document.querySelector('.obStopStrip');
+        if(strip)strip.scrollLeft=0;
+        const band=document.querySelector('.obDepartBand');
+        if(band)band.scrollLeft=0;
+        if(document.activeElement && document.activeElement.blur)document.activeElement.blur();
+      }catch(e){}
+    };
+    requestAnimationFrame(run);
+    setTimeout(run,40);
+    setTimeout(run,140);
+  }
+  ob043RefreshRoute = function(){
+    const y=scrollYNow();
+    ob042SaveDraft?.();
+    const node=document.querySelector('.obRouteDash');
+    if(node){
+      node.outerHTML=routePrepView();
+      bind();
+      ob044ClampX(y);
+    }else{
+      state.__scrollY=y;
+      render();
+      ob044ClampX(y);
+    }
+  }
+  toggleSimpleStop = function(id){
+    if(!id)return;
+    const y=scrollYNow();
+    const s=simpleStopState(id);
+    s.on=!s.on;
+    state.routeFocus='';
+    ob042SaveDraft?.();
+    save();
+    ob043RefreshRoute();
+    ob044ClampX(y);
+  }
+  setSimpleStopMin = function(id,min,doRender=false){
+    if(!id)return;
+    const y=scrollYNow();
+    const s=simpleStopState(id);
+    s.min=Math.max(0,Number(min||0));
+    state.routeFocus='';
+    ob042SaveDraft?.();
+    save();
+    if(doRender){ob043RefreshRoute();ob044ClampX(y)}
+  }
+  setRouteField = function(k,v,doRender=false){
+    const y=scrollYNow();
+    state.routePlan=state.routePlan||{};
+    if(k==='origin'||k==='home'){
+      state.settings.home=v;
+      state.routePlan.origin=v;
+    }else if(k==='currentPlanId'){
+      syncRouteFromPlan(v);
+      doRender=true;
+    }else if(k==='arrivalTarget'){
+      state.routePlan.arrivalTarget=v;
+      if(v==='exact'){state.routePlan.arrivalMode='exact';state.routePlan.customBuffer=0}
+      else if(v==='late'){state.routePlan.arrivalMode='late';state.routePlan.lateAllowance=30}
+      else {state.routePlan.arrivalMode='buffer';state.routePlan.customBuffer=Number(String(v).replace('b',''))||30}
+      doRender=true;
+    }else{
+      state.routePlan[k]=v;
+    }
+    state.routeFocus='';
+    ob042SaveDraft?.();
+    save();
+    if(doRender){
+      if(state.prepTab==='route'){ob043RefreshRoute();ob044ClampX(y)}
+      else render();
+    }
   }
 
 })();
