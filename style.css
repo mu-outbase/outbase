@@ -6977,3 +6977,71 @@ input,select,textarea,
     grid-column:auto;
   }
 }
+
+
+/* RESTORE04.3 ルート画面再整理 */
+.obRoute043 .obHero p{
+  font-size:13px;
+}
+.obPlanOnly{
+  display:grid;
+  gap:8px;
+}
+.obPlanOnly > .obMiniField,
+.obHomeSetting{
+  border-radius:22px;
+  background:rgba(255,248,236,.76);
+  border:1px solid rgba(17,20,15,.08);
+  box-shadow:0 8px 18px rgba(25,20,12,.05);
+}
+.obPlanOnly > .obMiniField{
+  padding:10px;
+}
+.obPlanOnly select{
+  min-height:46px!important;
+}
+.obHomeSetting{
+  overflow:hidden;
+}
+.obHomeSetting summary{
+  list-style:none;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  padding:12px 13px;
+}
+.obHomeSetting summary::-webkit-details-marker{display:none}
+.obHomeSetting summary b{
+  font-size:14px;
+  letter-spacing:-.04em;
+}
+.obHomeSetting summary small{
+  color:#756b5f;
+  font-size:10px;
+  font-weight:850;
+}
+.obHomeSetting .obMiniField{
+  margin:0 10px 10px;
+  background:rgba(255,255,255,.48);
+}
+.obSaved043 b{
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.obRoute043 .obSavedSlim{
+  grid-template-columns:auto 1fr auto auto;
+}
+.obRoute043 .obArrivalBand button,
+.obRoute043 .obStopChip{
+  scroll-margin-top:0;
+}
+@media(max-width:430px){
+  .obRoute043 .obSavedSlim{
+    grid-template-columns:auto 1fr;
+  }
+  .obRoute043 .obSavedSlim button{
+    min-height:36px;
+  }
+}
