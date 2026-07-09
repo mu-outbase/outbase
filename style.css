@@ -7137,3 +7137,253 @@ select:focus{
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
   }
 }
+
+
+/* RESTORE04.5 ルート1画面整理 */
+.obRoute045{
+  gap:8px!important;
+  padding:8px 8px 12px!important;
+  overflow-x:hidden!important;
+}
+.obHeroCompact{
+  border-radius:28px;
+  padding:14px;
+  color:#fff8ec;
+  background:
+    radial-gradient(circle at 90% 8%,rgba(240,209,138,.22),transparent 120px),
+    linear-gradient(135deg,#0b110d,#193b2a 70%,#0e1b14);
+  box-shadow:0 18px 42px rgba(0,0,0,.23);
+}
+.obHeroCompactMain{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:9px;
+}
+.obHeroCompactMain .label{
+  color:rgba(255,248,236,.64);
+  font-size:11px;
+  font-weight:950;
+}
+.obHeroCompactMain strong{
+  font-size:44px;
+  line-height:1;
+  letter-spacing:-.09em;
+  font-variant-numeric:tabular-nums;
+}
+.obHeroCompactMain em{
+  border-radius:999px;
+  padding:8px 10px;
+  background:linear-gradient(135deg,#f0d18a,#d6b56e);
+  color:#11140f;
+  font-style:normal;
+  font-size:11px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.obHeroCompact p{
+  margin:7px 0 0;
+  color:rgba(255,248,236,.72);
+  font-size:11px;
+  line-height:1.45;
+  font-weight:850;
+}
+.obHeroMiniStats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  margin-top:8px;
+}
+.obHeroMiniStats span{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:4px;
+  min-height:36px;
+  border-radius:14px;
+  padding:7px 8px;
+  background:rgba(255,248,236,.09);
+  color:rgba(255,248,236,.66);
+  font-size:10px;
+  font-weight:950;
+}
+.obHeroMiniStats b{
+  color:#fff8ec;
+  font-size:17px;
+  letter-spacing:-.06em;
+}
+.obHeroCompactActions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin-top:8px;
+}
+.obHeroCompactActions button{
+  min-height:42px;
+  border-radius:16px;
+  font-size:14px;
+  font-weight:950;
+  background:rgba(255,248,236,.10);
+  color:#fff8ec;
+  border:1px solid rgba(255,248,236,.10);
+}
+.obHeroCompactActions button.primary{
+  background:linear-gradient(135deg,#f0d18a,#d6b56e);
+  color:#11140f;
+  border:0;
+}
+.obSaved045{
+  display:grid;
+  grid-template-columns:auto 1fr auto auto;
+  align-items:center;
+  gap:7px;
+  min-height:42px;
+  border-radius:20px;
+  padding:7px 9px;
+  background:rgba(255,248,236,.76);
+  border:1px solid rgba(17,20,15,.07);
+}
+.obSaved045 span{
+  border-radius:999px;
+  padding:5px 7px;
+  background:rgba(214,181,110,.20);
+  color:#5d4421;
+  font-size:10px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.obSaved045 b{
+  font-size:13px;
+  letter-spacing:-.04em;
+}
+.obSaved045 button{
+  min-height:34px;
+  border-radius:14px;
+  padding:0 10px;
+  background:#123120;
+  color:#fff8ec;
+  font-size:12px;
+  font-weight:950;
+}
+.obPlanSelectMini{
+  display:grid;
+  gap:5px;
+  border-radius:20px;
+  padding:9px;
+  background:rgba(255,248,236,.76);
+  border:1px solid rgba(17,20,15,.07);
+}
+.obPlanSelectMini span{
+  color:rgba(17,20,15,.50);
+  font-size:10px;
+  font-weight:950;
+}
+.obPlanSelectMini select{
+  min-height:42px!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:rgba(255,255,255,.78)!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  color:#11140f!important;
+}
+.obStopMiniGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.obStopMini{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  min-height:40px;
+  border-radius:18px;
+  padding:8px 10px;
+  background:rgba(17,20,15,.06);
+  border:1px solid rgba(17,20,15,.06);
+  color:#11140f;
+}
+.obStopMini.on{
+  background:rgba(214,181,110,.24);
+  border-color:rgba(214,181,110,.34);
+}
+.obStopMini b{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:13px;
+  font-weight:950;
+}
+.obStopMini span{
+  color:#756b5f;
+  font-size:11px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.obDepartMiniBand{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  overflow:hidden;
+}
+.obDepartMiniBand button{
+  min-width:0;
+  min-height:54px;
+  border-radius:18px;
+  padding:8px 9px;
+  text-align:left;
+  background:rgba(255,248,236,.76);
+  border:1px solid rgba(17,20,15,.07);
+}
+.obDepartMiniBand button.active{
+  background:linear-gradient(135deg,#0f1a14,#284a38);
+  color:#fff8ec;
+}
+.obDepartMiniBand span{
+  display:block;
+  opacity:.62;
+  font-size:10px;
+  font-weight:950;
+}
+.obDepartMiniBand b{
+  display:block;
+  margin-top:3px;
+  font-size:22px;
+  letter-spacing:-.08em;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.obEditCompact{
+  border-radius:22px!important;
+}
+.obEditCompact summary{
+  padding:11px 13px!important;
+}
+.obEditCompact summary b{
+  font-size:16px!important;
+}
+.obEditCompact summary small{
+  font-size:10px!important;
+}
+.obEditCompact .obEditGrid{
+  gap:7px!important;
+  padding:0 9px 9px!important;
+}
+.obEditCompact .obMinuteGrid{
+  padding:0 9px 9px!important;
+}
+@media(max-width:430px){
+  .obHeroCompact{padding:13px;border-radius:26px}
+  .obHeroCompactMain strong{font-size:40px}
+  .obHeroCompactMain em{font-size:10px;padding:7px 8px}
+  .obHeroMiniStats span{min-height:34px;padding:6px 7px}
+  .obHeroMiniStats b{font-size:15px}
+  .obHeroCompactActions button{min-height:40px}
+  .obSaved045{grid-template-columns:auto 1fr auto auto}
+  .obSaved045 button{padding:0 8px}
+  .obStopMini{min-height:38px}
+  .obDepartMiniBand button{min-height:52px;padding:7px 8px}
+  .obDepartMiniBand b{font-size:20px}
+}

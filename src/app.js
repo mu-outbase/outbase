@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-4-field03-no-horizontal-shift-20260709';
-  const KEY = 'outbase_restore04_4_field03_state';
-  const SNAP_KEY = 'outbase_restore04_4_field03_snapshot';
-  const ERR_KEY = 'outbase_restore04_4_field03_last_error';
+  const VERSION = 'outbase-restore04-5-field03-route-one-screen-20260709';
+  const KEY = 'outbase_restore04_5_field03_state';
+  const SNAP_KEY = 'outbase_restore04_5_field03_snapshot';
+  const ERR_KEY = 'outbase_restore04_5_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-4-field03-no-horizontal-shift-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-5-field03-route-one-screen-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -5728,6 +5728,118 @@ ${starterPanelHtml()}
       if(state.prepTab==='route'){ob043RefreshRoute();ob044ClampX(y)}
       else render();
     }
+  }
+
+
+
+  /* RESTORE04.5: ルート1画面整理 */
+  function ob045CampEvents(){
+    return (state.events||[]).filter(e=>{
+      const t=`${e.title||''} ${e.type||''} ${e.category||''}`;
+      if(/候補|探し|検索|下見|散歩/.test(t))return false;
+      return /キャンプ|CF|camp|Camp|赤城|鹿沼|山中湖|月館|にこにこ|ほったらかし|白州|那須|九十九里|ふもとっぱら|まほろば|たきっぱら/.test(t);
+    });
+  }
+  function ob045PlanSelect(){
+    const list=ob045CampEvents();
+    const active=activeCampForRoute?.();
+    const items=list.length?list:(active?[active]:(state.events||[]).filter(e=>!/候補|探し|検索|下見|散歩/.test(`${e.title||''}`)).slice(0,1));
+    return `<label class="obPlanSelectMini"><span>予定</span><select data-route-field="currentPlanId">
+      ${items.map(e=>`<option value="${esc(e.id)}" ${e.id===state.currentPlanId?'selected':''}>${esc(e.title||'キャンプ予定')}${e.start?` / ${esc(e.start)}`:''}</option>`).join('')}
+    </select></label>`;
+  }
+  function ob045PlanLine(){
+    const d=ob043CampDate?.()||'';
+    return `${esc(ob043CampTitle?.()||routeTarget())}${d?` / ${esc(d)}`:''} / CI ${esc(state.routePlan?.checkin||'13:00')}`;
+  }
+  function ob045SavedPlan(){
+    const p=currentSavedRoutePlan?.();
+    if(!p)return `<div class="obSaved045 muted"><span>未保存</span><b>保存するとこの予定に紐づく</b></div>`;
+    return `<div class="obSaved045"><span>保存済み</span><b>${esc(p.depart)}出発</b><button data-act="useSavedRoute" data-id="${p.id}">出発</button><button data-act="openSavedRoute" data-id="${p.id}">Maps</button></div>`;
+  }
+  function ob045StopButtons(){
+    return simpleStopDefs().map(d=>{
+      const s=simpleStopState(d.id);
+      return `<button class="obStopMini ${s.on?'on':'off'}" data-act="toggleSimpleStop" data-stop="${d.id}">
+        <b>${esc(d.label)}</b><span>${s.on?`${Number(s.min||d.defaultMin)}分`:'OFF'}</span>
+      </button>`;
+    }).join('');
+  }
+  function ob045HomeEdit(){
+    return `<label class="obMiniField wide"><span>自宅</span><input data-route-field="home" value="${esc(routeOrigin())}" placeholder="例：千葉県柏市"></label>`;
+  }
+  routePrepView = function(){
+    const plan=activeCampForRoute?.();
+    if(plan && !state.routePlan.destination)syncRouteFromPlan(plan.id);
+    const standard=simpleDepartOption('標準',state.routePlan?.arrivalMode||'buffer',0);
+    const roomy=simpleDepartOption('余裕あり','buffer',30);
+    const tight=simpleDepartOption('ギリギリ','exact',0);
+    const rows=simpleRouteRows();
+    const at=state.routePlan?.arrivalTarget||'b30';
+    return `<section class="obRouteDash obRoute045">
+      <div class="obHeroCompact">
+        <div class="obHeroCompactMain">
+          <span class="label">自宅出発</span>
+          <strong>${standard.depart}</strong>
+          <em>${routeArrivalLabel()}</em>
+        </div>
+        <p>${ob045PlanLine()}</p>
+        <div class="obHeroMiniStats">
+          <span>移動<b>${Number(state.routePlan?.driveMin||150)}分</b></span>
+          <span>寄り道<b>${simpleStopTotal()}分</b></span>
+          <span>予備<b>${Number(state.routePlan?.trafficBuffer||0)}分</b></span>
+        </div>
+        <div class="obHeroCompactActions">
+          <button class="primary" data-act="saveSimpleRoute">保存</button>
+          <button data-act="openSimpleRoute">Maps</button>
+        </div>
+      </div>
+
+      ${ob045SavedPlan()}
+
+      ${ob045PlanSelect()}
+
+      <div class="obStopMiniGrid">
+        ${ob045StopButtons()}
+      </div>
+
+      <div class="obDepartMiniBand">
+        <button class="${at==='b60'?'active':''}" data-act="setArrivalTarget" data-target="b60"><span>余裕あり</span><b>${roomy.depart}</b></button>
+        <button class="${at==='b30'||at==='b15'?'active':''}" data-act="setArrivalTarget" data-target="b30"><span>標準</span><b>${standard.depart}</b></button>
+        <button class="${at==='exact'?'active':''}" data-act="setArrivalTarget" data-target="exact"><span>ギリギリ</span><b>${tight.depart}</b></button>
+      </div>
+
+      <details class="obEdit obEditCompact">
+        <summary><b>調整</b><small>移動時間・到着目標・自宅</small></summary>
+        <div class="obEditGrid">
+          ${ob045HomeEdit()}
+          <label class="obMiniField"><span>チェックイン</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label>
+          <label class="obMiniField"><span>当日想定移動</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label>
+          <label class="obMiniField"><span>到着目標</span><select data-route-field="arrivalTarget">
+            <option value="exact" ${state.routePlan?.arrivalTarget==='exact'?'selected':''}>ちょうど</option>
+            <option value="b15" ${state.routePlan?.arrivalTarget==='b15'?'selected':''}>15分前</option>
+            <option value="b30" ${(state.routePlan?.arrivalTarget||'b30')==='b30'?'selected':''}>30分前</option>
+            <option value="b60" ${state.routePlan?.arrivalTarget==='b60'?'selected':''}>1時間前</option>
+            <option value="late" ${state.routePlan?.arrivalTarget==='late'?'selected':''}>少し遅れてOK</option>
+          </select></label>
+          <label class="obMiniField"><span>追加予備</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label>
+        </div>
+        <div class="obMinuteGrid">${ob041StopMinuteInputs()}</div>
+      </details>
+
+      <details class="obEdit obEditCompact">
+        <summary><b>内訳</b><small>出発から到着目標まで</small></summary>
+        <div class="obTimeline">
+          ${rows.map(r=>`<div><time>${esc(r.time)}</time><span><b>${esc(r.label)}</b><small>${esc(r.memo)}</small></span></div>`).join('')}
+        </div>
+      </details>
+    </section>`;
+  }
+  prep = function(){
+    if(state.prepTab==='route'){
+      return shell(`${routePrepView()}`);
+    }
+    return ob041LegacyPrep();
   }
 
 })();
