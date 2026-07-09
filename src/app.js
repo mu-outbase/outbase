@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-13-field03-context-model-min-20260709';
+  const VERSION = 'outbase-restore04-14-field03-tabhome-ux-route-restore-20260710';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-13-field03-context-model-min-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-14-field03-tabhome-ux-route-restore-20260710').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -7102,6 +7102,144 @@ ${starterPanelHtml()}
     state.lastAudit0413={version:VERSION,time:ob413Now(),checks:checks.map(([name,pass])=>({name,pass:!!pass})),pass:checks.every(x=>x[1])};
   }
   ob413FinalAudit();
+
+
+
+  /* RESTORE04.14: タブホームUX監査反映 / Context Modelは裏側へ下げる
+     - 04.8でOKのルート1画面性を復帰・維持
+     - Context説明カードを常時大きく出さない
+     - 各タブは「説明」ではなく「入口」にする
+     - 表示/記録分離は保存事故防止のため裏側で維持
+  */
+  const OUTBASE_TAB_HOME_UX_LOCK_0414 = Object.freeze({
+    approvedRouteBase:'RESTORE04.8',
+    contextModel:'keep-internal',
+    rule:'タブホームは入口。構造説明カードを主役にしない。',
+    route:'ルートは1画面で見えることを優先。上に同時利用カードを置かない。',
+    status:'表示中/記録中は小さく確認。必要時だけ切替シート。'
+  });
+  function ob414View(){try{return ob413ViewLegacy?ob413ViewLegacy():ob412DisplayPlan()}catch(e){return current()}}
+  function ob414Rec(){try{return ob413SaveTarget?ob413SaveTarget():ob412SaveTarget()}catch(e){return current()}}
+  function ob414IsDiff(){const v=ob414View(),r=ob414Rec();return (v?.id||v?.rootPlanId)!==(r?.id||r?.rootPlanId)||!!r?.sessionId}
+  function ob414MiniStatus(){
+    const v=ob414View(), r=ob414Rec();
+    const diff=ob414IsDiff();
+    return `<div class="ob414MiniStatus ${diff?'split':''}"><span><b>表示</b>${esc(v?.title||'未確認')}</span><span><b>保存</b>${esc(r?.title||'未確認')}${r?.sessionTitle?` / ${esc(r.sessionTitle)}`:''}</span><button data-act="planSwitch">切替</button></div>`;
+  }
+  function ob414Section(title,sub,items){
+    return `<section class="section ob414HomeSection"><div class="head"><div><h2>${esc(title)}</h2><p>${esc(sub)}</p></div></div><div class="ob414ActionGrid">${items.map(i=>`<button class="${i.primary?'primary':''}" ${i.route?`data-route="${i.route}"`:''} ${i.prep?`data-prep="${i.prep}"`:''} ${i.act?`data-act="${i.act}"`:''}><b>${esc(i.title)}</b><small>${esc(i.sub||'')}</small></button>`).join('')}</div></section>`;
+  }
+  function ob414PlanSummary(){
+    const view=ob414View(), rec=ob414Rec();
+    return `<section class="section ob414Summary"><div class="head"><div><h2>今のOUTBASE</h2><p>見る対象と保存先は分けられる。普段はこの2つだけ確認。</p></div><span class="pill dark">04.14</span></div>${ob414MiniStatus()}</section>`;
+  }
+
+  // 04.13/04.12の大きな説明カードは常時表示しない。必要な確認は上部ミニ表示と切替シートだけ。
+  ob412DuoStatusHtml = function(){return ob414MiniStatus()};
+  ob412ConcurrentPanel = function(){return ''};
+  ob412InjectConcurrent = function(html){return html};
+
+  // ルートは04.8の一画面性を優先。Context説明や同時利用カードを上に置かない。
+  const ob414RouteBase = (typeof ob412BaseRoutePrepView==='function') ? ob412BaseRoutePrepView : routePrepView;
+  routePrepView = function(){
+    try{
+      const v=ob414View();
+      const isCamp=(v?.planType||v?.type||v?.kind)==='camp' || (v?.rootPlanTitle&&v?.rootPlanId);
+      if(isCamp || !v || v.inbox)return ob414RouteBase();
+      const camp=(state.events||[]).find(e=>e.type==='camp');
+      return `<section class="section ob414Notice"><div class="head"><div><h2>ルートはキャンプ用</h2><p>散歩記録中でも、表示だけキャンプへ切り替えれば準備ルートを確認できる。保存先は変わらない。</p></div><span class="pill dark">見るだけ</span></div><div class="shareOps">${camp?`<button class="primary" data-act="viewPlan" data-id="${camp.id}">キャンプを表示</button>`:''}<button data-route="field">記録へ戻る</button><button data-act="planSwitch">表示/記録切替</button></div></section>`;
+    }catch(e){return ob414RouteBase()}
+  };
+
+  // 準備タブ：ホームは入口、ルートは1画面。重い説明カードを出さない。
+  prep = function(){
+    if(state.prepTab==='route')return shell(`${routePrepView()}`);
+    if(state.prepTab&&state.prepTab!=='overview')return shell(`<section class="section"><div class="tabs">${['overview:全体','route:ルート','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット','timer:タイマー'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>${prepBody()}`);
+    return shell(`${ob414PlanSummary()}${ob414Section('準備','次に使う入口だけを並べる。細かい管理は各入口の中で見る。',[
+      {title:'ルート',sub:'出発逆算・寄り道・Maps',prep:'route',primary:true},
+      {title:'買い物',sub:'未購入を消す / LINEコピー',prep:'shopping'},
+      {title:'料理',sub:'献立・材料・調理順',prep:'meals'},
+      {title:'ギア',sub:'積込・収納・乾燥',prep:'gear'},
+      {title:'天気',sub:'雨風・設営撤収判断',prep:'weather'},
+      {title:'ペット',sub:'コタ用品・留守番確認',prep:'pets'}
+    ])}`);
+  };
+
+  // 記録タブ：保存先だけ小さく見せ、押す入口を大きく。Context説明は隠す。
+  function ob414RecordHub(){
+    const r=ob414Rec();
+    const isWalk=['walk','campWalk'].includes(r?.type)||r?.sessionTitle;
+    return shell(`<section class="section ob414Record"><div class="head"><div><h2>記録</h2><p>写真・音声・GPS・ピン・メモは保存先へ入る。</p></div><span class="pill dark">${esc(isWalk?'散歩/現地':'記録')}</span></div>${ob414MiniStatus()}<div class="ob411QuickGrid ob412QuickGrid ob414RecordGrid"><button class="primary" data-act="toggleVoice"><b>${voiceRecorder?'停止':'話す'}</b><small>音声メモ</small></button><button data-act="captureMedia" data-kind="photo"><b>撮る</b><small>写真</small></button><button data-act="captureMedia" data-kind="video"><b>動画</b><small>必要時だけ</small></button><button data-act="gps"><b>場所</b><small>現在地</small></button><button data-act="addPinQuick" data-kind="ピン"><b>ピン</b><small>地点メモ</small></button><button data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言</small></button></div><div class="ob414ActionGrid compact"><button class="primary" data-act="toggleWalk"><b>${state.walk?.active?'散歩終了':'散歩開始'}</b><small>GPSログ</small></button><button data-act="startCampWalkSession"><b>場内散歩</b><small>表示中キャンプの子セッション</small></button><button data-act="openMap"><b>Map</b><small>Google Map</small></button><button data-act="planSwitch"><b>保存先</b><small>表示/記録を切替</small></button></div>${gpsPanelHtml()}${ob412RecentRecordsHtml?ob412RecentRecordsHtml():''}</section>`);
+  }
+  field = function(){return ob414RecordHub()};
+
+  // ホーム：設計説明ではなく、5タブの入口を明確化。
+  home = function(){
+    return shell(`${ob414PlanSummary()}${ob414Section('何をする？','迷ったらここから。表示対象と保存先は右上で確認できる。',[
+      {title:'予定を見る',sub:'今日・次回・追加・切替',route:'calendar'},
+      {title:'準備する',sub:'ルート/買い物/料理/ギア/天気',route:'prep',primary:true},
+      {title:'記録する',sub:'話す/撮る/場所/ピン/メモ',route:'field'},
+      {title:'探す',sub:'キャンプ場/散歩場所候補',route:'discover'},
+      {title:'思い出',sub:'記録一覧/写真/レビュー',route:'memory'}
+    ])}${ob414Section('すぐ使う','並列利用は裏側で処理する。操作は大きい入口だけ。',[
+      {title:'コタ散歩を開始',sub:'保存先を散歩セッションへ',act:'startNormalWalkSession',primary:true},
+      {title:'場内散歩を開始',sub:'表示中キャンプの子セッション',act:'startCampWalkSession'},
+      {title:'ルートを見る',sub:'04.8の一画面ルート',prep:'route'},
+      {title:'表示/記録切替',sub:'見る対象と保存先を分ける',act:'planSwitch'}
+    ])}`);
+  };
+
+  // 予定・探す・思い出はまず入口を分かりやすく。詳細機能は既存画面を壊さず後続で仕上げる。
+  const ob414BaseCalendar = calendar;
+  calendar = function(){
+    return shell(`${ob414PlanSummary()}${ob414Section('予定','キャンプ・散歩予定を選ぶ。支払いなど関係ないサンプルは通常導線に出さない。',[
+      {title:'キャンプ作成',sub:'日程・場所・準備を作る',act:'createCampTemplate',primary:true},
+      {title:'散歩作成',sub:'通常散歩/場内散歩の予定',act:'createWalkTemplate'},
+      {title:'表示/記録切替',sub:'見る対象と保存先',act:'planSwitch'},
+      {title:'予定一覧',sub:'詳細一覧を見る',act:'showCalendarLegacy'}
+    ])}<details class="ob414Details"><summary>予定一覧を開く</summary>${ob414BaseCalendar().replace(/^<main class="main">|<\/main>$/g,'')}</details>`);
+  };
+  const ob414BaseDiscover = discover;
+  discover = function(){
+    return shell(`${ob414PlanSummary()}${ob414Section('探す','候補探しは準備やルートに混ぜない。候補保存までをここに集約。',[
+      {title:'キャンプ場候補',sub:'犬可・温水・4時間以内',act:'findCampCandidate',primary:true},
+      {title:'散歩場所候補',sub:'近場・駐車場・日陰',act:'findWalkCandidate'},
+      {title:'候補一覧',sub:'保存した候補を見る',act:'showDiscoverLegacy'}
+    ])}<details class="ob414Details"><summary>候補一覧を開く</summary>${ob414BaseDiscover().replace(/^<main class="main">|<\/main>$/g,'')}</details>`);
+  };
+  const ob414BaseMemory = memory;
+  memory = function(){
+    return shell(`${ob414PlanSummary()}${ob414Section('思い出','帰宅後の整理・レビュー・次回改善。現地の記録操作とは分ける。',[
+      {title:'記録一覧',sub:'写真/音声/メモを確認',act:'showMemoryLegacy',primary:true},
+      {title:'次回改善',sub:'レビューへ残す',act:'addReview'},
+      {title:'最後の記録を表示中にも関連',sub:'複数リンク',act:'linkLastToView'}
+    ])}<details class="ob414Details"><summary>思い出詳細を開く</summary>${ob414BaseMemory().replace(/^<main class="main">|<\/main>$/g,'')}</details>`);
+  };
+
+  // 04.14で追加したダミー入口は、未実装なら既存詳細を開く/案内するだけに止める。
+  const ob414BaseAct = act;
+  act = function(a,el){
+    if(a==='showCalendarLegacy'||a==='showDiscoverLegacy'||a==='showMemoryLegacy'){toast('下の詳細を開いて確認');return;}
+    if(a==='findCampCandidate'||a==='findWalkCandidate'){state.route='discover';save();render(false);toast('候補探しは探すタブで整理');return;}
+    return ob414BaseAct(a,el);
+  };
+
+  function ob414FinalAudit(){
+    ob413NormalizeContext?.();
+    state.lastAudit0414={
+      version:VERSION,
+      time:new Date().toISOString(),
+      checks:[
+        {name:'route one-screen restored',pass:typeof routePrepView==='function'},
+        {name:'concurrent large panel disabled',pass:ob412ConcurrentPanel()===''},
+        {name:'context model internal',pass:!!state.context&&Array.isArray(state.sessions)&&Array.isArray(state.links)},
+        {name:'tab homes overridden',pass:typeof home==='function'&&typeof prep==='function'&&typeof field==='function'}
+      ]
+    };
+    state.lastAudit0414.pass=state.lastAudit0414.checks.every(x=>x.pass);
+  }
+  ob414FinalAudit();
+
 
   // RESTORE04.13: first paint after Context Model overrides.
   save();

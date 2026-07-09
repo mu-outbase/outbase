@@ -7517,3 +7517,26 @@ select:focus{
 .ob413Home .grid2 button b{display:block;font-size:14px;}
 .ob413Home .grid2 button small{display:block;margin-top:4px;line-height:1.35;opacity:.78;}
 .planSwitchCard .fieldRecentList{margin-top:10px;}
+
+
+/* RESTORE04.14 タブホームUX整理 / Contextは裏側へ */
+.ob414MiniStatus{display:flex;align-items:center;gap:8px;margin:8px 0 10px;padding:8px;border:1px solid rgba(28,22,14,.10);border-radius:18px;background:rgba(255,255,255,.74);box-shadow:0 10px 24px rgba(42,33,20,.06);}
+.ob414MiniStatus span{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ob414MiniStatus b{display:inline-block;margin-right:6px;color:var(--ink);font-size:12px;}
+.ob414MiniStatus button{border:0;border-radius:999px;background:rgba(20,49,39,.10);padding:8px 12px;font-weight:900;color:var(--green0);}
+.ob414MiniStatus.split{border-color:rgba(200,157,75,.32);background:linear-gradient(180deg,rgba(255,253,247,.9),rgba(246,236,215,.8));}
+.ob414ActionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.ob414ActionGrid button,.ob414RecordGrid button{min-height:82px;border-radius:22px;border:1px solid rgba(33,27,19,.10);background:rgba(255,255,255,.78);box-shadow:0 12px 26px rgba(36,29,20,.08);padding:16px;text-align:left;color:var(--ink);}
+.ob414ActionGrid button.primary,.ob414RecordGrid button.primary{background:linear-gradient(135deg,var(--green1),var(--green0));color:#fff;}
+.ob414ActionGrid b,.ob414RecordGrid b{display:block;font-size:20px;line-height:1.15;letter-spacing:.01em;}
+.ob414ActionGrid small,.ob414RecordGrid small{display:block;margin-top:7px;color:inherit;opacity:.68;font-weight:800;line-height:1.35;}
+.ob414ActionGrid.compact button{min-height:62px;border-radius:18px;padding:12px;}
+.ob414ActionGrid.compact b{font-size:16px;}
+.ob414Summary .head{margin-bottom:2px;}
+.ob414HomeSection .head p,.ob414Record .head p{line-height:1.55;}
+.ob414Details{margin-top:12px;border-radius:22px;background:rgba(255,255,255,.62);border:1px solid rgba(36,30,22,.10);padding:12px;}
+.ob414Details summary{font-weight:900;cursor:pointer;}
+.ob414Details .main{padding:0!important;}
+.ob412Concurrent,.ob413Context,.ob413Home{display:none!important;}
+.obRoute045,.obRoute048{padding-bottom:8px!important;}
+.obTop0413 .ob412RecordStrip{font-size:13px;}
