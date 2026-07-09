@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-11-field03-entry-audit-context-20260709';
+  const VERSION = 'outbase-restore04-12-field03-view-record-session-20260709';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-11-field03-entry-audit-context-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-12-field03-view-record-session-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -25,7 +25,7 @@
 
   function seed(){
     return {
-      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', fieldMode:'kotaWalk', fieldActionMode:'kota', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null, lastError:null,
+      route:'home', stage:'before', currentMonth:'2026-07', selectedDate:'2026-07-07', currentPlanId:'akagi', recordPlanId:'', settings:{home:'柏市',drive:'4時間以内',mode:'sample',starterDone:false,allergy:'貝アレルギー / 魚卵苦手',servings:'大人2人+コタ'}, prepTab:'overview', gearTab:'list', gearFilter:'', walkMode:'normal', fieldMode:'kotaWalk', fieldActionMode:'kota', memoryTab:'review', memoryFilter:'all', discoverTab:'camp', candidateFilter:'all', centerQuery:'', familyTab:'pets', connectTab:'export', mealTab:'plan', timerTab:'active', siteMapTab:'map', insightTab:'all', drawer:null, toast:null, importMode:null, lastError:null,
       pets:[
         {id:'kota',name:'コタ',kind:'フレブル',role:'犬',age:'4歳',note:'暑さ寒さと地面温度を優先。体調メモは非公開。',active:true},
         {id:'ao',name:'アオ',kind:'茶虎',role:'猫',age:'4歳',note:'甘えん坊・泣き虫。留守番確認。',active:true},
@@ -6322,7 +6322,369 @@ ${starterPanelHtml()}
 
   ob411RepairState();
 
-  // RESTORE04.11: first paint after audit/context overrides.
+
+  /* RESTORE04.12: 表示中プラン / 記録中セッション分離
+     監査理由:
+       - 準備中にもコタ散歩をする
+       - 散歩中にもキャンプ準備を見る
+       - 「見ている予定」と「保存している記録先」を同一扱いにすると、必要機能を塞ぐか、保存先事故が起きる
+     固定方針:
+       - currentPlanId は表示中プランとして使う
+       - recordPlanId は記録中セッション/保存先として使う
+       - 準備/ルート/料理/ギア/天気は表示中プランを見る
+       - 話す/撮る/場所/ピン/メモ/GPSは記録中セッションへ保存する
+       - 散歩中にキャンプを見る時、保存先は勝手に赤城山へ変えない
+  */
+  const OUTBASE_RESTORE0412_DUAL_CONTEXT_LOCK = Object.freeze({
+    approvedRouteBase:'RESTORE04.8 route API-less MVP',
+    base:'RESTORE04.11 entry audit',
+    display:'表示中プラン。準備・ルート・料理・ギア・天気など、今見ている対象。',
+    recording:'記録中セッション。GPS・写真・動画・音声・ピン・メモの保存先。',
+    safety:'表示切替だけでは記録先を変えない。記録先変更は明示操作のみ。',
+    useCase:'赤城山の準備を見ながら、コタ散歩を記録する。'
+  });
+
+  function ob412Selectable(e){return !!e && (e.type==='camp'||e.type==='walk')}
+  function ob412Plans(){return (state.events||[]).filter(ob412Selectable)}
+  function ob412Find(id){return (state.events||[]).find(e=>e.id===id)}
+  function ob412FirstWalk(){return ob412Plans().find(e=>e.type==='walk')||null}
+  function ob412FirstCamp(){return ob412Plans().find(e=>e.type==='camp')||null}
+  function ob412Inbox(){return {id:'inbox',title:'未確認箱',type:'memo',start:'',end:'',place:'',memo:'プラン未選択の仮保存先',inbox:true}}
+  function ob412DisplayPlan(){
+    const cur=ob412Find(state.currentPlanId);
+    if(ob412Selectable(cur))return cur;
+    const camp=ob412FirstCamp(), walk=ob412FirstWalk();
+    return camp||walk||ob412Inbox();
+  }
+  function ob412RecordPlan(){
+    const rec=ob412Find(state.recordPlanId);
+    if(ob412Selectable(rec))return rec;
+    if(state.walk?.active){const w=ob412FirstWalk(); if(w)return w;}
+    const cur=ob412DisplayPlan();
+    return ob412Selectable(cur)?cur:ob412Inbox();
+  }
+  function ob412Kind(p){return p?.type==='camp'?'キャンプ':p?.type==='walk'?'散歩':'未確認'}
+  function ob412SameContext(){return (ob412DisplayPlan()?.id||'')===(ob412RecordPlan()?.id||'')}
+  function ob412DisplayIsCamp(){return ob412DisplayPlan()?.type==='camp'}
+  function ob412DisplayIsWalk(){return ob412DisplayPlan()?.type==='walk'}
+  function ob412RecordIsWalk(){return ob412RecordPlan()?.type==='walk'}
+  function ob412RecordIsCamp(){return ob412RecordPlan()?.type==='camp'}
+  function ob412SaveTarget(){
+    const p=ob412RecordPlan();
+    return ob412Selectable(p)?{id:p.id,title:p.title,type:p.type,inbox:false}:{id:'inbox',title:'未確認箱',type:'memo',inbox:true};
+  }
+  function ob412RepairState(){
+    let changed=false;
+    const before=(state.events||[]).length;
+    state.events=(state.events||[]).filter(e=>!(e.id==='pay1' && e.title==='カード支払い確認'));
+    if((state.events||[]).length!==before)changed=true;
+    if(!ob412Selectable(ob412Find(state.currentPlanId))){
+      const next=ob412FirstCamp()||ob412FirstWalk();
+      if(next){state.currentPlanId=next.id;changed=true;}
+    }
+    if(state.recordPlanId && !ob412Selectable(ob412Find(state.recordPlanId))){state.recordPlanId='';changed=true;}
+    if(state.walk?.active && !ob412RecordIsWalk()){
+      const w=ob412FirstWalk();
+      if(w){state.recordPlanId=w.id;changed=true;}
+    }
+    if(changed)save();
+  }
+  ob412RepairState();
+
+  // 表示対象は currentPlanId、保存対象は recordPlanId へ分離する。
+  current = function(){return ob412DisplayPlan()}
+  ob411SaveTarget = function(){return ob412SaveTarget()}
+  ob411PlanKindLabel = function(p=ob412DisplayPlan()){return ob412Kind(p)}
+  ob411IsCamp = function(){return ob412DisplayIsCamp()}
+  ob411IsWalk = function(){return ob412DisplayIsWalk()}
+  sortedPlans = function(){
+    const view=ob412DisplayPlan()?.id;
+    const rec=ob412RecordPlan()?.id;
+    const rank=e=>{
+      if(e.id===view)return -200000;
+      if(e.id===rec)return -150000;
+      if(!e.start)return 1000000;
+      return Math.abs((dObj(e.start)-dObj(state.selectedDate||today()))/86400000);
+    };
+    return ob412Plans().slice().sort((a,b)=>rank(a)-rank(b));
+  }
+  buildPlanContext = function(){
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan();
+    return `【OUTBASE】\n表示中：${view.title}（${ob412Kind(view)}）\n記録中：${rec.title}（${ob412Kind(rec)}）\n\n表示中プランは準備・ルートを見る対象。記録中セッションは写真・音声・GPSの保存先。`;
+  }
+
+  function ob412SetView(id,opts={}){
+    const e=ob412Find(id);
+    if(!ob412Selectable(e)){toast('表示できるのはキャンプ/散歩');return;}
+    state.currentPlanId=id;
+    if(e.start){state.selectedDate=e.start;state.currentMonth=e.start.slice(0,7)}
+    state.drawer=null;state.routeFocus='';state.__scrollY=0;
+    save();
+    if(opts.render!==false){render(false);toast(`${e.title}を表示中にした`)}
+  }
+  function ob412SetRecord(id,opts={}){
+    const e=ob412Find(id);
+    if(!ob412Selectable(e)){toast('記録先にできるのはキャンプ/散歩');return;}
+    state.recordPlanId=id;
+    if(e.type==='walk'){state.walkMode='normal';state.fieldMode='kotaWalk';state.fieldActionMode='kota';}
+    state.drawer=null;state.routeFocus='';state.__scrollY=0;
+    save();
+    if(opts.render!==false){render(false);toast(`${e.title}を記録先にした`)}
+  }
+  function ob412SetBoth(id){
+    const e=ob412Find(id);
+    if(!ob412Selectable(e))return;
+    ob412SetView(id,{render:false});
+    if(state.walk?.active && e.type!=='walk'){
+      // 散歩記録中にキャンプを開く時は、保存先事故防止のため表示だけ切替。
+      const w=ob412FirstWalk(); if(w)state.recordPlanId=w.id;
+      save();render(false);toast('散歩記録中なので表示だけ切替。記録先は散歩のまま');return;
+    }
+    ob412SetRecord(id,{render:false});
+    save();render(false);toast(`${e.title}を表示/記録の両方にした`);
+  }
+  selectPlan = function(id){return ob412SetBoth(id)}
+  setCurrentPlan = function(id){return ob412SetBoth(id)}
+
+  planSwitchCard = function(e){
+    const view=ob412DisplayPlan()?.id===e.id;
+    const rec=ob412RecordPlan()?.id===e.id;
+    const isCamp=e.type==='camp';
+    return `<div class="planSwitchCard ${view||rec?'current':''}">
+      <div class="planSwitchTop"><span><b>${esc(e.title)}</b><small>${esc(isCamp?'キャンプ':'散歩')} / ${esc(planSpan(e))} / ${esc(e.place||'場所未設定')}</small></span><span class="pill ${view&&rec?'dark':'wood'}">${view&&rec?'表示＋記録':view?'表示中':rec?'記録中':(isCamp?'キャンプ':'散歩')}</span></div>
+      <div class="planMiniStats"><span>表示<br>${view?'現在':'候補'}</span><span>記録<br>${rec?'保存先':'候補'}</span><span>用途<br>${isCamp?'準備/ルート':'散歩/GPS'}</span><span>安全<br>${state.walk?.active&&isCamp?'見るだけ可':'切替可'}</span></div>
+      <div class="planDrawerOps"><button data-act="viewPlan" data-id="${e.id}">見る</button><button data-act="recordPlan" data-id="${e.id}">記録先</button><button class="${view&&rec?'primary':''}" data-act="selectPlan" data-id="${e.id}">${view&&rec?'選択中':'表示＋記録'}</button><button data-act="openEvent" data-id="${e.id}">予定変更</button></div>
+    </div>`;
+  }
+  planSwitchHtml = function(){
+    const plans=sortedPlans();
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan();
+    return `<div class="form"><div class="head"><div><h2>表示中 / 記録中</h2><p>見る予定と保存先を分けられる。散歩中にキャンプ準備を見ても、記録先は勝手に変えない。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div>
+      <div class="ob412DuoBox"><span><b>表示中</b><small>${esc(view.title||'未確認')} / ${esc(ob412Kind(view))}</small></span><span><b>記録中</b><small>${esc(rec.title||'未確認')} / ${esc(ob412Kind(rec))}</small></span></div>
+      <div class="planSwitchList">${plans.map(planSwitchCard).join('') || `<div class="honestBox"><b>プランなし</b><p>記録は未確認箱に仮保存する。</p></div>`}</div>
+      <div class="actions"><button class="btn primary" type="button" data-act="createCampTemplate">キャンプ作成</button><button class="btn" type="button" data-act="createWalkTemplate">散歩作成</button></div>
+    </div>`;
+  }
+
+  top = function(){
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan();
+    const diff=!ob412SameContext();
+    return `<div class="top obTop046 obTop0411 obTop0412">
+      <div class="top-row">
+        <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(view.title||'未確認箱')}</b><small>表示中 / ${esc(ob412Kind(view))}</small></button>
+      </div>
+      <button class="ob412RecordStrip ${diff||state.walk?.active?'on':''}" data-act="planSwitch"><b>記録中：${esc(rec.title||'未確認箱')}</b><small>${esc(ob412Kind(rec))}${diff?' / 表示とは別':' / 表示と同じ'}</small></button>
+    </div>`;
+  }
+  function ob412DuoStatusHtml(){
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan();
+    const diff=!ob412SameContext();
+    return `<section class="section ob412Status"><div class="ob412DuoBox"><span><b>表示中</b><small>${esc(view.title||'未確認')} / ${esc(ob412Kind(view))}</small></span><span><b>記録中</b><small>${esc(rec.title||'未確認')} / ${esc(ob412Kind(rec))}</small></span></div>${diff?`<p>今は「見る対象」と「保存先」を分けている。準備を見ても記録先は変わらない。</p>`:`<p>表示と記録は同じ。必要なら右上から分けられる。</p>`}</section>`;
+  }
+  function ob412ConcurrentPanel(){
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan();
+    const walk=ob412FirstWalk();
+    const diff=!ob412SameContext();
+    const showStart=walk && view.type==='camp';
+    if(!diff && !showStart && !state.walk?.active)return '';
+    return `<section class="section ob412Concurrent"><div class="head"><div><h2>同時利用</h2><p>準備を見ながら散歩記録、散歩中にキャンプ準備確認ができる。</p></div><span class="pill dark">表示/記録分離</span></div>
+      <div class="ob412DuoBox"><span><b>表示中</b><small>${esc(view.title)} / ${esc(ob412Kind(view))}</small></span><span><b>記録中</b><small>${esc(rec.title)} / ${esc(ob412Kind(rec))}</small></span></div>
+      <div class="shareOps">
+        ${walk?`<button data-act="recordPlan" data-id="${walk.id}">コタ散歩を記録先</button>`:''}
+        ${walk?`<button class="primary" data-act="startWalkRecording">${state.walk?.active?'散歩記録へ':'コタ散歩開始'}</button>`:''}
+        <button data-route="field">記録画面</button><button data-act="planSwitch">表示/記録を変える</button>
+      </div></section>`;
+  }
+
+  function ob412InjectConcurrent(html){
+    const panel=ob412ConcurrentPanel();
+    if(!panel)return html;
+    return html.replace('<main class="main">','<main class="main">'+panel);
+  }
+  const ob412BasePrep = prep;
+  prep = function(){
+    if(ob412DisplayIsWalk()){
+      // 表示対象が散歩なら散歩準備。キャンプ準備を見たい時は「見る」をキャンプへ切り替える。
+      return ob412BasePrep();
+    }
+    return ob412InjectConcurrent(ob412BasePrep());
+  }
+  const ob412BaseRoutePrepView = routePrepView;
+  routePrepView = function(){
+    if(ob412DisplayIsCamp())return ob412BaseRoutePrepView();
+    const camp=ob412FirstCamp();
+    return `<section class="section obContext0412"><div class="head"><div><h2>${esc(ob412DisplayPlan().title||'散歩')}</h2><p>表示中は${esc(ob412Kind(ob412DisplayPlan()))}。キャンプ用ルートを見るなら表示対象だけキャンプへ切り替える。</p></div><span class="pill dark">見るだけ切替</span></div><div class="honestBox"><b>記録先は変えない</b><p>キャンプルートを見ても、記録中がコタ散歩なら写真・GPS・音声は散歩へ保存される。</p><div class="shareOps">${camp?`<button class="primary" data-act="viewPlan" data-id="${camp.id}">キャンプ準備を見る</button>`:''}<button data-route="field">記録へ</button><button data-act="planSwitch">表示/記録を変える</button></div></div></section>`;
+  }
+
+  function ob412RecordButtons(){
+    return `<div class="ob411QuickGrid ob412QuickGrid">
+      <button class="primary" data-act="toggleVoice"><b>${voiceRecorder?'停止':'話す'}</b><small>音声メモ</small></button>
+      <button data-act="captureMedia" data-kind="photo"><b>撮る</b><small>写真</small></button>
+      <button data-act="captureMedia" data-kind="video"><b>動画</b><small>必要時だけ</small></button>
+      <button data-act="gps"><b>場所</b><small>現在地</small></button>
+      <button data-act="addPinQuick" data-kind="ピン"><b>ピン</b><small>地点メモ</small></button>
+      <button data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言</small></button>
+    </div>`;
+  }
+  function ob412RecentRecordsHtml(){
+    const target=ob412SaveTarget();
+    const rec=(state.records||[]).filter(r=>(r.eventId||'inbox')===target.id).slice(-5).reverse();
+    return `<div class="fieldRecentList ob411Recent">${rec.map(r=>`<div class="sessionRecentCard"><b>${esc(r.title||recordKindLabel(r.kind))}</b><small>${esc(r.time||'')} / ${esc(r.text||'')}<br>保存先：${esc(target.title)}</small></div>`).join('') || `<div class="sessionRecentCard"><b>まだ記録なし</b><small>話す・撮る・場所・メモから残す。</small></div>`}</div>`;
+  }
+  function ob412RecordHub(){
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan(), target=ob412SaveTarget();
+    const isWalk=target.type==='walk', isCamp=target.type==='camp';
+    return shell(`${ob412DuoStatusHtml()}<section class="section obRecord0412">
+      <div class="head"><div><h2>${isWalk?'散歩記録':isCamp?'キャンプ記録':'とりあえず記録'}</h2><p>保存先：${esc(target.title)}。表示中：${esc(view.title)}。</p></div><span class="pill dark">${esc(target.inbox?'未確認':ob412Kind(rec))}</span></div>
+      ${ob412RecordButtons()}
+      <div class="ob411SubGrid">
+        ${isWalk?`<button class="primary" data-act="toggleWalk"><b>${state.walk?.active?'散歩終了':'散歩開始'}</b><small>GPSログ</small></button>`:''}
+        ${isCamp?`<button data-prep="route"><b>ルート</b><small>表示中キャンプを見る</small></button>`:''}
+        ${!isWalk && ob412FirstWalk()?`<button data-act="startWalkRecording"><b>コタ散歩開始</b><small>記録先だけ散歩へ</small></button>`:''}
+        <button data-act="openMap"><b>Map</b><small>Google Map</small></button>
+        <button data-act="exportGpx"><b>GPX</b><small>履歴出力</small></button>
+      </div>
+      <div class="honestBox"><b>保存ルール</b><p>${target.inbox?'プラン未選択なので未確認箱へ仮保存。あとで整理する。':`写真・音声・GPS・ピン・メモは「${esc(target.title)}」に保存。準備画面を見ても保存先は変わらない。`}</p></div>
+      ${gpsPanelHtml()}
+      ${ob412RecentRecordsHtml()}
+      ${isCamp?`<details class="ob411Advanced"><summary>詳細現地モード</summary>${ob411LegacyFieldHtml()}</details>`:''}
+    </section>`);
+  }
+  field = function(){return ob412RecordHub()}
+
+  home = function(){
+    const view=ob412DisplayPlan(), rec=ob412RecordPlan();
+    return shell(`
+      ${ob412DuoStatusHtml()}
+      <section class="section ob411Home ob412Home"><div class="head"><div><h2>何をする？</h2><p>準備は表示中プラン、記録は記録中セッションへ。必要なら同時に使える。</p></div><button class="btn" data-act="planSwitch">変更</button></div>
+        <div class="ob411FeatureGrid">
+          ${ob411FeatureCard('calendar','予定を見る','キャンプ/散歩の予定を確認','▦')}
+          ${ob411FeatureCard('prep',view.type==='walk'?'散歩準備':'キャンプ準備',view.type==='walk'?'表示中の散歩を見る':'表示中キャンプの料理・買物・ギア・天気・ルート','◫',false,'overview')}
+          ${ob411FeatureCard('field','記録する',`保存先：${rec.title||'未確認箱'}`,'＋',true)}
+          ${ob411FeatureCard('discover','探す','キャンプ場・散歩場所候補','⌕')}
+          ${ob411FeatureCard('memory','思い出','記録一覧・レビュー・次回改善','○')}
+        </div>
+      </section>
+      ${ob412ConcurrentPanel()}
+    `);
+  }
+
+  const ob412BaseAddMediaRecord = addMediaRecord;
+  addMediaRecord = function(kind,file,dataUrl){
+    const target=ob412SaveTarget();
+    const p=state.walk.track[state.walk.track.length-1];
+    state.records=state.records||[];
+    state.records.push({
+      id:uid('rec'), eventId:target.id, planTitle:target.title, kind,
+      title:recordKindLabel(kind), text:file?.name?`${file.name} を記録`:((kind==='voice'&&voiceLiveText)?voiceLiveText:''),
+      mode:target.type==='walk'?'散歩記録':'キャンプ記録', time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}), date:today(),
+      lat:p?.lat||null, lng:p?.lng||null, private:false, fieldModeId:state.fieldMode||'',
+      target:target.inbox?'未確認箱':target.title, viewPlanTitle:ob412DisplayPlan().title, flow:[target.title], tags:[ob412Kind(ob412RecordPlan()), recordKindLabel(kind)].filter(Boolean),
+      mediaName:file?.name||'', mediaType:file?.type||'', mediaSize:file?.size||0, dataUrl:dataUrl||''
+    });
+    if(kind==='photo'||kind==='voice')autoPin(kind==='photo'?'写真':'音声', recordKindLabel(kind), file?.name||voiceLiveText||'');
+    if(mediaSize()>1800000){const packed=compactStateForStorage(state);state=packed.state;state.lastError={message:`メディア容量を自動軽量化: ${packed.removed}件`,time:new Date().toISOString(),route:state.route};}
+  }
+  addPublicRecord = function(kind,text,title){
+    const target=ob412SaveTarget();
+    const p=state.walk.track[state.walk.track.length-1];
+    state.records=state.records||[];
+    state.records.push({id:uid('rec'),eventId:target.id,planTitle:target.title,kind,title:title||recordKindLabel(kind),text:text||'',mode:target.type==='walk'?'散歩記録':'キャンプ記録',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:false,fieldModeId:state.fieldMode||'',target:target.inbox?'未確認箱':target.title,viewPlanTitle:ob412DisplayPlan().title,flow:[target.title],tags:[ob412Kind(ob412RecordPlan()),recordKindLabel(kind)].filter(Boolean)});
+  }
+  addFieldRecord = function(kind,text,title,opts={}){
+    const target=ob412SaveTarget();
+    const p=state.walk.track[state.walk.track.length-1];
+    state.records=state.records||[];
+    state.records.push({id:uid('rec'),eventId:target.id,planTitle:target.title,kind:kind||'memo',title:title||recordKindLabel(kind)||kind||'記録',text:text||'',mode:target.type==='walk'?'散歩記録':'キャンプ記録',fieldModeId:state.fieldMode||'',target:opts.target||target.title,viewPlanTitle:ob412DisplayPlan().title,tags:opts.tags||[ob412Kind(ob412RecordPlan())],flow:opts.flow||[target.title],time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:!!opts.private});
+  }
+  sessionRecord = function(data){
+    const target=ob412SaveTarget();
+    const p=state.walk.track[state.walk.track.length-1];
+    const rec={id:uid('rec'),eventId:target.id,planTitle:target.title,kind:data.kind||'memo',title:data.title||data.kind||'記録',text:data.text||'',mode:target.type==='walk'?'散歩記録':'キャンプ記録',sessionGroup:data.group||'session',target:data.target||target.title,viewPlanTitle:ob412DisplayPlan().title,flow:data.flow||[target.title],tags:data.tags||[ob412Kind(ob412RecordPlan())],time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:!!data.private};
+    state.records=state.records||[];state.records.push(rec);return rec;
+  }
+  pushGpsPoint = function(lat,lng,source='gps'){
+    const target=ob412SaveTarget();
+    const p={lat,lng,source,mode:fieldModeName(),time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),ts:Date.now(),eventId:target.id,planTitle:target.title,viewPlanTitle:ob412DisplayPlan().title};
+    const last=state.walk.track[state.walk.track.length-1];
+    const dist=last?haversine(last,p):0;
+    if(last && dist>GPS_JUMP_LIMIT_KM){state.notes.push({id:uid('note'),title:'GPSジャンプ除外',text:`${dist.toFixed(2)}km / ${p.time}`,private:false});return false;}
+    state.walk.track.push(p);maybeAutoEndDrive(p,last,dist);return true;
+  }
+  ensureWalkSession = function(){
+    state.walk.sessions=state.walk.sessions||[];
+    let s=state.walk.sessions.find(x=>x.active);
+    if(!s){const target=ob412SaveTarget();s={id:uid('walk'),eventId:target.id,planTitle:target.title,mode:fieldModeName(),startedAt:Date.now(),endedAt:0,active:true,startCount:state.walk.track.length};state.walk.sessions.push(s);}
+    return s;
+  }
+  autoPin = function(kind='ピン',name='記録',note=''){
+    const target=ob412SaveTarget();
+    const p=state.walk.track[state.walk.track.length-1];
+    state.mapPins=state.mapPins||[];
+    state.mapPins.push({id:uid('pin'),eventId:target.id,planTitle:target.title,name,kind,x:Math.round(18+Math.random()*64),y:Math.round(18+Math.random()*64),lat:p?.lat||null,lng:p?.lng||null,public:!/(うんち|おしっこ|体調|非公開)/.test(kind),note,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),score:3});
+  }
+  addPinQuick = function(kind){
+    const name=prompt(`${kind}名`,kind)||kind;
+    const note=prompt('メモ','')||'';
+    const target=ob412SaveTarget();
+    const p=state.walk.track[state.walk.track.length-1];
+    state.mapPins=state.mapPins||[];
+    state.mapPins.push({id:uid('pin'),eventId:target.id,planTitle:target.title,name,kind,x:Math.round(18+Math.random()*64),y:Math.round(18+Math.random()*64),lat:p?.lat||null,lng:p?.lng||null,public:!/(危険|注意|非公開|体調|うんち|おしっこ)/.test(kind),note,score:kind==='木陰'?5:kind==='危険'?1:3});
+    if(p)state.walk.spots.push({name,type:kind,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),lat:p.lat,lng:p.lng,mode:fieldModeName(),eventId:target.id});
+    save();render();toast('ピン追加');
+  }
+  const ob412BaseToggleWalk = toggleWalk;
+  toggleWalk = function(){
+    if(!state.walk?.active && !ob412RecordIsWalk()){
+      const w=ob412FirstWalk(); if(w)state.recordPlanId=w.id;
+    }
+    return ob412BaseToggleWalk();
+  }
+  function ob412StartWalkRecording(){
+    const w=ob412FirstWalk();
+    if(w)state.recordPlanId=w.id;
+    state.route='field';state.stage='field';state.walkMode='normal';state.fieldMode='kotaWalk';state.fieldActionMode='kota';
+    save();
+    if(!state.walk?.active)return toggleWalk();
+    render(false);toast('散歩記録へ戻る');
+  }
+
+  const ob412BaseAct = act;
+  act = function(a,el){
+    if(a==='viewPlan')return ob412SetView(el.dataset.id);
+    if(a==='recordPlan')return ob412SetRecord(el.dataset.id);
+    if(a==='startWalkRecording')return ob412StartWalkRecording();
+    return ob412BaseAct(a,el);
+  }
+  const ob412BaseBind = bind;
+  bind = function(){
+    ob412BaseBind();
+    document.querySelectorAll('[data-prep]').forEach(el=>el.onclick=()=>{
+      state.route='prep';
+      // 準備は表示中プランを見る。記録先は変えない。
+      state.prepTab=ob412DisplayIsWalk()?'overview':(el.dataset.prep||'overview');
+      state.stage=ob412DisplayIsWalk()?'field':'prep';
+      state.__scrollY=0;save();render(false);
+    });
+    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{
+      const route=el.dataset.route;
+      state.route=route;
+      if(route==='prep'){
+        state.prepTab=ob412DisplayIsWalk()?'overview':(state.prepTab&&state.prepTab!=='route'?state.prepTab:'overview');
+        state.stage=ob412DisplayIsWalk()?'field':'prep';
+      }else if(route==='field'){
+        state.stage='field';
+      }
+      state.routeFocus='';state.__scrollY=0;save();render(false);
+      const run=()=>{try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0}catch(e){}};
+      const raf=window.requestAnimationFrame||((fn)=>setTimeout(fn,0));raf(run);setTimeout(run,60);
+    });
+  }
+
+  ob412RepairState();
+
+  // RESTORE04.12: first paint after display/record separation overrides.
   render();
 
 })();

@@ -7486,3 +7486,26 @@ select:focus{
 .obRecord0411 .gpsPanel{margin-top:12px;}
 @media (min-width:720px){.ob411FeatureGrid{grid-template-columns:repeat(2,1fr)}.ob411QuickGrid{grid-template-columns:repeat(3,1fr)}.ob411SubGrid{grid-template-columns:repeat(4,1fr)}}
 @media (max-width:520px){.ob411QuickGrid button,.ob411SubGrid button{min-height:72px;padding:13px 10px}.ob411QuickGrid b,.ob411SubGrid b{font-size:17px}}
+
+
+/* RESTORE04.12 表示中プラン / 記録中セッション分離 */
+.obTop0412 .top-row{margin-bottom:6px!important;}
+.ob412RecordStrip{
+  width:100%;border:1px solid rgba(36,30,22,.12);border-radius:16px;background:rgba(255,255,255,.72);
+  padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;color:inherit;
+}
+.ob412RecordStrip b{font-size:12px;line-height:1.15;}
+.ob412RecordStrip small{font-size:10px;opacity:.72;line-height:1.1;}
+.ob412RecordStrip.on{background:#15140f;color:#fff;border-color:#15140f;box-shadow:0 8px 18px rgba(0,0,0,.12)}
+.ob412DuoBox{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;}
+.ob412DuoBox span{border:1px solid rgba(36,30,22,.12);border-radius:16px;background:rgba(255,255,255,.74);padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0;}
+.ob412DuoBox b{font-size:12px;}
+.ob412DuoBox small{font-size:11px;opacity:.74;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ob412Status p{margin:8px 2px 0;color:var(--muted);font-size:12px;line-height:1.55;}
+.ob412Concurrent{border:1px solid rgba(30,24,16,.13);background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(247,239,226,.76));}
+.ob412QuickGrid button{min-height:76px;}
+.ob412Home .ob411FeatureGrid{margin-top:10px;}
+.obContext0412 .shareOps,.ob412Concurrent .shareOps{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.obContext0412 .shareOps button,.ob412Concurrent .shareOps button{min-height:40px;border-radius:14px;border:1px solid rgba(36,30,22,.12);background:#fff;padding:8px 12px;}
+.obContext0412 .shareOps button.primary,.ob412Concurrent .shareOps button.primary{background:#15140f;color:#fff;}
+@media(max-width:390px){.ob412DuoBox{grid-template-columns:1fr}.ob412RecordStrip{align-items:flex-start;flex-direction:column}}
