@@ -7509,3 +7509,11 @@ select:focus{
 .obContext0412 .shareOps button,.ob412Concurrent .shareOps button{min-height:40px;border-radius:14px;border:1px solid rgba(36,30,22,.12);background:#fff;padding:8px 12px;}
 .obContext0412 .shareOps button.primary,.ob412Concurrent .shareOps button.primary{background:#15140f;color:#fff;}
 @media(max-width:390px){.ob412DuoBox{grid-template-columns:1fr}.ob412RecordStrip{align-items:flex-start;flex-direction:column}}
+
+/* RESTORE04.13 Context Model 最小導入 */
+.obTop0413 .top-row{margin-bottom:8px!important;}
+.ob413Context,.ob413Home{position:relative;}
+.ob413Context .shareOps,.ob413Home .shareOps{margin-top:10px;}
+.ob413Home .grid2 button b{display:block;font-size:14px;}
+.ob413Home .grid2 button small{display:block;margin-top:4px;line-height:1.35;opacity:.78;}
+.planSwitchCard .fieldRecentList{margin-top:10px;}

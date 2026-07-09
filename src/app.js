@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-12-field03-view-record-session-20260709';
+  const VERSION = 'outbase-restore04-13-field03-context-model-min-20260709';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-12-field03-view-record-session-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-13-field03-context-model-min-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -6682,9 +6682,429 @@ ${starterPanelHtml()}
     });
   }
 
-  ob412RepairState();
 
-  // RESTORE04.12: first paint after display/record separation overrides.
+  /* RESTORE04.13: Context Model最小導入
+     OUTBASE_CONTEXT_MODEL_LOCK_v1 準拠。
+     表示対象 / 記録対象 / セッション / 複数リンクの土台を追加する。
+     04.8ルートAPIなし版の計算・見た目は触らない。
+  */
+  const OUTBASE_CONTEXT_MODEL_LOCK_0413 = Object.freeze({
+    approvedRouteBase:'RESTORE04.8',
+    lock:'OUTBASE_CONTEXT_MODEL_LOCK_v1',
+    purpose:'単一currentPlanId中心から、viewTarget / recordTarget / session / record / link の土台へ移行する最小実装。',
+    uiDepth:'UIは最大3階層程度に抑える。内部は可変階層 + 複数関連リンク。',
+    rule:'表示切替で保存先を変えない。保存先変更は明示操作だけ。'
+  });
+  function ob413Now(){return new Date().toISOString()}
+  function ob413Event(id){return (state.events||[]).find(e=>e.id===id)||null}
+  function ob413Session(id){return (state.sessions||[]).find(s=>s.id===id)||null}
+  function ob413InboxId(){return state.context?.inboxId||'inbox'}
+  function ob413Inbox(){return {id:ob413InboxId(),type:'inbox',title:'未確認箱',kind:'未確認',rootPlanId:'',sessionId:'',inbox:true}}
+  function ob413PlanKind(e){return e?.type==='camp'?'キャンプ':e?.type==='walk'?'散歩':e?.type==='inbox'?'未確認':(typeName[e?.type]||'予定')}
+  function ob413SelectableEvent(e){return !!e && ['camp','walk'].includes(e.type)}
+  function ob413RootPlanForSession(s){return ob413Event(s?.rootPlanId)||null}
+  function ob413TargetLabel(t){
+    if(!t)return '未確認箱';
+    if(t.type==='session'){
+      const root=ob413RootPlanForSession(t);
+      return root?`${root.title} / ${t.title}`:t.title;
+    }
+    return t.title||'未確認箱';
+  }
+  function ob413NormalizeContext(){
+    state.sessions=Array.isArray(state.sessions)?state.sessions:[];
+    state.links=Array.isArray(state.links)?state.links:[];
+    state.context={
+      viewTargetId:state.currentPlanId||state.events?.[0]?.id||'akagi',
+      viewTargetType:'plan',
+      recordTargetId:state.recordPlanId||state.currentPlanId||state.events?.[0]?.id||'akagi',
+      recordTargetType:'plan',
+      primaryRecordingSessionId:'',
+      activeSessionIds:[],
+      referenceTargetIds:[],
+      inboxId:'inbox',
+      ...(state.context||{})
+    };
+    if(!ob413Event(state.context.viewTargetId) && !ob413Session(state.context.viewTargetId)){
+      const camp=ob412FirstCamp?.()||state.events.find(e=>e.type==='camp')||state.events[0];
+      state.context.viewTargetId=camp?.id||'inbox';
+      state.context.viewTargetType=camp?'plan':'inbox';
+    }
+    const ps=ob413Session(state.context.primaryRecordingSessionId);
+    if(state.context.primaryRecordingSessionId && !ps)state.context.primaryRecordingSessionId='';
+    if(state.context.primaryRecordingSessionId){
+      state.context.recordTargetId=state.context.primaryRecordingSessionId;
+      state.context.recordTargetType='session';
+    }else if(!ob413Event(state.context.recordTargetId) && !ob413Session(state.context.recordTargetId)){
+      const rec=state.recordPlanId&&ob413Event(state.recordPlanId)?state.recordPlanId:state.context.viewTargetId;
+      state.context.recordTargetId=ob413Event(rec)?rec:'inbox';
+      state.context.recordTargetType=ob413Event(rec)?'plan':'inbox';
+    }
+    state.context.activeSessionIds=(state.context.activeSessionIds||[]).filter(id=>!!ob413Session(id));
+    state.context.referenceTargetIds=[...new Set((state.context.referenceTargetIds||[]).filter(id=>id&&id!==state.context.viewTargetId&&!!(ob413Event(id)||ob413Session(id))))];
+    // 旧互換。表示中Planだけ currentPlanId に同期。記録先は recordPlanId にPlan/rootPlanを入れる。
+    const view=ob413ViewTarget();
+    if(view?.type==='plan')state.currentPlanId=view.id;
+    const rec=ob413RecordTarget();
+    if(rec?.type==='session')state.recordPlanId=rec.rootPlanId||'';
+    else if(rec?.type==='plan')state.recordPlanId=rec.id;
+    else state.recordPlanId='';
+    state.records=(state.records||[]).map(r=>ob413NormalizeRecord(r));
+  }
+  function ob413ViewTarget(){
+    const c=state.context||{};
+    if(c.viewTargetType==='session'){
+      const s=ob413Session(c.viewTargetId); if(s)return {...s,type:'session',kind:s.type};
+    }
+    if(c.viewTargetType==='inbox')return ob413Inbox();
+    const e=ob413Event(c.viewTargetId); if(e)return {...e,type:'plan',planType:e.type,kind:e.type};
+    const camp=ob412FirstCamp?.()||state.events.find(e=>e.type==='camp')||state.events[0];
+    return camp?{...camp,type:'plan',planType:camp.type,kind:camp.type}:ob413Inbox();
+  }
+  function ob413RecordTarget(){
+    const c=state.context||{};
+    const ps=ob413Session(c.primaryRecordingSessionId);
+    if(ps)return {...ps,type:'session',kind:ps.type};
+    if(c.recordTargetType==='session'){
+      const s=ob413Session(c.recordTargetId); if(s)return {...s,type:'session',kind:s.type};
+    }
+    if(c.recordTargetType==='inbox')return ob413Inbox();
+    const e=ob413Event(c.recordTargetId); if(e)return {...e,type:'plan',planType:e.type,kind:e.type};
+    return ob413Inbox();
+  }
+  function ob413RootPlanIdForTarget(t){
+    if(!t||t.inbox)return '';
+    if(t.type==='session')return t.rootPlanId||'';
+    return t.id||'';
+  }
+  function ob413RootPlanForTarget(t){return ob413Event(ob413RootPlanIdForTarget(t))}
+  function ob413ActiveSession(){return ob413Session(state.context?.primaryRecordingSessionId)||null}
+  function ob413SessionTypeLabel(s){
+    const map={walk:'散歩',campWalk:'場内散歩',setup:'設営',withdraw:'撤収',meal:'料理',move:'移動',shopping:'買い物',gear:'ギア',memo:'メモ'};
+    return map[s?.type]||s?.type||'セッション';
+  }
+  function ob413MakeSession({rootPlanId,parentSessionId='',type='memo',title='',status='active'}={}){
+    const root=ob413Event(rootPlanId)||ob413Event(state.currentPlanId)||ob412FirstCamp?.()||ob412FirstWalk?.();
+    const s={
+      id:uid('ses'),
+      rootPlanId:root?.id||'',
+      parentSessionId:parentSessionId||'',
+      type,
+      title:title||`${ob413PlanKind(root)} ${ob413SessionTypeLabel({type})}`,
+      status,
+      startedAt:ob413Now(),
+      endedAt:'',
+      active:status==='active',
+      createdAt:ob413Now(),
+      updatedAt:ob413Now(),
+      source:'restore04.13'
+    };
+    state.sessions.push(s);
+    ob413Link('session',s.id,'plan',s.rootPlanId,'belongsTo');
+    return s;
+  }
+  function ob413StartSession(type,rootPlanId,title){
+    ob413NormalizeContext();
+    const s=ob413MakeSession({rootPlanId,type,title,status:'active'});
+    state.context.primaryRecordingSessionId=s.id;
+    state.context.recordTargetId=s.id;
+    state.context.recordTargetType='session';
+    state.context.activeSessionIds=[...new Set([...(state.context.activeSessionIds||[]),s.id])];
+    if(type==='walk'||type==='campWalk'){
+      state.walk.active=true;
+      startGpsAuto();
+    }
+    ob413NormalizeContext();save();render(false);toast(`${s.title}を記録中`);
+    return s;
+  }
+  function ob413EndPrimarySession(){
+    const s=ob413ActiveSession();
+    if(!s){toast('記録中セッションなし');return;}
+    s.active=false;s.status='closed';s.endedAt=ob413Now();s.updatedAt=ob413Now();
+    state.context.activeSessionIds=(state.context.activeSessionIds||[]).filter(id=>id!==s.id);
+    state.context.primaryRecordingSessionId='';
+    state.context.recordTargetId=s.rootPlanId||state.currentPlanId||'inbox';
+    state.context.recordTargetType=s.rootPlanId?'plan':'inbox';
+    if(s.type==='walk'||s.type==='campWalk'){state.walk.active=false;stopGpsAuto(false);}
+    ob413NormalizeContext();save();render(false);toast('セッション終了');
+  }
+  function ob413Link(fromType,fromId,toType,toId,role='related'){
+    if(!fromId||!toId)return null;
+    state.links=state.links||[];
+    const exists=state.links.find(l=>l.fromType===fromType&&l.fromId===fromId&&l.toType===toType&&l.toId===toId&&l.role===role);
+    if(exists)return exists;
+    const l={id:uid('link'),fromType,fromId,toType,toId,role,createdAt:ob413Now(),source:'restore04.13'};
+    state.links.push(l);return l;
+  }
+  function ob413LinksFor(type,id){return (state.links||[]).filter(l=>(l.fromType===type&&l.fromId===id)||(l.toType===type&&l.toId===id))}
+  function ob413TargetToLegacy(t){
+    const root=ob413RootPlanForTarget(t);
+    return {
+      id:t?.id||'inbox',
+      title:ob413TargetLabel(t),
+      type:t?.type==='session'?(root?.type||t.kind||'session'):(t?.planType||t?.kind||t?.type||'memo'),
+      inbox:!!t?.inbox,
+      rootPlanId:root?.id||'',
+      rootPlanTitle:root?.title||'',
+      sessionId:t?.type==='session'?t.id:'',
+      sessionTitle:t?.type==='session'?t.title:'',
+      targetType:t?.type||'inbox'
+    };
+  }
+  function ob413SaveTarget(){return ob413TargetToLegacy(ob413RecordTarget())}
+  function ob413ViewLegacy(){return ob413TargetToLegacy(ob413ViewTarget())}
+  function ob413NormalizeRecord(r){
+    const targetId=r.eventId||r.rootPlanId||r.sessionId||'';
+    const session=ob413Session(r.sessionId||'');
+    const root=ob413Event(r.rootPlanId||session?.rootPlanId||targetId)||null;
+    return {
+      ...r,
+      rootPlanId:r.rootPlanId||root?.id||((ob413Event(targetId)&&targetId)||''),
+      sessionId:r.sessionId||'',
+      parentRecordId:r.parentRecordId||'',
+      sourceDevice:r.sourceDevice||'local',
+      syncStatus:r.syncStatus||'local',
+      confidence:Number.isFinite(Number(r.confidence))?Number(r.confidence):0.8,
+      links:Array.isArray(r.links)?r.links:[]
+    };
+  }
+  function ob413DecorateRecord(rec,{target=ob413SaveTarget(),kind='memo'}={}){
+    const view=ob413ViewLegacy();
+    const out=ob413NormalizeRecord({
+      ...rec,
+      eventId:target.sessionId||target.rootPlanId||target.id,
+      rootPlanId:target.rootPlanId||(!target.inbox&&target.targetType==='plan'?target.id:''),
+      sessionId:target.sessionId||'',
+      targetType:target.targetType,
+      target:target.inbox?'未確認箱':target.title,
+      planTitle:target.rootPlanTitle||target.title,
+      sessionTitle:target.sessionTitle||'',
+      viewTargetId:view.sessionId||view.rootPlanId||view.id,
+      viewTargetTitle:view.title,
+      viewPlanTitle:view.rootPlanTitle||view.title,
+      sourceDevice:'local',
+      syncStatus:'local',
+      confidence:target.inbox?0.3:0.92,
+      links:[...(rec.links||[])],
+      tags:[...(rec.tags||[]), target.sessionId?'セッション':(target.inbox?'未確認':'予定')].filter(Boolean)
+    });
+    if(out.rootPlanId)ob413Link('record',out.id,'plan',out.rootPlanId,'belongsTo');
+    if(out.sessionId)ob413Link('record',out.id,'session',out.sessionId,'capturedIn');
+    if(view.rootPlanId && view.rootPlanId!==out.rootPlanId)ob413Link('record',out.id,'plan',view.rootPlanId,'viewedWhile');
+    out.links=ob413LinksFor('record',out.id).map(l=>l.id);
+    return out;
+  }
+
+  // 04.12互換関数をContext Modelへ差し替える。
+  ob412DisplayPlan = function(){
+    const v=ob413ViewTarget();
+    if(v.type==='plan')return ob413Event(v.id)||ob413Inbox();
+    if(v.type==='session')return ob413RootPlanForSession(v)||ob413Inbox();
+    return ob413Inbox();
+  }
+  ob412RecordPlan = function(){
+    const r=ob413RecordTarget();
+    if(r.type==='plan')return ob413Event(r.id)||ob413Inbox();
+    if(r.type==='session')return ob413RootPlanForSession(r)||ob413Inbox();
+    return ob413Inbox();
+  }
+  ob412SaveTarget = function(){return ob413SaveTarget()}
+  ob412SameContext = function(){
+    const v=ob413ViewLegacy(), r=ob413SaveTarget();
+    return (v.sessionId||v.rootPlanId||v.id)===(r.sessionId||r.rootPlanId||r.id);
+  }
+  ob412DisplayIsCamp = function(){return ob412DisplayPlan()?.type==='camp'}
+  ob412DisplayIsWalk = function(){return ob412DisplayPlan()?.type==='walk'}
+  ob412RecordIsWalk = function(){const r=ob413RecordTarget();return r?.kind==='walk'||r?.kind==='campWalk'||ob412RecordPlan()?.type==='walk'}
+  ob412RecordIsCamp = function(){return ob412RecordPlan()?.type==='camp'}
+  current = function(){return ob412DisplayPlan()}
+  planRecords = function(id=state.currentPlanId){
+    const relatedIds=new Set([id]);
+    (state.sessions||[]).filter(s=>s.rootPlanId===id||s.id===id).forEach(s=>relatedIds.add(s.id));
+    (state.links||[]).forEach(l=>{if(l.toId===id)relatedIds.add(l.fromId);if(l.fromId===id)relatedIds.add(l.toId)});
+    return publicRecords().filter(r=>r.eventId===id||r.rootPlanId===id||r.sessionId===id||relatedIds.has(r.id)||relatedIds.has(r.sessionId));
+  }
+  function ob413SetView(id,type='plan',opts={}){
+    if(type==='session'){
+      const s=ob413Session(id); if(!s){toast('表示セッションなし');return;}
+      state.context.viewTargetId=s.id;state.context.viewTargetType='session';
+      const root=ob413RootPlanForSession(s); if(root)state.currentPlanId=root.id;
+    }else{
+      const e=ob413Event(id); if(!e){toast('表示プランなし');return;}
+      state.context.viewTargetId=e.id;state.context.viewTargetType='plan';state.currentPlanId=e.id;
+      if(e.start){state.selectedDate=e.start;state.currentMonth=e.start.slice(0,7)}
+    }
+    state.drawer=null;state.__scrollY=0;ob413NormalizeContext();save();if(opts.render!==false)render(false);if(opts.toast!==false)toast('表示中を変更');
+  }
+  function ob413SetRecord(id,type='plan',opts={}){
+    if(type==='session'){
+      const s=ob413Session(id); if(!s){toast('記録セッションなし');return;}
+      state.context.primaryRecordingSessionId=s.id;state.context.recordTargetId=s.id;state.context.recordTargetType='session';state.context.activeSessionIds=[...new Set([...(state.context.activeSessionIds||[]),s.id])];
+    }else if(type==='inbox'){
+      state.context.primaryRecordingSessionId='';state.context.recordTargetId=ob413InboxId();state.context.recordTargetType='inbox';
+    }else{
+      const e=ob413Event(id); if(!e){toast('記録プランなし');return;}
+      state.context.primaryRecordingSessionId='';state.context.recordTargetId=e.id;state.context.recordTargetType='plan';state.recordPlanId=e.id;
+    }
+    state.drawer=null;ob413NormalizeContext();save();if(opts.render!==false)render(false);if(opts.toast!==false)toast('記録先を変更');
+  }
+  function ob413SetBoth(id){ob413SetView(id,'plan',{render:false,toast:false});ob413SetRecord(id,'plan',{render:false,toast:false});save();render(false);toast('表示/記録を変更')}
+  selectPlan = function(id){return ob413SetBoth(id)}
+  setCurrentPlan = function(id){return ob413SetBoth(id)}
+
+  function ob413ContextStatusHtml(){
+    const view=ob413ViewLegacy(), rec=ob413SaveTarget(), s=ob413ActiveSession();
+    const diff=(view.sessionId||view.rootPlanId||view.id)!==(rec.sessionId||rec.rootPlanId||rec.id);
+    const refs=(state.context.referenceTargetIds||[]).map(id=>ob413Event(id)||ob413Session(id)).filter(Boolean);
+    return `<section class="section ob413Context"><div class="ob412DuoBox"><span><b>表示中</b><small>${esc(view.title)} / ${esc(view.rootPlanTitle||ob413PlanKind(ob413ViewTarget()))}</small></span><span><b>記録中</b><small>${esc(rec.title)}${rec.sessionTitle?` / ${esc(rec.sessionTitle)}`:''}</small></span></div>${s?`<p>セッション：${esc(s.title)}。写真・音声・GPS・ピンはここに保存。</p>`:diff?`<p>見る対象と保存先を分けている。表示を変えても保存先は変わらない。</p>`:`<p>表示と記録は同じ。必要なら分けて使える。</p>`}${refs.length?`<div class="versionStrip">参照中：${refs.map(x=>esc(x.title)).join(' / ')}</div>`:''}<div class="shareOps"><button data-act="planSwitch">表示/記録</button>${s?`<button data-act="endPrimarySession">記録終了</button>`:''}<button data-act="linkLastToView">最後の記録を表示中にも関連</button></div></section>`;
+  }
+  ob412DuoStatusHtml = function(){return ob413ContextStatusHtml()}
+  function ob413PlanSwitchCard(e){
+    const view=ob413ViewTarget(); const rec=ob413RecordTarget();
+    const isView=view.type==='plan'&&view.id===e.id;
+    const isRecord=(rec.type==='plan'&&rec.id===e.id)||(rec.type==='session'&&rec.rootPlanId===e.id);
+    const sessions=(state.sessions||[]).filter(s=>s.rootPlanId===e.id&&s.active);
+    return `<div class="planSwitchCard ${isView?'current':''}"><div class="planSwitchTop"><span><b>${esc(e.title)}</b><small>${esc(typeName[e.type]||e.type)} / ${esc(planSpan(e))} / ${esc(e.place||'場所未設定')}</small></span><span class="pill ${isRecord?'dark':'wood'}">${isRecord?'記録関係':'表示候補'}</span></div><div class="planMiniStats"><span>表示<br>${isView?'中':'候補'}</span><span>記録<br>${isRecord?'関係':'候補'}</span><span>セッション<br>${sessions.length}</span><span>記録数<br>${planRecords(e.id).length}</span></div><div class="planDrawerOps"><button data-act="viewPlan" data-id="${e.id}">表示</button><button data-act="recordPlan" data-id="${e.id}">記録先</button><button data-act="selectPlan" data-id="${e.id}">両方</button></div>${sessions.length?`<div class="fieldRecentList">${sessions.map(s=>`<div class="sessionRecentCard"><b>${esc(s.title)}</b><small>${esc(ob413SessionTypeLabel(s))}</small><div class="shareOps"><button data-act="viewSession" data-id="${s.id}">表示</button><button data-act="recordSession" data-id="${s.id}">記録</button></div></div>`).join('')}</div>`:''}</div>`;
+  }
+  planSwitchHtml = function(){
+    const plans=(state.events||[]).filter(ob413SelectableEvent);
+    const view=ob413ViewLegacy(), rec=ob413SaveTarget();
+    return `<div class="form"><div class="head"><div><h2>表示/記録を変更</h2><p>表示対象と記録対象は別。見るだけでは保存先を変えない。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div><div class="ob412DuoBox"><span><b>表示中</b><small>${esc(view.title)}</small></span><span><b>記録中</b><small>${esc(rec.title)}</small></span></div><div class="planSwitchList">${plans.map(ob413PlanSwitchCard).join('')||`<div class="honestBox"><b>予定なし</b><p>記録は未確認箱へ仮保存。</p></div>`}</div><div class="honestBox"><b>セッション開始</b><p>場内散歩・通常散歩など、保存先を一段分けたい時だけ開始する。</p><div class="actions"><button class="btn primary" type="button" data-act="startNormalWalkSession">コタ通常散歩</button><button class="btn" type="button" data-act="startCampWalkSession">場内散歩</button><button class="btn" type="button" data-act="recordInbox">未確認箱</button></div></div></div>`;
+  }
+  const ob413BaseTop = top;
+  top = function(){
+    const view=ob413ViewLegacy(), rec=ob413SaveTarget();
+    const diff=(view.sessionId||view.rootPlanId||view.id)!==(rec.sessionId||rec.rootPlanId||rec.id);
+    return `<div class="top obTop046 obTop0413"><div class="top-row"><button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>context model</small></span></button><button class="plan" data-act="planSwitch"><i></i><b>${esc(view.title)}</b><small>表示中</small></button></div><button class="ob412RecordStrip ${diff||state.context?.primaryRecordingSessionId?'on':''}" data-act="planSwitch"><b>記録中：${esc(rec.title)}</b><small>${rec.sessionTitle?`セッション / ${esc(rec.sessionTitle)}`:(diff?'表示とは別':'表示と同じ')}</small></button></div>`;
+  }
+  function ob413HomePanel(){
+    return `<section class="section ob413Home"><div class="head"><div><h2>OUTBASE文脈</h2><p>準備・記録・整理を並列に扱う土台。普段は表示中/記録中だけ確認。</p></div><span class="pill dark">04.13</span></div><div class="grid2"><button data-act="startNormalWalkSession"><b>コタ散歩を記録</b><small>表示中は変えない</small></button><button data-act="startCampWalkSession"><b>場内散歩を記録</b><small>表示中キャンプの子セッション</small></button><button data-route="prep"><b>表示中の準備</b><small>保存先は変えない</small></button><button data-route="field"><b>記録画面</b><small>写真/音声/GPS/ピン</small></button></div></section>`;
+  }
+  const ob413BaseHome = home;
+  home = function(){
+    return ob413BaseHome()
+      .replace(/<button[^>]*data-act="createPaymentTemplate"[\s\S]*?<\/button>/g,'')
+      .replace(/支払い確認日/g,'')
+      .replace(/カード支払い確認/g,'')
+      .replace('</main>',`${ob413HomePanel()}</main>`);
+  }
+  const ob413BaseAddMediaRecord = addMediaRecord;
+  addMediaRecord = function(kind,file,dataUrl){
+    const target=ob413SaveTarget(); const p=state.walk.track[state.walk.track.length-1];
+    const rec=ob413DecorateRecord({id:uid('rec'),kind,title:recordKindLabel(kind),text:file?.name?`${file.name} を記録`:((kind==='voice'&&voiceLiveText)?voiceLiveText:''),mode:target.type==='walk'||target.type==='campWalk'?'散歩記録':'キャンプ記録',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:false,fieldModeId:state.fieldMode||'',flow:[target.title],tags:[ob413PlanKind(ob412RecordPlan()),recordKindLabel(kind)].filter(Boolean),mediaName:file?.name||'',mediaType:file?.type||'',mediaSize:file?.size||0,dataUrl:dataUrl||''},{target,kind});
+    state.records=state.records||[];state.records.push(rec);
+    if(kind==='photo'||kind==='voice')autoPin(kind==='photo'?'写真':'音声', recordKindLabel(kind), file?.name||voiceLiveText||'');
+    if(mediaSize()>1800000){const packed=compactStateForStorage(state);state=packed.state;state.lastError={message:`メディア容量を自動軽量化: ${packed.removed}件`,time:new Date().toISOString(),route:state.route};}
+  }
+  addPublicRecord = function(kind,text,title){
+    const target=ob413SaveTarget(); const p=state.walk.track[state.walk.track.length-1];
+    const rec=ob413DecorateRecord({id:uid('rec'),kind,title:title||recordKindLabel(kind),text:text||'',mode:target.type==='walk'||target.type==='campWalk'?'散歩記録':'キャンプ記録',time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:false,fieldModeId:state.fieldMode||'',flow:[target.title],tags:[ob413PlanKind(ob412RecordPlan()),recordKindLabel(kind)].filter(Boolean)},{target,kind});
+    state.records=state.records||[];state.records.push(rec);return rec;
+  }
+  addFieldRecord = function(kind,text,title,opts={}){
+    const target=ob413SaveTarget(); const p=state.walk.track[state.walk.track.length-1];
+    const rec=ob413DecorateRecord({id:uid('rec'),kind:kind||'memo',title:title||recordKindLabel(kind)||kind||'記録',text:text||'',mode:target.type==='walk'||target.type==='campWalk'?'散歩記録':'キャンプ記録',fieldModeId:state.fieldMode||'',tags:opts.tags||[ob413PlanKind(ob412RecordPlan())],flow:opts.flow||[target.title],time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:!!opts.private},{target,kind});
+    state.records=state.records||[];state.records.push(rec);return rec;
+  }
+  sessionRecord = function(data){
+    const target=ob413SaveTarget(); const p=state.walk.track[state.walk.track.length-1];
+    const rec=ob413DecorateRecord({id:uid('rec'),kind:data.kind||'memo',title:data.title||data.kind||'記録',text:data.text||'',mode:target.type==='walk'||target.type==='campWalk'?'散歩記録':'キャンプ記録',sessionGroup:data.group||'session',flow:data.flow||[target.title],tags:data.tags||[ob413PlanKind(ob412RecordPlan())],time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),date:today(),lat:p?.lat||null,lng:p?.lng||null,private:!!data.private},{target,kind:data.kind||'memo'});
+    state.records=state.records||[];state.records.push(rec);return rec;
+  }
+  pushGpsPoint = function(lat,lng,source='gps'){
+    const target=ob413SaveTarget(); const p={lat,lng,source,mode:fieldModeName(),time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),ts:Date.now(),eventId:target.sessionId||target.rootPlanId||target.id,rootPlanId:target.rootPlanId||'',sessionId:target.sessionId||'',planTitle:target.rootPlanTitle||target.title,sessionTitle:target.sessionTitle||'',viewPlanTitle:ob413ViewLegacy().title};
+    const last=state.walk.track[state.walk.track.length-1]; const dist=last?haversine(last,p):0;
+    if(last && dist>GPS_JUMP_LIMIT_KM){state.notes.push({id:uid('note'),title:'GPSジャンプ除外',text:`${dist.toFixed(2)}km / ${p.time}`,private:false});return false;}
+    state.walk.track.push(p); maybeAutoEndDrive(p,last,dist); return true;
+  }
+  ensureWalkSession = function(){
+    state.walk.sessions=state.walk.sessions||[];
+    let s=state.walk.sessions.find(x=>x.active);
+    const ctx=ob413ActiveSession(); const target=ob413SaveTarget();
+    if(!s){s={id:uid('walk'),eventId:target.sessionId||target.rootPlanId||target.id,rootPlanId:target.rootPlanId||'',sessionId:target.sessionId||ctx?.id||'',planTitle:target.rootPlanTitle||target.title,sessionTitle:target.sessionTitle||ctx?.title||'',mode:fieldModeName(),startedAt:Date.now(),endedAt:0,active:true,startCount:state.walk.track.length};state.walk.sessions.push(s);}
+    return s;
+  }
+  autoPin = function(kind='ピン',name='記録',note=''){
+    const target=ob413SaveTarget(); const p=state.walk.track[state.walk.track.length-1]; state.mapPins=state.mapPins||[];
+    const pin={id:uid('pin'),eventId:target.sessionId||target.rootPlanId||target.id,rootPlanId:target.rootPlanId||'',sessionId:target.sessionId||'',planTitle:target.rootPlanTitle||target.title,sessionTitle:target.sessionTitle||'',name,kind,x:Math.round(18+Math.random()*64),y:Math.round(18+Math.random()*64),lat:p?.lat||null,lng:p?.lng||null,public:!/(うんち|おしっこ|体調|非公開)/.test(kind),note,time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),score:3};
+    state.mapPins.push(pin); if(pin.rootPlanId)ob413Link('pin',pin.id,'plan',pin.rootPlanId,'belongsTo'); if(pin.sessionId)ob413Link('pin',pin.id,'session',pin.sessionId,'capturedIn');
+  }
+  toggleWalk = function(){
+    if(!state.walk?.active){
+      const active=ob413ActiveSession();
+      if(!active || !['walk','campWalk'].includes(active.type)){
+        const root=ob412FirstWalk?.()||ob412FirstCamp?.();
+        const s=ob413StartSession('walk',root?.id,'コタ通常散歩');
+        addPublicRecord('memo',`${fieldModeName()}開始`,'散歩開始');
+        gps(true);
+        save();render();toast('散歩開始');
+        return;
+      }
+      state.walk.active=true;
+      ensureWalkSession();
+      addPublicRecord('memo',`${fieldModeName()}開始`,'散歩開始');
+      startGpsAuto();
+      gps(true);
+      save();render();toast('散歩開始');
+      return;
+    }
+    const s=currentWalkSession();
+    if(s){s.active=false;s.endedAt=Date.now();s.distance=walkDistance();s.duration=walkDurationSec();}
+    const ctx=ob413ActiveSession();
+    if(ctx && ['walk','campWalk'].includes(ctx.type)){
+      ctx.active=false;ctx.status='closed';ctx.endedAt=ob413Now();ctx.updatedAt=ob413Now();
+      state.context.activeSessionIds=(state.context.activeSessionIds||[]).filter(id=>id!==ctx.id);
+      state.context.primaryRecordingSessionId='';
+      state.context.recordTargetId=ctx.rootPlanId||state.currentPlanId||'inbox';
+      state.context.recordTargetType=ctx.rootPlanId?'plan':'inbox';
+    }
+    state.walk.active=false;
+    stopGpsAuto(false);
+    addPublicRecord('memo',`散歩終了：${walkDistance().toFixed(2)}km / ${fmtDuration(walkDurationSec())}`,'散歩終了');
+    ob413NormalizeContext();save();render();toast('散歩終了');
+  }
+  const ob413BaseAct = act;
+  act = function(a,el){
+    if(a==='viewPlan')return ob413SetView(el.dataset.id,'plan');
+    if(a==='recordPlan')return ob413SetRecord(el.dataset.id,'plan');
+    if(a==='viewSession')return ob413SetView(el.dataset.id,'session');
+    if(a==='recordSession')return ob413SetRecord(el.dataset.id,'session');
+    if(a==='recordInbox')return ob413SetRecord('inbox','inbox');
+    if(a==='startNormalWalkSession'){const w=ob412FirstWalk?.()||ob412FirstCamp?.();return ob413StartSession('walk',w?.id,'コタ通常散歩')}
+    if(a==='startCampWalkSession'){const v=ob412DisplayPlan();const root=v?.type==='camp'?v:(ob412FirstCamp?.()||v);return ob413StartSession('campWalk',root?.id,'コタ場内散歩')}
+    if(a==='endPrimarySession')return ob413EndPrimarySession();
+    if(a==='linkLastToView'){
+      const r=(state.records||[]).slice().reverse().find(x=>!x.private); const v=ob413ViewLegacy();
+      if(!r){toast('関連付ける記録なし');return;}
+      if(v.rootPlanId)ob413Link('record',r.id,'plan',v.rootPlanId,'related');
+      r.links=ob413LinksFor('record',r.id).map(l=>l.id); save();render();toast('関連リンク追加');return;
+    }
+    if(a==='startWalkRecording'){const w=ob412FirstWalk?.()||ob412FirstCamp?.();ob413StartSession('walk',w?.id,'コタ通常散歩');state.route='field';return;}
+    return ob413BaseAct(a,el);
+  }
+  const ob413BaseBind = bind;
+  bind = function(){
+    ob413BaseBind();
+    // 表示遷移では記録先を変えない。ここで再保証する。
+    document.querySelectorAll('[data-route]').forEach(el=>{
+      const prev=el.onclick;
+      el.onclick=(ev)=>{const before={...state.context}; if(prev)prev(ev); state.context={...state.context,recordTargetId:before.recordTargetId,recordTargetType:before.recordTargetType,primaryRecordingSessionId:before.primaryRecordingSessionId,activeSessionIds:before.activeSessionIds}; ob413NormalizeContext(); save();};
+    });
+  }
+  function ob413FinalAudit(){
+    ob413NormalizeContext();
+    const checks=[];
+    checks.push(['context exists',!!state.context&&'viewTargetId'in state.context&&'recordTargetId'in state.context]);
+    checks.push(['sessions array',Array.isArray(state.sessions)]);
+    checks.push(['links array',Array.isArray(state.links)]);
+    checks.push(['route04.8 preserved',typeof routePrepView==='function'&&typeof simpleRouteRows==='function']);
+    checks.push(['top override',typeof top==='function']);
+    state.lastAudit0413={version:VERSION,time:ob413Now(),checks:checks.map(([name,pass])=>({name,pass:!!pass})),pass:checks.every(x=>x[1])};
+  }
+  ob413FinalAudit();
+
+  // RESTORE04.13: first paint after Context Model overrides.
+  save();
   render();
 
 })();
