@@ -7408,3 +7408,27 @@ select:focus{
 .bottomNav button[data-route="prep"].active{
   transform:translateY(-10px);
 }
+
+
+/* RESTORE04.7 下バー中央＋整理 / ルート下余白 */
+.obNav047 button[data-route="field"] b{
+  font-size:22px!important;
+  line-height:.95!important;
+  transform:translateY(-1px);
+}
+.obNav047 button[data-route="field"] span{
+  font-size:11px!important;
+  letter-spacing:.02em!important;
+}
+.obNav047 button[data-route="field"]{
+  min-width:58px!important;
+}
+.obRoute045{
+  padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
+}
+.obRoute045 .obEdit:last-child{
+  margin-bottom:18px!important;
+}
+.obTop046 + .main:has(.obRoute045){
+  padding-bottom:calc(108px + env(safe-area-inset-bottom))!important;
+}

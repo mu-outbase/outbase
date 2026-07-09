@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-6a-field03-topbar-prep-home-first-render-20260709';
+  const VERSION = 'outbase-restore04-7-field03-bottomnav-api-lock-20260709';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-6a-field03-topbar-prep-home-first-render-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-7-field03-bottomnav-api-lock-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -5865,7 +5865,26 @@ ${starterPanelHtml()}
   }
 
 
-  // RESTORE04.6a: ensure first paint uses the final overridden UI functions.
+  /* RESTORE04.7: 下バー中央＋の見た目整理 / APIあり移行LOCK（非表示方針） */
+  nav = function(){
+    const items=[
+      ['calendar','▦','予定'],
+      ['discover','⌕','探す'],
+      ['prep','◫','準備'],
+      ['field','＋','記録'],
+      ['memory','○','思い出']
+    ];
+    return `<nav class="bottomNav obNav047">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
+  }
+
+  const OUTBASE_API_MIGRATION_LOCK_047 = Object.freeze({
+    mode:'api_optional_candidate_first',
+    rule:'OUTBASEはAPIなしで成立。APIありでは精度と自動化を強化するが、APIは裏側の補助であり必須条件にしない。API値は候補扱いで、ユーザー保存値を勝手に上書きしない。',
+    route:'Google Maps等のAPI値は移動時間候補として取得し、保存済み計画へは採用操作後に反映する。',
+    fallback:'API失敗・未設定・通信不可でも、手入力値・保存値・Google Maps起動でルート画面を維持する。'
+  });
+
+  // RESTORE04.6a/04.7: ensure first paint uses the final overridden UI functions.
   render();
 
 })();
