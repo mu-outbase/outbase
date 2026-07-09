@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-5-field03-route-one-screen-20260709';
-  const KEY = 'outbase_restore04_5_field03_state';
-  const SNAP_KEY = 'outbase_restore04_5_field03_snapshot';
-  const ERR_KEY = 'outbase_restore04_5_field03_last_error';
+  const VERSION = 'outbase-restore04-6a-field03-topbar-prep-home-first-render-20260709';
+  const KEY = 'outbase_restore04_6_field03_state';
+  const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
+  const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-5-field03-route-one-screen-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-6a-field03-topbar-prep-home-first-render-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -3540,7 +3540,16 @@ ${starterPanelHtml()}
     document.querySelectorAll('[data-session-shortcut]').forEach(el=>el.onclick=()=>handleSessionShortcut(el.dataset.sessionShortcut));
     document.querySelectorAll('[data-field-mode]').forEach(el=>el.onclick=()=>{state.fieldMode=el.dataset.fieldMode;state.walkMode=el.dataset.fieldMode==='campWalk'?'camp':'normal';save();render()});
     document.querySelectorAll('[data-field-action]').forEach(el=>el.onclick=()=>handleFieldAction(el.dataset.fieldAction));
-    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{state.route=el.dataset.route;save();render()});
+    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{
+      state.route=el.dataset.route;
+      if(state.route==='prep'){
+        state.prepTab='overview';
+        state.stage='prep';
+      }
+      save();
+      render(false);
+      try{window.scrollTo(0,0)}catch(e){}
+    });
     document.querySelectorAll('[data-stage]').forEach(el=>el.onclick=()=>{state.stage=el.dataset.stage;save();render()});
     document.querySelectorAll('[data-prep]').forEach(el=>el.onclick=()=>{state.route='prep';state.prepTab=el.dataset.prep;save();render()});
     document.querySelectorAll('[data-gear]').forEach(el=>el.onclick=()=>{state.gearTab=el.dataset.gear;save();render()});
@@ -4768,7 +4777,7 @@ ${starterPanelHtml()}
   document.addEventListener('visibilitychange',visibility03);
   setInterval(updateTimers,1000);
   if(state.walk.active||state.drive?.active)startGpsAuto();
-  render();
+  // Initial render moved after RESTORE04.6 overrides.
 
 
   /* RESTORE03.4: APIなし出発逆算版 */
@@ -5841,5 +5850,22 @@ ${starterPanelHtml()}
     }
     return ob041LegacyPrep();
   }
+
+
+
+  /* RESTORE04.6: 上バー整理 / 下バー準備は準備ホーム */
+  top = function(){
+    const p=current();
+    return `<div class="top obTop046">
+      <div class="top-row">
+        <button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button>
+        <button class="plan" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${p.start?`${fmt(p.start)}〜${fmt(p.end||p.start)} / ${typeName[p.type]}`:'日付未設定'}</small></button>
+      </div>
+    </div>`;
+  }
+
+
+  // RESTORE04.6a: ensure first paint uses the final overridden UI functions.
+  render();
 
 })();

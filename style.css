@@ -7387,3 +7387,24 @@ select:focus{
   .obDepartMiniBand button{min-height:52px;padding:7px 8px}
   .obDepartMiniBand b{font-size:20px}
 }
+
+
+/* RESTORE04.6 上バー整理 / 準備ホーム復帰 */
+.obTop046{
+  padding-bottom:10px!important;
+}
+.obTop046 .stage{
+  display:none!important;
+}
+.obTop046 .top-row{
+  margin-bottom:0!important;
+}
+.obTop046 + .main{
+  padding-top:8px!important;
+}
+.top .stage{
+  display:none!important;
+}
+.bottomNav button[data-route="prep"].active{
+  transform:translateY(-10px);
+}
