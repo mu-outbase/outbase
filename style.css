@@ -7458,12 +7458,31 @@ select:focus{
 }
 
 
-/* RESTORE04.10: プラン種別別UI交通整理 */
-.obContext0410 .shareOps,.obWalk0410 .shareOps{display:flex;gap:8px;flex-wrap:wrap}
-.obQuick0410{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
-.obQuick0410 button{min-height:72px;text-align:left;border-radius:18px;padding:12px;border:1px solid rgba(80,60,35,.18);background:#fffdf7}
-.obQuick0410 button.primary{background:#1f2b22;color:#fff;border-color:#1f2b22}
-.obQuick0410 b{display:block;font-size:15px}.obQuick0410 small{display:block;opacity:.72;margin-top:4px;line-height:1.35}
-.obNav0410.walk button.active{box-shadow:inset 0 0 0 1px rgba(60,80,55,.22)}
-.obWalk0410 .fieldRecentList{margin-top:12px}
-@media (max-width:420px){.obQuick0410{grid-template-columns:1fr 1fr;gap:8px}.obQuick0410 button{min-height:66px;padding:10px}}
+/* RESTORE04.11 実装前総合監査反映：入口整理・迷子防止 */
+.obTop0411 .stage,.top .stage{display:none!important;}
+.obTop0411{padding-bottom:10px!important;}
+.obTop0411 + .main{padding-top:8px!important;}
+.obNav0411 button[data-route="field"] b{width:34px;height:34px;border-radius:999px;display:grid;place-items:center;margin:0 auto 2px;background:rgba(255,255,255,.78);color:#1c211b;box-shadow:0 8px 20px rgba(0,0,0,.12);}
+.obNav0411 button[data-route="field"].active b{background:rgba(255,255,255,.92);color:#151712;}
+.obNav0411 button[data-route="field"] span{font-weight:900;}
+.ob411Header .head{align-items:center;}
+.ob411FeatureGrid{display:grid;grid-template-columns:1fr;gap:10px;}
+.ob411FeatureGrid.compact{margin-top:12px;}
+.ob411Feature,.ob411FeatureGrid button{appearance:none;border:1px solid rgba(39,58,48,.14);background:rgba(255,255,255,.82);border-radius:22px;padding:16px;text-align:left;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;color:var(--ink);box-shadow:0 12px 26px rgba(36,28,18,.06);}
+.ob411Feature.primary,.ob411FeatureGrid button.primary{background:linear-gradient(135deg,var(--black),var(--green2));color:var(--milk);}
+.ob411Feature b,.ob411FeatureGrid button b{font-size:17px;line-height:1.2;}
+.ob411Feature small,.ob411FeatureGrid button small{grid-column:1/2;font-size:12px;opacity:.76;line-height:1.35;}
+.ob411Feature em,.ob411FeatureGrid button em{grid-row:1/3;grid-column:2/3;font-style:normal;font-size:22px;font-weight:900;opacity:.8;}
+.ob411QuickGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0;}
+.ob411QuickGrid button,.ob411SubGrid button{border:1px solid rgba(39,58,48,.14);background:rgba(255,255,255,.84);border-radius:22px;padding:15px 12px;text-align:left;color:var(--ink);min-height:78px;}
+.ob411QuickGrid button.primary,.ob411SubGrid button.primary{background:linear-gradient(135deg,var(--black),var(--green2));color:var(--milk);}
+.ob411QuickGrid b,.ob411SubGrid b{display:block;font-size:18px;line-height:1.1;margin-bottom:6px;}
+.ob411QuickGrid small,.ob411SubGrid small{font-size:11px;opacity:.76;}
+.ob411SubGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0 12px;}
+.ob411Advanced{margin-top:12px;border:1px solid rgba(39,58,48,.12);border-radius:20px;background:rgba(255,255,255,.62);padding:10px 12px;}
+.ob411Advanced summary{font-weight:900;cursor:pointer;padding:4px;}
+.ob411Legacy{margin-top:10px;}
+.ob411Recent{margin-top:12px;}
+.obRecord0411 .gpsPanel{margin-top:12px;}
+@media (min-width:720px){.ob411FeatureGrid{grid-template-columns:repeat(2,1fr)}.ob411QuickGrid{grid-template-columns:repeat(3,1fr)}.ob411SubGrid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:520px){.ob411QuickGrid button,.ob411SubGrid button{min-height:72px;padding:13px 10px}.ob411QuickGrid b,.ob411SubGrid b{font-size:17px}}
