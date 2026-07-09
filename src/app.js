@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-9-field03-plan-switch-record-target-20260709';
+  const VERSION = 'outbase-restore04-10-field03-plan-context-gate-20260709';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-9-field03-plan-switch-record-target-20260709').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-10-field03-plan-context-gate-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -6028,123 +6028,169 @@ ${starterPanelHtml()}
     });
   }
 
-  /* RESTORE04.9: 小型プラン切替シート / 記録保存先保護 */
-  function ob049RecordTarget(){
-    const exact=(state.events||[]).find(e=>e.id===state.currentPlanId);
-    if(exact){
-      return {id:exact.id,title:exact.title||'現在の主役予定',type:exact.type,start:exact.start,end:exact.end,uncertain:false,label:`${exact.title||'現在の主役予定'}に保存`};
-    }
-    return {id:'inbox',title:'未確認箱',type:'memo',start:'',end:'',uncertain:true,label:'未確認箱に仮保存'};
+
+  /* RESTORE04.10: プラン種別別UI交通整理 / ルート04.8固定維持
+     - ルートAPIなしOK部分はRESTORE04.8のまま維持
+     - プランチップは豪華化しない。主役プランの種類に応じて不要画面を出さない
+     - payment/search等のサンプル予定は主役候補から外す
+  */
+  const OUTBASE_PLAN_CONTEXT_LOCK_0410 = Object.freeze({
+    approvedRouteBase:'RESTORE04.8',
+    purpose:'各機能を作り込む前の交通整理。チップ強化ではなく、主役プランと表示文脈の不一致を防ぐ。',
+    selectableTypes:['camp','walk'],
+    camp:'キャンプ選択時だけキャンプ準備・ルート・場内系を表示する。',
+    walk:'散歩選択時はキャンプルート・チェックイン・場内・設営撤収を出さず、散歩/記録文脈に寄せる。',
+    fallback:'プラン未作成や判断不能でも記録を止めず、後で整理できるようにする。'
+  });
+  function ob410SelectablePlan(e){return !!e && ['camp','walk'].includes(e.type)}
+  function ob410VisiblePlans(){return (state.events||[]).filter(ob410SelectablePlan)}
+  function ob410CurrentPlan(){
+    const cur=(state.events||[]).find(e=>e.id===state.currentPlanId);
+    if(ob410SelectablePlan(cur))return cur;
+    return ob410VisiblePlans()[0] || cur || (state.events||[])[0] || null;
   }
-  function ob049Status(e){
-    if(!e)return '未確認';
-    if(e.id===state.currentPlanId)return '選択中';
-    if(e.start){
-      const diff=Math.round((dObj(e.start)-dObj(today()))/86400000);
-      if(diff===0)return '今日';
-      if(diff>0 && diff<=14)return `${diff}日後`;
-      if(diff<0 && diff>=-14)return `${Math.abs(diff)}日前`;
+  function ob410CurrentType(){return ob410CurrentPlan()?.type || 'none'}
+  function ob410IsCamp(){return ob410CurrentType()==='camp'}
+  function ob410IsWalk(){return ob410CurrentType()==='walk'}
+  function ob410RepairSamplePlans(){
+    // サンプルの「カード支払い確認」はOUTBASE MVPの主役候補を邪魔するため、既定データからだけ除外する。
+    const before=(state.events||[]).length;
+    state.events=(state.events||[]).filter(e=>!(e.id==='pay1' && e.title==='カード支払い確認' && e.type==='payment'));
+    if(!ob410SelectablePlan((state.events||[]).find(e=>e.id===state.currentPlanId))){
+      const next=ob410VisiblePlans()[0];
+      if(next)state.currentPlanId=next.id;
     }
-    return e.type==='camp'?'キャンプ':(typeName[e.type]||'予定');
+    if((state.events||[]).length!==before)save();
+  }
+  ob410RepairSamplePlans();
+
+  current = function(){
+    return ob410CurrentPlan() || (state.events||[]).find(e=>e.type==='camp') || (state.events||[])[0] || {id:'inbox',title:'未確認箱',type:'memo',start:'',end:'',place:'',memo:''};
+  }
+  sortedPlans = function(){
+    const cur=state.currentPlanId;
+    const rank=e=>{
+      if(e.id===cur)return -100000;
+      if(!e.start)return 1000000;
+      return Math.abs((dObj(e.start)-dObj(state.selectedDate||today()))/86400000);
+    };
+    return ob410VisiblePlans().slice().sort((a,b)=>rank(a)-rank(b));
   }
   planSwitchCard = function(e){
     const cur=e.id===state.currentPlanId;
-    return `<div class="planSwitchCard planSwitch049Card ${cur?'current':''}">
-      <button class="planSwitch049Main" data-act="selectPlan" data-id="${esc(e.id)}">
-        <span><b>${esc(e.title||'無題の予定')}</b><small>${esc(planSpan(e))} / ${esc(typeName[e.type]||e.type)}${e.place?` / ${esc(e.place)}`:''}</small></span>
-        <i>${cur?'選択中':ob049Status(e)}</i>
-      </button>
-      <div class="planSwitch049Ops"><button data-act="openEvent" data-id="${esc(e.id)}">予定変更</button></div>
+    const rec=planRecords(e.id).length;
+    const isCamp=e.type==='camp';
+    return `<div class="planSwitchCard ${cur?'current':''}">
+      <div class="planSwitchTop"><span><b>${esc(e.title)}</b><small>${esc(typeName[e.type]||e.type)} / ${esc(planSpan(e))} / ${esc(e.place||'場所未設定')}</small></span><span class="pill ${cur?'dark':'wood'}">${cur?'主役':(isCamp?'キャンプ':'散歩')}</span></div>
+      <div class="planMiniStats"><span>種類<br>${isCamp?'キャンプ':'散歩'}</span><span>記録<br>${rec}</span><span>表示<br>${isCamp?'準備/ルート':'散歩/記録'}</span><span>保存<br>${cur?'現在':'候補'}</span></div>
+      <div class="planDrawerOps"><button data-act="selectPlan" data-id="${e.id}">${cur?'表示中':'主役にする'}</button><button data-act="openEvent" data-id="${e.id}">予定変更</button></div>
     </div>`;
   }
   planSwitchHtml = function(){
-    const rt=ob049RecordTarget();
-    return `<div class="form planSwitch049">
-      <div class="head"><div><h2>プラン切替</h2><p>現在の保存先：${esc(rt.label)}。選ぶとこの画面を閉じる。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div>
-      <div class="planSwitch049Notice"><b>保存先保護</b><small>勝手に確定しない。プラン不明なら未確認箱に逃がす。</small></div>
-      <div class="planSwitchList">${sortedPlans().map(planSwitchCard).join('')}</div>
-      <div class="actions"><button class="btn primary" type="button" data-act="addEvent">予定追加</button><button class="btn" type="button" data-act="copyPlanContext">主役コピー</button></div>
+    const plans=sortedPlans();
+    return `<div class="form"><div class="head"><div><h2>主役プラン切替</h2><p>ここに出すのはキャンプ/散歩だけ。支払い確認や候補探しは主役プランに混ぜない。</p></div><button class="btn" type="button" data-act="close">閉じる</button></div>
+      <div class="planSwitchList">${plans.map(planSwitchCard).join('') || `<div class="honestBox"><b>主役プランなし</b><p>記録は止めず、未確認箱に残して後で整理する。</p></div>`}</div>
+      <div class="actions"><button class="btn primary" type="button" data-act="createCampTemplate">キャンプ作成</button><button class="btn" type="button" data-act="createWalkTemplate">散歩作成</button></div>
     </div>`;
   }
-  function ob049RecordTargetHtml(){
-    const rt=ob049RecordTarget();
-    return `<div class="recordTarget049 ${rt.uncertain?'warn':''}">
-      <span><b>保存先</b><small>${esc(rt.label)}${rt.start?` / ${esc(planSpan(rt))}`:''}</small></span>
-      <button data-act="planSwitch">切替</button>
-    </div>`;
-  }
-  const ob049BaseFw03HeaderHtml = fw03HeaderHtml;
-  fw03HeaderHtml = function(){
-    return ob049BaseFw03HeaderHtml().replace('</section>', `${ob049RecordTargetHtml()}</section>`);
-  }
-  addPublicRecord = function(kind,text,title){
-    const p=state.walk.track[state.walk.track.length-1];
-    const rt=ob049RecordTarget();
-    const label=recordKindLabel(kind);
-    state.records=state.records||[];
-    state.records.push({
-      id:uid('rec'),
-      eventId:rt.uncertain?null:rt.id,
-      pendingTarget:rt.uncertain,
-      kind,
-      title:title||label,
-      text:text||'',
-      mode:fieldModeName(),
-      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
-      date:today(),
-      lat:p?.lat||null,
-      lng:p?.lng||null,
-      private:false,
-      fieldModeId:state.fieldMode||'',
-      target:`${rt.uncertain?'未確認箱':rt.title} / ${label}`,
-      targetPlanTitle:rt.uncertain?'未確認箱':rt.title,
-      flow:(state.fieldMode?currentFieldMode().saveTo:[])||[],
-      tags:[rt.uncertain?'未確認箱':rt.title, currentFieldMode().title, label].filter(Boolean)
-    });
-  }
-  addMediaRecord = function(kind,file,dataUrl){
-    const p=state.walk.track[state.walk.track.length-1];
-    const rt=ob049RecordTarget();
-    const label=recordKindLabel(kind);
-    state.records=state.records||[];
-    state.records.push({
-      id:uid('rec'),
-      eventId:rt.uncertain?null:rt.id,
-      pendingTarget:rt.uncertain,
-      kind,
-      title:label,
-      text:file?.name?`${file.name} を記録`:((kind==='voice'&&voiceLiveText)?voiceLiveText:''),
-      mode:fieldModeName(),
-      time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
-      date:today(),
-      lat:p?.lat||null,
-      lng:p?.lng||null,
-      private:false,
-      fieldModeId:state.fieldMode||'',
-      target:`${rt.uncertain?'未確認箱':rt.title} / ${kind==='photo'?'現地写真':kind==='video'?'現地動画':'音声メモ'}`,
-      targetPlanTitle:rt.uncertain?'未確認箱':rt.title,
-      flow:(state.fieldMode?currentFieldMode().saveTo:[])||[],
-      tags:[rt.uncertain?'未確認箱':rt.title, fw03CurrentMode?fw03CurrentMode().label:currentFieldMode().title, label].filter(Boolean),
-      mediaName:file?.name||'',
-      mediaType:file?.type||'',
-      mediaSize:file?.size||0,
-      dataUrl:dataUrl||''
-    });
-    if(kind==='photo'||kind==='voice')autoPin(kind==='photo'?'写真':'音声', label, file?.name||voiceLiveText||'');
-    if(mediaSize()>1800000){
-      const packed=compactStateForStorage(state);
-      state=packed.state;
-      state.lastError={message:`メディア容量を自動軽量化: ${packed.removed}件`,time:new Date().toISOString(),route:state.route};
-    }
-  }
-  const OUTBASE_RESTORE04_9_LOCK = Object.freeze({
-    base:'RESTORE04.8',
-    routeApiLess:'RESTORE04.8で一旦OK。04.9ではルート計算に触らない。',
-    planSwitch:'小型プランチップから下部シートで切替。大型常時表示は禁止。',
-    recordTarget:'記録画面では保存先を軽く表示。プラン不明時は未確認箱に仮保存。'
-  });
 
-  // RESTORE04.9: ensure first paint uses plan switch and record target protection.
+  const ob410BaseSelectPlan = selectPlan;
+  selectPlan = function(id){
+    const e=(state.events||[]).find(x=>x.id===id);
+    if(!e)return;
+    if(!ob410SelectablePlan(e)){
+      toast('主役にできるのはキャンプ/散歩');
+      return;
+    }
+    state.currentPlanId=id;
+    if(e.start){state.selectedDate=e.start;state.currentMonth=e.start.slice(0,7)}
+    state.drawer=null;
+    state.routeFocus='';
+    state.__scrollY=0;
+    if(e.type==='walk'){
+      state.route='field';
+      state.stage='field';
+      state.prepTab='overview';
+      state.walkMode='normal';
+      state.fieldActionMode='kota';
+    }else if(e.type==='camp'){
+      state.stage=state.stage||'prep';
+      if(state.route==='field')state.fieldActionMode=state.fieldActionMode||'free';
+    }
+    save();render(false);toast(`${e.type==='walk'?'散歩':'キャンプ'}を主役にした`);
+  }
+  setCurrentPlan = selectPlan;
+
+  function ob410WalkPrepView(){
+    const p=current();
+    return shell(`<section class="section obContext0410">
+      <div class="head"><div><h2>${esc(p.title||'散歩')}</h2><p>${esc(planSpan(p))} / ${esc(p.place||'場所未設定')}。キャンプ用ルート・チェックイン・場内はこのプランでは表示しない。</p></div><span class="pill dark">散歩</span></div>
+      <div class="honestBox"><b>散歩プランで使うもの</b><p>GPS、ピン、写真、動画、音声メモ、犬友達、体調メモ。記録先はこの散歩プラン。</p><div class="shareOps"><button class="primary" data-route="field">散歩記録へ</button><button data-act="gps">現在地</button><button data-act="toggleWalk">${state.walk.active?'散歩終了':'散歩開始'}</button><button data-act="editPlan">予定変更</button></div></div>
+      <div class="gpsPanel"><div class="gpsHead"><span><b>${state.walk.active?'ルート記録中':'ルート記録'}</b><small>通常散歩としてGPSを残す。キャンプ場場内扱いにはしない。</small></span><span class="gpsLive ${state.walk.active?'on':''}">${state.walk.active?'AUTO':'STOP'}</span></div><div class="gpsGrid"><div class="gpsMetric"><b>${walkDistance().toFixed(2)}</b><span>km</span></div><div class="gpsMetric"><b>${fmtDuration(walkDurationSec())}</b><span>時間</span></div><div class="gpsMetric"><b>${walkAvgSpeed().toFixed(1)}</b><span>km/h</span></div><div class="gpsMetric"><b>${state.walk.track.length}</b><span>GPS</span></div></div></div>
+    </section>`);
+  }
+  function ob410NonCampRouteNotice(){
+    const p=current();
+    return `<section class="section obContext0410"><div class="head"><div><h2>${esc(p.title||'散歩')}</h2><p>この主役プランは${esc(typeName[p.type]||p.type)}。キャンプ用ルートは出さない。</p></div><span class="pill dark">${esc(typeName[p.type]||p.type)}</span></div><div class="honestBox"><b>ルート画面はキャンプ専用</b><p>コタ散歩ではチェックイン、自宅出発、SA/PA、買物、Mapsでキャンプ場へ、場内ボタンは非表示。</p><div class="shareOps"><button class="primary" data-route="field">散歩記録へ</button><button data-act="planSwitch">プラン切替</button></div></div></section>`;
+  }
+  const ob410RoutePrepView = routePrepView;
+  routePrepView = function(){
+    if(!ob410IsCamp())return ob410NonCampRouteNotice();
+    return ob410RoutePrepView();
+  }
+  const ob410Prep = prep;
+  prep = function(){
+    if(ob410IsWalk())return ob410WalkPrepView();
+    return ob410Prep();
+  }
+
+  function ob410WalkFieldView(){
+    const p=current();
+    const rec=planRecords(p.id).slice(-5).reverse();
+    return shell(`<section class="section obWalk0410">
+      <div class="head"><div><h2>${esc(p.title||'コタ散歩')}</h2><p>${esc(planSpan(p))} / ${esc(p.place||'自宅周辺')}。キャンプ場の「場内」ではなく、通常散歩として記録する。</p></div><span class="pill dark">散歩記録</span></div>
+      <div class="gpsPanel"><div class="gpsHead"><span><b>${state.walk.active?'散歩中':'散歩を始める'}</b><small>GPS・写真・音声・ピンをこの散歩プランへ保存。</small></span><span class="gpsLive ${state.walk.active?'on':''}">${state.walk.active?'AUTO':'STOP'}</span></div><div class="gpsGrid"><div class="gpsMetric"><b>${walkDistance().toFixed(2)}</b><span>km</span></div><div class="gpsMetric"><b>${fmtDuration(walkDurationSec())}</b><span>時間</span></div><div class="gpsMetric"><b>${state.walk.track.length}</b><span>GPS</span></div><div class="gpsMetric"><b>${planRecords(p.id).length}</b><span>記録</span></div></div><div class="gpsOps"><button class="primary" data-act="toggleWalk">${state.walk.active?'終了':'開始'}</button><button data-act="gps">現在地</button><button data-act="openMap">Map</button><button data-act="exportGpx">GPX</button></div></div>
+      <div class="obQuick0410"><button class="primary" data-act="toggleVoice"><b>${voiceRecorder?'音声停止':'音声メモ'}</b><small>気づいたことを声で残す</small></button><button data-act="captureMedia" data-kind="photo"><b>写真</b><small>コタ/道/危険</small></button><button data-act="captureMedia" data-kind="video"><b>動画</b><small>必要な時だけ</small></button><button data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言入力</small></button><button data-act="friend"><b>犬友達</b><small>名前を残す</small></button><button data-act="health" data-type="体調"><b>体調</b><small>非公開</small></button></div>
+      <div class="honestBox"><b>保存先</b><p>${esc(p.title||'コタ散歩')}。プラン不明時だけ未確認箱へ逃がす。通常運用で毎回確認させない。</p></div>
+      <div class="fieldRecentList">${rec.map(r=>`<div class="sessionRecentCard"><b>${esc(r.title||recordKindLabel(r.kind))}</b><small>${esc(r.time||'')} / ${esc(r.text||'')}<br>保存先：${esc(p.title||'散歩')}</small></div>`).join('')||`<div class="sessionRecentCard"><b>まだなし</b><small>開始、現在地、音声、写真から残す。</small></div>`}</div>
+    </section>`);
+  }
+  const ob410Field = field;
+  field = function(){
+    if(ob410IsWalk())return ob410WalkFieldView();
+    return ob410Field();
+  }
+
+  const ob410Nav = nav;
+  nav = function(){
+    const t=ob410CurrentType();
+    const items=t==='walk' ? [
+      ['calendar','▦','予定'],['discover','⌕','探す'],['prep','犬','散歩'],['field','＋','記録'],['memory','○','思い出']
+    ] : [
+      ['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','記録'],['memory','○','思い出']
+    ];
+    return `<nav class="bottomNav obNav047 obNav0410 ${t==='walk'?'walk':''}">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
+  }
+
+  const ob410BaseBind = bind;
+  bind = function(){
+    ob410BaseBind();
+    // 主役が散歩の時に準備を押しても、キャンプ準備/ルートへ戻さない。
+    document.querySelectorAll('.bottomNav [data-route="prep"]').forEach(el=>el.onclick=()=>{
+      state.route='prep';
+      state.prepTab='overview';
+      state.routeFocus='';
+      state.__scrollY=0;
+      if(ob410IsWalk())state.stage='field';
+      else state.stage='prep';
+      save();render(false);
+      const run=()=>{try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0}catch(e){}};
+      const raf=window.requestAnimationFrame||((fn)=>setTimeout(fn,0));
+      raf(run);setTimeout(run,60);setTimeout(run,180);
+    });
+  }
+
+  // RESTORE04.10: ensure first paint uses plan context gate while preserving RESTORE04.8 route.
   render();
 
 })();
