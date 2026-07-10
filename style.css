@@ -7707,3 +7707,122 @@ html,body,#app{background:#090d09!important;}
 .obT4Walk{padding:14px}.obT4Walk p{margin:0 0 8px;color:#c7c0b2;font-size:12px}.obT4MapBox{position:relative;border-radius:16px;overflow:hidden;background:#eef0e6}.obT4MapBox .obMapSvg{height:205px!important;width:100%!important;object-fit:cover!important;display:block}.obT4MapBox .obMapLegend{left:9px!important;bottom:8px!important;font-size:10px!important;padding:7px 9px!important;border-radius:12px!important}.obT4Stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.obT4Stats span{border:1px solid rgba(255,255,255,.11);border-radius:13px;padding:7px 3px;text-align:center;color:#c8c0b3;font-size:10px}.obT4Stats b{display:block;color:#fff;font-size:13px;line-height:1.05}.obT4Actions{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.obT4Actions button{border:1px solid rgba(255,255,255,.12);border-radius:13px;background:rgba(255,255,255,.055);color:#fff;font-weight:950;padding:9px 4px;font-size:12px;line-height:1.1}.obT4Actions .primary{background:linear-gradient(145deg,#efce70,#c69b44);color:#111;border:0}.obT4Quick{border-radius:22px;padding:13px}.obT4Quick h2{margin:0 0 8px;font-size:21px}.obT4Quick>div{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.obT4Quick button{border:1px solid rgba(255,255,255,.13);border-radius:13px;background:rgba(255,255,255,.055);color:#fff;padding:7px 2px;display:grid;gap:2px}.obT4Quick i{height:20px;display:grid;place-items:center;font-style:normal}.obT4Quick i:before{color:#f0e6d3;font-size:18px}.obT4Quick i.mic:before{content:'♬'}.obT4Quick i.camera:before{content:'▣'}.obT4Quick i.video:before{content:'□'}.obT4Quick i.pin:before{content:'⌖'}.obT4Quick i.dot:before{content:'●'}.obT4Quick i.note:before{content:'▤'}.obT4Quick b{font-size:12px}.obT4Quick small{font-size:8px;color:#c3bbb0}.obT4MemoryGrid .obT4Mini{min-height:86px}.obT4MemoryList{padding-bottom:13px}
 .obDesignNav{height:80px!important;background:rgba(245,240,229,.92)!important;backdrop-filter:blur(16px)!important}.obDesignNav button.active{background:linear-gradient(180deg,#084532,#033121)!important;border-radius:17px!important;box-shadow:0 11px 18px rgba(20,13,5,.17)!important}.obDesignNav button b{font-size:23px!important}.obDesignNav button span{font-size:11px!important;font-weight:900!important}
 @media(max-width:390px){.main{padding:8px 10px 86px!important}.obLockTop{padding:12px 12px 10px!important}.obBrand{grid-template-columns:46px minmax(0,1fr)!important;column-gap:10px!important}.obBrand span{width:46px!important;height:46px!important;font-size:18px!important}.obBrand b{font-size:21px!important}.obBrand small{font-size:10px!important}.obPlanChip{max-width:45vw!important;padding:8px 10px!important}.obPlanChip b{font-size:14px!important}.obPlanChip small{font-size:10px!important}.obSaveStrip{height:34px!important}.obSaveStrip b{font-size:14px!important}.obSaveStrip span{font-size:12px!important}.obContextPill{height:54px!important;margin-bottom:9px!important}.obContextPill b{font-size:14px!important}.obContextPill button{font-size:13px!important;padding:8px 10px!important}.obT4{gap:8px}.obT4Panel{border-radius:22px;padding:12px}.obT4Hero{min-height:103px;padding:15px 17px;border-radius:22px}.obT4Hero h1{font-size:36px}.obT4Hero p{font-size:13.5px}.obT4HeroIcon{width:56px;height:56px}.obT4HeroIcon:before{font-size:30px}.obT4Calendar{padding:12px}.obT4Calendar h1{font-size:29px}.obT4Calendar header p{font-size:10px;max-width:113px}.obT4CalGrid{grid-template-rows:repeat(5,38px)}.obT4Day{height:38px;padding:5px 4px}.obT4Day b{font-size:12px}.obT4Bar{height:15px;margin-bottom:4px;font-size:7.2px;padding:0 3px}.obT4Bar.gold{font-size:7px}.obT4SchRow{grid-template-columns:50px 7px minmax(0,1fr) 12px;gap:7px;padding:7px 0}.obT4SchRow time{font-size:14px}.obT4SchRow b{font-size:13.5px}.obT4Grid{gap:8px}.obT4Mini{min-height:73px;padding:9px;grid-template-columns:30px minmax(0,1fr) 12px;gap:8px}.obT4Mini i{width:28px;height:28px}.obT4Mini b{font-size:14px}.obT4Mini small{font-size:9.5px}.obT4Mini u,.obT4SavedRow u{font-size:7.5px}.obT4SavedRow{grid-template-columns:39px minmax(0,1fr) auto;gap:8px}.obT4SavedRow i{width:34px;height:30px}.obT4SavedRow b{font-size:13px}.obT4SavedRow time{font-size:9px}.obT4Basic{gap:7px}.obT4Basic b{font-size:13px}.obT4Basic small{font-size:8.5px}.obT4MapBox .obMapSvg{height:180px!important}.obT4Quick>div{grid-template-columns:repeat(6,1fr);gap:5px}.obT4Quick button{padding:6px 1px}.obT4Quick b{font-size:10.5px}.obT4Quick small{font-size:7px}.obDesignNav{height:76px!important}.obDesignNav button b{font-size:21px!important}.obDesignNav button span{font-size:10px!important}}
+
+
+/* OUTBASE_ROUTE08_UI_DONE_FIX5: reference color/icon/type/calendar alignment */
+:root{
+  --ob-cream:#efe7d8!important;
+  --ob-ink:#0d130f!important;
+  --ob-card:#0a1711!important;
+  --ob-green:#073522!important;
+  --ob-green2:#0f4a33!important;
+  --ob-gold:#c39a4b!important;
+  --ob-gold2:#d6b161!important;
+  --ob-muted:#b2aa9b!important;
+}
+body,.shell,.main{background:var(--ob-cream)!important;}
+.obLockTop{background:linear-gradient(180deg,#050705,#10150f)!important;}
+.obContextPill,
+.obT4Panel,
+.obT4Hero,
+.obT4Mini,
+.obT4Status,
+.obT4Basic button,
+.obT4Quick,
+.obDesignNav button.active{
+  background:
+    radial-gradient(circle at 72% -8%,rgba(43,88,61,.18),transparent 40%),
+    linear-gradient(145deg,#0d1711,#073421 92%)!important;
+}
+.obT4Panel,.obT4Hero,.obT4Mini,.obT4Status,.obT4Basic button,.obT4Quick{box-shadow:0 12px 26px rgba(26,18,8,.16)!important;}
+.obPlanChip i,.obT4SchRow i.gold{background:var(--ob-gold)!important;}
+.obPlanChip,.obSaveStrip{background:rgba(255,255,255,.045)!important;border-color:rgba(255,255,255,.13)!important;}
+.obContextPill button,.obHeroBadge,.obHeroOneIcon.gold,.obT4Actions .primary,
+.obT4Mini u,.obT4SavedRow u,.obT4Bar.gold,
+.obDesignNav button.active[data-route="field"] b::before{
+  background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;
+  color:#11140e!important;
+}
+.obT4Schedule h2,.obT4Saved h2,.obT4Walk h2,.obT4MemoryList h2{color:var(--ob-gold)!important;}
+.obT4Hero h1{font-size:38px!important;letter-spacing:-.04em!important;line-height:1!important;}
+.obT4Hero p{font-size:13px!important;line-height:1.42!important;color:#eee5d5!important;}
+.obT4Hero small{color:var(--ob-gold)!important;}
+.obT4Mini b{font-size:15px!important;line-height:1.08!important;letter-spacing:-.03em!important;}
+.obT4Mini small{font-size:10px!important;color:#c9c1b4!important;}
+.obT4Mini u,.obT4SavedRow u{font-size:7.4px!important;padding:2px 5px!important;background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;}
+.obT4Mini strong{font-size:16px!important;color:var(--ob-gold)!important;}
+.obT4Mini i,.obT4Status i,.obT4Basic i{background:rgba(255,255,255,.065)!important;color:var(--ob-gold)!important;}
+.obT4Mini i:before,.obT4Basic i:before,.obT4Quick i:before{font-family:Arial,Helvetica,sans-serif!important;color:var(--ob-gold)!important;font-weight:400!important;line-height:1!important;text-shadow:none!important;}
+.obT4Mini i:before{font-size:20px!important;}
+.obT4Mini i.tent:before{content:'△'!important;}
+.obT4Mini i.walk:before{content:'⌁'!important;}
+.obT4Mini i.paw:before{content:'○'!important;}
+.obT4Mini i.cup:before{content:'▱'!important;font-size:18px!important;}
+.obT4Mini i.memo:before{content:'▤'!important;}
+.obT4Mini i.save:before{content:'▰'!important;}
+.obT4Mini i.car:before{content:'▱'!important;}
+.obT4Mini i.people:before{content:'○○'!important;font-size:13px!important;letter-spacing:-3px!important;}
+.obT4Mini i.person:before{content:'○'!important;}
+.obT4Mini i.photo:before{content:'▧'!important;}
+.obT4Mini i.cart:before{content:'▱'!important;}
+.obT4Mini i.pin:before{content:'⌖'!important;}
+.obT4Mini i.link:before{content:'∞'!important;}
+.obT4Basic i.bag:before{content:'▧'!important;}
+.obT4Basic i.sun:before{content:'☼'!important;}
+.obT4Basic i.route:before{content:'⌁'!important;}
+.obT4Quick i.mic:before{content:'⌁'!important;}
+.obT4Quick i.camera:before{content:'▧'!important;}
+.obT4Quick i.video:before{content:'□'!important;}
+.obT4Quick i.pin:before{content:'⌖'!important;}
+.obT4Quick i.dot:before{content:'○'!important;}
+.obT4Quick i.note:before{content:'▤'!important;}
+.obT4Calendar h1{font-size:28px!important;letter-spacing:.06em!important;}
+.obT4Calendar header p{color:#b7afa0!important;font-size:10px!important;line-height:1.15!important;}
+.obT4CalGrid{grid-template-rows:repeat(5,40px)!important;border-color:rgba(255,255,255,.13)!important;background:rgba(0,0,0,.05)!important;}
+.obT4Day{height:40px!important;padding:0!important;}
+.obT4Day b{
+  position:absolute!important;left:7px!important;top:6px!important;
+  font-size:13px!important;line-height:1!important;font-weight:900!important;
+}
+.obT4Day em{position:absolute!important;left:7px!important;top:20px!important;font-size:7.4px!important;line-height:1.05!important;margin:0!important;}
+.obT4Bar{height:15px!important;margin:0 2px 5px!important;font-size:7.5px!important;background:linear-gradient(90deg,#143b2d,#2a704c)!important;color:#f7f0df!important;box-shadow:0 3px 7px rgba(0,0,0,.16)!important;}
+.obT4Bar.gold{font-size:7px!important;background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;color:#11140e!important;}
+.obT4SchRow b{font-size:13.8px!important;}
+.obT4SchRow time{font-size:14px!important;}
+.obT4SchRow small{font-size:9.5px!important;}
+.obT4Grid{gap:8px!important;}
+.obT4Mini{min-height:70px!important;padding:9px 10px!important;grid-template-columns:30px minmax(0,1fr) 12px!important;gap:8px!important;border-radius:17px!important;}
+.obT4Mini i{width:29px!important;height:29px!important;}
+.obT4SavedRow b{font-size:13.2px!important;}
+.obT4SavedRow small,.obT4SavedRow time{font-size:9.5px!important;}
+.obT4Title h2{font-size:19px!important;}
+.obT4Title p{font-size:11px!important;}
+.obT4Basic b{font-size:12.5px!important;}
+.obT4Basic small{font-size:8px!important;}
+.obT4Quick h2{font-size:19px!important;}
+.obT4Quick b{font-size:10px!important;}
+.obT4Quick small{font-size:7px!important;}
+.obT4MapBox .obMapLegend span{font-size:9.5px!important;}
+.obDesignNav button b{font-size:0!important;position:relative!important;width:26px!important;height:24px!important;display:block!important;}
+.obDesignNav button b::before{font-size:21px!important;color:#6f6b60!important;font-weight:400!important;line-height:1!important;}
+.obDesignNav button[data-route="calendar"] b::before{content:'▦';}
+.obDesignNav button[data-route="discover"] b::before{content:'⌕';}
+.obDesignNav button[data-route="prep"] b::before{content:'◫';}
+.obDesignNav button[data-route="field"] b::before{content:'＋';}
+.obDesignNav button[data-route="memory"] b::before{content:'○';}
+.obDesignNav button.active b::before{color:#f7f0df!important;}
+.obDesignNav button.active[data-route="field"] b::before{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;margin:auto;}
+@media(max-width:390px){
+  .obT4Hero h1{font-size:34px!important;}
+  .obT4Hero p{font-size:12.5px!important;}
+  .obT4Mini b{font-size:13.4px!important;}
+  .obT4Mini small{font-size:9px!important;}
+  .obT4Calendar h1{font-size:26px!important;}
+  .obT4CalGrid{grid-template-rows:repeat(5,37px)!important;}
+  .obT4Day{height:37px!important;}
+  .obT4Day b{font-size:12px!important;left:6px!important;top:5px!important;}
+  .obT4Day em{font-size:7px!important;top:18px!important;}
+  .obT4Bar{height:14px!important;font-size:6.8px!important;margin-bottom:4px!important;}
+  .obT4Bar.gold{font-size:6.5px!important;}
+  .obT4SchRow b{font-size:13px!important;}
+}

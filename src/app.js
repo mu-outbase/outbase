@@ -6148,13 +6148,13 @@ ${starterPanelHtml()}
     <polyline points="65,230 130,185 210,168 300,155 395,170 500,145 590,174 680,210 760,270 835,305" fill="none" stroke="#73a584" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
     ${[[65,230],[130,185],[210,168],[300,155],[395,170],[500,145],[590,174],[680,210],[760,270],[835,305]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="8" fill="#1a332b" stroke="#94b18f" stroke-width="3"/>`).join('')}
     <g><path d="M522 95 C522 65 548 42 578 42 C608 42 634 65 634 95 C634 137 578 178 578 178 C578 178 522 137 522 95Z" fill="#2f6fa8"/><circle cx="578" cy="92" r="21" fill="#fff"/></g>
-    ${[[180,155],[455,145],[690,225],[790,300]].map((p,i)=>`<g><circle cx="${p[0]}" cy="${p[1]}" r="26" fill="#fff4d2" stroke="#9e7b35" stroke-width="5"/><text x="${p[0]}" y="${p[1]+7}" text-anchor="middle" font-size="27">📷</text></g>`).join('')}
+    ${[[180,155],[455,145],[690,225],[790,300]].map((p,i)=>`<g><circle cx="${p[0]}" cy="${p[1]}" r="26" fill="#fff4d2" stroke="#8d743e" stroke-width="5"/><rect x="${p[0]-13}" y="${p[1]-8}" width="26" height="18" rx="4" fill="none" stroke="#5b533f" stroke-width="3"/><circle cx="${p[0]}" cy="${p[1]+1}" r="5" fill="none" stroke="#5b533f" stroke-width="3"/><path d="M${p[0]-8} ${p[1]-10} H${p[0]+1}" stroke="#5b533f" stroke-width="3" stroke-linecap="round"/></g>`).join('')}
     <g><circle cx="710" cy="175" r="25" fill="#eef5df" stroke="#38654d" stroke-width="5"/><text x="710" y="183" text-anchor="middle" font-size="26">□</text></g>
     <text x="80" y="120" fill="#2d627e" font-size="22" font-weight="700">手賀沼親水広場</text><text x="390" y="220" fill="#355a68" font-size="24" font-weight="700">手賀沼</text><text x="585" y="187" fill="#2f6fa8" font-size="22" font-weight="700">現在地</text><text x="590" y="92" fill="#377244" font-size="18">手賀沼公園</text><text x="650" y="330" fill="#377244" font-size="18">手賀沼フィッシングセンター</text>
   </svg>`}
   field = function(){
     return obPage(`${obHero('記録','保存先はコタ散歩。表示を変えても保存先は変わらない。','<button class="obHeroBadge" data-act="planSwitch">同伴 コタ</button>')}
-      <section class="obRouteLike obWalkMap"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obMapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>📍 現在地</span><span>📷 写真ピン</span><span>□ メモピン</span></div></div><div class="obMapStats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obMapActions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
+      <section class="obRouteLike obWalkMap"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obMapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>○ 現在地</span><span>▧ 写真ピン</span><span>□ メモピン</span></div></div><div class="obMapStats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obMapActions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
       <section class="obQuickRecord"><h2>クイック記録</h2><div>${[['🎙','話す','音声を記録'],['📷','撮る','写真を撮影'],['▣','動画','動画を撮影'],['📍','場所','場所を記録'],['●','ピン','ピンを追加'],['▤','メモ','メモを残す']].map(([i,t,s])=>`<button data-act="noop"><i>${i}</i><b>${esc(t)}</b><small>${esc(s)}</small></button>`).join('')}</div></section>`);
   };
   memory = function(){
@@ -6275,7 +6275,7 @@ ${starterPanelHtml()}
   };
   field = function(){
     return obPageOne('field', `${obHeroOne('記録','保存先はコタ散歩。表示を変えても保存先は変わらない。','<button class="obHeroBadge" data-act="planSwitch">同伴 コタ</button>')}
-      <section class="obOneCard obWalkOne"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obMapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>📍 現在地</span><span>📷 写真ピン</span><span>□ メモピン</span></div></div><div class="obMapStats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obMapActions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
+      <section class="obOneCard obWalkOne"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obMapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>○ 現在地</span><span>▧ 写真ピン</span><span>□ メモピン</span></div></div><div class="obMapStats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obMapActions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
       <section class="obQuickOne"><h2>クイック記録</h2><div>${[['🎙','話す','音声'],['📷','撮る','写真'],['▣','動画','動画'],['📍','場所','場所'],['●','ピン','追加'],['▤','メモ','残す']].map(([i,t,s])=>`<button data-act="noop"><i>${i}</i><b>${esc(t)}</b><small>${esc(s)}</small></button>`).join('')}</div></section>`);
   };
   memory = function(){
@@ -6291,7 +6291,7 @@ ${starterPanelHtml()}
 /* OUTBASE_ROUTE08_UI_DONE_FIX4: approved reference visual tune + one-screen compact layout */
 (function(){
   if(typeof shell==='undefined') return;
-  const OB_FIX4_VERSION='outbase-route08-ui-done-fix4-reference-tone-one-screen-20260710';
+  const OB_FIX5_VERSION='outbase-route08-ui-done-fix5-reference-icons-tone-calendar-20260710';
   function obPageT(kind, html){return shell(`${obContextPill()}<div class="obT4 obT4-${kind}">${html}</div>`);}
   function obHeroT(key,title,sub,iconClass){return `<section class="obT4Hero obT4Hero-${key}"><div><small>${esc(key==='field'?'RECORD':key==='memory'?'MEMORIES':'OUTBASE')}</small><h1>${esc(title)}</h1><p>${esc(sub)}</p></div><i class="obT4HeroIcon ${iconClass||''}"></i></section>`;}
   function obCalendarGridT(){
@@ -6356,7 +6356,7 @@ ${starterPanelHtml()}
   };
   field=function(){
     return obPageT('field',`${obHeroT('field','記録','保存先はコタ散歩。表示を変えても保存先は変わらない。','badge')}
-      <section class="obT4Panel obT4Walk"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obT4MapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>📍 現在地</span><span>📷 写真ピン</span><span>□ メモピン</span></div></div><div class="obT4Stats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obT4Actions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
+      <section class="obT4Panel obT4Walk"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obT4MapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>○ 現在地</span><span>▧ 写真ピン</span><span>□ メモピン</span></div></div><div class="obT4Stats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obT4Actions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
       <section class="obT4Quick"><h2>クイック記録</h2><div>${[['mic','話す','音声'],['camera','撮る','写真'],['video','動画','動画'],['pin','場所','場所'],['dot','ピン','追加'],['note','メモ','残す']].map(([cl,t,s])=>`<button data-act="noop"><i class="${cl}"></i><b>${esc(t)}</b><small>${esc(s)}</small></button>`).join('')}</div></section>`);
   };
   memory=function(){
