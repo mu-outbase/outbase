@@ -7964,3 +7964,87 @@ body,.shell,.main{background:linear-gradient(180deg,#f5efe4,#eadfce)!important;}
   .obT4Calendar h1{font-size:24px!important}.obT4Calendar header p{font-size:9px!important;max-width:100px!important}.obMonthBtns button{width:25px!important;height:25px!important}.obT4Week{font-size:12.5px!important}.obT4CalGrid{grid-template-rows:repeat(5,36px)!important}.obT4Day{height:36px!important}.obT4Day b{font-size:11px!important;left:6px!important;top:5px!important}.obT4Day em{font-size:6.5px!important;top:17px!important;}.obT4Bar{height:13px!important;font-size:6.2px!important;margin-bottom:4px!important;}
   .obT4SchRow b{font-size:11.8px!important}.obT4SchRow time{font-size:12.5px!important}.obT4MapBox .obMapSvg{height:158px!important}.obT4Quick h2{font-size:17px!important}.obT4Quick b{font-size:8.8px!important}.obT4Quick small{font-size:6px!important}
 }
+
+/* OUTBASE_ROUTE08_UI_DONE_FIX7: strong visible reference alignment, no tiny-token-only edits */
+:root{
+  --ob-cream:#f0e7d8!important;
+  --ob-card:#08120d!important;
+  --ob-deep:#07100b!important;
+  --ob-green:#052f21!important;
+  --ob-green2:#0a3a29!important;
+  --ob-gold:#a9844a!important;
+  --ob-gold2:#bf9b5b!important;
+  --ob-gold3:#8f7142!important;
+  --ob-text:#f2eadb!important;
+  --ob-subtle:#b8ad9b!important;
+}
+body,.shell,.main{background:linear-gradient(180deg,#f3ecdf 0%,#e9dece 100%)!important;color:#11150f!important;}
+.main{padding-left:13px!important;padding-right:13px!important;}
+/* darker, softer premium cards */
+.obT4Panel,.obT4Hero,.obT4Mini,.obT4Status,.obT4Quick,.obT4Basic button{
+  background:
+    radial-gradient(circle at 78% 3%,rgba(70,100,75,.18),transparent 42%),
+    linear-gradient(150deg,#0a1510 0%,#082116 45%,#062b1d 100%)!important;
+  border:1px solid rgba(240,231,216,.075)!important;
+  box-shadow:0 14px 32px rgba(20,13,6,.16)!important;
+}
+.obContextPill{background:linear-gradient(100deg,#063020,#064832 70%,#062d1e)!important;box-shadow:0 8px 18px rgba(20,13,6,.13)!important;}
+.obContextPill button,.obHeroBadge,.obHeroOneIcon.gold,.obT4Actions .primary,
+.obT4Mini u,.obT4SavedRow u,.obT4Bar.gold{
+  background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;color:#10120e!important;
+}
+.obT4Schedule h2,.obT4Saved h2,.obT4Walk h2,.obT4MemoryList h2{color:var(--ob-gold2)!important;}
+/* Make headline visibly smaller than previous versions */
+.obT4Hero{min-height:94px!important;padding:13px 17px!important;border-radius:22px!important;}
+.obT4Hero small{font-size:9px!important;letter-spacing:.26em!important;color:var(--ob-gold2)!important;margin-bottom:5px!important;}
+.obT4Hero h1{font-size:26px!important;line-height:.98!important;letter-spacing:-.045em!important;font-weight:900!important;color:#fff8ec!important;}
+.obT4Hero p{font-size:11.5px!important;line-height:1.42!important;color:#e5dccd!important;font-weight:600!important;}
+.obT4HeroIcon{width:50px!important;height:50px!important;color:var(--ob-gold2)!important;background:rgba(255,255,255,.018)!important;border:1px solid rgba(240,231,216,.14)!important;}
+.obT4HeroIcon:before{font-size:25px!important;color:var(--ob-gold2)!important;font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important;}
+.obT4HeroIcon.check,.obT4HeroIcon.badge{background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;color:#10120e!important;}
+.obT4HeroIcon.badge{width:62px!important;height:48px!important}.obT4HeroIcon.badge:before{font-size:13px!important;color:#10120e!important;}
+/* mini card type lowered */
+.obT4Grid{gap:8px!important;}
+.obT4Mini{min-height:62px!important;border-radius:15px!important;padding:8px 9px!important;grid-template-columns:29px minmax(0,1fr) 10px!important;gap:7px!important;}
+.obT4Mini b{font-size:12.1px!important;line-height:1.08!important;font-weight:900!important;letter-spacing:-.035em!important;color:#fff8ec!important;}
+.obT4Mini small{font-size:8.1px!important;line-height:1.18!important;color:#c7bdac!important;font-weight:650!important;}
+.obT4Mini u,.obT4SavedRow u{font-size:6.4px!important;padding:2px 4px!important;line-height:1!important;background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;color:#10120e!important;}
+.obT4Mini strong{font-size:13px!important;color:var(--ob-gold2)!important;font-weight:400!important;}
+.obT4Title h2{font-size:17px!important;}.obT4Title p{font-size:10px!important;}
+/* true unified monochrome line icons; no emoji colors */
+.obT4Mini i,.obT4Status i,.obT4Basic i,.obT4Quick i{
+  width:27px!important;height:27px!important;border-radius:50%!important;background:rgba(240,231,216,.045)!important;border:1px solid rgba(240,231,216,.055)!important;color:var(--ob-gold2)!important;overflow:hidden!important;
+}
+.obT4Mini i:before,.obT4Basic i:before,.obT4Quick i:before{
+  font-family:Arial,Helvetica,sans-serif!important;color:var(--ob-gold2)!important;font-size:16px!important;font-weight:400!important;text-shadow:none!important;filter:none!important;
+}
+.obT4Mini i.tent:before{content:'△'!important}.obT4Mini i.walk:before{content:'⌁'!important}.obT4Mini i.paw:before{content:'○'!important}.obT4Mini i.cup:before{content:'□'!important}.obT4Mini i.memo:before{content:'▤'!important}.obT4Mini i.save:before{content:'▰'!important}.obT4Mini i.car:before{content:'▱'!important}.obT4Mini i.people:before{content:'○○'!important;font-size:12px!important;letter-spacing:-4px!important}.obT4Mini i.person:before{content:'○'!important}.obT4Mini i.photo:before{content:'▧'!important}.obT4Mini i.cart:before{content:'▱'!important}.obT4Mini i.pin:before{content:'⌖'!important}.obT4Mini i.link:before{content:'∞'!important}
+.obT4Basic i.bag:before{content:'▧'!important}.obT4Basic i.sun:before{content:'☼'!important}.obT4Basic i.route:before{content:'⌁'!important}
+.obT4Quick i.mic:before{content:'⌁'!important}.obT4Quick i.camera:before{content:'▧'!important}.obT4Quick i.video:before{content:'□'!important}.obT4Quick i.pin:before{content:'⌖'!important}.obT4Quick i.dot:before{content:'○'!important}.obT4Quick i.note:before{content:'▤'!important}
+/* calendar: keep dates truly fixed top-left */
+.obT4Calendar{padding:12px 13px!important;border-radius:22px!important;}
+.obT4Calendar h1{font-size:24px!important;color:#f3eadb!important;letter-spacing:.02em!important;font-weight:900!important;}
+.obT4Calendar header p{font-size:9px!important;color:#b7ad9a!important;line-height:1.12!important;max-width:108px!important;}
+.obMonthBtns button{width:24px!important;height:24px!important;color:var(--ob-gold2)!important;background:rgba(255,255,255,.035)!important;border-color:rgba(240,231,216,.11)!important;}
+.obT4Week{font-size:11.5px!important;margin-bottom:3px!important;}
+.obT4CalGrid{grid-template-rows:repeat(5,34px)!important;border-radius:15px!important;}
+.obT4Day{height:34px!important;padding:0!important;text-align:left!important;display:block!important;position:relative!important;}
+.obT4Day b{position:absolute!important;left:6px!important;top:5px!important;font-size:10.2px!important;line-height:1!important;font-weight:850!important;text-align:left!important;}
+.obT4Day em{position:absolute!important;left:6px!important;top:17px!important;font-size:5.8px!important;line-height:1.05!important;font-weight:750!important;text-align:left!important;}
+.obT4Bar{height:12px!important;margin:0 1px 4px!important;font-size:5.8px!important;font-weight:800!important;background:linear-gradient(90deg,#123628,#226142)!important;color:#efe7d8!important;border-radius:999px!important;}
+.obT4Bar.gold{font-size:5.5px!important;background:linear-gradient(145deg,var(--ob-gold2),var(--ob-gold))!important;color:#10120e!important;}
+/* nav: hide real glyphs so pseudo icon is single, no double plus */
+.obDesignNav button b{font-size:0!important;line-height:1!important;}
+.obDesignNav button b::before{font-size:20px!important;font-weight:400!important;color:#6f6a60!important;}
+.obDesignNav button.active b::before{color:#f3eadb!important;}
+.obDesignNav button span{font-size:10px!important;color:#6f6a60!important;}
+.obDesignNav button.active span{color:#f3eadb!important;}
+.obDesignNav button.active{background:linear-gradient(180deg,#073524,#05281b)!important;}
+.obDesignNav button[data-route="calendar"] b::before{content:'▦'!important}.obDesignNav button[data-route="discover"] b::before{content:'⌕'!important}.obDesignNav button[data-route="prep"] b::before{content:'▥'!important}.obDesignNav button[data-route="field"] b::before{content:'＋'!important}.obDesignNav button[data-route="memory"] b::before{content:'○'!important}
+/* map and list condensed */
+.obT4Walk{padding:12px!important}.obT4Walk p{font-size:10.4px!important;margin-bottom:6px!important}.obT4MapBox .obMapSvg{height:154px!important}.obT4Stats span{font-size:8px!important;padding:5px 2px!important}.obT4Stats b{font-size:10.8px!important}.obT4Actions button{font-size:10px!important;padding:7px 2px!important}.obT4Quick h2{font-size:16px!important}.obT4Quick button{padding:5px 1px!important}.obT4Quick b{font-size:8px!important}.obT4Quick small{font-size:5.8px!important}.obT4SavedRow b{font-size:11.5px!important}.obT4SavedRow small,.obT4SavedRow time{font-size:8px!important}.obT4SavedRow i{width:31px!important;height:27px!important}.obT4Basic b{font-size:10.5px!important}.obT4Basic small{font-size:7px!important}
+@media(max-width:390px){
+  .obT4Hero h1{font-size:24px!important}.obT4Hero p{font-size:10.5px!important}.obT4Hero{min-height:88px!important;padding:12px 14px!important}.obT4HeroIcon{width:46px!important;height:46px!important}
+  .obT4Mini{min-height:58px!important}.obT4Mini b{font-size:11.2px!important}.obT4Mini small{font-size:7.6px!important}.obT4Mini u,.obT4SavedRow u{font-size:6px!important}
+  .obT4Calendar h1{font-size:22px!important}.obT4Calendar header p{font-size:8px!important}.obT4CalGrid{grid-template-rows:repeat(5,32px)!important}.obT4Day{height:32px!important}.obT4Day b{font-size:9.7px!important}.obT4Bar{height:11px!important;font-size:5.2px!important}.obT4MapBox .obMapSvg{height:145px!important}
+}
