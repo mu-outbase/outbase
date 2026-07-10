@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-18-field03-integrated-ui-calendar-scroll-20260710';
+  const VERSION = 'outbase-restore04-19-field03-approved-route-rebuild-rest-20260710';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-18-field03-integrated-ui-calendar-scroll-20260710').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-19-field03-approved-route-rebuild-rest-20260710').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -7616,7 +7616,7 @@ ${starterPanelHtml()}
        - 記録タブに散歩マップ
   */
   const OUTBASE_RESTORE0418_LOCK = Object.freeze({
-    version:'outbase-restore04-18-field03-integrated-ui-calendar-scroll-20260710',
+    version:'outbase-restore04-19-field03-approved-route-rebuild-rest-20260710',
     routeApproved:'RESTORE04.8 route one-screen flow',
     unapprovedScope:'route以外のトップ/予定/探す/準備/記録/思い出/デザイン/スクロール',
     decision:'全体再統合。カレンダーだけ、散歩地図だけの小修正にしない。'
@@ -7872,6 +7872,177 @@ ${starterPanelHtml()}
 
   ob415FinalAudit();
   save();
+
+  /* RESTORE04.19 承認済みルート保護 + ルート以外再構成
+     目的：04.8系ルートを壊さず、トップ/記録/準備/探す/思い出を重複UIなしで再構成する。 */
+  const OUTBASE_RESTORE0419 = {
+    version:'outbase-restore04-19-field03-approved-route-rebuild-rest-20260710',
+    approved:['route04.8 one-screen route','route calculation'],
+    rebuilt:['calendar top','record map','prep/discover/memory entry','duplicate view/save chips removed','scroll retention']
+  };
+
+  function ob419View(){return ob415ViewEvent?.()||current?.()||((state.events||[])[0]||null)}
+  function ob419Record(){return ob415RecordTarget?.()||ob419View()}
+  function ob419Label(x){return (ob413TargetLabel?.(x)||x?.title||'未確認')}
+  function ob419Line(e=ob419View()){
+    if(!e)return '未確認';
+    const a=ob415Attrs?.(e)||{};
+    const span=e.start?`${fmt(e.start)}${e.end&&e.end!==e.start?`〜${fmt(e.end)}`:''}`:'日付未設定';
+    return `${typeName[e.type]||a.template||'外出'} / ${span}${e.place?` / ${e.place}`:''}`;
+  }
+  function ob419RecordLine(){const r=ob419Record();return ob419Label(r)}
+
+  top = function(){
+    const v=ob419View(), r=ob419Record();
+    const rec=ob419Label(r), view=ob419Label(v);
+    const diff=(v?.id||v?.rootPlanId)!==(r?.id||r?.rootPlanId)||r?.type==='session';
+    return `<div class="top obTop046 obTop0415 obTop0419"><div class="top-row"><button class="brand" data-route="calendar"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button><button class="plan ob419PlanPill" data-act="planSwitch"><i></i><b>${esc(view)}</b><small>${esc(ob419Line(v))}${diff?` / 保存 ${esc(rec)}`:''}</small></button></div></div>`;
+  };
+  nav = function(){
+    const items=[['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','記録'],['memory','○','思い出']];
+    return `<nav class="bottomNav obNav047 obNav0415 obNav0419">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
+  };
+  function ob419Shell(inner){return shell(`<div class="ob419Page">${inner}</div>`) }
+  function ob419Panel(title, sub='', body='', extra=''){
+    return `<section class="ob419Panel ${extra}"><div class="ob419PanelHead"><span><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</span></div>${body}</section>`;
+  }
+  function ob419Hero(kicker,title,sub,actions=''){
+    return `<section class="ob419Hero"><div><small>${esc(kicker)}</small><h1>${esc(title)}</h1>${sub?`<p>${esc(sub)}</p>`:''}</div>${actions?`<div class="ob419HeroOps">${actions}</div>`:''}</section>`;
+  }
+  function ob419Grid(items, cls=''){
+    return `<div class="ob419Grid ${cls}">${items.map((x,i)=>`<button class="${x.primary?'primary':''}" ${x.route?`data-route="${x.route}"`:''} ${x.prep?`data-prep="${x.prep}"`:''} ${x.act?`data-act="${x.act}"`:''} ${x.id?`data-id="${x.id}"`:''}><b>${esc(x.title)}</b><small>${esc(x.sub||'')}</small></button>`).join('')}</div>`;
+  }
+
+  function ob419Holiday(date){
+    const md=date.slice(5);
+    const m={
+      '01-01':'元日','01-12':'成人の日','02-11':'建国記念の日','02-23':'天皇誕生日','03-20':'春分の日','04-29':'昭和の日','05-03':'憲法記念日','05-04':'みどりの日','05-05':'こどもの日','05-06':'振替休日','07-20':'海の日','08-11':'山の日','09-21':'敬老の日','09-22':'国民の休日','09-23':'秋分の日','10-12':'スポーツの日','11-03':'文化の日','11-23':'勤労感謝の日'
+    };
+    return m[md]||'';
+  }
+  function ob419DateEvents(date){
+    const target=dObj(date);
+    return (state.events||[]).filter(e=>{
+      if(!e.start&&e.repeat==='none')return false;
+      if(e.repeat&&e.repeat!=='none'){
+        const st=dObj(e.start||date); if(!st||target<st)return false;
+        const diff=Math.floor((target-st)/86400000);
+        if(e.repeat==='daily')return true;
+        if(e.repeat==='weekly')return diff%7===0;
+        if(e.repeat==='monthly')return Number(date.slice(8,10))===Number((e.start||'').slice(8,10));
+        if(e.repeat==='yearly')return date.slice(5) === (e.start||'').slice(5);
+      }
+      return e.start&&e.start<=date&&(e.end||e.start)>=date;
+    });
+  }
+  function ob419NextEvents(n=4){
+    const t=today();
+    return (state.events||[]).filter(e=>e.start&&e.start>=t).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,n);
+  }
+  function ob419MonthDays(){
+    const [y,m]=String(state.currentMonth||today().slice(0,7)).split('-').map(Number);
+    const first=new Date(y,m-1,1); const start=new Date(first); start.setDate(first.getDate()-first.getDay());
+    return Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return iso(d)});
+  }
+  function ob419DayButton(date){
+    const d=dObj(date), dow=d.getDay(), inMonth=date.slice(0,7)===(state.currentMonth||today().slice(0,7));
+    const evs=ob419DateEvents(date); const hol=ob419Holiday(date); const selected=date===(state.selectedDate||today()); const t=date===today();
+    const bars=evs.filter(e=>e.start&&e.end&&e.end!==e.start&&e.start<=date&&e.end>=date).slice(0,2);
+    const singles=evs.filter(e=>!bars.includes(e)).slice(0,2);
+    return `<button class="ob419Day ${inMonth?'':'out'} ${selected?'selected':''} ${t?'today':''} ${dow===0?'sun':''} ${dow===6?'sat':''} ${hol?'holiday':''}" data-act="selectDay419" data-date="${date}"><span class="ob419DayTop"><b>${Number(date.slice(8,10))}</b><i>${['日','月','火','水','木','金','土'][dow]}${hol?' 祝':''}</i></span>${hol?`<em class="holidayName">${esc(hol)}</em>`:''}<span class="bars">${bars.map(e=>`<strong class="bar ${e.type||''} ${e.start===date?'start':''} ${e.end===date?'end':''}">${esc(e.title)}</strong>`).join('')}</span><span class="singles">${singles.map(e=>`<em class="${esc(e.type||'normal')}">${esc(e.title)}</em>`).join('')}</span></button>`;
+  }
+  function ob419EventRow(e, label='表示'){
+    const a=ob415Attrs?.(e)||{};
+    return `<button class="ob419Row" data-act="viewPlan419" data-id="${esc(e.id)}"><span><b>${esc(e.title)}</b><small>${esc(ob419Line(e))} / ${esc(ob415PetLabel?ob415PetLabel(a):'')}</small></span><em>${label}</em></button>`;
+  }
+  function ob419Calendar(){
+    ob415EnsureOutingModel?.();
+    state.currentMonth=state.currentMonth||today().slice(0,7); state.selectedDate=state.selectedDate||today();
+    const days=ob419MonthDays(); const selected=state.selectedDate||today(); const selectedEvents=ob419DateEvents(selected);
+    const todayEvents=ob419DateEvents(today()); const next=ob419NextEvents(4); const [y,m]=String(state.currentMonth).split('-');
+    return ob419Shell(`<section class="ob419CalendarTop"><div class="ob419MonthHead"><button data-act="prevMonth419">‹</button><div><small>CALENDAR</small><h1>${Number(y)}.${pad(Number(m))}</h1><p>今日・選択日・次の外出をここで見る。外出タイプ選択は＋新規予定の中。</p></div><button data-act="nextMonth419">›</button></div><div class="ob419CalOps"><button data-act="today419">今日</button><button class="primary" data-act="addEvent" data-date="${esc(selected)}">＋新規予定</button><button data-route="field">散歩マップ</button></div><div class="ob419Week"><b>日</b><b>月</b><b>火</b><b>水</b><b>木</b><b>金</b><b>土</b></div><div class="ob419Days">${days.map(ob419DayButton).join('')}</div><div class="ob419Legend"><span class="sun">日曜</span><span class="sat">土曜</span><span class="holiday">祝日</span><span class="linked">連泊/連動予定</span></div></section>${ob419Panel(`選択日 ${fmt(selected)}`,'1回タップで選択。もう一度同じ日を押すと予定追加。',selectedEvents.length?selectedEvents.map(e=>ob419EventRow(e,'開く')).join(''):`<div class="ob419Empty">この日の予定はまだありません。＋新規予定から追加できます。</div>`,'selected')}${ob419Panel('今日',todayEvents.length?`${fmt(today())} の予定`:'今日の確認',todayEvents.length?todayEvents.map(e=>ob419EventRow(e,'今日')).join(''):`<div class="ob419Empty">今日の予定はありません。</div>`)}${ob419Panel('次の外出','近い予定から順に表示',next.length?next.map(e=>ob419EventRow(e,'表示')).join(''):`<div class="ob419Empty">次の外出予定はまだありません。</div>`)}<details class="ob419NewDock"><summary>＋新規予定の種類を選ぶ</summary>${ob419Grid([
+      {title:'キャンプ',sub:'泊まり/デイキャンプ',act:'createCampTemplate',primary:true},{title:'通常散歩',sub:'自宅から歩く',act:'createHomeWalkTemplate'},{title:'ドライブ散歩',sub:'車で行ってから歩く',act:'createDriveWalkTemplate'},{title:'同伴イベント',sub:'ペット連れ',act:'createEventWithPetTemplate'},{title:'人だけイベント',sub:'物販・下見',act:'createEventNoPetTemplate'},{title:'予定なし記録',sub:'未確認箱へ',act:'recordInbox'}
+    ],'mini')}</details>`);
+  }
+
+  function ob419WalkMap(){
+    const km=typeof walkDistance==='function'?walkDistance():0, sec=typeof walkDurationSec==='function'?walkDurationSec():0, sp=typeof walkAvgSpeed==='function'?walkAvgSpeed():0;
+    const pts=(state.walk?.track||[]).length, pins=(state.walk?.spots||[]).length+(state.mapPins||[]).length;
+    return `<section class="ob419MapCard"><div class="ob419MapHead"><div><small>WALK MAP</small><h1>散歩マップ</h1><p>移動ルートとは別。歩いた軌跡、現在地、ピン、写真場所を残す。</p></div><em class="${state.walk?.active?'live':''}">${state.walk?.active?'LIVE':'MAP'}</em></div><div class="ob419MapCanvas"><canvas id="walkMap" width="680" height="320"></canvas><strong>${pts?`GPS ${pts}点`:'散歩開始で記録'}</strong></div><div class="ob419Stats"><span><b>${km.toFixed(2)}</b><small>km</small></span><span><b>${typeof fmtDuration==='function'?fmtDuration(sec):'0:00'}</b><small>時間</small></span><span><b>${sp.toFixed(1)}</b><small>km/h</small></span><span><b>${pins}</b><small>ピン</small></span></div><div class="ob419Ops"><button class="primary" data-act="toggleWalk">${state.walk?.active?'散歩終了':'散歩開始'}</button><button data-act="gps">現在地</button><button data-act="addPinQuick">ピン</button><button data-act="openMap">Google Map</button></div></section>`;
+  }
+  function ob419Field(){
+    const r=ob419Record();
+    return ob419Shell(`${ob419Hero('RECORD','記録',`保存先：${ob419Label(r)}。表示を変えても保存先は勝手に変えない。`)}${ob419WalkMap()}${ob419Panel('すぐ記録','写真・音声・メモを残す',ob419Grid([
+      {title:voiceRecorder?'停止':'話す',sub:'音声メモ',act:'toggleVoice',primary:true},{title:'撮る',sub:'写真',act:'capturePhoto'},{title:'動画',sub:'必要時だけ',act:'captureVideo'},{title:'場所',sub:'現在地保存',act:'gps'},{title:'ピン',sub:'地点メモ',act:'addPinQuick'},{title:'メモ',sub:'一言記録',act:'quickRecord'}
+    ],'record'))}${ob419Panel('散歩セッション','自宅・ドライブ先・場内/会場を分ける',ob419Grid([
+      {title:'通常散歩',sub:'自宅から歩く',act:'startNormalWalkSession',primary:true},{title:'ドライブ散歩',sub:'車で行ってから歩く',act:'startDriveWalkSession'},{title:'場内/会場散歩',sub:'キャンプ・イベント先',act:'startCampWalkSession'},{title:'未確認箱',sub:'予定なし記録',act:'recordInbox'}
+    ],'mini'))}${ob412RecentRecordsHtml?ob412RecentRecordsHtml():''}`);
+  }
+  function ob419Prep(){
+    if(state.prepTab==='route')return ob419Shell(`${routePrepView()}`);
+    if(state.prepTab&&state.prepTab!=='overview')return ob419Shell(`${ob419Hero('READY','準備',`${ob419Label(ob419View())} の準備`)}<section class="section ob416LegacyTabs"><div class="tabs">${['overview:全体','route:ルート','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット','timer:タイマー'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>${prepBody()}`);
+    return ob419Shell(`${ob419Hero('READY','準備',`${ob419Label(ob419View())} に必要なことだけ。`)}${ob419Grid([
+      {title:'ルート',sub:'出発逆算・Maps',prep:'route',primary:true},{title:'持ち物',sub:'同伴/車載/水/休憩',prep:'pets'},{title:'買い物',sub:'食材・物販・補充',prep:'shopping'},{title:'料理',sub:'献立・材料',prep:'meals'},{title:'ギア',sub:'積込・乾燥・修理',prep:'gear'},{title:'天気',sub:'雨風・暑さ寒さ',prep:'weather'}
+    ])}`);
+  }
+  function ob419Discover(){
+    return ob419Shell(`${ob419Hero('DISCOVER','探す','候補探し・下見・保存。予定作成前の情報をここにまとめる。')}${ob419Grid([
+      {title:'キャンプ場',sub:'犬可・温水・4時間以内',act:'findCampCandidate',primary:true},{title:'散歩場所',sub:'駐車場・日陰・水辺',act:'findWalkCandidate'},{title:'ペット関連イベント',sub:'同伴あり/なしは後で選ぶ',act:'createEventNoPetTemplate'},{title:'ドッグカフェ',sub:'寄り道候補',act:'addCandidate'},{title:'下見記録',sub:'駐車場・トイレ・混雑',act:'quickRecord'},{title:'保存候補',sub:'あとで思い出整理',act:'addCandidate'}
+    ])}`);
+  }
+  function ob419Memory(){
+    const rec=(typeof publicRecords==='function')?publicRecords():[];
+    return ob419Shell(`${ob419Hero('MEMORY','思い出','記録整理・レビュー・次回改善。現地操作とは分ける。')}${ob419Grid([
+      {title:'記録一覧',sub:'写真・音声・メモ',act:'showLegacyMemory',primary:true},{title:'次回改善',sub:'買い足し・反省',act:'addReview'},{title:'場所メモ',sub:'駐車場・トイレ・日陰',act:'recordToPlace'},{title:'関連付け',sub:'最後の記録を整理',act:'linkLastToView'}
+    ],'mini')}${rec.length?ob419Panel('最近の記録',`${rec.length}件`,rec.slice(0,4).map(fieldRecordCard).join('')):''}`);
+  }
+
+  calendar = ob419Calendar;
+  home = ob419Calendar;
+  field = ob419Field;
+  prep = ob419Prep;
+  discover = ob419Discover;
+  memory = ob419Memory;
+
+  const ob419BaseAct = act;
+  act = function(a,el){
+    if(a==='selectDay419'){
+      const date=el.dataset.date||today(); const now=Date.now(); const last=state.__calendarLastTap||{};
+      rememberScroll?.();
+      if(state.selectedDate===date && last.date===date && now-last.time<1200){state.drawer={type:'event',date};state.__calendarLastTap={date,time:0};}
+      else{state.selectedDate=date;state.currentMonth=date.slice(0,7);state.__calendarLastTap={date,time:now};}
+      save();render(true);return;
+    }
+    if(a==='prevMonth419'||a==='nextMonth419'){
+      rememberScroll?.(); const delta=a==='prevMonth419'?-1:1; const [y,m]=String(state.currentMonth||today().slice(0,7)).split('-').map(Number); const d=new Date(y,m-1+delta,1); state.currentMonth=`${d.getFullYear()}-${pad(d.getMonth()+1)}`; if((state.selectedDate||'').slice(0,7)!==state.currentMonth)state.selectedDate=iso(d); save();render(true);return;
+    }
+    if(a==='today419'){rememberScroll?.();state.selectedDate=today();state.currentMonth=today().slice(0,7);save();render(true);return;}
+    if(a==='viewPlan419'){
+      const id=el.dataset.id; const e=(state.events||[]).find(x=>x.id===id); if(e){ob413SetView?.(id,'plan',{render:false,toast:false});state.currentPlanId=id;if(!state.recordPlanId)state.recordPlanId=id;if(e.start){state.selectedDate=e.start;state.currentMonth=e.start.slice(0,7)}save();render(true);toast(`${e.title}を表示`)} return;
+    }
+    return ob419BaseAct(a,el);
+  };
+  const ob419BaseBind = bind;
+  bind = function(){
+    ob419BaseBind();
+    document.querySelectorAll('[data-route]').forEach(el=>el.onclick=()=>{const next=el.dataset.route; const changed=state.route!==next; state.route=next; if(next==='prep'){state.prepTab=state.prepTab||'overview';state.stage='prep'} if(next==='field')state.stage='field'; state.__scrollY=changed?0:scrollYNow(); save();render(!changed);});
+    document.querySelectorAll('[data-prep]').forEach(el=>el.onclick=()=>{rememberScroll?.();state.route='prep';state.prepTab=el.dataset.prep||'overview';state.stage='prep';save();render(true);});
+  };
+  function ob419Audit(){
+    const cal=calendar(), fld=field(), rt=routePrepView?.()||'';
+    const checks=[
+      ['route kept',/自宅出発/.test(rt)&&/Maps/.test(rt)],
+      ['single top context',!/ob416Status/.test(cal)&&!/ob416Status/.test(fld)],
+      ['calendar top',/ob419CalendarTop/.test(cal)&&/選択日/.test(cal)&&/次の外出/.test(cal)],
+      ['outing type behind details',/ob419NewDock/.test(cal)],
+      ['weekend holiday',/日曜/.test(cal)&&/土曜/.test(cal)&&/祝日/.test(cal)],
+      ['walk map record',/ob419MapCard/.test(fld)&&/散歩マップ/.test(fld)],
+      ['scroll retention',/render\(true\)/.test(String(act))&&/changed\?0/.test(String(bind))]
+    ];
+    state.lastAudit0419={version:OUTBASE_RESTORE0419.version,time:new Date().toISOString(),checks:checks.map(([name,pass])=>({name,pass:!!pass})),pass:checks.every(x=>x[1]),decision:checks.every(x=>x[1])?'zip_candidate':'stop'};
+  }
+  ob419Audit();
+
   render();
 
 })();
