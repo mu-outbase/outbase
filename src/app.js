@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-8-base-route-ok-ui-rebuild-v1-20260710';
+  const VERSION = 'outbase-restore04-8-field03-route-space-calc-sync-20260709';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-8-base-route-ok-ui-rebuild-v1-20260710').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-8-field03-route-space-calc-sync-20260709').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -112,7 +112,13 @@
   }
 
   let state=load();
-  state=migrateState(state); save();
+  state=migrateState(state);
+  try{
+    const qp=new URLSearchParams(location.search);
+    const rr=qp.get('route');
+    if(['calendar','discover','prep','field','memory','home'].includes(rr))state.route=rr;
+  }catch(_){ }
+  save();
   
   function scrollYNow(){return window.pageYOffset||document.documentElement?.scrollTop||document.body?.scrollTop||0}
   function rememberScroll(){try{state.__scrollY=scrollYNow()}catch(e){}}
@@ -6030,120 +6036,125 @@ ${starterPanelHtml()}
 
 
 
-  /* ROUTE_OK_UI_REBUILD_v1: 04.8ルート保護 / ルート以外UI再構築 */
-  const UI_REBUILD_LOCK = Object.freeze({
-    base:'RESTORE04.8 route accepted',
-    rule:'ルート画面は04.8のまま保護。トップ/記録/探す/準備/思い出は後付け版を流用せず、必要最小の入口画面として再構築。',
-    rejected:['RESTORE04.18 UI','RESTORE04.19 UI','重複した表示/保存チップ','大型説明カード']
-  });
-
-  function obxDateLabel(s){return s?`${Number(s.slice(5,7))}/${Number(s.slice(8,10))}`:'未定'}
-  function obxIsBetween(date,start,end){return !!start && date>=start && date<=(end||start)}
-  function obxHoliday(date){
-    const fixed={
-      '2026-01-01':'元日','2026-01-12':'成人の日','2026-02-11':'建国記念の日','2026-02-23':'天皇誕生日','2026-03-20':'春分の日','2026-04-29':'昭和の日','2026-05-03':'憲法記念日','2026-05-04':'みどりの日','2026-05-05':'こどもの日','2026-05-06':'振替','2026-07-20':'海の日','2026-08-11':'山の日','2026-09-21':'敬老の日','2026-09-22':'国民の休日','2026-09-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-03':'文化の日','2026-11-23':'勤労感謝の日'
-    };
-    return fixed[date]||'';
-  }
-  function obxVisibleEvents(){return (state.events||[]).filter(e=>e.start && e.type!=='payment')}
-  function obxSelectedEvents(){return obxVisibleEvents().filter(e=>obxIsBetween(state.selectedDate,e.start,e.end||e.start)).sort((a,b)=>(a.start||'').localeCompare(b.start||''))}
-  function obxTodayEvents(){const t=today();return obxVisibleEvents().filter(e=>obxIsBetween(t,e.start,e.end||e.start)).slice(0,3)}
-  function obxNextEvent(){const t=today();return obxVisibleEvents().filter(e=>e.start>=t).sort((a,b)=>a.start.localeCompare(b.start))[0] || obxVisibleEvents().sort((a,b)=>a.start.localeCompare(b.start))[0]}
-  function obxEventMini(e){return `<button class="obxEvent" data-act="openEvent" data-id="${esc(e.id)}"><b>${esc(e.title||'予定')}</b><small>${esc(typeName[e.type]||e.type||'予定')} / ${esc(obxDateLabel(e.start))}${e.end&&e.end!==e.start?`〜${esc(obxDateLabel(e.end))}`:''}${e.place?` / ${esc(e.place)}`:''}</small></button>`}
-  function obxMonthCells(){
-    const [y,m]=state.currentMonth.split('-').map(Number);
-    const first=new Date(y,m-1,1), start=new Date(first);start.setDate(1-start.getDay());
-    const out=[];
-    for(let i=0;i<42;i++){
-      const d=new Date(start);d.setDate(start.getDate()+i);
-      const date=iso(d), dow=d.getDay(), inMonth=d.getMonth()===m-1, selected=date===state.selectedDate, isToday=date===today(), hol=obxHoliday(date);
-      const occs=obxVisibleEvents().filter(e=>obxIsBetween(date,e.start,e.end||e.start)).slice(0,3);
-      out.push(`<button class="obxDay ${inMonth?'':'muted'} ${selected?'selected':''} ${isToday?'today':''} ${dow===0||hol?'sun':''} ${dow===6?'sat':''}" data-day="${date}">
-        <span class="obxDayNum">${d.getDate()}<small>${['日','月','火','水','木','金','土'][dow]}</small></span>
-        ${hol?`<em class="obxHoliday">${esc(hol)}</em>`:''}
-        <span class="obxMarks">${occs.map(e=>{
-          const multi=e.end&&e.end!==e.start;
-          const pos=!multi?'single':date===e.start?'start':date===(e.end||e.start)?'end':'mid';
-          return `<i class="${pos} ${e.type==='camp'?'camp':e.type==='walk'?'walk':'normal'}">${pos==='mid'?'':esc(e.title||'予定')}</i>`;
-        }).join('')}</span>
-      </button>`);
-    }
-    return out.join('');
-  }
-  function obxCalendarHeader(){
-    const next=obxNextEvent();
-    const todays=obxTodayEvents();
-    return `<section class="obxHero obxCalendarHero">
-      <div class="obxMonthHead">
-        <button data-act="prevMonth">‹</button>
-        <div><b>${esc(state.currentMonth.replace('-','.'))}</b><small>予定・連泊・土日祝をここで見る</small></div>
-        <button data-act="nextMonth">›</button>
-      </div>
-      <div class="obxHeroActions">
-        <button data-act="goToday">今日</button>
-        <button class="primary" data-act="addEvent">＋新規予定</button>
-        <button data-route="field">散歩マップ</button>
-      </div>
-      <div class="obxNowGrid">
-        <div><span>今日</span>${todays.length?todays.map(e=>`<b>${esc(e.title)}</b>`).join(''):'<b>予定なし</b>'}</div>
-        <div><span>次の外出</span>${next?`<b>${esc(next.title)}</b><small>${esc(obxDateLabel(next.start))}${next.end&&next.end!==next.start?`〜${esc(obxDateLabel(next.end))}`:''}</small>`:'<b>未登録</b>'}</div>
-      </div>
-    </section>`;
-  }
-  calendar = function(){
-    const selected=obxSelectedEvents();
-    return shell(`${obxCalendarHeader()}
-      <section class="obxPanel obxCalendarPanel">
-        <div class="obxWeek"><b>日</b><b>月</b><b>火</b><b>水</b><b>木</b><b>金</b><b>土</b></div>
-        <div class="obxMonthGrid" id="days">${obxMonthCells()}</div>
-      </section>
-      <section class="obxPanel">
-        <div class="obxSectionHead"><span><b>${esc(obxDateLabel(state.selectedDate))} の予定</b><small>日付1回で選択。同じ日付をもう一度で予定追加。</small></span><button data-act="addEvent" data-date="${esc(state.selectedDate)}">追加</button></div>
-        <div class="obxList">${selected.length?selected.map(obxEventMini).join(''):`<div class="obxEmpty">この日の予定はまだない。</div>`}</div>
-      </section>`);
-  }
-  home = calendar;
-
-  top = function(){
-    const p=current();
-    return `<div class="top obTop046 obxTop">
-      <div class="top-row">
-        <button class="brand" data-route="calendar"><span class="logo">OB</span><span><b>OUTBASE</b><small>route design</small></span></button>
-        <button class="plan obxPlan" data-act="planSwitch"><i></i><b>${esc(p.title||'主役未設定')}</b><small>${p.start?`${fmt(p.start)} / ${esc(typeName[p.type]||p.type||'予定')}`:'日付未設定'}${p.memo?` / ${esc(String(p.memo).slice(0,18))}`:''}</small></button>
-      </div>
+  /* OUTBASE UI DESIGN LOCK v1 / IMPLEMENTATION SPEC v1
+     04.8ルート承認部分は routePrepView のまま保持。
+     予定/探す/準備/記録/思い出だけを、採用モックの方向へ上書きする。 */
+  const OB_UI_LOCK_VERSION = 'outbase-ui-lock-v1-route08-preserve-final-20260710';
+  const obPlans = [
+    {title:'尾瀬トレッキング', type:'登山', start:'2026-06-30', end:'2026-07-02', color:'green'},
+    {title:'コタ散歩', type:'散歩', start:'2026-07-12', end:'2026-07-12', color:'green'},
+    {title:'手賀沼ドライブ散歩', type:'ドライブ散歩', start:'2026-07-13', end:'2026-07-13', color:'gold'},
+    {title:'スノーピーク赤城山CF', type:'イベント', start:'2026-07-18', end:'2026-07-20', color:'green'},
+    {title:'谷川岳山行', type:'登山', start:'2026-07-31', end:'2026-08-01', color:'green'}
+  ];
+  function obPad2(n){return String(n).padStart(2,'0')}
+  function obDateKey(y,m,d){return `${y}-${obPad2(m)}-${obPad2(d)}`}
+  function obDateObj(key){const [y,m,d]=key.split('-').map(Number);return new Date(y,m-1,d)}
+  function obAddDays(key,n){const d=obDateObj(key);d.setDate(d.getDate()+n);return obDateKey(d.getFullYear(),d.getMonth()+1,d.getDate())}
+  function obRangeDays(start,end){const out=[];let k=start;while(k<=end){out.push(k);k=obAddDays(k,1)}return out}
+  function obCurrentPlan(){return {title:'手賀沼ドライブ散歩', sub:'ドライブ散歩 / 7/13 / 同伴 コタ', save:'コタ散歩', companion:'同伴 コタ'};}
+  function obLockedTop(){
+    const p=obCurrentPlan();
+    return `<div class="obLockTop">
+      <div class="obTopMain"><button class="obBrand" data-route="calendar"><span>OB</span><b>OUTBASE</b><small>route design</small></button><button class="obPlanChip" data-act="planSwitch"><i></i><b>${esc(p.title)}</b><small>${esc(p.sub)}</small></button></div>
+      <div class="obSaveStrip"><b>保存先：${esc(p.save)}</b><span>表示とは別</span></div>
     </div>`;
   }
-  shell = function(html){return `<div class="shell obxShell">${top()}<main class="main obxMain">${html}</main></div>${drawer()}${state.toast?`<div class="toast">${esc(state.toast)}</div>`:''}${nav()}`}
+  top = obLockedTop;
+  function obContextPill(){
+    const p=obCurrentPlan();
+    return `<section class="obContextPill"><div><small>表示</small><b>${esc(p.title)}</b></div><div><small>保存</small><b>${esc(p.save)}</b></div><button data-act="planSwitch">${esc(p.companion)}</button></section>`;
+  }
+  nav = function(){
+    const items=[['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','記録'],['memory','○','思い出']];
+    return `<nav class="bottomNav obDesignNav">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
+  };
+  function obPage(html){return shell(`${obContextPill()}${html}`)}
+  home = function(){state.route='calendar';return calendar();};
 
+  function obCalendarCells(){
+    const start=new Date(2026,5,28); const today='2026-07-10';
+    let html='';
+    for(let i=0;i<42;i++){
+      const d=new Date(start); d.setDate(start.getDate()+i);
+      const key=obDateKey(d.getFullYear(),d.getMonth()+1,d.getDate());
+      const dow=d.getDay(); const inMonth=d.getMonth()===6;
+      const holiday=(key==='2026-07-20'||key==='2026-07-23');
+      const cls=['obDay',inMonth?'':'muted',dow===0?'sun':'',dow===6?'sat':'',holiday?'holiday':'',key===today?'today':''].join(' ');
+      const hname=key==='2026-07-20'?'海の日':key==='2026-07-23'?'スポーツの日':'';
+      html+=`<button class="${cls}" data-date="${key}" data-act="calendarDate"><b>${d.getDate()}</b>${hname?`<em>${hname}</em>`:''}</button>`;
+    }
+    return html;
+  }
+  function obEventBars(){
+    return `
+      <span class="obEvt green start end" style="grid-column:3 / 6;grid-row:1;">尾瀬トレッキング</span>
+      <span class="obEvt green short single" style="grid-column:1 / 2;grid-row:3;">コタ散歩</span>
+      <span class="obEvt gold short single" style="grid-column:2 / 3;grid-row:3;">手賀沼ドライブ散歩</span>
+      <span class="obEvt green start" style="grid-column:7 / 8;grid-row:3;">スノーピーク赤城山CF</span>
+      <span class="obEvt green cont end" style="grid-column:1 / 3;grid-row:4;">スノーピーク赤城山CF</span>
+      <span class="obEvt green start end" style="grid-column:6 / 8;grid-row:5;">谷川岳山行</span>`;
+  }
+  calendar = function(){
+    return obPage(`<section class="obRouteLike obCalendarHero">
+      <header><h1>2026.07</h1><div class="obMonthBtns"><button data-act="noop">‹</button><button data-act="noop">›</button></div><p>日付を2回タップで新規予定</p></header>
+      <div class="obWeek"><b class="sun">日</b><b>月</b><b>火</b><b>水</b><b>木</b><b>金</b><b class="sat">土</b></div>
+      <div class="obCalendarGrid">${obCalendarCells()}${obEventBars()}</div>
+    </section>
+    <section class="obRouteLike obScheduleList">
+      <header><h2>選択日の予定</h2><button data-act="noop">すべての予定を見る ›</button></header>
+      ${[
+        ['7/12','散歩','コタ散歩','日','green'],['7/13','ドライブ散歩','手賀沼ドライブ散歩','月','gold'],['7/18〜7/20','イベント','スノーピーク赤城山CF','土〜月・祝','green'],['7/31〜8/1','登山','谷川岳山行','金〜土','green']
+      ].map(([d,t,title,w,c])=>`<button class="obListRow" data-act="noop"><time>${esc(d)}<small>${esc(w)}</small></time><i class="${c}"></i><span><small>${esc(t)}</small><b>${esc(title)}</b></span><em>›</em></button>`).join('')}
+    </section>`);
+  };
+  function obHero(title,sub,extra=''){return `<section class="obRouteLike obHeroLock"><div><small>${esc(title==='記録'?'RECORD':title==='思い出'?'MEMORIES':'OUTBASE')}</small><h1>${esc(title)}</h1><p>${esc(sub)}</p></div>${extra}</section>`}
   discover = function(){
-    const list=filteredCandidates().slice(0,8);
-    return shell(`<section class="obxHero"><span class="obxKicker">DISCOVER</span><h1>次の行き先を探す</h1><p>犬可・温水・ドッグフリー・景色・距離。候補は予定化してカレンダーへ戻す。</p><div class="obxHeroActions"><button class="primary" data-act="addCandidate">候補追加</button><button data-act="compareCandidates">比較</button></div></section>
-    <section class="obxPanel"><div class="obxSectionHead"><span><b>候補</b><small>保存したい場所だけ残す</small></span></div><div class="obxCardGrid">${list.map(c=>`<article class="obxCard"><b>${esc(c.name)}</b><small>${esc(c.area||'')} / ${esc(c.drive||'')}</small><p>${esc(c.memo||'')}</p><div class="obxTags">${(c.flags||[]).slice(0,5).map(x=>`<span>${esc(x)}</span>`).join('')}</div><div class="obxCardOps"><button data-act="candidateToPlan" data-id="${esc(c.id)}">予定化</button><button data-act="toggleCandidateWish" data-id="${esc(c.id)}">保存</button></div></article>`).join('')||'<div class="obxEmpty">候補なし</div>'}</div></section>`);
-  }
-
+    const cards=[['△','キャンプ場','犬可・温水・4時間以内','犬可,温水,4時間以内'],['⌁','散歩場所','駐車場・日陰・水辺','駐車場,日陰,水辺'],['●','ペットイベント','同伴あり/なしは属性で管理','同伴,イベント'],['☕','ドッグカフェ','寄り道候補','テラス,駐車場'],['▤','下見メモ','駐車場・トイレ・混雑','駐車場,トイレ,混雑'],['▰','保存候補','あとで比較','保存,比較']];
+    return obPage(`${obHero('探す','候補探し・下見・保存。行く前の検討をここで。','<div class="obHeroIcon">⌕</div>')}
+      <section class="obCardGrid">${cards.map(([ico,t,sub,tags])=>`<button class="obMiniCard" data-act="noop"><i>${ico}</i><span><b>${esc(t)}</b><small>${esc(sub)}</small><em>${tags.split(',').map(x=>`<u>${esc(x)}</u>`).join('')}</em></span><strong>›</strong></button>`).join('')}</section>
+      <section class="obRouteLike obSavedCandidates"><header><h2>最近保存した候補</h2><button data-act="noop">すべて見る ›</button></header>
+      ${[['散歩場所','手賀沼親水広場','駐車場 日陰 水辺','7/10'],['キャンプ場','印旛沼サンセットヒルズ','犬可 温水 4時間以内','7/08'],['ドッグカフェ','cafe HYGGE','テラス 大型犬OK 駐車場あり','7/06']].map(x=>`<button class="obCandidateRow" data-act="noop"><i></i><span><small>${esc(x[0])}</small><b>${esc(x[1])}</b><em>${x[2].split(' ').map(t=>`<u>${esc(t)}</u>`).join('')}</em></span><time>保存日 ${esc(x[3])}</time><strong>▱</strong></button>`).join('')}</section>`);
+  };
   prep = function(){
-    if(state.prepTab==='route')return shell(`${routePrepView()}`);
-    const undone=state.shopping.filter(s=>!s.done).length, unloaded=state.gear.filter(g=>g.status!=='loaded').length, weather=state.weather.filter(w=>!w.done).length;
-    return shell(`<section class="obxHero"><span class="obxKicker">PREP</span><h1>準備</h1><p>ルートは承認済み画面を使う。買い物・ギア・天気はここから終わらせる。</p><div class="obxHeroActions"><button class="primary" data-prep="route">ルート</button><button data-prep="shopping">買い物</button><button data-prep="gear">ギア</button><button data-prep="weather">天気</button></div></section>
-    <section class="obxPanel"><div class="obxTaskGrid"><button data-prep="route"><b>出発逆算</b><small>04.8承認ルート</small></button><button data-prep="shopping"><b>買い物</b><small>残り ${undone}件</small></button><button data-prep="gear"><b>ギア</b><small>未積込 ${unloaded}件</small></button><button data-prep="weather"><b>天気</b><small>未確認 ${weather}件</small></button><button data-prep="pets"><b>ペット</b><small>コタ/猫留守番</small></button><button data-prep="meals"><b>料理</b><small>献立と材料</small></button></div></section>
-    ${state.prepTab&&state.prepTab!=='overview'?`<section class="obxPanel"><div class="obxSectionHead"><span><b>${esc(state.prepTab)}</b><small>詳細は従来の管理画面を利用</small></span></div>${prepBody()}</section>`:''}`);
-  }
-
+    if(state.prepTab==='route') return shell(`${obContextPill()}${routePrepView()}`);
+    const cards=[['🚗','ドライブ散歩','駐車場・到着目安・ルート','駐車場・到着目安・ルート'],['👥','同伴イベント','持ち物・暑さ対策','持ち物・暑さ対策'],['⛺','キャンプ','ギア・天気・出発逆算','ギア・天気・出発逆算'],['●','人だけイベント','買物・下見・身軽','買物・下見・身軽']];
+    return obPage(`${obHero('準備','通常散歩は準備不要。必要な外出だけ準備する。','<div class="obHeroIcon gold">✓</div>')}
+      <section class="obStatusCard"><i>▰</i><span><small>現在の保存先</small><b>コタ散歩 / 通常散歩 / 準備不要</b></span><em>›</em></section>
+      <section class="obSectionTitle"><h2>必要な時だけ準備</h2><p>ドライブ散歩や特別な外出など、必要なときだけ準備します。</p></section>
+      <section class="obCardGrid">${cards.map(([ico,t,sub,tag])=>`<button class="obMiniCard" data-act="noop"><i>${ico}</i><span><b>${esc(t)}</b><small>${esc(sub)}</small><em><u>${esc(tag)}</u></em></span><strong>›</strong></button>`).join('')}</section>
+      <section class="obSectionTitle"><h2>準備の基本（必要に応じて）</h2><p>散歩にも役立つ基本情報をすばやく確認。</p></section>
+      <section class="obThreeCards"><button data-prep="gear">🎒<b>持ち物</b><small>チェックリスト</small></button><button data-prep="weather">☀<b>天気</b><small>天候・気温・暑さ指数</small></button><button data-prep="route">⌁<b>ルート</b><small>地図・距離・時間</small></button></section>`);
+  };
+  function obMapSvg(){return `<svg class="obMapSvg" viewBox="0 0 900 430" role="img" aria-label="散歩MAP">
+    <rect width="900" height="430" fill="#eef0e6"/><path d="M0 180 C120 130 200 155 315 190 C420 225 510 200 610 145 C730 80 825 110 900 160 L900 430 L0 430 Z" fill="#bcd5d0"/>
+    <path d="M0 62 L900 305" stroke="#d8caa8" stroke-width="20" opacity=".65"/><path d="M0 320 L900 120" stroke="#e7dcc6" stroke-width="15" opacity=".8"/><path d="M210 0 L240 430" stroke="#d8caa8" stroke-width="11" opacity=".55"/><path d="M640 0 L600 430" stroke="#d8caa8" stroke-width="12" opacity=".55"/>
+    <g fill="#d7e6d0" opacity=".85"><rect x="620" y="215" width="170" height="110" rx="8"/><rect x="55" y="95" width="150" height="95" rx="8"/><rect x="420" y="35" width="135" height="95" rx="8"/></g>
+    <polyline points="65,230 130,185 210,168 300,155 395,170 500,145 590,174 680,210 760,270 835,305" fill="none" stroke="#123b2e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="65,230 130,185 210,168 300,155 395,170 500,145 590,174 680,210 760,270 835,305" fill="none" stroke="#73a584" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    ${[[65,230],[130,185],[210,168],[300,155],[395,170],[500,145],[590,174],[680,210],[760,270],[835,305]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="8" fill="#1a332b" stroke="#94b18f" stroke-width="3"/>`).join('')}
+    <g><path d="M522 95 C522 65 548 42 578 42 C608 42 634 65 634 95 C634 137 578 178 578 178 C578 178 522 137 522 95Z" fill="#2f6fa8"/><circle cx="578" cy="92" r="21" fill="#fff"/></g>
+    ${[[180,155],[455,145],[690,225],[790,300]].map((p,i)=>`<g><circle cx="${p[0]}" cy="${p[1]}" r="26" fill="#fff4d2" stroke="#9e7b35" stroke-width="5"/><text x="${p[0]}" y="${p[1]+7}" text-anchor="middle" font-size="27">📷</text></g>`).join('')}
+    <g><circle cx="710" cy="175" r="25" fill="#eef5df" stroke="#38654d" stroke-width="5"/><text x="710" y="183" text-anchor="middle" font-size="26">□</text></g>
+    <text x="80" y="120" fill="#2d627e" font-size="22" font-weight="700">手賀沼親水広場</text><text x="390" y="220" fill="#355a68" font-size="24" font-weight="700">手賀沼</text><text x="585" y="187" fill="#2f6fa8" font-size="22" font-weight="700">現在地</text><text x="590" y="92" fill="#377244" font-size="18">手賀沼公園</text><text x="650" y="330" fill="#377244" font-size="18">手賀沼フィッシングセンター</text>
+  </svg>`}
   field = function(){
-    const active=state.walk?.active, km=(distanceKm?.()||0).toFixed(2), dur=walkDurationSec?.()||0, h=Math.floor(dur/3600), mi=Math.floor((dur%3600)/60), pts=state.walk?.track?.length||0, pins=(state.mapPins||[]).length;
-    return shell(`<section class="obxHero obxFieldHero"><span class="obxKicker">RECORD</span><h1>記録</h1><p>散歩マップを中心に、GPS・ピン・写真・メモをその場で残す。</p><div class="obxHeroActions"><button class="primary" data-act="toggleWalk">${active?'散歩終了':'散歩開始'}</button><button data-act="gps">現在地</button><button data-act="openMap">Google Map</button></div></section>
-      <section class="obxPanel obxMapPanel"><div class="obxSectionHead"><span><b>散歩マップ</b><small>移動ルートとは別。歩いた軌跡・現在地・ピンを残す。</small></span><em>MAP</em></div><div class="obxMapBox"><canvas id="walkMap" width="640" height="360"></canvas><span>GPS ${pts}点</span></div><div class="obxStats"><div><b>${km}</b><span>km</span></div><div><b>${h}:${pad(mi)}</b><span>時間</span></div><div><b>${pins}</b><span>ピン</span></div></div><div class="obxActionGrid"><button data-act="toggleWalk">${active?'散歩終了':'散歩開始'}</button><button data-act="gps">現在地</button><button data-act="spot">ピン</button><button data-act="captureMedia" data-kind="photo">写真</button><button data-act="captureMedia" data-kind="video">動画</button><button data-act="addNote">メモ</button></div></section>
-      <section class="obxPanel"><div class="obxSectionHead"><span><b>最近の記録</b><small>非公開メモはレビューに混ぜない</small></span></div><div class="obxList">${(state.records||[]).slice(-5).reverse().map(r=>`<div class="obxRecord"><b>${esc(r.title||recordKindLabel(r.kind)||'記録')}</b><small>${esc(r.time||'')} / ${esc(r.mode||'')}</small><p>${esc(r.text||'')}</p></div>`).join('')||'<div class="obxEmpty">まだ記録なし</div>'}</div></section>`);
-  }
-
+    return obPage(`${obHero('記録','保存先はコタ散歩。表示を変えても保存先は変わらない。','<button class="obHeroBadge" data-act="planSwitch">同伴 コタ</button>')}
+      <section class="obRouteLike obWalkMap"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obMapBox">${obMapSvg()}<div class="obMapLegend"><span>━ 歩いたルート</span><span>📍 現在地</span><span>📷 写真ピン</span><span>□ メモピン</span></div></div><div class="obMapStats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obMapActions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></section>
+      <section class="obQuickRecord"><h2>クイック記録</h2><div>${[['🎙','話す','音声を記録'],['📷','撮る','写真を撮影'],['▣','動画','動画を撮影'],['📍','場所','場所を記録'],['●','ピン','ピンを追加'],['▤','メモ','メモを残す']].map(([i,t,s])=>`<button data-act="noop"><i>${i}</i><b>${esc(t)}</b><small>${esc(s)}</small></button>`).join('')}</div></section>`);
+  };
   memory = function(){
-    const rec=(state.records||[]).filter(r=>!r.private), places=state.places||[], imp=improveNotes();
-    return shell(`<section class="obxHero"><span class="obxKicker">MEMORY</span><h1>思い出</h1><p>記録を見返して、場所カード・レビュー・次回改善へ戻す。</p><div class="obxHeroActions"><button class="primary" data-act="copyTripReport">レポートコピー</button><button data-act="saveTripReport">レビュー保存</button></div></section>
-    <section class="obxPanel"><div class="obxTaskGrid"><button data-memory="timeline"><b>${rec.length}</b><small>公開記録</small></button><button data-memory="places"><b>${places.length}</b><small>場所</small></button><button data-memory="improve"><b>${imp.length}</b><small>改善</small></button><button data-memory="data"><b>保全</b><small>バックアップ</small></button></div></section>
-    <section class="obxPanel"><div class="obxSectionHead"><span><b>最近</b><small>次回に使う素材</small></span></div><div class="obxList">${rec.slice(-5).reverse().map(r=>`<div class="obxRecord"><b>${esc(r.title||'記録')}</b><small>${esc(r.time||'')}</small><p>${esc(r.text||'')}</p></div>`).join('')||'<div class="obxEmpty">記録なし</div>'}</div></section>`);
-  }
+    const cards=[['▧','記録一覧','写真・音声・メモ','散歩中に残した記録をまとめて確認できます。'],['🛒','次回改善','買い足し・反省','持ち物の見直しや反省点を整理して次に活かします。'],['📍','場所メモ','駐車場・トイレ・日陰','役立った場所や注意点をメモしておきます。'],['∞','関連付け','最後の記録をまとめる','最後に残した記録を起点に、思い出をひとつにまとめます。']];
+    return obPage(`${obHero('思い出','帰宅後の整理・レビュー・次回改善。','<div class="obHeroIcon">△</div>')}<section class="obCardGrid">${cards.map(([ico,t,sub,txt])=>`<button class="obMiniCard tall" data-act="noop"><i>${ico}</i><span><b>${esc(t)}</b><small>${esc(sub)}</small><p>${esc(txt)}</p></span><strong>›</strong></button>`).join('')}</section><section class="obRouteLike obMemoryRows"><header><h2>既存の思い出詳細</h2><button data-act="noop">すべての思い出を見る ›</button></header>${[['手賀沼ドライブ散歩','2026.07.13','同伴 コタ','36件'],['谷川岳山行','2026.07.05','単独','28件'],['スノーピーク赤城山CF','2026.07.18-20','グループ','52件']].map((x,i)=>`<button class="obCandidateRow" data-act="noop"><i></i><span><b>${esc(x[0])}</b><small>${esc(x[1])} <u>${esc(x[2])}</u></small></span><time>記録 ${esc(x[3])}</time><strong>›</strong></button>`).join('')}</section>`);
+  };
+  const obDesignBaseBind = bind;
+  bind = function(){
+    obDesignBaseBind();
+    document.querySelectorAll('[data-act="calendarDate"]').forEach(el=>{
+      el.onclick=()=>{const d=el.dataset.date; const now=Date.now(); if(state.__lastCalendarDate===d && now-(state.__lastCalendarTap||0)<900){toast(`${d} 新規予定`);} state.selectedDate=d; state.__lastCalendarDate=d; state.__lastCalendarTap=now; save(); render(true);};
+    });
+  };
 
-  /* UI rebuild: first paint uses rebuilt screens. */
   // RESTORE04.8: ensure first paint uses route spacing and calculation fixes.
   render();
 
