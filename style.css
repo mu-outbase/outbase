@@ -7826,3 +7826,141 @@ body,.shell,.main{background:var(--ob-cream)!important;}
   .obT4Bar.gold{font-size:6.5px!important;}
   .obT4SchRow b{font-size:13px!important;}
 }
+
+
+/* OUTBASE_ROUTE08_UI_DONE_FIX6: reference-token hard alignment
+   - アイコン体系を線画記号で統一
+   - ゴールドを明るい黄から落ち着いた真鍮へ
+   - 見出し/カード文字を基準画像密度へ圧縮
+   - カレンダー日付を左上に完全固定
+*/
+:root{
+  --ob-cream:#f1eadc!important;
+  --ob-ink:#0a0f0b!important;
+  --ob-card:#08140f!important;
+  --ob-green:#062b1e!important;
+  --ob-green2:#0c3a29!important;
+  --ob-gold:#ad8950!important;
+  --ob-gold2:#caa86a!important;
+  --ob-muted:#ada493!important;
+  --ob-line:rgba(241,234,220,.115)!important;
+}
+body,.shell,.main{background:linear-gradient(180deg,#f5efe4,#eadfce)!important;}
+.obLockTop{background:linear-gradient(180deg,#050605,#0c100c)!important;border-bottom:1px solid rgba(241,234,220,.08)!important;}
+.obBrand span{background:linear-gradient(145deg,#dec47e,#a98751)!important;color:#11130f!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 12px 20px rgba(0,0,0,.24)!important;}
+.obBrand b{font-size:26px!important;letter-spacing:.12em!important;font-weight:900!important;}
+.obBrand small{font-size:11px!important;letter-spacing:.34em!important;color:#a9a292!important;}
+.obPlanChip,.obSaveStrip{background:rgba(255,255,255,.052)!important;border:1px solid rgba(241,234,220,.12)!important;}
+.obPlanChip i{background:var(--ob-gold)!important;box-shadow:none!important;}
+.obPlanChip b{font-size:17px!important;letter-spacing:-.02em!important;}
+.obPlanChip small,.obSaveStrip span{color:#a9a292!important;}
+.obSaveStrip b{font-size:17px!important;}
+.obContextPill{
+  background:linear-gradient(100deg,#07311f,#0a4c33 72%,#06331f)!important;
+  border:0!important;box-shadow:0 10px 22px rgba(16,10,3,.12)!important;
+}
+.obContextPill small{font-size:11px!important;color:rgba(241,234,220,.62)!important;}
+.obContextPill b{font-size:15.5px!important;color:#fff7e8!important;}
+.obContextPill button{
+  background:linear-gradient(145deg,#cfb276,#ad8950)!important;color:#11130f!important;
+  font-size:15px!important;font-weight:950!important;box-shadow:none!important;
+}
+.obT4Panel,.obT4Hero,.obT4Mini,.obT4Status,.obT4Quick,.obT4Basic button{
+  background:
+    radial-gradient(circle at 78% -10%,rgba(53,95,68,.20),transparent 44%),
+    linear-gradient(145deg,#0d1711 0%,#062d20 95%)!important;
+  color:#fff7e8!important;
+  border:1px solid rgba(241,234,220,.065)!important;
+  box-shadow:0 11px 24px rgba(23,15,5,.14)!important;
+}
+.obT4Panel{border-radius:23px!important;}
+.obT4Hero{border-radius:23px!important;min-height:108px!important;padding:15px 18px!important;}
+.obT4Hero small{font-size:10px!important;letter-spacing:.24em!important;color:var(--ob-gold2)!important;margin-bottom:5px!important;}
+.obT4Hero h1{font-size:32px!important;line-height:1!important;letter-spacing:-.055em!important;font-weight:950!important;}
+.obT4Hero p{font-size:12.5px!important;line-height:1.42!important;color:#e8dfd0!important;font-weight:650!important;margin-top:8px!important;}
+.obT4HeroIcon{width:58px!important;height:58px!important;border-color:rgba(241,234,220,.13)!important;color:var(--ob-gold2)!important;background:rgba(255,255,255,.025)!important;}
+.obT4HeroIcon:before{font-size:29px!important;color:var(--ob-gold2)!important;font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important;}
+.obT4HeroIcon.check,.obT4HeroIcon.badge{background:linear-gradient(145deg,#c9aa6d,#ad8950)!important;color:#11130f!important;}
+.obT4HeroIcon.check:before{font-size:38px!important;color:#11130f!important;}
+.obT4HeroIcon.badge{width:66px!important;height:56px!important;}
+.obT4HeroIcon.badge:before{font-size:14px!important;line-height:1.02!important;color:#11130f!important;}
+/* card typography */
+.obT4Mini{min-height:68px!important;border-radius:16px!important;padding:9px 10px!important;grid-template-columns:31px minmax(0,1fr) 11px!important;gap:8px!important;}
+.obT4Mini b{font-size:13.2px!important;line-height:1.08!important;font-weight:950!important;letter-spacing:-.045em!important;}
+.obT4Mini small{font-size:9px!important;line-height:1.23!important;color:#c8bfaf!important;font-weight:700!important;}
+.obT4Mini strong{font-size:15px!important;color:var(--ob-gold2)!important;font-weight:500!important;}
+.obT4Mini u,.obT4SavedRow u{background:linear-gradient(145deg,#ccb074,#a9854d)!important;color:#11130f!important;font-size:7px!important;line-height:1!important;padding:2px 5px!important;}
+.obT4Title h2{font-size:18px!important;letter-spacing:-.04em!important;}
+.obT4Title p{font-size:10.8px!important;color:#50493d!important;}
+.obT4Schedule h2,.obT4Saved h2,.obT4Walk h2,.obT4MemoryList h2{font-size:19px!important;color:var(--ob-gold2)!important;letter-spacing:-.04em!important;}
+.obT4Schedule header button,.obT4Saved header button,.obT4Walk header button{color:var(--ob-gold2)!important;border-color:rgba(241,234,220,.10)!important;background:rgba(255,255,255,.028)!important;}
+/* unified line icons */
+.obT4Mini i,.obT4Status i,.obT4Basic i,.obT4Quick i{
+  width:29px!important;height:29px!important;border-radius:50%!important;
+  background:rgba(241,234,220,.045)!important;border:1px solid rgba(241,234,220,.035)!important;
+  display:grid!important;place-items:center!important;color:var(--ob-gold2)!important;position:relative!important;font-style:normal!important;
+}
+.obT4Mini i:before,.obT4Basic i:before,.obT4Quick i:before,.obT4HeroIcon:before{
+  font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important;color:var(--ob-gold2)!important;text-shadow:none!important;
+}
+.obT4Mini i:before{font-size:19px!important;line-height:1!important;}
+.obT4Mini i.tent:before{content:'△'!important;}
+.obT4Mini i.walk:before{content:'⌁'!important;}
+.obT4Mini i.paw:before{content:'○'!important;}
+.obT4Mini i.cup:before{content:'□'!important;font-size:17px!important;}
+.obT4Mini i.memo:before{content:'▤'!important;}
+.obT4Mini i.save:before{content:'▰'!important;font-size:14px!important;}
+.obT4Mini i.car:before{content:'▱'!important;}
+.obT4Mini i.people:before{content:'○○'!important;font-size:13px!important;letter-spacing:-4px!important;}
+.obT4Mini i.person:before{content:'○'!important;}
+.obT4Mini i.photo:before{content:'▧'!important;}
+.obT4Mini i.cart:before{content:'▱'!important;}
+.obT4Mini i.pin:before{content:'⌖'!important;}
+.obT4Mini i.link:before{content:'∞'!important;}
+.obT4Basic i.bag:before{content:'▧'!important;}
+.obT4Basic i.sun:before{content:'☼'!important;}
+.obT4Basic i.route:before{content:'⌁'!important;}
+.obT4Quick i.mic:before{content:'⌁'!important;}
+.obT4Quick i.camera:before{content:'▧'!important;}
+.obT4Quick i.video:before{content:'□'!important;}
+.obT4Quick i.pin:before{content:'⌖'!important;}
+.obT4Quick i.dot:before{content:'○'!important;}
+.obT4Quick i.note:before{content:'▤'!important;}
+/* calendar hard alignment */
+.obT4Calendar{padding:13px 14px!important;border-radius:23px!important;}
+.obT4Calendar header{margin-bottom:8px!important;grid-template-columns:auto auto 1fr!important;}
+.obT4Calendar h1{font-size:28px!important;letter-spacing:.035em!important;color:#f5eddc!important;font-weight:900!important;}
+.obT4Calendar header p{font-size:10px!important;color:#b7ad9a!important;line-height:1.12!important;max-width:120px!important;}
+.obMonthBtns button{width:27px!important;height:27px!important;color:var(--ob-gold2)!important;border-color:rgba(241,234,220,.10)!important;font-size:16px!important;}
+.obT4Week{font-size:13.5px!important;margin-bottom:4px!important;}
+.obT4Week b{color:#d8d0c1!important;}.obT4Week .sun{color:#e25551!important}.obT4Week .sat{color:#5f96cd!important}
+.obT4CalGrid{grid-template-rows:repeat(5,40px)!important;border-radius:16px!important;border-color:rgba(241,234,220,.12)!important;overflow:hidden!important;}
+.obT4Day{height:40px!important;padding:0!important;display:block!important;background:transparent!important;}
+.obT4Day b{position:absolute!important;left:7px!important;top:6px!important;font-size:12.5px!important;line-height:1!important;font-weight:900!important;color:#f3eadb!important;}
+.obT4Day em{position:absolute!important;left:7px!important;top:20px!important;font-size:7px!important;line-height:1.05!important;margin:0!important;color:#e25551!important;font-weight:800!important;}
+.obT4Day.sun b,.obT4Day.holiday b{color:#e25551!important}.obT4Day.sat b{color:#5f96cd!important}.obT4Day.muted b{color:#77736a!important}.obT4Day.today{outline:1px solid rgba(173,137,80,.76)!important;outline-offset:-3px!important;}
+.obT4Bar{height:14px!important;margin:0 2px 5px!important;border-radius:999px!important;background:linear-gradient(90deg,#133929,#276847)!important;color:#f3eadb!important;font-size:7px!important;font-weight:850!important;letter-spacing:-.02em!important;box-shadow:none!important;}
+.obT4Bar.gold{background:linear-gradient(145deg,#ccb074,#a9854d)!important;color:#11130f!important;font-size:6.7px!important;}
+/* list + map density */
+.obT4SchRow{padding:6px 0!important;grid-template-columns:52px 7px minmax(0,1fr) 12px!important;}
+.obT4SchRow time{font-size:13.5px!important;line-height:1.05!important;}
+.obT4SchRow time small{font-size:9px!important;color:#73a8dc!important;}
+.obT4SchRow small{font-size:9px!important;color:#b9b1a4!important;}
+.obT4SchRow b{font-size:12.9px!important;line-height:1.08!important;font-weight:900!important;}
+.obT4SchRow em{color:var(--ob-gold2)!important;font-size:19px!important;}
+.obT4Walk p{font-size:11px!important;color:#c7beae!important;}
+.obT4MapBox .obMapSvg{height:174px!important;}
+.obT4Stats span{font-size:9px!important;padding:6px 2px!important}.obT4Stats b{font-size:12px!important;}
+.obT4Actions button{font-size:11px!important;padding:8px 3px!important}.obT4Actions .primary{background:linear-gradient(145deg,#ccb074,#a9854d)!important;color:#11130f!important;}
+.obT4Quick h2{font-size:18px!important;}.obT4Quick button{padding:6px 1px!important}.obT4Quick b{font-size:9.4px!important}.obT4Quick small{font-size:6.5px!important;color:#bfb6a8!important;}
+.obT4SavedRow b{font-size:12.6px!important;}.obT4SavedRow small,.obT4SavedRow time{font-size:9px!important;}.obT4SavedRow i{width:35px!important;height:30px!important;border-radius:8px!important;background:linear-gradient(135deg,#789b74,#d1b87a)!important;}
+.obT4Basic button{border-radius:14px!important;padding:8px!important;}.obT4Basic b{font-size:11.8px!important}.obT4Basic small{font-size:7.6px!important;color:#c8bfaf!important;}
+.obDesignNav{background:rgba(242,235,222,.92)!important;}
+.obDesignNav button b::before{color:#706b60!important}.obDesignNav button.active b::before{color:#f4ecd9!important}.obDesignNav button.active{background:linear-gradient(180deg,#083725,#05291c)!important;box-shadow:0 9px 17px rgba(16,10,3,.14)!important;}
+@media(max-width:390px){
+  .obBrand b{font-size:21px!important;}.obPlanChip b{font-size:13.5px!important}.obSaveStrip b{font-size:14px!important}.obContextPill b{font-size:13.2px!important}.obContextPill button{font-size:12.5px!important;}
+  .obT4Hero{min-height:96px!important;padding:13px 15px!important}.obT4Hero h1{font-size:28px!important}.obT4Hero p{font-size:11.4px!important}.obT4HeroIcon{width:50px!important;height:50px!important;}
+  .obT4Mini{min-height:63px!important;padding:8px!important;grid-template-columns:28px minmax(0,1fr) 10px!important}.obT4Mini i{width:27px!important;height:27px!important}.obT4Mini b{font-size:12.4px!important}.obT4Mini small{font-size:8.3px!important}.obT4Mini u,.obT4SavedRow u{font-size:6.6px!important;}
+  .obT4Calendar h1{font-size:24px!important}.obT4Calendar header p{font-size:9px!important;max-width:100px!important}.obMonthBtns button{width:25px!important;height:25px!important}.obT4Week{font-size:12.5px!important}.obT4CalGrid{grid-template-rows:repeat(5,36px)!important}.obT4Day{height:36px!important}.obT4Day b{font-size:11px!important;left:6px!important;top:5px!important}.obT4Day em{font-size:6.5px!important;top:17px!important;}.obT4Bar{height:13px!important;font-size:6.2px!important;margin-bottom:4px!important;}
+  .obT4SchRow b{font-size:11.8px!important}.obT4SchRow time{font-size:12.5px!important}.obT4MapBox .obMapSvg{height:158px!important}.obT4Quick h2{font-size:17px!important}.obT4Quick b{font-size:8.8px!important}.obT4Quick small{font-size:6px!important}
+}

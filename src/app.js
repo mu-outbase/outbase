@@ -6291,7 +6291,7 @@ ${starterPanelHtml()}
 /* OUTBASE_ROUTE08_UI_DONE_FIX4: approved reference visual tune + one-screen compact layout */
 (function(){
   if(typeof shell==='undefined') return;
-  const OB_FIX5_VERSION='outbase-route08-ui-done-fix5-reference-icons-tone-calendar-20260710';
+  const OB_FIX5_VERSION='outbase-route08-ui-done-fix6-reference-token-tight-20260710';
   function obPageT(kind, html){return shell(`${obContextPill()}<div class="obT4 obT4-${kind}">${html}</div>`);}
   function obHeroT(key,title,sub,iconClass){return `<section class="obT4Hero obT4Hero-${key}"><div><small>${esc(key==='field'?'RECORD':key==='memory'?'MEMORIES':'OUTBASE')}</small><h1>${esc(title)}</h1><p>${esc(sub)}</p></div><i class="obT4HeroIcon ${iconClass||''}"></i></section>`;}
   function obCalendarGridT(){
