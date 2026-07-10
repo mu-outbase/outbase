@@ -7486,3 +7486,98 @@ body{background:var(--ob-cream)!important;color:#132017!important}.shell{backgro
   .obCalendarHero header{grid-template-columns:1fr auto!important;}
   .obCalendarHero header p{grid-column:1 / 3;text-align:left!important;font-size:12px!important;}
 }
+
+/* OUTBASE_ROUTE08_UI_DONE_FIX1: real phone responsive repair */
+.main{max-width:520px;margin:0 auto;padding:16px 14px 112px!important;box-sizing:border-box;overflow-x:hidden!important;}
+.obLockTop{padding-left:14px!important;padding-right:14px!important;}
+.obTopMain{gap:10px!important;}
+.obBrand{grid-template-columns:48px auto!important;gap:0 10px!important;min-width:0!important;}
+.obBrand span{width:48px!important;height:48px!important;border-radius:15px!important;}
+.obBrand b{font-size:22px!important;}
+.obBrand small{font-size:11px!important;letter-spacing:.22em!important;}
+.obPlanChip{max-width:48vw!important;padding:9px 12px!important;}
+.obPlanChip b{font-size:15px!important;}
+.obPlanChip small{font-size:11px!important;}
+.obSaveStrip{padding:9px 13px!important;font-size:14px!important;}
+.obContextPill{border-radius:28px!important;grid-template-columns:minmax(0,1fr) minmax(0,.9fr) auto!important;gap:8px!important;padding:10px 12px!important;}
+.obContextPill b{font-size:15px!important;line-height:1.15!important;}
+.obContextPill button{padding:9px 11px!important;font-size:14px!important;}
+.obRouteLike,.obHeroLock,.obStatusCard,.obQuickRecord{border-radius:24px!important;padding:18px!important;margin-bottom:14px!important;}
+.obCalendarHero header{grid-template-columns:auto auto 1fr!important;gap:8px!important;margin-bottom:12px!important;}
+.obCalendarHero h1{font-size:34px!important;line-height:1!important;white-space:nowrap!important;}
+.obCalendarHero p{font-size:12px!important;line-height:1.3!important;}
+.obMonthBtns button{width:34px!important;height:34px!important;padding:0!important;}
+.obWeek{font-size:15px!important;margin:4px 0 4px!important;}
+.obCalendarGrid{display:none!important;}
+.obCalendarGridFixed{border:1px solid rgba(255,255,255,.16);border-radius:18px;overflow:hidden;background:rgba(0,0,0,.08);}
+.obCalWeekRow{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));height:64px;}
+.obCalWeekRow+.obCalWeekRow{border-top:1px solid rgba(255,255,255,.11);}
+.obCalWeekRow .obDay{min-width:0!important;height:64px;border-right:1px solid rgba(255,255,255,.11);border-bottom:0!important;padding:9px 6px!important;z-index:1;}
+.obCalWeekRow .obDay:last-of-type{border-right:0!important;}
+.obCalWeekRow .obDay b{font-size:17px!important;line-height:1!important;}
+.obCalWeekRow .obDay em{font-size:9px!important;line-height:1.1!important;margin-top:3px!important;}
+.obCalWeekRow .obDay.today{outline:1px solid rgba(216,182,91,.65)!important;outline-offset:-3px!important;}
+.obCalWeekRow .obEvt{position:absolute;top:33px;margin:0!important;height:22px!important;z-index:5;border-radius:999px!important;display:flex;align-items:center;justify-content:center;padding:0 7px!important;font-size:10px!important;line-height:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 5px 10px rgba(0,0,0,.18);}
+.obCalWeekRow .obEvt.edgeLeft{border-top-left-radius:999px!important;border-bottom-left-radius:999px!important;}
+.obCalWeekRow .obEvt.edgeRight{border-top-right-radius:999px!important;border-bottom-right-radius:999px!important;}
+.obCalWeekRow .obEvt.gold{font-size:9px!important;}
+.obListRow{grid-template-columns:72px 10px minmax(0,1fr) auto!important;gap:9px!important;padding:11px 0!important;}
+.obListRow time{font-size:20px!important;line-height:1.05!important;}
+.obListRow span b{font-size:17px!important;line-height:1.2!important;word-break:keep-all;overflow-wrap:anywhere;}
+.obListRow span small{font-size:12px!important;}
+.obScheduleList header h2{font-size:24px!important;}
+.obScheduleList header button,.obSavedCandidates header button,.obMemoryRows header button{font-size:12px!important;padding:8px 10px!important;}
+.obHeroLock{min-height:128px!important;}
+.obHeroLock h1{font-size:42px!important;}
+.obHeroLock p{font-size:16px!important;line-height:1.45!important;}
+.obHeroIcon{width:74px!important;height:74px!important;font-size:42px!important;flex:0 0 auto!important;}
+.obCardGrid{grid-template-columns:1fr!important;gap:12px!important;}
+.obMiniCard{min-height:86px!important;grid-template-columns:44px minmax(0,1fr) 20px!important;padding:14px!important;border-radius:20px!important;}
+.obMiniCard.tall{min-height:112px!important;}
+.obMiniCard i{width:42px!important;height:42px!important;font-size:21px!important;}
+.obMiniCard b{font-size:19px!important;line-height:1.15!important;word-break:keep-all;overflow-wrap:anywhere;}
+.obMiniCard small{font-size:13px!important;line-height:1.25!important;}
+.obMiniCard p{font-size:12px!important;line-height:1.35!important;margin:.35em 0 0!important;}
+.obMiniCard em{gap:5px!important;}
+.obMiniCard u,.obCandidateRow u{font-size:10px!important;padding:3px 7px!important;}
+.obStatusCard{grid-template-columns:48px minmax(0,1fr) 16px!important;padding:14px!important;}
+.obStatusCard i{width:48px!important;height:48px!important;}
+.obStatusCard b{font-size:17px!important;line-height:1.25!important;}
+.obSectionTitle h2{font-size:22px!important;line-height:1.2!important;}
+.obSectionTitle p{font-size:14px!important;line-height:1.35!important;}
+.obThreeCards{grid-template-columns:1fr 1fr 1fr!important;gap:8px!important;}
+.obThreeCards button{padding:12px 8px!important;border-radius:16px!important;}
+.obThreeCards b{font-size:15px!important;line-height:1.15!important;}
+.obThreeCards small{font-size:10px!important;line-height:1.2!important;}
+.obCandidateRow{grid-template-columns:54px minmax(0,1fr) auto!important;gap:10px!important;}
+.obCandidateRow i{width:48px!important;height:42px!important;}
+.obCandidateRow strong{display:none!important;}
+.obCandidateRow span b{font-size:17px!important;line-height:1.2!important;overflow-wrap:anywhere;}
+.obCandidateRow time{font-size:11px!important;white-space:nowrap!important;}
+.obWalkMap{padding:18px 14px!important;}
+.obWalkMap header h2{font-size:24px!important;}
+.obWalkMap p{font-size:14px!important;line-height:1.35!important;margin:0 0 10px!important;}
+.obMapBox{border-radius:18px!important;}
+.obMapSvg{height:250px!important;width:100%!important;object-fit:cover!important;}
+.obMapLegend{left:10px!important;bottom:10px!important;font-size:11px!important;padding:8px 10px!important;}
+.obMapStats{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;}
+.obMapStats span{padding:8px 4px!important;border-radius:14px!important;font-size:11px!important;}
+.obMapStats b{font-size:14px!important;line-height:1.1!important;}
+.obMapActions{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important;}
+.obMapActions button{padding:11px 5px!important;border-radius:14px!important;font-size:13px!important;line-height:1.15!important;}
+.obQuickRecord{padding:16px 12px!important;}
+.obQuickRecord>div{grid-template-columns:repeat(3,1fr)!important;gap:8px!important;}
+.obQuickRecord button{padding:10px 4px!important;border-radius:14px!important;}
+.obQuickRecord b{font-size:13px!important;}
+.obQuickRecord small{font-size:9px!important;}
+.obDesignNav{height:92px!important;padding-bottom:env(safe-area-inset-bottom,0px)!important;}
+.obDesignNav button{min-width:0!important;}
+.obDesignNav button b{font-size:24px!important;}
+.obDesignNav button span{font-size:12px!important;}
+@media(max-width:360px){
+  .main{padding-left:10px!important;padding-right:10px!important;}
+  .obBrand b{font-size:20px!important}.obBrand small{font-size:10px!important}.obPlanChip{max-width:44vw!important}.obPlanChip b{font-size:13px!important}.obPlanChip small{font-size:10px!important}
+  .obContextPill{grid-template-columns:1fr 1fr!important}.obContextPill button{grid-column:1 / 3;justify-self:end;padding:7px 10px!important}
+  .obCalendarHero h1{font-size:30px!important}.obCalWeekRow{height:58px}.obCalWeekRow .obDay{height:58px!important;padding:8px 5px!important}.obCalWeekRow .obDay b{font-size:16px!important}.obCalWeekRow .obEvt{top:30px;height:20px!important;font-size:9px!important;padding:0 4px!important}
+  .obMapStats,.obMapActions{grid-template-columns:repeat(2,1fr)!important}.obMapSvg{height:230px!important}.obQuickRecord>div{grid-template-columns:repeat(2,1fr)!important}
+}

@@ -6072,34 +6072,48 @@ ${starterPanelHtml()}
   function obPage(html){return shell(`${obContextPill()}${html}`)}
   home = function(){state.route='calendar';return calendar();};
 
-  function obCalendarCells(){
-    const start=new Date(2026,5,28); const today='2026-07-10';
-    let html='';
-    for(let i=0;i<42;i++){
-      const d=new Date(start); d.setDate(start.getDate()+i);
-      const key=obDateKey(d.getFullYear(),d.getMonth()+1,d.getDate());
-      const dow=d.getDay(); const inMonth=d.getMonth()===6;
-      const holiday=(key==='2026-07-20'||key==='2026-07-23');
-      const cls=['obDay',inMonth?'':'muted',dow===0?'sun':'',dow===6?'sat':'',holiday?'holiday':'',key===today?'today':''].join(' ');
-      const hname=key==='2026-07-20'?'海の日':key==='2026-07-23'?'スポーツの日':'';
-      html+=`<button class="${cls}" data-date="${key}" data-act="calendarDate"><b>${d.getDate()}</b>${hname?`<em>${hname}</em>`:''}</button>`;
+  function obMonthMatrix(){
+    const start=new Date(2026,5,28); // 2026/07 month grid starts at 6/28
+    const rows=[];
+    for(let r=0;r<6;r++){
+      const cells=[];
+      for(let c=0;c<7;c++){
+        const d=new Date(start); d.setDate(start.getDate()+r*7+c);
+        const key=obDateKey(d.getFullYear(),d.getMonth()+1,d.getDate());
+        const dow=d.getDay(); const inMonth=d.getMonth()===6;
+        const holiday=(key==='2026-07-20'||key==='2026-07-23');
+        const hname=key==='2026-07-20'?'海の日':key==='2026-07-23'?'スポーツの日':'';
+        const cls=['obDay',inMonth?'':'muted',dow===0?'sun':'',dow===6?'sat':'',holiday?'holiday':'',key==='2026-07-10'?'today':''].join(' ');
+        cells.push({key,d,cls,hname});
+      }
+      rows.push(cells);
     }
-    return html;
+    return rows;
   }
-  function obEventBars(){
-    return `
-      <span class="obEvt green start end" style="grid-column:3 / 6;grid-row:1;">尾瀬トレッキング</span>
-      <span class="obEvt green short single" style="grid-column:1 / 2;grid-row:3;">コタ散歩</span>
-      <span class="obEvt gold short single" style="grid-column:2 / 3;grid-row:3;">手賀沼ドライブ散歩</span>
-      <span class="obEvt green start" style="grid-column:7 / 8;grid-row:3;">スノーピーク赤城山CF</span>
-      <span class="obEvt green cont end" style="grid-column:1 / 3;grid-row:4;">スノーピーク赤城山CF</span>
-      <span class="obEvt green start end" style="grid-column:6 / 8;grid-row:5;">谷川岳山行</span>`;
+  function obWeekSegment(title,color,row,colStart,colEnd,label){
+    const left=(colStart/7)*100;
+    const width=((colEnd-colStart+1)/7)*100;
+    return `<span class="obEvt ${color||'green'} ${colStart===0?'edgeLeft':''} ${colEnd===6?'edgeRight':''}" style="left:${left}%;width:${width}%;">${esc(label||title)}</span>`;
+  }
+  function obCalendarWeek(rows,idx){
+    const cells=rows[idx];
+    const segs={
+      0:[obWeekSegment('尾瀬トレッキング','green',0,2,4,'尾瀬トレッキング')],
+      2:[obWeekSegment('コタ散歩','green',2,0,0,'コタ散歩'),obWeekSegment('手賀沼ドライブ散歩','gold',2,1,1,'手賀沼ドライブ散歩'),obWeekSegment('スノーピーク赤城山CF','green',2,6,6,'スノーピーク赤城山CF')],
+      3:[obWeekSegment('スノーピーク赤城山CF','green',3,0,1,'スノーピーク赤城山CF')],
+      4:[obWeekSegment('谷川岳山行','green',4,5,6,'谷川岳山行')]
+    }[idx]||[];
+    return `<div class="obCalWeekRow">${cells.map(cell=>`<button class="${cell.cls}" data-date="${cell.key}" data-act="calendarDate"><b>${cell.d.getDate()}</b>${cell.hname?`<em>${cell.hname}</em>`:''}</button>`).join('')}${segs.join('')}</div>`;
+  }
+  function obCalendarRows(){
+    const rows=obMonthMatrix();
+    return rows.map((_,i)=>obCalendarWeek(rows,i)).join('');
   }
   calendar = function(){
     return obPage(`<section class="obRouteLike obCalendarHero">
       <header><h1>2026.07</h1><div class="obMonthBtns"><button data-act="noop">‹</button><button data-act="noop">›</button></div><p>日付を2回タップで新規予定</p></header>
       <div class="obWeek"><b class="sun">日</b><b>月</b><b>火</b><b>水</b><b>木</b><b>金</b><b class="sat">土</b></div>
-      <div class="obCalendarGrid">${obCalendarCells()}${obEventBars()}</div>
+      <div class="obCalendarGridFixed">${obCalendarRows()}</div>
     </section>
     <section class="obRouteLike obScheduleList">
       <header><h2>選択日の予定</h2><button data-act="noop">すべての予定を見る ›</button></header>
