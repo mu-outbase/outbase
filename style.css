@@ -7519,24 +7519,54 @@ select:focus{
 .planSwitchCard .fieldRecentList{margin-top:10px;}
 
 
-/* RESTORE04.14 タブホームUX整理 / Contextは裏側へ */
-.ob414MiniStatus{display:flex;align-items:center;gap:8px;margin:8px 0 10px;padding:8px;border:1px solid rgba(28,22,14,.10);border-radius:18px;background:rgba(255,255,255,.74);box-shadow:0 10px 24px rgba(42,33,20,.06);}
-.ob414MiniStatus span{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ob414MiniStatus b{display:inline-block;margin-right:6px;color:var(--ink);font-size:12px;}
-.ob414MiniStatus button{border:0;border-radius:999px;background:rgba(20,49,39,.10);padding:8px 12px;font-weight:900;color:var(--green0);}
-.ob414MiniStatus.split{border-color:rgba(200,157,75,.32);background:linear-gradient(180deg,rgba(255,253,247,.9),rgba(246,236,215,.8));}
-.ob414ActionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
-.ob414ActionGrid button,.ob414RecordGrid button{min-height:82px;border-radius:22px;border:1px solid rgba(33,27,19,.10);background:rgba(255,255,255,.78);box-shadow:0 12px 26px rgba(36,29,20,.08);padding:16px;text-align:left;color:var(--ink);}
-.ob414ActionGrid button.primary,.ob414RecordGrid button.primary{background:linear-gradient(135deg,var(--green1),var(--green0));color:#fff;}
-.ob414ActionGrid b,.ob414RecordGrid b{display:block;font-size:20px;line-height:1.15;letter-spacing:.01em;}
-.ob414ActionGrid small,.ob414RecordGrid small{display:block;margin-top:7px;color:inherit;opacity:.68;font-weight:800;line-height:1.35;}
-.ob414ActionGrid.compact button{min-height:62px;border-radius:18px;padding:12px;}
-.ob414ActionGrid.compact b{font-size:16px;}
-.ob414Summary .head{margin-bottom:2px;}
-.ob414HomeSection .head p,.ob414Record .head p{line-height:1.55;}
-.ob414Details{margin-top:12px;border-radius:22px;background:rgba(255,255,255,.62);border:1px solid rgba(36,30,22,.10);padding:12px;}
-.ob414Details summary{font-weight:900;cursor:pointer;}
-.ob414Details .main{padding:0!important;}
-.ob412Concurrent,.ob413Context,.ob413Home{display:none!important;}
-.obRoute045,.obRoute048{padding-bottom:8px!important;}
-.obTop0413 .ob412RecordStrip{font-size:13px;}
+/* RESTORE04.15 責任者統合版：04.8の質感へ復旧 / Contextと属性は裏側 */
+.obTop0415{padding-bottom:10px!important;}
+.obTop0415 .top-row{margin-bottom:8px!important;}
+.ob415SaveStrip{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:7px 10px;border-radius:14px;background:rgba(255,248,237,.07);
+  border:1px solid rgba(255,248,237,.11);color:var(--milk);text-align:left;
+}
+.ob415SaveStrip b{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.ob415SaveStrip small{font-size:10px;color:var(--mutedDark);white-space:nowrap;}
+.ob415Status{
+  width:100%;display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;
+  margin:0 0 12px;padding:9px 10px;border-radius:18px;
+  background:linear-gradient(180deg,rgba(255,248,237,.78),rgba(239,230,213,.72));
+  border:1px solid rgba(17,19,15,.10);box-shadow:0 10px 22px rgba(17,19,15,.06);text-align:left;
+}
+.ob415Status span{min-width:0;display:flex;flex-direction:column;gap:2px;}
+.ob415Status b{font-size:10px;color:var(--muted);letter-spacing:.08em;}
+.ob415Status span{font-size:12px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ob415Status em{font-style:normal;font-size:10px;font-weight:950;color:var(--green);background:rgba(63,94,76,.10);border-radius:999px;padding:5px 8px;white-space:nowrap;}
+.ob415Status.split{background:linear-gradient(135deg,rgba(17,19,15,.92),rgba(39,58,48,.90));color:var(--milk);}
+.ob415Status.split b{color:rgba(255,248,237,.62)}.ob415Status.split em{background:rgba(185,154,102,.18);color:var(--brass)}
+.ob415Hero,.ob415RecordHero{
+  position:relative;overflow:hidden;margin-bottom:14px;border-radius:28px;padding:18px;
+  background:linear-gradient(145deg,rgba(17,19,15,.96),rgba(39,58,48,.93));
+  color:var(--milk);box-shadow:var(--shadow);display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
+}
+.ob415Hero:after,.ob415RecordHero:after{content:"";position:absolute;right:-28px;top:-36px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(185,154,102,.26),transparent 64%)}
+.ob415Hero span,.ob415RecordHero span{display:block;color:var(--brass);font-size:10px;letter-spacing:.18em;font-weight:950;}
+.ob415Hero h1,.ob415RecordHero h1{margin-top:7px;font-size:25px;letter-spacing:-.06em;line-height:1.08;}
+.ob415Hero p,.ob415RecordHero p{margin-top:8px;color:rgba(255,248,237,.72);font-size:12px;line-height:1.55;font-weight:700;}
+.ob415Hero button{position:relative;z-index:1;flex:0 0 auto;border-radius:999px;padding:9px 12px;background:rgba(255,248,237,.12);border:1px solid rgba(255,248,237,.14);font-size:12px;font-weight:950;}
+.ob415Grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 14px;}
+.ob415Grid button{
+  min-height:88px;border-radius:23px;padding:15px 13px;text-align:left;
+  background:rgba(255,248,237,.72);border:1px solid rgba(17,19,15,.09);
+  box-shadow:var(--softShadow);color:var(--black);display:flex;flex-direction:column;justify-content:space-between;
+}
+.ob415Grid button.primary{background:linear-gradient(135deg,var(--black),var(--green2));color:var(--milk);}
+.ob415Grid b{display:block;font-size:17px;line-height:1.15;letter-spacing:-.03em;}
+.ob415Grid small{display:block;margin-top:8px;color:inherit;opacity:.70;font-size:11px;line-height:1.35;font-weight:800;}
+.ob415Grid.mini button{min-height:72px;padding:13px 12px;}
+.ob415Grid.record button{min-height:82px;}
+.ob415List .row em{font-style:normal;color:var(--green);font-weight:950;font-size:12px;}
+.ob415Details{margin-top:12px;border:1px solid rgba(17,19,15,.10);border-radius:20px;background:rgba(255,248,237,.58);padding:10px 12px;}
+.ob415Details summary{font-weight:950;cursor:pointer;padding:3px;}
+.obRoute0415{margin-top:0!important;}
+.obRoute0415 .obHeroCompact{box-shadow:var(--shadow)!important;}
+.obTop0415 + .main:has(.obRoute0415){padding-top:8px!important;padding-bottom:calc(var(--navH) + env(safe-area-inset-bottom) + 6px)!important;}
+.obNav0415 button[data-route="field"] b{font-size:22px!important;line-height:.95!important;}
+@media(max-width:420px){.ob415Grid{gap:8px}.ob415Grid button{min-height:82px;padding:13px 11px}.ob415Grid b{font-size:16px}.ob415Status{grid-template-columns:1fr;}.ob415Status em{width:max-content}.ob415Hero,.ob415RecordHero{border-radius:24px;padding:16px}.ob415Hero h1,.ob415RecordHero h1{font-size:23px}.ob415SaveStrip{align-items:flex-start;flex-direction:column;gap:2px}}

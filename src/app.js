@@ -1,14 +1,14 @@
 
 (() => {
   'use strict';
-  const VERSION = 'outbase-restore04-14-field03-tabhome-ux-route-restore-20260710';
+  const VERSION = 'outbase-restore04-15-field03-ux-restore-outing-attrs-20260710';
   const KEY = 'outbase_restore04_6_field03_state';
   const SNAP_KEY = 'outbase_restore04_6_field03_snapshot';
   const ERR_KEY = 'outbase_restore04_6_field03_last_error';
   const app = document.getElementById('app');
   const fileInput = document.getElementById('fileInput');
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-14-field03-tabhome-ux-route-restore-20260710').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-restore04-15-field03-ux-restore-outing-attrs-20260710').catch(()=>{}));
   }
 
   const pad=n=>String(n).padStart(2,'0');
@@ -7104,144 +7104,253 @@ ${starterPanelHtml()}
   ob413FinalAudit();
 
 
-
-  /* RESTORE04.14: タブホームUX監査反映 / Context Modelは裏側へ下げる
-     - 04.8でOKのルート1画面性を復帰・維持
-     - Context説明カードを常時大きく出さない
-     - 各タブは「説明」ではなく「入口」にする
-     - 表示/記録分離は保存事故防止のため裏側で維持
+  /* RESTORE04.15: 責任者統合版 / UIUXデザイン復旧 + 外出属性モデル最小導入
+     - 04.8のルート1画面性を正として復帰
+     - 04.13 Context Modelは内部だけ維持
+     - 外出タイプは固定メニューで閉じず、属性テンプレートで吸収
+     - タブホームは説明ではなく入口
   */
-  const OUTBASE_TAB_HOME_UX_LOCK_0414 = Object.freeze({
-    approvedRouteBase:'RESTORE04.8',
-    contextModel:'keep-internal',
-    rule:'タブホームは入口。構造説明カードを主役にしない。',
-    route:'ルートは1画面で見えることを優先。上に同時利用カードを置かない。',
-    status:'表示中/記録中は小さく確認。必要時だけ切替シート。'
+  const OUTBASE_OUTING_ATTRIBUTE_LOCK_0415 = Object.freeze({
+    model:'outing_attribute_template',
+    rule:'外出タイプを固定メニューで閉じず、宿泊/移動/同伴/予約/天候影響/目的などの属性で必要入口を出し分ける。',
+    ui:'画面は予定/探す/準備/記録/思い出の5入口を維持。Contextや属性説明は常時表示しない。',
+    route:'ルートはキャンプ専用ではなく外出共通の移動エンジン。ただしキャンプではチェックイン逆算を優先。',
+    petEvent:'ペット関連イベントはペット同伴とは限らない。同伴あり/なし/未定で準備入口を変える。'
   });
-  function ob414View(){try{return ob413ViewLegacy?ob413ViewLegacy():ob412DisplayPlan()}catch(e){return current()}}
-  function ob414Rec(){try{return ob413SaveTarget?ob413SaveTarget():ob412SaveTarget()}catch(e){return current()}}
-  function ob414IsDiff(){const v=ob414View(),r=ob414Rec();return (v?.id||v?.rootPlanId)!==(r?.id||r?.rootPlanId)||!!r?.sessionId}
-  function ob414MiniStatus(){
-    const v=ob414View(), r=ob414Rec();
-    const diff=ob414IsDiff();
-    return `<div class="ob414MiniStatus ${diff?'split':''}"><span><b>表示</b>${esc(v?.title||'未確認')}</span><span><b>保存</b>${esc(r?.title||'未確認')}${r?.sessionTitle?` / ${esc(r.sessionTitle)}`:''}</span><button data-act="planSwitch">切替</button></div>`;
+  Object.assign(typeName,{event:'イベント',daytrip:'日帰り',driveWalk:'ドライブ散歩',lodge:'宿泊',maintenance:'片付け',vehicle:'車準備'});
+  function ob415DefaultAttrs(e){
+    const type=e?.type||'normal';
+    const title=e?.title||'';
+    const isCamp=type==='camp';
+    const isWalk=type==='walk';
+    const isEvent=type==='event'||/イベント|フェス|雪峰祭|展示|マルシェ/.test(title);
+    const isDriveWalk=type==='driveWalk'||/ドライブ散歩|公園|湖|道の駅/.test(title+String(e?.memo||''));
+    const isSearch=type==='search';
+    return {
+      template:isCamp?'camp':isEvent?'event':isDriveWalk?'driveWalk':isWalk?'homeWalk':isSearch?'search':'daytrip',
+      stay:isCamp?'overnight':'none',
+      move:isWalk&&!isDriveWalk?'walk':'car',
+      petCompanion:isCamp||isWalk||isDriveWalk?'yes':isEvent?'unknown':'unknown',
+      companionPets:isCamp||isWalk||isDriveWalk?['kota']:[],
+      companions:['mu','rin'],
+      reservation:isCamp?'yes':isEvent?'unknown':'unknown',
+      ticket:isEvent?'unknown':'none',
+      weatherImpact:isCamp||isWalk||isDriveWalk?'high':'medium',
+      purposes:isCamp?['camp','record','review']:isWalk?['walk','health','record']:isDriveWalk?['drive','walk','scout','record']:isEvent?['event','shopping','research','record']:isSearch?['scout','candidate']:['outing','record'],
+      routeDeadlineLabel:isCamp?'チェックイン':isEvent?'入場/開始':isWalk&&!isDriveWalk?'散歩開始':'到着',
+      routeDeadlineTime:isCamp?'13:00':isEvent?'10:00':'10:30',
+      updatedAt:ob413Now?.()||new Date().toISOString()
+    };
   }
-  function ob414Section(title,sub,items){
-    return `<section class="section ob414HomeSection"><div class="head"><div><h2>${esc(title)}</h2><p>${esc(sub)}</p></div></div><div class="ob414ActionGrid">${items.map(i=>`<button class="${i.primary?'primary':''}" ${i.route?`data-route="${i.route}"`:''} ${i.prep?`data-prep="${i.prep}"`:''} ${i.act?`data-act="${i.act}"`:''}><b>${esc(i.title)}</b><small>${esc(i.sub||'')}</small></button>`).join('')}</div></section>`;
+  function ob415EnsureOutingModel(){
+    ob413NormalizeContext?.();
+    state.outingAttributes=state.outingAttributes&&typeof state.outingAttributes==='object'?state.outingAttributes:{};
+    (state.events||[]).forEach(e=>{state.outingAttributes[e.id]={...ob415DefaultAttrs(e),...(state.outingAttributes[e.id]||{})};});
+    state.outingTemplates=state.outingTemplates||[
+      {id:'homeWalk',label:'通常散歩',attrs:{template:'homeWalk',move:'walk',petCompanion:'yes',companionPets:['kota'],purposes:['walk','health','record']}},
+      {id:'driveWalk',label:'ドライブ散歩',attrs:{template:'driveWalk',move:'car',petCompanion:'yes',companionPets:['kota'],purposes:['drive','walk','scout','record']}},
+      {id:'camp',label:'キャンプ',attrs:{template:'camp',stay:'overnight',move:'car',petCompanion:'yes',companionPets:['kota'],purposes:['camp','food','gear','record','review']}},
+      {id:'eventWithPet',label:'イベント 同伴あり',attrs:{template:'event',move:'car',petCompanion:'yes',companionPets:['kota'],ticket:'unknown',purposes:['event','shopping','record']}},
+      {id:'eventNoPet',label:'イベント 同伴なし',attrs:{template:'event',move:'car',petCompanion:'no',companionPets:[],ticket:'unknown',purposes:['event','shopping','research','record']}},
+      {id:'inbox',label:'予定なし記録',attrs:{template:'inbox',move:'unknown',petCompanion:'unknown',purposes:['quickRecord','laterLink']}}
+    ];
+    if(!(state.events||[]).some(e=>e.id==='drivewalk_sample')){
+      state.events.push({id:'drivewalk_sample',title:'手賀沼ドライブ散歩',type:'driveWalk',start:'2026-07-13',end:'2026-07-13',repeat:'none',place:'手賀沼周辺',memo:'車で行ってからコタ散歩。駐車場と日陰を確認。',level:2});
+      state.outingAttributes.drivewalk_sample={...ob415DefaultAttrs({type:'driveWalk',title:'手賀沼ドライブ散歩'}),template:'driveWalk',routeDeadlineTime:'10:30'};
+    }
+    if(!(state.events||[]).some(e=>e.id==='petevent_sample')){
+      state.events.push({id:'petevent_sample',title:'ペット関連イベント 下見',type:'event',start:'2026-07-26',end:'2026-07-26',repeat:'none',place:'イベント会場',memo:'今回は人だけで物販と情報収集。次回コタ同伴可否を見る。',level:2});
+      state.outingAttributes.petevent_sample={...ob415DefaultAttrs({type:'event',title:'ペット関連イベント 下見'}),petCompanion:'no',companionPets:[],purposes:['event','shopping','research','scout'],routeDeadlineTime:'10:00'};
+    }
+    state.outingAudit0415={version:VERSION,time:ob413Now?.()||new Date().toISOString(),events:(state.events||[]).length,templates:(state.outingTemplates||[]).length};
   }
-  function ob414PlanSummary(){
-    const view=ob414View(), rec=ob414Rec();
-    return `<section class="section ob414Summary"><div class="head"><div><h2>今のOUTBASE</h2><p>見る対象と保存先は分けられる。普段はこの2つだけ確認。</p></div><span class="pill dark">04.14</span></div>${ob414MiniStatus()}</section>`;
+  function ob415EventForTarget(t){
+    if(!t)return current();
+    if(t.type==='session')return ob413Event(t.rootPlanId)||current();
+    if(t.type==='plan')return ob413Event(t.id)||current();
+    return current();
   }
-
-  // 04.13/04.12の大きな説明カードは常時表示しない。必要な確認は上部ミニ表示と切替シートだけ。
-  ob412DuoStatusHtml = function(){return ob414MiniStatus()};
+  function ob415ViewTarget(){try{return ob413ViewTarget()}catch(e){return current()}}
+  function ob415RecordTarget(){try{return ob413RecordTarget()}catch(e){return current()}}
+  function ob415ViewEvent(){return ob415EventForTarget(ob415ViewTarget())}
+  function ob415Attrs(e=ob415ViewEvent()){ob415EnsureOutingModel();return {...ob415DefaultAttrs(e),...(state.outingAttributes?.[e?.id]||{})}}
+  function ob415PetLabel(attrs){
+    if(attrs.petCompanion==='yes')return `同伴 ${attrs.companionPets?.length?attrs.companionPets.map(id=>(state.pets||[]).find(p=>p.id===id)?.name||id).join('・'):'あり'}`;
+    if(attrs.petCompanion==='no')return '同伴なし';
+    return '同伴未定';
+  }
+  function ob415SmallStatus(){
+    const v=ob415ViewTarget(), r=ob415RecordTarget(), a=ob415Attrs(ob415EventForTarget(v));
+    const diff=(v?.id||v?.rootPlanId)!==(r?.id||r?.rootPlanId)||r?.type==='session';
+    return `<button class="ob415Status ${diff?'split':''}" data-act="planSwitch"><span><b>表示</b>${esc(ob413TargetLabel?.(v)||v?.title||'未確認')}</span><span><b>保存</b>${esc(ob413TargetLabel?.(r)||r?.title||'未確認')}</span><em>${esc(ob415PetLabel(a))}</em></button>`;
+  }
+  function ob415Shell(inner){return shell(`${ob415SmallStatus()}${inner}`)}
+  function ob415Hero(title,sub,kicker='OUTBASE'){
+    return `<section class="ob415Hero"><div><span>${esc(kicker)}</span><h1>${esc(title)}</h1><p>${esc(sub)}</p></div><button data-act="planSwitch">切替</button></section>`;
+  }
+  function ob415CardGrid(items,cls=''){
+    return `<div class="ob415Grid ${cls}">${items.map(i=>`<button class="${i.primary?'primary':''}" ${i.route?`data-route="${i.route}"`:''} ${i.prep?`data-prep="${i.prep}"`:''} ${i.act?`data-act="${i.act}"`:''} ${i.id?`data-id="${i.id}"`:''}><b>${esc(i.title)}</b><small>${esc(i.sub||'')}</small></button>`).join('')}</div>`;
+  }
+  function ob415PrepItems(){
+    const e=ob415ViewEvent(), a=ob415Attrs(e);
+    const items=[{title:'ルート',sub:a.template==='camp'?'出発逆算・寄り道・Maps':'目的地・駐車場・到着時間',prep:'route',primary:true}];
+    if(['camp','daytrip','event','driveWalk'].includes(a.template)||a.move==='car')items.push({title:'持ち物',sub:ob415PetLabel(a)+' / 車載・水・休憩',prep:'gear'});
+    if(a.template==='camp')items.push({title:'買い物',sub:'食材・消耗品・未購入',prep:'shopping'},{title:'料理',sub:'献立・材料・手順',prep:'meals'},{title:'ギア',sub:'積込・収納・乾燥',prep:'gear'});
+    if(a.template==='event'){
+      items.push({title:'入場/ブース',sub:a.petCompanion==='no'?'見たいブース・買いたい物':'入場・休憩・混雑回避',act:'eventPrepNote'});
+      items.push({title:'買い物',sub:'物販・気になる商品',prep:'shopping'});
+    }
+    if(a.template==='driveWalk'||a.template==='homeWalk')items.push({title:'散歩',sub:a.move==='car'?'現地散歩・駐車場・日陰':'自宅からそのまま記録',act:a.move==='car'?'startDriveWalkSession':'startNormalWalkSession'});
+    items.push({title:'天気',sub:a.weatherImpact==='high'?'雨風・暑さ寒さを優先':'当日確認',prep:'weather'});
+    return items;
+  }
+  function ob415PlanLine(e=ob415ViewEvent()){
+    const a=ob415Attrs(e), date=e?.start?`${fmt(e.start)}${e.end&&e.end!==e.start?`〜${fmt(e.end)}`:''}`:'日付未設定';
+    return `${typeName[e?.type]||a.template} / ${date} / ${ob415PetLabel(a)}`;
+  }
+  // Top/Nav: 04.8の落ち着いた見た目へ戻す。Context説明は出さない。
+  top = function(){
+    const e=ob415ViewEvent(), r=ob415RecordTarget();
+    return `<div class="top obTop046 obTop0415"><div class="top-row"><button class="brand" data-route="home"><span class="logo">OB</span><span><b>OUTBASE</b><small>field system</small></span></button><button class="plan" data-act="planSwitch"><i></i><b>${esc(e?.title||'未確認')}</b><small>${esc(ob415PlanLine(e))}</small></button></div><button class="ob415SaveStrip" data-act="planSwitch"><b>保存先：${esc(ob413TargetLabel?.(r)||r?.title||'未確認')}</b><small>表示切替では保存先を変えない</small></button></div>`;
+  };
+  nav = function(){
+    const items=[['calendar','▦','予定'],['discover','⌕','探す'],['prep','◫','準備'],['field','＋','記録'],['memory','○','思い出']];
+    return `<nav class="bottomNav obNav047 obNav0415">${items.map(([r,i,l])=>`<button class="${state.route===r?'active':''}" data-route="${r}"><b>${i}</b><span>${l}</span></button>`).join('')}</nav>`;
+  };
+  // Route: 04.8の一画面構成を維持しつつ、キャンプ以外の外出にも同期。
+  function ob415SyncRouteToView(){
+    const e=ob415ViewEvent(); if(!e)return;
+    const a=ob415Attrs(e);
+    state.routePlan=state.routePlan||{};
+    if(state.routePlan.eventId!==e.id){
+      state.routePlan.eventId=e.id;
+      state.routePlan.destination=e.place||state.routePlan.destination||'';
+      state.routePlan.checkin=a.routeDeadlineTime||state.routePlan.checkin||'13:00';
+      state.routePlan.arrivalTarget=state.routePlan.arrivalTarget||'b30';
+      state.routePlan.driveMin=Number(state.routePlan.driveMin||150);
+      state.routePlan.trafficBuffer=Number(state.routePlan.trafficBuffer||20);
+    }
+  }
+  function ob415RoutePlanLine(){
+    const e=ob415ViewEvent(), a=ob415Attrs(e); const d=e?.start?`${fmt(e.start)}${e.end&&e.end!==e.start?`〜${fmt(e.end)}`:''}`:'';
+    const label=a.routeDeadlineLabel||'到着';
+    return `${esc(e?.title||routeTarget())}${d?` / ${esc(d)}`:''} / ${esc(label)} ${esc(state.routePlan?.checkin||a.routeDeadlineTime||'13:00')}`;
+  }
+  const ob415BaseOpenSimpleRoute = typeof openSimpleRoute==='function'?openSimpleRoute:null;
+  const ob415BaseRouteTarget = routeTarget;
+  routeTarget = function(){
+    const e=ob415ViewEvent();
+    return state.routePlan?.destination || e?.place || ob415BaseRouteTarget?.() || '';
+  };
+  const ob415BaseRoutePrepView = routePrepView;
+  routePrepView = function(){
+    ob415EnsureOutingModel(); ob415SyncRouteToView();
+    const at=state.routePlan?.arrivalTarget||'b30';
+    const current=ob048DepartForTarget(at,'採用');
+    const roomy=ob048DepartForTarget('b60','余裕あり');
+    const standard=ob048DepartForTarget('b30','標準');
+    const tight=ob048DepartForTarget('exact','ギリギリ');
+    const rows=simpleRouteRows();
+    return `<section class="obRouteDash obRoute045 obRoute048 obRoute0415">
+      <div class="obHeroCompact">
+        <div class="obHeroCompactMain"><span class="label">自宅出発</span><strong>${current.depart}</strong><em>${routeArrivalLabel()}</em></div>
+        <p>${ob415RoutePlanLine()}</p>
+        <div class="obHeroMiniStats"><span>移動<b>${Number(state.routePlan?.driveMin||150)}分</b></span><span>寄り道<b>${simpleStopTotal()}分</b></span><span>予備<b>${Number(state.routePlan?.trafficBuffer||0)}分</b></span></div>
+        <div class="obHeroCompactActions"><button class="primary" data-act="saveSimpleRoute">保存</button><button data-act="openSimpleRoute">Maps</button></div>
+      </div>
+      ${ob045SavedPlan()}${ob045PlanSelect()}
+      <div class="obStopMiniGrid">${ob045StopButtons()}</div>
+      <div class="obDepartMiniBand"><button class="${at==='b60'?'active':''}" data-act="setArrivalTarget" data-target="b60"><span>余裕あり</span><b>${roomy.depart}</b></button><button class="${at==='b30'||at==='b15'?'active':''}" data-act="setArrivalTarget" data-target="b30"><span>標準</span><b>${standard.depart}</b></button><button class="${at==='exact'?'active':''}" data-act="setArrivalTarget" data-target="exact"><span>ギリギリ</span><b>${tight.depart}</b></button></div>
+      <details class="obEdit obEditCompact"><summary><b>調整</b><small>移動時間・到着目標・自宅</small></summary><div class="obEditGrid">${ob045HomeEdit()}<label class="obMiniField"><span>${esc(ob415Attrs().routeDeadlineLabel||'到着')}</span><input data-route-field="checkin" type="time" value="${esc(state.routePlan?.checkin||'13:00')}"></label><label class="obMiniField"><span>当日想定移動</span><input data-route-field="driveMin" type="number" value="${Number(state.routePlan?.driveMin||150)}"></label><label class="obMiniField"><span>到着目標</span><select data-route-field="arrivalTarget"><option value="exact" ${state.routePlan?.arrivalTarget==='exact'?'selected':''}>ちょうど</option><option value="b15" ${state.routePlan?.arrivalTarget==='b15'?'selected':''}>15分前</option><option value="b30" ${(state.routePlan?.arrivalTarget||'b30')==='b30'?'selected':''}>30分前</option><option value="b60" ${state.routePlan?.arrivalTarget==='b60'?'selected':''}>1時間前</option><option value="late" ${state.routePlan?.arrivalTarget==='late'?'selected':''}>少し遅れてOK</option></select></label><label class="obMiniField"><span>追加予備</span><input data-route-field="trafficBuffer" type="number" value="${Number(state.routePlan?.trafficBuffer||20)}"></label></div><div class="obMinuteGrid">${ob041StopMinuteInputs()}</div></details>
+      <details class="obEdit obEditCompact"><summary><b>内訳</b><small>出発から到着目標まで</small></summary><div class="obTimeline">${rows.map(r=>`<div><time>${esc(r.time)}</time><span><b>${esc(r.label)}</b><small>${esc(r.memo)}</small></span></div>`).join('')}</div></details>
+    </section>`;
+  };
+  prep = function(){
+    if(state.prepTab==='route')return ob415Shell(`${routePrepView()}`);
+    if(state.prepTab&&state.prepTab!=='overview')return shell(`<section class="section"><div class="tabs">${['overview:全体','route:ルート','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット','timer:タイマー'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>${prepBody()}`);
+    const e=ob415ViewEvent();
+    return ob415Shell(`${ob415Hero('準備',`${e?.title||'外出'}に必要な入口だけ表示。細かい説明は中に入れてから見る。`,'READY')}${ob415CardGrid(ob415PrepItems())}`);
+  };
+  field = function(){
+    const r=ob415RecordTarget();
+    return ob415Shell(`<section class="ob415RecordHero"><div><span>保存先</span><h1>${esc(ob413TargetLabel?.(r)||r?.title||'未確認')}</h1><p>話す・撮る・場所・ピン・メモ。予定なしでも未確認箱へ逃がす。</p></div></section>${ob415CardGrid([
+      {title:voiceRecorder?'停止':'話す',sub:'音声メモ',act:'toggleVoice',primary:true},{title:'撮る',sub:'写真',act:'capturePhoto'},{title:'動画',sub:'必要時だけ',act:'captureVideo'},{title:'場所',sub:'現在地を保存',act:'gps'},{title:'ピン',sub:'地点メモ',act:'addPinQuick'},{title:'メモ',sub:'一言記録',act:'quickRecord'}
+    ],'record')}${ob415CardGrid([
+      {title:state.walk?.active?'散歩終了':'散歩開始',sub:'GPSログ',act:'toggleWalk',primary:true},{title:'通常散歩',sub:'自宅から歩く',act:'startNormalWalkSession'},{title:'ドライブ散歩',sub:'車で行ってから歩く',act:'startDriveWalkSession'},{title:'場内散歩',sub:'キャンプ/イベント先',act:'startCampWalkSession'}
+    ],'mini')}${gpsPanelHtml()}${ob412RecentRecordsHtml?ob412RecentRecordsHtml():''}`);
+  };
+  home = function(){
+    const e=ob415ViewEvent(), a=ob415Attrs(e);
+    return ob415Shell(`${ob415Hero('何をする？',`${e?.title||'外出'} / ${ob415PetLabel(a)}。迷ったら大きい入口だけ押す。`,'FIELD OS')}${ob415CardGrid([
+      {title:'準備する',sub:'ルート・持ち物・買い物・天気',route:'prep',primary:true},{title:'記録する',sub:'話す・撮る・場所・ピン',route:'field'},{title:'予定を見る',sub:'今日・次回・切替',route:'calendar'},{title:'探す',sub:'候補・下見・保存',route:'discover'},{title:'思い出',sub:'整理・レビュー・次回改善',route:'memory'}
+    ])}${ob415CardGrid([
+      {title:'ルートを開く',sub:'04.8の一画面ルート',prep:'route',primary:true},{title:'通常散歩',sub:'自宅からすぐ記録',act:'startNormalWalkSession'},{title:'ドライブ散歩',sub:'車移動＋現地散歩',act:'startDriveWalkSession'},{title:'予定なし記録',sub:'あとで整理',act:'recordInbox'}
+    ],'mini')}`);
+  };
+  const ob415BaseCalendar = calendar;
+  calendar = function(){
+    ob415EnsureOutingModel();
+    const selectable=(state.events||[]).filter(e=>['camp','walk','driveWalk','event','search','daytrip','normal'].includes(e.type));
+    return ob415Shell(`${ob415Hero('予定','外出プランを選ぶ。ペット同伴は属性で持つので、イベント=同伴とは決めない。','PLAN')}${ob415CardGrid([
+      {title:'キャンプ',sub:'泊まり/デイキャンプにも展開',act:'createCampTemplate',primary:true},{title:'通常散歩',sub:'自宅から歩く',act:'createHomeWalkTemplate'},{title:'ドライブ散歩',sub:'車で行ってから散歩',act:'createDriveWalkTemplate'},{title:'イベント 同伴あり',sub:'コタ連れ想定',act:'createEventWithPetTemplate'},{title:'イベント 同伴なし',sub:'人だけで下見/物販',act:'createEventNoPetTemplate'},{title:'予定なし記録',sub:'未確認箱へ',act:'recordInbox'}
+    ],'mini')}<section class="section ob415List"><div class="head"><div><h2>外出予定</h2><p>表示だけ変えても保存先は変わらない。</p></div></div><div class="list">${selectable.map(e=>`<button class="row" data-act="viewPlan" data-id="${e.id}"><span><strong>${esc(e.title)}</strong><small>${esc(ob415PlanLine(e))} / ${esc(e.place||'場所未設定')}</small></span><em>表示</em></button>`).join('')}</div></section>`);
+  };
+  discover = function(){
+    return ob415Shell(`${ob415Hero('探す','候補探し・下見・保存。準備や記録と混ぜない。','DISCOVER')}${ob415CardGrid([
+      {title:'キャンプ場',sub:'犬可・温水・4時間以内',act:'findCampCandidate',primary:true},{title:'散歩場所',sub:'駐車場・日陰・水辺',act:'findWalkCandidate'},{title:'ペットイベント',sub:'同伴あり/なしを後で設定',act:'createEventNoPetTemplate'},{title:'ドッグカフェ/道の駅',sub:'寄り道候補',act:'findWalkCandidate'},{title:'下見記録',sub:'駐車場・トイレ・混雑',act:'quickRecord'},{title:'保存候補',sub:'思い出側で整理',route:'memory'}
+    ])}`);
+  };
+  memory = function(){
+    return ob415Shell(`${ob415Hero('思い出','帰宅後の整理・レビュー・次回改善。現地記録とは分ける。','MEMORY')}${ob415CardGrid([
+      {title:'記録一覧',sub:'写真・音声・メモ',act:'showLegacyMemory',primary:true},{title:'次回改善',sub:'買い足し/撤退理由/反省',act:'addReview'},{title:'場所メモ',sub:'駐車場・トイレ・日陰',act:'recordToPlace'},{title:'最後の記録を表示中へ関連',sub:'複数リンク',act:'linkLastToView'}
+    ])}<details class="ob415Details"><summary>既存の思い出詳細を開く</summary>${(typeof publicRecords==='function')?publicRecords().map(fieldRecordCard).join(''):''}</details>`);
+  };
+  const ob415BaseAct = act;
+  act = function(a,el){
+    ob415EnsureOutingModel();
+    if(a==='capturePhoto')return act('captureMedia',{dataset:{kind:'photo'}});
+    if(a==='captureVideo')return act('captureMedia',{dataset:{kind:'video'}});
+    if(a==='startDriveWalkSession'){
+      let e=(state.events||[]).find(x=>x.id==='drivewalk_sample');
+      if(!e){e={id:'drivewalk_sample',title:'ドライブ散歩',type:'driveWalk',start:today(),end:today(),repeat:'none',place:'目的地未設定',memo:'車で行ってから散歩',level:2};state.events.push(e)}
+      state.outingAttributes[e.id]={...ob415DefaultAttrs(e),template:'driveWalk',move:'car',petCompanion:'yes',companionPets:['kota']};
+      ob413SetView(e.id,'plan',{render:false,toast:false});
+      const s=ob413StartSession('walk',e.id,'現地散歩',{render:false,toast:false});
+      state.route='field'; save(); render(false); toast('ドライブ散歩を記録先にした'); return;
+    }
+    if(a==='createHomeWalkTemplate')return ob415CreatePlan('walk','コタ通常散歩','自宅周辺',{template:'homeWalk',move:'walk',petCompanion:'yes',companionPets:['kota']});
+    if(a==='createDriveWalkTemplate')return ob415CreatePlan('driveWalk','ドライブ散歩','目的地未設定',{template:'driveWalk',move:'car',petCompanion:'yes',companionPets:['kota']});
+    if(a==='createCampTemplate')return ob415CreatePlan('camp','新しいキャンプ','場所未設定',{template:'camp',stay:'overnight',move:'car',petCompanion:'yes',companionPets:['kota']});
+    if(a==='createEventWithPetTemplate')return ob415CreatePlan('event','ペット関連イベント 同伴あり','会場未設定',{template:'event',move:'car',petCompanion:'yes',companionPets:['kota'],ticket:'unknown'});
+    if(a==='createEventNoPetTemplate')return ob415CreatePlan('event','ペット関連イベント 同伴なし','会場未設定',{template:'event',move:'car',petCompanion:'no',companionPets:[],ticket:'unknown',purposes:['event','shopping','research']});
+    if(a==='eventPrepNote'){toast('イベント準備は見たいブース/買い物/入場時間を記録');return;}
+    if(a==='findCampCandidate'||a==='findWalkCandidate'){toast('候補は写真・メモ・場所で記録して保存');return;}
+    if(a==='showLegacyMemory'){toast('下の詳細を開いて確認');return;}
+    return ob415BaseAct(a,el);
+  };
+  function ob415CreatePlan(type,title,place,attrs){
+    const id=uid('plan');
+    const e={id,title,type,start:today(),end:today(),repeat:'none',place,memo:'OUTBASE 04.15属性テンプレートから作成',level:1};
+    state.events.push(e); state.outingAttributes[id]={...ob415DefaultAttrs(e),...attrs};
+    ob413SetView(id,'plan',{render:false,toast:false}); ob413SetRecord(id,'plan',{render:false,toast:false}); state.route='calendar'; save(); render(false); toast(`${title}を作成`);
+  }
+  // 04.12/04.13の大きな文脈説明は常時表示しない。必要情報は小型ステータスだけにする。
+  ob412DuoStatusHtml = function(){return ob415SmallStatus()};
   ob412ConcurrentPanel = function(){return ''};
   ob412InjectConcurrent = function(html){return html};
 
-  // ルートは04.8の一画面性を優先。Context説明や同時利用カードを上に置かない。
-  const ob414RouteBase = (typeof ob412BaseRoutePrepView==='function') ? ob412BaseRoutePrepView : routePrepView;
-  routePrepView = function(){
-    try{
-      const v=ob414View();
-      const isCamp=(v?.planType||v?.type||v?.kind)==='camp' || (v?.rootPlanTitle&&v?.rootPlanId);
-      if(isCamp || !v || v.inbox)return ob414RouteBase();
-      const camp=(state.events||[]).find(e=>e.type==='camp');
-      return `<section class="section ob414Notice"><div class="head"><div><h2>ルートはキャンプ用</h2><p>散歩記録中でも、表示だけキャンプへ切り替えれば準備ルートを確認できる。保存先は変わらない。</p></div><span class="pill dark">見るだけ</span></div><div class="shareOps">${camp?`<button class="primary" data-act="viewPlan" data-id="${camp.id}">キャンプを表示</button>`:''}<button data-route="field">記録へ戻る</button><button data-act="planSwitch">表示/記録切替</button></div></section>`;
-    }catch(e){return ob414RouteBase()}
-  };
-
-  // 準備タブ：ホームは入口、ルートは1画面。重い説明カードを出さない。
-  prep = function(){
-    if(state.prepTab==='route')return shell(`${routePrepView()}`);
-    if(state.prepTab&&state.prepTab!=='overview')return shell(`<section class="section"><div class="tabs">${['overview:全体','route:ルート','meals:料理','shopping:買い物','gear:ギア','weather:天気','pets:ペット','timer:タイマー'].map(x=>{const [id,l]=x.split(':');return `<button class="tab ${state.prepTab===id?'active':''}" data-prep="${id}">${l}</button>`}).join('')}</div></section>${prepBody()}`);
-    return shell(`${ob414PlanSummary()}${ob414Section('準備','次に使う入口だけを並べる。細かい管理は各入口の中で見る。',[
-      {title:'ルート',sub:'出発逆算・寄り道・Maps',prep:'route',primary:true},
-      {title:'買い物',sub:'未購入を消す / LINEコピー',prep:'shopping'},
-      {title:'料理',sub:'献立・材料・調理順',prep:'meals'},
-      {title:'ギア',sub:'積込・収納・乾燥',prep:'gear'},
-      {title:'天気',sub:'雨風・設営撤収判断',prep:'weather'},
-      {title:'ペット',sub:'コタ用品・留守番確認',prep:'pets'}
-    ])}`);
-  };
-
-  // 記録タブ：保存先だけ小さく見せ、押す入口を大きく。Context説明は隠す。
-  function ob414RecordHub(){
-    const r=ob414Rec();
-    const isWalk=['walk','campWalk'].includes(r?.type)||r?.sessionTitle;
-    return shell(`<section class="section ob414Record"><div class="head"><div><h2>記録</h2><p>写真・音声・GPS・ピン・メモは保存先へ入る。</p></div><span class="pill dark">${esc(isWalk?'散歩/現地':'記録')}</span></div>${ob414MiniStatus()}<div class="ob411QuickGrid ob412QuickGrid ob414RecordGrid"><button class="primary" data-act="toggleVoice"><b>${voiceRecorder?'停止':'話す'}</b><small>音声メモ</small></button><button data-act="captureMedia" data-kind="photo"><b>撮る</b><small>写真</small></button><button data-act="captureMedia" data-kind="video"><b>動画</b><small>必要時だけ</small></button><button data-act="gps"><b>場所</b><small>現在地</small></button><button data-act="addPinQuick" data-kind="ピン"><b>ピン</b><small>地点メモ</small></button><button data-act="quickRecord" data-kind="memo"><b>メモ</b><small>一言</small></button></div><div class="ob414ActionGrid compact"><button class="primary" data-act="toggleWalk"><b>${state.walk?.active?'散歩終了':'散歩開始'}</b><small>GPSログ</small></button><button data-act="startCampWalkSession"><b>場内散歩</b><small>表示中キャンプの子セッション</small></button><button data-act="openMap"><b>Map</b><small>Google Map</small></button><button data-act="planSwitch"><b>保存先</b><small>表示/記録を切替</small></button></div>${gpsPanelHtml()}${ob412RecentRecordsHtml?ob412RecentRecordsHtml():''}</section>`);
+  function ob415FinalAudit(){
+    ob415EnsureOutingModel();
+    const checks=[
+      ['context model kept',!!state.context&&Array.isArray(state.sessions)&&Array.isArray(state.links)],
+      ['outing attrs exists',!!state.outingAttributes&&!!state.outingTemplates],
+      ['route 04.8 functions kept',typeof ob048DepartForTarget==='function'&&typeof simpleRouteRows==='function'],
+      ['tab homes are entry functions',typeof home==='function'&&typeof prep==='function'&&typeof field==='function'],
+      ['payment not normal route',!(state.events||[]).some(e=>e.type==='payment')]
+    ];
+    state.lastAudit0415={version:VERSION,time:ob413Now?.()||new Date().toISOString(),checks:checks.map(([name,pass])=>({name,pass:!!pass})),pass:checks.every(x=>x[1]),decision:checks.every(x=>x[1])?'zip_candidate':'stop'};
   }
-  field = function(){return ob414RecordHub()};
-
-  // ホーム：設計説明ではなく、5タブの入口を明確化。
-  home = function(){
-    return shell(`${ob414PlanSummary()}${ob414Section('何をする？','迷ったらここから。表示対象と保存先は右上で確認できる。',[
-      {title:'予定を見る',sub:'今日・次回・追加・切替',route:'calendar'},
-      {title:'準備する',sub:'ルート/買い物/料理/ギア/天気',route:'prep',primary:true},
-      {title:'記録する',sub:'話す/撮る/場所/ピン/メモ',route:'field'},
-      {title:'探す',sub:'キャンプ場/散歩場所候補',route:'discover'},
-      {title:'思い出',sub:'記録一覧/写真/レビュー',route:'memory'}
-    ])}${ob414Section('すぐ使う','並列利用は裏側で処理する。操作は大きい入口だけ。',[
-      {title:'コタ散歩を開始',sub:'保存先を散歩セッションへ',act:'startNormalWalkSession',primary:true},
-      {title:'場内散歩を開始',sub:'表示中キャンプの子セッション',act:'startCampWalkSession'},
-      {title:'ルートを見る',sub:'04.8の一画面ルート',prep:'route'},
-      {title:'表示/記録切替',sub:'見る対象と保存先を分ける',act:'planSwitch'}
-    ])}`);
-  };
-
-  // 予定・探す・思い出はまず入口を分かりやすく。詳細機能は既存画面を壊さず後続で仕上げる。
-  const ob414BaseCalendar = calendar;
-  calendar = function(){
-    return shell(`${ob414PlanSummary()}${ob414Section('予定','キャンプ・散歩予定を選ぶ。支払いなど関係ないサンプルは通常導線に出さない。',[
-      {title:'キャンプ作成',sub:'日程・場所・準備を作る',act:'createCampTemplate',primary:true},
-      {title:'散歩作成',sub:'通常散歩/場内散歩の予定',act:'createWalkTemplate'},
-      {title:'表示/記録切替',sub:'見る対象と保存先',act:'planSwitch'},
-      {title:'予定一覧',sub:'詳細一覧を見る',act:'showCalendarLegacy'}
-    ])}<details class="ob414Details"><summary>予定一覧を開く</summary>${ob414BaseCalendar().replace(/^<main class="main">|<\/main>$/g,'')}</details>`);
-  };
-  const ob414BaseDiscover = discover;
-  discover = function(){
-    return shell(`${ob414PlanSummary()}${ob414Section('探す','候補探しは準備やルートに混ぜない。候補保存までをここに集約。',[
-      {title:'キャンプ場候補',sub:'犬可・温水・4時間以内',act:'findCampCandidate',primary:true},
-      {title:'散歩場所候補',sub:'近場・駐車場・日陰',act:'findWalkCandidate'},
-      {title:'候補一覧',sub:'保存した候補を見る',act:'showDiscoverLegacy'}
-    ])}<details class="ob414Details"><summary>候補一覧を開く</summary>${ob414BaseDiscover().replace(/^<main class="main">|<\/main>$/g,'')}</details>`);
-  };
-  const ob414BaseMemory = memory;
-  memory = function(){
-    return shell(`${ob414PlanSummary()}${ob414Section('思い出','帰宅後の整理・レビュー・次回改善。現地の記録操作とは分ける。',[
-      {title:'記録一覧',sub:'写真/音声/メモを確認',act:'showMemoryLegacy',primary:true},
-      {title:'次回改善',sub:'レビューへ残す',act:'addReview'},
-      {title:'最後の記録を表示中にも関連',sub:'複数リンク',act:'linkLastToView'}
-    ])}<details class="ob414Details"><summary>思い出詳細を開く</summary>${ob414BaseMemory().replace(/^<main class="main">|<\/main>$/g,'')}</details>`);
-  };
-
-  // 04.14で追加したダミー入口は、未実装なら既存詳細を開く/案内するだけに止める。
-  const ob414BaseAct = act;
-  act = function(a,el){
-    if(a==='showCalendarLegacy'||a==='showDiscoverLegacy'||a==='showMemoryLegacy'){toast('下の詳細を開いて確認');return;}
-    if(a==='findCampCandidate'||a==='findWalkCandidate'){state.route='discover';save();render(false);toast('候補探しは探すタブで整理');return;}
-    return ob414BaseAct(a,el);
-  };
-
-  function ob414FinalAudit(){
-    ob413NormalizeContext?.();
-    state.lastAudit0414={
-      version:VERSION,
-      time:new Date().toISOString(),
-      checks:[
-        {name:'route one-screen restored',pass:typeof routePrepView==='function'},
-        {name:'concurrent large panel disabled',pass:ob412ConcurrentPanel()===''},
-        {name:'context model internal',pass:!!state.context&&Array.isArray(state.sessions)&&Array.isArray(state.links)},
-        {name:'tab homes overridden',pass:typeof home==='function'&&typeof prep==='function'&&typeof field==='function'}
-      ]
-    };
-    state.lastAudit0414.pass=state.lastAudit0414.checks.every(x=>x.pass);
-  }
-  ob414FinalAudit();
-
-
-  // RESTORE04.13: first paint after Context Model overrides.
+  ob415FinalAudit();
   save();
   render();
 
