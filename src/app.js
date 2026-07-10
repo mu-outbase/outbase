@@ -6371,3 +6371,64 @@ ${starterPanelHtml()}
       ${[['手賀沼ドライブ散歩','2026.07.13','同伴 コタ','36件'],['谷川岳山行','2026.07.05','単独','28件'],['スノーピーク赤城山CF','2026.07.18-20','グループ','52件']].map(x=>`<button class="obT4SavedRow" data-act="noop"><i></i><span><b>${esc(x[0])}</b><small>${esc(x[1])} <u>${esc(x[2])}</u></small></span><time>記録 ${esc(x[3])}</time></button>`).join('')}</section>`);
   };
 })();
+
+/* OUTBASE_ROUTE08_UI_DONE_FIX8: reference-screen structural rebuild for non-route tabs */
+(function(){
+  if(typeof shell==='undefined' || typeof esc==='undefined') return;
+  const V='outbase-route08-ui-done-fix8-reference-structural-20260710';
+  function svg(name){
+    const common='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const p={
+      calendar:`<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01M16 17h.01"/>`,
+      search:`<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>`,
+      prep:`<rect x="5" y="4" width="14" height="16" rx="1.8"/><path d="M9 4v16M15 4v16"/>`,
+      plus:`<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>`,
+      memory:`<circle cx="12" cy="12" r="9"/>`,
+      tent:`<path d="M3 19h18L12 5 3 19Z"/><path d="M12 5v14"/>`,
+      trail:`<path d="M6 18c4-5 8 3 12-5"/><path d="M8 7h.01M16 5h.01"/>`,
+      paw:`<path d="M8.5 12.5c1.6-1.8 5.4-1.8 7 0 1.7 2 0 5-3.5 5s-5.2-3-3.5-5Z"/><circle cx="7" cy="8" r="1.3"/><circle cx="11" cy="6.5" r="1.3"/><circle cx="15" cy="8" r="1.3"/><circle cx="18" cy="10.5" r="1.2"/>`,
+      cup:`<path d="M5 9h10v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V9Z"/><path d="M15 10h2.2a2.4 2.4 0 1 1 0 4.8H15"/><path d="M4 20h13"/>`,
+      memo:`<rect x="6" y="4" width="12" height="16" rx="1.6"/><path d="M9 8h6M9 12h6M9 16h4"/>`,
+      save:`<path d="M7 4h10v16l-5-3-5 3V4Z"/>`,
+      car:`<path d="M5 15h14M7 15l1.5-5h7L17 15"/><circle cx="8" cy="17" r="1.5"/><circle cx="16" cy="17" r="1.5"/>`,
+      people:`<path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20c.8-4 9.2-4 10 0M17 11a2.5 2.5 0 1 0 0-5M15 14c2.8.2 5.2 1.8 6 6"/>`,
+      person:`<circle cx="12" cy="8" r="3"/><path d="M5 20c1-5 13-5 14 0"/>`,
+      photo:`<rect x="4" y="6" width="16" height="13" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M4 17l4.5-4 3.5 3 2.2-2 5.8 5"/>`,
+      cart:`<path d="M4 5h2l2.5 10h8l2-7H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/>`,
+      pin:`<path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/>`,
+      link:`<path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/>`,
+      mic:`<path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>`,
+      video:`<rect x="4" y="7" width="12" height="10" rx="2"/><path d="M16 10l4-2v8l-4-2"/>`,
+      bag:`<path d="M7 9V7a5 5 0 0 1 10 0v2"/><rect x="5" y="9" width="14" height="11" rx="2"/><path d="M9 13h6"/>`,
+      sun:`<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M19.8 4.2l-2.1 2.1M6.3 17.7l-2.1 2.1"/>`,
+      route:`<path d="M5 18c3-7 11 1 14-7"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="11" r="2"/>`,
+      mountain:`<path d="M3 19h18L15 9l-4 6-2-3-6 7Z"/><path d="M15 9l-2.5 3M7 19v-3M11 19v-3M16 19v-3"/>`,
+      check:`<path d="M5 13l4 4L20 6"/>`
+    };
+    return `<svg ${common}>${p[name]||p.search}</svg>`;
+  }
+  function page(kind, html){return shell(`${obContextPill()}<div class="obR8 obR8-${kind}">${html}</div>`);}
+  function hero(kind,title,sub,icon){return `<section class="obR8Hero obR8Hero-${kind}"><div><small>${kind==='field'?'RECORD':kind==='memory'?'MEMORIES':'OUTBASE'}</small><h1>${esc(title)}</h1><p>${esc(sub)}</p></div><span class="obR8HeroIcon">${svg(icon)}</span></section>`;}
+  function mini(icon,title,sub,tags=''){return `<button class="obR8Mini" data-act="noop"><i>${svg(icon)}</i><span><b>${esc(title)}</b><small>${esc(sub)}</small>${tags?`<em>${tags.split(',').map(t=>`<u>${esc(t)}</u>`).join('')}</em>`:''}</span><strong>›</strong></button>`;}
+  function bar(label,cls,row,c1,c2){return `<span class="obR8Bar ${cls}" style="grid-row:${row};grid-column:${c1}/${c2+1};">${esc(label)}</span>`;}
+  function calGrid(){
+    const start=new Date(2026,5,28); const cells=[];
+    for(let i=0;i<35;i++){
+      const d=new Date(start); d.setDate(start.getDate()+i);
+      const key=obDateKey(d.getFullYear(),d.getMonth()+1,d.getDate());
+      const dow=d.getDay(), inMonth=d.getMonth()===6;
+      const h=key==='2026-07-20'?'海の日':key==='2026-07-23'?'スポーツの日':'';
+      const row=Math.floor(i/7)+1,col=i%7+1;
+      cells.push(`<button class="obR8Day ${inMonth?'':'muted'} ${dow===0?'sun':''} ${dow===6?'sat':''} ${h?'holiday':''} ${key==='2026-07-10'?'today':''}" data-date="${key}" data-act="calendarDate" style="grid-row:${row};grid-column:${col}"><b>${d.getDate()}</b>${h?`<em>${esc(h)}</em>`:''}</button>`);
+    }
+    return `<div class="obR8CalGrid">${cells.join('')}${[
+      bar('尾瀬トレッキング','green',1,3,5),bar('コタ散歩','green small',3,1,1),bar('手賀沼\nドライブ散歩','gold small',3,2,2),bar('スノーピーク赤城山CF','green',3,7,7),bar('スノーピーク赤城山CF','green',4,1,2),bar('谷川岳山行','green',5,6,7)
+    ].join('')}</div>`;
+  }
+  calendar=function(){return page('calendar',`<section class="obR8Panel obR8Calendar"><header><h1>2026.07</h1><div class="obR8Month"><button data-act="noop">‹</button><button data-act="noop">›</button></div><p>日付を2回タップで新規予定</p></header><div class="obR8Week"><b class="sun">日</b><b>月</b><b>火</b><b>水</b><b>木</b><b>金</b><b class="sat">土</b></div>${calGrid()}</section><section class="obR8Panel obR8Schedule"><header><h2>選択日の予定</h2><button data-act="noop">すべての予定を見る ›</button></header>${[['7/12','日','散歩','コタ散歩','green'],['7/13','月','ドライブ散歩','手賀沼ドライブ散歩','gold'],['7/18 - 7/20','土〜月・祝','イベント','スノーピーク赤城山CF','green'],['7/31 - 8/1','金〜土','登山','谷川岳山行','green']].map(([d,w,t,ttl,c])=>`<button class="obR8Row" data-act="noop"><time>${esc(d)}<small>${esc(w)}</small></time><i class="${c}"></i><span><small>${esc(t)}</small><b>${esc(ttl)}</b></span><em>›</em></button>`).join('')}<footer><button data-act="noop">すべての予定を見る ›</button></footer></section>`);};
+  discover=function(){return page('discover',`${hero('discover','探す','候補探し・下見・保存。\n行く前の検討をここで。','search')}<section class="obR8Grid">${mini('tent','キャンプ場','犬可・温水・4時間以内','犬可,温水,4時間以内')}${mini('trail','散歩場所','駐車場・日陰・水辺','駐車場,日陰,水辺')}${mini('paw','ペットイベント','同伴あり/なしは属性で管理')}${mini('cup','ドッグカフェ','寄り道候補')}${mini('memo','下見メモ','駐車場・トイレ・混雑','駐車場,トイレ,混雑')}${mini('save','保存候補','あとで比較')}</section><section class="obR8Panel obR8Saved"><header><h2>最近保存した候補</h2><button data-act="noop">すべて見る ›</button></header>${[['散歩場所','手賀沼親水広場','駐車場 日陰 水辺','7/10'],['キャンプ場','印旛沼サンセットヒルズ','犬可 温水 4時間以内','7/08'],['ドッグカフェ','cafe HYGGE','テラス 大型犬OK 駐車場あり','7/06']].map(x=>`<button class="obR8SavedRow" data-act="noop"><i></i><span><small>${esc(x[0])}</small><b>${esc(x[1])}</b><em>${x[2].split(' ').map(t=>`<u>${esc(t)}</u>`).join('')}</em></span><time>保存日 ${esc(x[3])}</time><strong>${svg('save')}</strong></button>`).join('')}</section>`);};
+  prep=function(){if(state.prepTab==='route') return shell(`${obContextPill()}${routePrepView()}`);return page('prep',`${hero('prep','準備','通常散歩は準備不要。\n必要な外出だけ準備する。','check')}<section class="obR8Status"><i>${svg('bag')}</i><span><small>現在の保存先</small><b>コタ散歩 / 通常散歩 / 準備不要</b></span><em>›</em></section><section class="obR8Title"><h2>必要な時だけ準備</h2><p>ドライブ散歩や特別な外出など、必要なときだけ準備します。</p></section><section class="obR8Grid obR8PrepGrid">${mini('car','ドライブ散歩','駐車場・到着目安・ルート','駐車場・到着目安・ルート')}${mini('people','同伴イベント','持ち物・暑さ対策','持ち物・暑さ対策')}${mini('tent','キャンプ','ギア・天気・出発逆算','ギア・天気・出発逆算')}${mini('person','人だけイベント','買物・下見・身軽','買物・下見・身軽')}</section><section class="obR8Basic"><button data-prep="gear">${svg('bag')}<b>持ち物</b><small>チェックリスト</small></button><button data-prep="weather">${svg('sun')}<b>天気</b><small>天候・気温・暑さ指数</small></button><button data-prep="route">${svg('route')}<b>ルート</b><small>地図・距離・時間</small></button></section>`);};
+  field=function(){return page('field',`${hero('field','記録','保存先はコタ散歩。\n表示を変えても保存先は変わらない。','paw')}<section class="obR8Panel obR8Walk"><header><h2>散歩MAP</h2><button data-act="noop">MAP 切替</button></header><p>実際の地図で、歩いた軌跡と記録を確認できます。</p><div class="obR8Map">${obMapSvg()}<div class="obR8Legend"><span>━ 歩いたルート</span><span>◇ 現在地</span><span>▧ 写真ピン</span><span>□ メモピン</span></div><div class="obR8Stats"><span>GPS <b>612点</b></span><span>距離 <b>4.32km</b></span><span>時間 <b>1:24:37</b></span><span>ピン数 <b>18</b></span></div><div class="obR8Actions"><button class="primary" data-act="startWalk">散歩開始</button><button data-act="getLocation">現在地</button><button data-act="addPin">ピン</button><button data-act="openGoogleMap">Google Map</button></div></div></section><section class="obR8Quick"><h2>クイック記録</h2><div>${[['mic','話す','音声を記録'],['photo','撮る','写真を撮影'],['video','動画','動画を撮影'],['pin','場所','場所を記録'],['route','ピン','ピンを追加'],['memo','メモ','メモを残す']].map(([ic,t,s])=>`<button data-act="noop">${svg(ic)}<b>${esc(t)}</b><small>${esc(s)}</small></button>`).join('')}</div></section>`);};
+  memory=function(){return page('memory',`${hero('memory','思い出','帰宅後の整理・レビュー・次回改善。','mountain')}<section class="obR8Grid obR8MemoryGrid">${mini('photo','記録一覧','写真・音声・メモ','')}${mini('cart','次回改善','買い足し・反省','')}${mini('pin','場所メモ','駐車場・トイレ・日陰','')}${mini('link','関連付け','最後の記録をまとめる','')}</section><section class="obR8Panel obR8MemoryList"><header><h2>既存の思い出詳細</h2><button data-act="noop">すべての思い出を見る ›</button></header>${[['手賀沼ドライブ散歩','2026.07.13','同伴 コタ','36件'],['谷川岳山行','2026.07.05','単独','28件'],['スノーピーク赤城山CF','2026.07.18-20','グループ','52件']].map(x=>`<button class="obR8SavedRow" data-act="noop"><i></i><span><b>${esc(x[0])}</b><small>${esc(x[1])} <u>${esc(x[2])}</u></small></span><time>記録 ${esc(x[3])}</time><strong>›</strong></button>`).join('')}</section>`);};
+  try{render();}catch(e){console.warn('FIX8 render skipped',e)}
+})();
