@@ -6169,6 +6169,49 @@ ${starterPanelHtml()}
     });
   };
 
+
+
+  /* OUTBASE_ROUTE08_UI_DONE_FIX2: visual match to approved mock references */
+  function obCalendarGridV2(){
+    const start=new Date(2026,5,28);
+    let cells=[];
+    for(let i=0;i<42;i++){
+      const d=new Date(start); d.setDate(start.getDate()+i);
+      const key=obDateKey(d.getFullYear(),d.getMonth()+1,d.getDate());
+      const dow=d.getDay(); const inMonth=d.getMonth()===6;
+      const hname=key==='2026-07-20'?'海の日':key==='2026-07-23'?'スポーツの日':'';
+      const cls=['obCal2Cell',inMonth?'':'muted',dow===0?'sun':'',dow===6?'sat':'',hname?'holiday':'',key==='2026-07-10'?'today':''].filter(Boolean).join(' ');
+      const row=Math.floor(i/7)+1, col=(i%7)+1;
+      cells.push(`<button class="${cls}" style="grid-row:${row};grid-column:${col};" data-date="${key}" data-act="calendarDate"><b>${d.getDate()}</b>${hname?`<em>${hname}</em>`:''}</button>`);
+    }
+    const bar=(title,cls,row,c1,c2)=>`<span class="obCal2Bar ${cls}" style="grid-row:${row};grid-column:${c1} / ${c2+1};">${esc(title)}</span>`;
+    const bars=[
+      bar('尾瀬トレッキング','green',1,3,5),
+      bar('コタ散歩','green small',2,1,1),
+      bar('手賀沼ドライブ散歩','gold small',2,2,2),
+      bar('コタ散歩','green small',3,1,1),
+      bar('手賀沼ドライブ散歩','gold small',3,2,2),
+      bar('スノーピーク赤城山CF','green endStart',3,7,7),
+      bar('スノーピーク赤城山CF','green cont',4,1,2),
+      bar('谷川岳山行','green',5,6,7)
+    ];
+    return `<div class="obCal2Grid">${cells.join('')}${bars.join('')}</div>`;
+  }
+
+  calendar = function(){
+    return obPage(`<section class="obRouteLike obCalendarHero obCalendarHeroV2">
+      <header><h1>2026.07</h1><div class="obMonthBtns"><button data-act="noop">‹</button><button data-act="noop">›</button></div><p>日付を2回タップで新規予定</p></header>
+      <div class="obWeek obWeekV2"><b class="sun">日</b><b>月</b><b>火</b><b>水</b><b>木</b><b>金</b><b class="sat">土</b></div>
+      ${obCalendarGridV2()}
+    </section>
+    <section class="obRouteLike obScheduleList obScheduleListV2">
+      <header><h2>選択日の予定</h2><button data-act="noop">すべての予定を見る ›</button></header>
+      ${[
+        ['7/12','散歩','コタ散歩','日','green'],['7/13','ドライブ散歩','手賀沼ドライブ散歩','月','gold'],['7/18〜7/20','イベント','スノーピーク赤城山CF','土〜月・祝','green'],['7/31〜8/1','登山','谷川岳山行','金〜土','green']
+      ].map(([d,t,title,w,c])=>`<button class="obListRow" data-act="noop"><time>${esc(d)}<small>${esc(w)}</small></time><i class="${c}"></i><span><small>${esc(t)}</small><b>${esc(title)}</b></span><em>›</em></button>`).join('')}
+    </section>`);
+  };
+
   // RESTORE04.8: ensure first paint uses route spacing and calculation fixes.
   render();
 

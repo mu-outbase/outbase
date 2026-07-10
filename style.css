@@ -7581,3 +7581,80 @@ body{background:var(--ob-cream)!important;color:#132017!important}.shell{backgro
   .obCalendarHero h1{font-size:30px!important}.obCalWeekRow{height:58px}.obCalWeekRow .obDay{height:58px!important;padding:8px 5px!important}.obCalWeekRow .obDay b{font-size:16px!important}.obCalWeekRow .obEvt{top:30px;height:20px!important;font-size:9px!important;padding:0 4px!important}
   .obMapStats,.obMapActions{grid-template-columns:repeat(2,1fr)!important}.obMapSvg{height:230px!important}.obQuickRecord>div{grid-template-columns:repeat(2,1fr)!important}
 }
+
+/* OUTBASE_ROUTE08_UI_DONE_FIX2: match approved mock references */
+.main{max-width:520px!important;padding:16px 16px 116px!important;background:var(--ob-cream)!important;}
+.obLockTop{background:linear-gradient(180deg,#060807,#101811)!important;}
+.obContextPill{margin:0 0 16px!important;border-radius:999px!important;box-shadow:0 12px 20px rgba(20,13,5,.13)!important;}
+.obRouteLike,.obHeroLock,.obStatusCard,.obQuickRecord{box-shadow:0 14px 26px rgba(20,13,5,.15)!important;}
+.obCalendarHeroV2{padding:18px 18px 20px!important;border-radius:28px!important;}
+.obCalendarHeroV2 header{display:grid!important;grid-template-columns:auto auto 1fr!important;align-items:center!important;gap:10px!important;margin-bottom:15px!important;}
+.obCalendarHeroV2 h1{font-size:34px!important;line-height:1!important;letter-spacing:.04em!important;white-space:nowrap!important;}
+.obCalendarHeroV2 header p{font-size:12px!important;line-height:1.3!important;text-align:right!important;color:#c7bfae!important;max-width:145px;justify-self:end!important;}
+.obWeekV2{display:grid!important;grid-template-columns:repeat(7,1fr)!important;margin:0 0 6px!important;color:#d7d1c3!important;font-size:15px!important;}
+.obWeekV2 b{text-align:center!important;}
+.obCal2Grid{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,58px);border:1px solid rgba(255,255,255,.16);border-radius:18px;overflow:hidden;background:rgba(0,0,0,.08);}
+.obCal2Cell{position:relative;min-width:0;height:58px;border:0;border-right:1px solid rgba(255,255,255,.11);border-bottom:1px solid rgba(255,255,255,.11);background:transparent;color:#f4eddd;text-align:left;padding:8px 7px;z-index:1;}
+.obCal2Cell:nth-of-type(7n){border-right:0;}
+.obCal2Cell b{font-size:17px!important;line-height:1!important;display:block;}
+.obCal2Cell em{display:block;color:#ff665d!important;font-style:normal;font-size:9px!important;line-height:1.1;margin-top:3px;}
+.obCal2Cell.muted b{color:#77766d!important;}
+.obCal2Cell.sun b,.obCal2Cell.holiday b{color:#ff665d!important;}
+.obCal2Cell.sat b{color:#6aa8e6!important;}
+.obCal2Cell.today{outline:1px solid rgba(216,182,91,.65);outline-offset:-3px;}
+.obCal2Bar{align-self:end;justify-self:stretch;height:21px;margin:0 2px 8px;border-radius:999px;background:linear-gradient(90deg,#153b2d,#2b744f);color:#fff;display:flex;align-items:center;justify-content:center;padding:0 8px;font-size:10px;font-weight:950;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:4;box-shadow:0 5px 11px rgba(0,0,0,.2);}
+.obCal2Bar.gold{background:linear-gradient(145deg,#edcf72,#c69843);color:#111;white-space:normal;text-align:center;font-size:9px;line-height:1.05;}
+.obCal2Bar.small{padding:0 5px;}
+.obCal2Bar.cont{border-top-left-radius:999px;border-bottom-left-radius:999px;}
+.obCal2Bar.endStart{border-top-right-radius:999px;border-bottom-right-radius:999px;}
+.obCalendarGridFixed,.obCalendarGrid{display:none!important;}
+.obScheduleListV2{padding:18px!important;}
+.obScheduleListV2 header h2{font-size:23px!important;letter-spacing:-.02em!important;}
+.obListRow{grid-template-columns:70px 10px minmax(0,1fr) 18px!important;gap:10px!important;padding:10px 0!important;}
+.obListRow time{font-size:19px!important;line-height:1.05!important;}
+.obListRow time small{font-size:12px!important;}
+.obListRow span b{font-size:17px!important;line-height:1.2!important;word-break:keep-all!important;overflow-wrap:normal!important;}
+.obListRow span small{font-size:11px!important;}
+.obCardGrid{grid-template-columns:1fr 1fr!important;gap:12px!important;}
+.obMiniCard{min-height:96px!important;grid-template-columns:40px minmax(0,1fr) 14px!important;gap:9px!important;padding:13px 11px!important;border-radius:20px!important;}
+.obMiniCard.tall{min-height:138px!important;}
+.obMiniCard i{width:38px!important;height:38px!important;font-size:20px!important;}
+.obMiniCard b{font-size:17px!important;line-height:1.1!important;letter-spacing:-.04em!important;word-break:keep-all!important;overflow-wrap:normal!important;}
+.obMiniCard small{font-size:12px!important;line-height:1.25!important;}
+.obMiniCard p{font-size:11px!important;line-height:1.38!important;}
+.obMiniCard u,.obCandidateRow u{font-size:9.5px!important;padding:3px 6px!important;}
+.obMiniCard strong{font-size:22px!important;}
+.obHeroLock{min-height:150px!important;padding:22px!important;}
+.obHeroLock h1{font-size:48px!important;line-height:.96!important;}
+.obHeroLock p{font-size:16px!important;line-height:1.55!important;}
+.obHeroIcon{width:76px!important;height:76px!important;font-size:40px!important;}
+.obStatusCard{border-radius:22px!important;}
+.obThreeCards{grid-template-columns:repeat(3,1fr)!important;}
+.obWalkMap{padding:20px 18px!important;}
+.obMapSvg{height:285px!important;}
+.obQuickRecord>div{grid-template-columns:repeat(6,1fr)!important;gap:8px!important;}
+.obQuickRecord button{min-height:72px!important;}
+.obDesignNav{height:92px!important;}
+@media(max-width:390px){
+ .main{padding-left:12px!important;padding-right:12px!important;}
+ .obCalendarHeroV2 h1{font-size:31px!important;}
+ .obMonthBtns button{width:32px!important;height:32px!important;}
+ .obCalendarHeroV2 header p{font-size:11px!important;max-width:118px;}
+ .obCal2Grid{grid-template-rows:repeat(6,54px)!important;}
+ .obCal2Cell{height:54px!important;padding:7px 5px!important;}
+ .obCal2Cell b{font-size:16px!important;}
+ .obCal2Bar{height:19px!important;margin-bottom:7px!important;font-size:9px!important;padding:0 4px!important;}
+ .obListRow span b{font-size:16px!important;}
+ .obCardGrid{gap:10px!important;}
+ .obMiniCard{grid-template-columns:34px minmax(0,1fr) 12px!important;padding:12px 9px!important;min-height:92px!important;}
+ .obMiniCard i{width:32px!important;height:32px!important;font-size:18px!important;}
+ .obMiniCard b{font-size:16px!important;}
+ .obMiniCard small{font-size:11px!important;}
+ .obMapSvg{height:250px!important;}
+ .obQuickRecord>div{grid-template-columns:repeat(3,1fr)!important;}
+}
+@media(max-width:360px){
+ .obCardGrid{grid-template-columns:1fr!important;}
+ .obMiniCard{grid-template-columns:42px minmax(0,1fr) 14px!important;}
+ .obQuickRecord>div{grid-template-columns:repeat(2,1fr)!important;}
+}
