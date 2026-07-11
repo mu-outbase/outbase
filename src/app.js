@@ -72,29 +72,32 @@
   let planMonth=localStorage.getItem('outbase_plan_month')||selectedPlanDate.slice(0,7);
   let planSheet=params.get('planSheet')||'';
   let selectedPlanId=params.get('planId')||'';
-  let planDraftMode='plan';
   let planDraft=null;
   let planDraftDirty=false;
-  let planSheetTouchStartY=null;
+  let planSheetDrag=null;
   let planCalendarTouchStart=null;
+  let planCalendarSwipeSuppressUntil=0;
+  let planReminderTimer=null;
   let activePlanId=localStorage.getItem('outbase_active_plan_id')||'plan-drive-13';
   if(previewMode==='plan-add'||previewMode==='plan011-add') planSheet='add';
   if(previewMode==='plan-detail'){planSheet='detail';selectedPlanId='plan-drive-13';}
   if(previewMode==='plan-list') planSheet='list';
-  if(previewMode==='plan011-repeat'){planSheet='add';}
+  if(previewMode==='plan011-repeat'||previewMode==='plan012-repeat'){planSheet='add';}
+  if(previewMode==='plan012-reminder'){planSheet='add';}
   if(previewMode==='plan011-types') planSheet='type-manager';
 
   function migratePlanData(){
     const schema=Number(localStorage.getItem('outbase_plan_schema')||0);
-    if(schema>=2) return;
     const demoRemove=new Set(['plan-oz','plan-tani','plan-check-10']);
     plans=plans.filter(p=>!demoRemove.has(p.id)).map(p=>{
       const companionNames=Array.isArray(p.companionNames)?p.companionNames:String(p.companion||'').split(/[・,、]/).map(x=>x.trim()).filter(Boolean);
-      return {...p,type:p.type==='買い物'?'ショッピング':p.type==='日常'?'その他':p.type,startTime:p.startTime||p.time||'',endTime:p.endTime||'',allDay:Boolean(p.allDay),companionNames};
+      return {...p,type:p.type==='買い物'?'ショッピング':p.type==='日常'?'その他':p.type,startTime:p.startTime||p.time||'',endTime:p.endTime||'',allDay:Boolean(p.allDay),companionNames,reminders:Array.isArray(p.reminders)?p.reminders:[],allDayReminderTime:p.allDayReminderTime||'09:00'};
     });
-    if(!plans.length) plans=defaultPlans.map(p=>({...p}));
-    localStorage.setItem('outbase_plan_schema','2');
-    localStorage.setItem('outbase_plans_v1',JSON.stringify(plans));
+    if(!plans.length) plans=defaultPlans.map(p=>({...p,reminders:[],allDayReminderTime:'09:00'}));
+    if(schema<3){
+      localStorage.setItem('outbase_plan_schema','3');
+      localStorage.setItem('outbase_plans_v1',JSON.stringify(plans));
+    }
   }
   migratePlanData();
 
@@ -215,7 +218,7 @@
     localStorage.setItem('outbase_selected_plan_date',selectedPlanDate);
     localStorage.setItem('outbase_plan_month',planMonth);
     localStorage.setItem('outbase_active_plan_id',activePlanId);
-    localStorage.setItem('outbase_plan_schema','2');
+    localStorage.setItem('outbase_plan_schema','3');
   }
   function monthCalendar(monthKey){
     const [y,m]=monthKey.split('-').map(Number),first=new Date(y,m-1,1,12),last=new Date(y,m,0,12);
@@ -241,7 +244,7 @@
         const col=Math.round((ss-ws)/86400000)+1,span=Math.round((se-ss)/86400000)+1;
         let lane=0;while(lane<2&&occupied[week][lane].some(r=>!(col+span-1<r[0]||col>r[1]))) lane++;
         if(lane>=2) continue;occupied[week][lane].push([col,col+span-1]);
-        html.push(`<button class="eventBar ${planTone(plan)} planSegment" style="grid-column:${col}/span ${span};grid-row:${week+1};--lane:${lane}" data-plan-id="${plan.id}">${escapeHtml(plan.title)}</button>`);
+        html.push(`<div class="eventBar ${planTone(plan)} planSegment" style="grid-column:${col}/span ${span};grid-row:${week+1};--lane:${lane}" aria-hidden="true">${escapeHtml(plan.title)}</div>`);
       }
     }
     return html.join('');
@@ -251,13 +254,28 @@
     const names=planCompanionNames(plan||{});
     return names.map(name=>companions.find(c=>c.name===name)?.id).filter(Boolean);
   }
+  function defaultRepeat(startValue){
+    const start=parseYmd(startValue||selectedPlanDate),day=start.getDate(),weekday=start.getDay();
+    const lastDay=new Date(start.getFullYear(),start.getMonth()+1,0,12).getDate();
+    const ordinal=day+7>lastDay?-1:Math.ceil(day/7);
+    return {mode:'none',customFrequency:'weekly',interval:2,weekdays:[weekday],monthlyMode:'dayOfMonth',monthDay:day,monthOrdinal:ordinal,monthWeekday:weekday,endMode:'none',count:10,until:''};
+  }
+  function normalizeRepeat(raw,startValue){
+    const base=defaultRepeat(startValue),r=raw||{};
+    if(r.mode){return {...base,...r,weekdays:Array.isArray(r.weekdays)&&r.weekdays.length?r.weekdays.map(Number):base.weekdays};}
+    if(r.frequency&&r.frequency!=='none'){
+      const interval=Math.max(1,Number(r.interval)||1);
+      return {...base,mode:interval===1?r.frequency:'custom',customFrequency:r.frequency,interval,weekdays:Array.isArray(r.weekdays)&&r.weekdays.length?r.weekdays.map(Number):base.weekdays,endMode:r.endMode||'none',count:Number(r.count)||10,until:r.until||''};
+    }
+    return base;
+  }
   function blankPlanDraft(plan=null){
-    const editing=Boolean(plan);
+    const editing=Boolean(plan),startValue=plan?.start||selectedPlanDate;
     return {
-      editingId:plan?.id||'',title:plan?.title||'',start:plan?.start||selectedPlanDate,end:plan?.end||plan?.start||selectedPlanDate,
+      editingId:plan?.id||'',title:plan?.title||'',start:startValue,end:plan?.end||plan?.start||selectedPlanDate,
       startTime:plan?.startTime||plan?.time||'',endTime:plan?.endTime||'',allDay:editing?Boolean(plan.allDay):true,
       type:plan?.type||'',companionIds:companionIdsForPlan(plan),companionNames:planCompanionNames(plan||{}),location:plan?.location||'',note:plan?.note||'',
-      repeat:{frequency:'none',interval:1,weekdays:[parseYmd(plan?.start||selectedPlanDate).getDay()],endMode:'count',count:10,until:''}
+      repeat:normalizeRepeat(plan?.repeat,startValue),reminders:Array.isArray(plan?.reminders)?plan.reminders.map(x=>({...x,id:x.id||newId('reminder')})):[],allDayReminderTime:plan?.allDayReminderTime||'09:00'
     };
   }
   function ensurePlanDraft(plan=null){if(!planDraft||planDraft.editingId!==(plan?.id||'')) planDraft=blankPlanDraft(plan);return planDraft;}
@@ -272,36 +290,60 @@
     planDraft.allDay=Boolean(get('planAllDayInput')?.checked);
     planDraft.location=get('planLocationInput')?.value??planDraft.location;
     planDraft.note=get('planNoteInput')?.value??planDraft.note;
-    const freq=get('planRepeatFrequency');if(freq) planDraft.repeat.frequency=freq.value;
+    planDraft.allDayReminderTime=get('planAllDayReminderTime')?.value||planDraft.allDayReminderTime||'09:00';
+    const mode=get('planRepeatMode');if(mode) planDraft.repeat.mode=mode.value;
+    const customFrequency=get('planRepeatCustomFrequency');if(customFrequency) planDraft.repeat.customFrequency=customFrequency.value;
     const interval=get('planRepeatInterval');if(interval) planDraft.repeat.interval=Math.max(1,Number(interval.value)||1);
+    const monthlyMode=get('planRepeatMonthlyMode');if(monthlyMode) planDraft.repeat.monthlyMode=monthlyMode.value;
+    const monthDay=get('planRepeatMonthDay');if(monthDay) planDraft.repeat.monthDay=Math.min(31,Math.max(1,Number(monthDay.value)||1));
+    const monthOrdinal=get('planRepeatMonthOrdinal');if(monthOrdinal) planDraft.repeat.monthOrdinal=Number(monthOrdinal.value)||1;
+    const monthWeekday=get('planRepeatMonthWeekday');if(monthWeekday) planDraft.repeat.monthWeekday=Number(monthWeekday.value)||0;
     const endMode=get('planRepeatEndMode');if(endMode) planDraft.repeat.endMode=endMode.value;
     const count=get('planRepeatCount');if(count) planDraft.repeat.count=Math.max(1,Number(count.value)||10);
     const until=get('planRepeatUntil');if(until) planDraft.repeat.until=until.value;
+    const reminderRows=[...document.querySelectorAll('[data-reminder-row]')];
+    if(reminderRows.length){
+      planDraft.reminders=reminderRows.map(row=>({id:row.dataset.reminderRow,value:Math.max(1,Number(row.querySelector('[data-reminder-value]')?.value)||1),unit:row.querySelector('[data-reminder-unit]')?.value||'day'}));
+    }
   }
   function openPlanEditor(plan=null){selectedPlanId=plan?.id||'';planDraft=blankPlanDraft(plan);planDraftDirty=false;planSheet=plan?'edit':'add';}
   function attemptClosePlanSheet(){
     if((planSheet==='add'||planSheet==='edit')&&planDraftDirty&&!confirm('入力内容を破棄して閉じますか？')) return false;
     planSheet='';selectedPlanId='';planDraft=null;planDraftDirty=false;render();return true;
   }
+  function nthWeekdayOfMonth(year,month,weekday,ordinal){
+    if(ordinal===-1){const last=new Date(year,month+1,0,12);last.setDate(last.getDate()-((last.getDay()-weekday+7)%7));return last;}
+    const first=new Date(year,month,1,12),offset=(weekday-first.getDay()+7)%7,day=1+offset+(Math.max(1,ordinal)-1)*7;
+    if(day>new Date(year,month+1,0,12).getDate()) return null;
+    return new Date(year,month,day,12);
+  }
+  function monthDate(year,month,day){const last=new Date(year,month+1,0,12).getDate();return new Date(year,month,Math.min(last,Math.max(1,day)),12);}
   function repeatDates(draft){
-    const repeat=draft.repeat||{frequency:'none'};const start=parseYmd(draft.start);
-    if(!repeat.frequency||repeat.frequency==='none') return [draft.start];
-    const dates=[],interval=Math.max(1,Number(repeat.interval)||1),max=100;
-    const countLimit=repeat.endMode==='count'?Math.min(max,Math.max(1,Number(repeat.count)||10)):max;
-    const until=repeat.endMode==='until'&&repeat.until?parseYmd(repeat.until):addDays(start,730);
-    const push=d=>{if(dates.length<countLimit&&d<=until) dates.push(toYmd(d));};
-    if(repeat.frequency==='daily'){
-      for(let i=0;dates.length<countLimit;i++) {const d=addDays(start,i*interval);if(d>until)break;push(d);}
-    }else if(repeat.frequency==='weekly'){
-      const weekdays=(repeat.weekdays&&repeat.weekdays.length?repeat.weekdays:[start.getDay()]).map(Number);
+    const repeat=normalizeRepeat(draft.repeat,draft.start),start=parseYmd(draft.start),mode=repeat.mode||'none';
+    if(mode==='none') return [draft.start];
+    const frequency=mode==='custom'?(repeat.customFrequency||'weekly'):mode;
+    const interval=mode==='custom'?Math.max(1,Number(repeat.interval)||1):1;
+    const max=200,countLimit=repeat.endMode==='count'?Math.min(max,Math.max(1,Number(repeat.count)||10)):max;
+    const defaultDays={daily:730,weekly:3650,monthly:7300,yearly:36500}[frequency]||7300;
+    const until=repeat.endMode==='until'&&repeat.until?parseYmd(repeat.until):addDays(start,defaultDays);
+    const dates=[],seen=new Set();
+    const push=d=>{if(!d||d<start||d>until||dates.length>=countLimit)return;const key=toYmd(d);if(!seen.has(key)){seen.add(key);dates.push(key);}};
+    if(frequency==='daily'){
+      for(let i=0;dates.length<countLimit;i++){const d=addDays(start,i*interval);if(d>until)break;push(d);}
+    }else if(frequency==='weekly'){
+      const weekdays=(repeat.weekdays&&repeat.weekdays.length?repeat.weekdays:[start.getDay()]).map(Number),anchor=addDays(start,-start.getDay());
       for(let d=new Date(start);d<=until&&dates.length<countLimit;d=addDays(d,1)){
-        const diff=Math.floor((d-start)/86400000),week=Math.floor(diff/7);
+        const week=Math.floor((d-anchor)/604800000);
         if(week%interval===0&&weekdays.includes(d.getDay())) push(d);
       }
-    }else if(repeat.frequency==='monthly'){
-      for(let i=0;dates.length<countLimit;i++){const d=new Date(start.getFullYear(),start.getMonth()+i*interval,start.getDate(),12);if(d>until)break;push(d);}
-    }else if(repeat.frequency==='yearly'){
-      for(let i=0;dates.length<countLimit;i++){const d=new Date(start.getFullYear()+i*interval,start.getMonth(),start.getDate(),12);if(d>until)break;push(d);}
+    }else if(frequency==='monthly'){
+      for(let i=0;dates.length<countLimit;i++){
+        const monthIndex=start.getMonth()+i*interval,year=start.getFullYear()+Math.floor(monthIndex/12),month=((monthIndex%12)+12)%12;
+        const d=repeat.monthlyMode==='nthWeekday'?nthWeekdayOfMonth(year,month,Number(repeat.monthWeekday),Number(repeat.monthOrdinal)):monthDate(year,month,Number(repeat.monthDay)||start.getDate());
+        if(d&&d>until)break;push(d);
+      }
+    }else if(frequency==='yearly'){
+      for(let i=0;dates.length<countLimit;i++){const y=start.getFullYear()+i*interval,d=monthDate(y,start.getMonth(),start.getDate());if(d>until)break;push(d);}
     }
     return dates.length?dates:[draft.start];
   }
@@ -312,9 +354,31 @@
     return dates.map((date,index)=>({
       id:draft.editingId||newId('plan'),seriesId,seriesIndex:index,title:draft.title.trim(),type:draft.type||'',start:date,end:toYmd(addDays(parseYmd(date),duration)),
       startTime:draft.allDay?'':draft.startTime,endTime:draft.allDay?'':draft.endTime,allDay:Boolean(draft.allDay),companionIds:[...draft.companionIds],companionNames:names,
-      location:draft.location.trim(),note:draft.note.trim(),prep:'未着手',manualStatus:'',repeat:dates.length>1?{...draft.repeat}:null
+      location:draft.location.trim(),note:draft.note.trim(),prep:'未着手',manualStatus:'',repeat:dates.length>1?{...draft.repeat,weekdays:[...draft.repeat.weekdays]}:null,
+      reminders:draft.reminders.map(x=>({...x})),allDayReminderTime:draft.allDayReminderTime||'09:00'
     }));
   }
+  function reminderUnitLabel(unit){return {month:'か月前',week:'週間前',day:'日前',hour:'時間前'}[unit]||'日前';}
+  function reminderDate(plan,reminder){
+    const base=dateTimeAt(plan.start,plan.allDay?(plan.allDayReminderTime||'09:00'):(plan.startTime||'09:00'),false),d=new Date(base),value=Math.max(1,Number(reminder.value)||1);
+    if(reminder.unit==='month')d.setMonth(d.getMonth()-value);else if(reminder.unit==='week')d.setDate(d.getDate()-value*7);else if(reminder.unit==='day')d.setDate(d.getDate()-value);else d.setHours(d.getHours()-value);
+    return d;
+  }
+  function reminderSummary(plan){
+    const rows=Array.isArray(plan?.reminders)?plan.reminders:[];
+    return rows.map(r=>`${r.value}${reminderUnitLabel(r.unit)}`).join('・');
+  }
+  async function showPlanNotification(plan){
+    const options={body:`${planRangeLabel(plan)}${plan.location?` / ${plan.location}`:''}`,tag:`outbase-plan-${plan.id}`,icon:'assets/memory_hero_art.png'};
+    try{if(navigator.serviceWorker){const reg=await navigator.serviceWorker.ready;await reg.showNotification(plan.title,options);}else if(window.Notification)new Notification(plan.title,options);}catch(_e){}
+  }
+  function checkPlanReminders(){
+    if(!window.Notification||Notification.permission!=='granted')return;
+    const now=Date.now(),done=readStored('outbase_plan_notified_v1',{});let changed=false;
+    for(const plan of plans){for(const reminder of (plan.reminders||[])){const at=reminderDate(plan,reminder).getTime(),key=`${plan.id}:${reminder.id}:${at}`;if(!done[key]&&now>=at&&now-at<90000){done[key]=now;changed=true;showPlanNotification(plan);}}}
+    if(changed)localStorage.setItem('outbase_plan_notified_v1',JSON.stringify(done));
+  }
+  function requestPlanNotificationPermission(){if(window.Notification&&Notification.permission==='default')Notification.requestPermission().then(()=>checkPlanReminders()).catch(()=>{});}
 
   function clearRecoverableSession(){
     recoverableSession=null;
@@ -495,33 +559,51 @@
     const rows=companions.filter(c=>!c.hidden);
     return `<div class="planChoiceHead"><span>同行者 <small>複数選択できます</small></span><button type="button" data-manage-companions>編集</button></div><div class="choiceChips companionChoiceChips">${rows.map(c=>`<button type="button" class="${selectedIds.includes(c.id)?'selected':''}" data-companion-choice="${c.id}">${escapeHtml(c.name)}</button>`).join('')}</div>`;
   }
+  function repeatSummary(repeat){
+    const r=repeat||{},labels={daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年'};
+    if(!r.mode||r.mode==='none')return 'なし';
+    if(r.mode==='custom')return `${r.interval||2}${{daily:'日',weekly:'週',monthly:'か月',yearly:'年'}[r.customFrequency]||'週'}ごと`;
+    return labels[r.mode]||'設定あり';
+  }
   function repeatMarkup(draft){
-    const r=draft.repeat;
-    const weekdayNames=['日','月','火','水','木','金','土'];
-    return `<details class="repeatBox" ${r.frequency!=='none'?'open':''}><summary>繰り返し <b>${r.frequency==='none'?'なし':({daily:'毎日',weekly:'毎週',monthly:'毎月',yearly:'毎年'}[r.frequency]||'設定あり')}</b></summary><div class="repeatInner"><div class="planFormGrid"><label class="planField">周期<select id="planRepeatFrequency"><option value="none" ${r.frequency==='none'?'selected':''}>なし</option><option value="daily" ${r.frequency==='daily'?'selected':''}>毎日</option><option value="weekly" ${r.frequency==='weekly'?'selected':''}>毎週</option><option value="monthly" ${r.frequency==='monthly'?'selected':''}>毎月</option><option value="yearly" ${r.frequency==='yearly'?'selected':''}>毎年</option></select></label><label class="planField">間隔<input id="planRepeatInterval" type="number" min="1" max="52" value="${r.interval||1}"></label></div><div class="weekdayChoices ${r.frequency==='weekly'?'show':''}">${weekdayNames.map((name,i)=>`<button type="button" class="${r.weekdays.includes(i)?'selected':''}" data-repeat-weekday="${i}">${name}</button>`).join('')}</div><div class="planFormGrid"><label class="planField">終了<select id="planRepeatEndMode"><option value="count" ${r.endMode==='count'?'selected':''}>回数</option><option value="until" ${r.endMode==='until'?'selected':''}>終了日</option><option value="none" ${r.endMode==='none'?'selected':''}>指定なし</option></select></label><label class="planField repeatCountField ${r.endMode==='count'?'show':''}">回数<input id="planRepeatCount" type="number" min="1" max="100" value="${r.count||10}"></label><label class="planField repeatUntilField ${r.endMode==='until'?'show':''}">終了日<input id="planRepeatUntil" type="date" value="${r.until||''}"></label></div></div></details>`;
+    const r=draft.repeat,weekdayNames=['日','月','火','水','木','金','土'],actualFrequency=r.mode==='custom'?r.customFrequency:r.mode;
+    const weekly=actualFrequency==='weekly',monthly=actualFrequency==='monthly';
+    const weekdayButtons=weekdayNames.map((name,i)=>`<button type="button" class="${r.weekdays.includes(i)?'selected':''}" data-repeat-weekday="${i}">${name}</button>`).join('');
+    return `<details class="repeatBox" ${r.mode!=='none'?'open':''}><summary>繰り返し <b>${escapeHtml(repeatSummary(r))}</b></summary><div class="repeatInner">
+      <label class="planField">繰り返し<select id="planRepeatMode"><option value="none" ${r.mode==='none'?'selected':''}>なし</option><option value="daily" ${r.mode==='daily'?'selected':''}>毎日</option><option value="weekly" ${r.mode==='weekly'?'selected':''}>毎週</option><option value="monthly" ${r.mode==='monthly'?'selected':''}>毎月</option><option value="yearly" ${r.mode==='yearly'?'selected':''}>毎年</option><option value="custom" ${r.mode==='custom'?'selected':''}>カスタム</option></select></label>
+      <div class="customRepeatFields ${r.mode==='custom'?'show':''}"><label class="planField">間隔<input id="planRepeatInterval" type="number" min="1" max="99" value="${r.interval||2}"></label><label class="planField">単位<select id="planRepeatCustomFrequency"><option value="daily" ${r.customFrequency==='daily'?'selected':''}>日</option><option value="weekly" ${r.customFrequency==='weekly'?'selected':''}>週</option><option value="monthly" ${r.customFrequency==='monthly'?'selected':''}>か月</option><option value="yearly" ${r.customFrequency==='yearly'?'selected':''}>年</option></select></label></div>
+      <div class="repeatSubsection ${weekly?'show':''}"><div class="repeatSubHead"><span>曜日指定</span><div><button type="button" data-weekday-preset="weekday">平日</button><button type="button" data-weekday-preset="weekend">土日</button></div></div><div class="weekdayChoices show">${weekdayButtons}</div></div>
+      <div class="repeatSubsection monthlyRepeatFields ${monthly?'show':''}"><label class="planField">毎月の基準<select id="planRepeatMonthlyMode"><option value="dayOfMonth" ${r.monthlyMode==='dayOfMonth'?'selected':''}>日付</option><option value="nthWeekday" ${r.monthlyMode==='nthWeekday'?'selected':''}>第◯曜日</option></select></label><div class="monthDayFields ${r.monthlyMode==='dayOfMonth'?'show':''}"><label class="planField">日<input id="planRepeatMonthDay" type="number" min="1" max="31" value="${r.monthDay||parseYmd(draft.start).getDate()}"></label></div><div class="monthOrdinalFields ${r.monthlyMode==='nthWeekday'?'show':''}"><label class="planField">週<select id="planRepeatMonthOrdinal"><option value="1" ${r.monthOrdinal===1?'selected':''}>第1</option><option value="2" ${r.monthOrdinal===2?'selected':''}>第2</option><option value="3" ${r.monthOrdinal===3?'selected':''}>第3</option><option value="4" ${r.monthOrdinal===4?'selected':''}>第4</option><option value="5" ${r.monthOrdinal===5?'selected':''}>第5</option><option value="-1" ${r.monthOrdinal===-1?'selected':''}>最終</option></select></label><label class="planField">曜日<select id="planRepeatMonthWeekday">${weekdayNames.map((name,i)=>`<option value="${i}" ${r.monthWeekday===i?'selected':''}>${name}曜日</option>`).join('')}</select></label></div></div>
+      <div class="planFormGrid repeatEndGrid"><label class="planField">終了<select id="planRepeatEndMode"><option value="none" ${r.endMode==='none'?'selected':''}>指定なし</option><option value="until" ${r.endMode==='until'?'selected':''}>終了日</option><option value="count" ${r.endMode==='count'?'selected':''}>回数</option></select></label><label class="planField repeatCountField ${r.endMode==='count'?'show':''}">回数<input id="planRepeatCount" type="number" min="1" max="200" value="${r.count||10}"></label><label class="planField repeatUntilField ${r.endMode==='until'?'show':''}">終了日<input id="planRepeatUntil" type="date" value="${r.until||''}"></label></div>
+    </div></details>`;
+  }
+  function reminderMarkup(draft){
+    const rows=draft.reminders||[];
+    return `<details class="reminderBox" ${rows.length?'open':''}><summary>お知らせ <b>${rows.length?`${rows.length}件`:'なし'}</b></summary><div class="reminderInner"><div class="reminderRows">${rows.map(r=>`<div class="reminderRow" data-reminder-row="${r.id}"><input type="number" min="1" max="999" value="${r.value||1}" data-reminder-value><select data-reminder-unit><option value="month" ${r.unit==='month'?'selected':''}>か月前</option><option value="week" ${r.unit==='week'?'selected':''}>週間前</option><option value="day" ${r.unit==='day'?'selected':''}>日前</option><option value="hour" ${r.unit==='hour'?'selected':''}>時間前</option></select><button type="button" data-remove-reminder="${r.id}">削除</button></div>`).join('')}</div><button type="button" class="addReminderButton" data-add-reminder>＋お知らせを追加</button><label class="planField allDayReminderField ${draft.allDay&&rows.length?'show':''}">終日予定の通知時刻<input id="planAllDayReminderTime" type="time" value="${draft.allDayReminderTime||'09:00'}"></label><p class="reminderNote">端末通知は許可後、OUTBASEが動作中のときに通知します。</p></div></details>`;
   }
   function planSheetMarkup(){
     if(!planSheet) return '';
     const plan=planForId(selectedPlanId);
+    const dragHeader=(eyebrow,title)=>`<div class="planSheetDragZone" data-plan-drag-zone><div class="sheetHandle"></div><small>${eyebrow}</small><h2>${title}</h2></div>`;
     if(planSheet==='add'||planSheet==='edit'){
-      const editing=planSheet==='edit'&&plan;
-      const draft=ensurePlanDraft(editing?plan:null);
-      if(previewMode==='plan011-repeat') draft.repeat.frequency='weekly';
-      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planEditSheet" data-plan-sheet-panel><div class="sheetHandle"></div><small>PLAN / EXPERIENCE</small><h2>${editing?'予定・出来事を編集':'予定・出来事を追加'}</h2><div class="planModeSwitch"><button class="${planDraftMode==='plan'?'selected':''}" data-plan-mode="plan">予定</button><button class="${planDraftMode==='now'?'selected':''}" data-plan-mode="now">今から</button><button class="${planDraftMode==='past'?'selected':''}" data-plan-mode="past">過去から</button></div><p class="planModeHelp">${planDraftMode==='plan'?'これからの予定として追加します。':planDraftMode==='now'?'予定がなくても、今始める出来事として追加します。':'写真やメモから、過去の実績として追加します。'}</p><label class="planField wide">名前<input id="planTitleInput" value="${escapeHtml(draft.title)}" placeholder="例：手賀沼ドライブ散歩"></label><label class="allDayToggle"><input id="planAllDayInput" type="checkbox" ${draft.allDay?'checked':''}><span>終日</span></label><div class="planFormGrid dateTimeGrid"><label class="planField">開始日<input id="planStartInput" type="date" value="${draft.start}"></label><label class="planField timeField ${draft.allDay?'disabled':''}">開始時間<input id="planStartTimeInput" type="time" value="${draft.startTime}" ${draft.allDay?'disabled':''}></label><label class="planField">終了日<input id="planEndInput" type="date" value="${draft.end}"></label><label class="planField timeField ${draft.allDay?'disabled':''}">終了時間<input id="planEndTimeInput" type="time" value="${draft.endTime}" ${draft.allDay?'disabled':''}></label></div>${typeChipsMarkup(draft.type)}${companionChipsMarkup(draft.companionIds)}<label class="planField wide">場所<input id="planLocationInput" value="${escapeHtml(draft.location)}" placeholder="場所は後でもOK"></label>${repeatMarkup(draft)}<label class="planField wide">メモ<textarea id="planNoteInput" placeholder="準備や当日の補足">${escapeHtml(draft.note)}</textarea></label><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-save-plan>${editing?'更新':'追加'}</button></div></section></div>`;
+      const editing=planSheet==='edit'&&plan,draft=ensurePlanDraft(editing?plan:null);
+      if(previewMode==='plan011-repeat'||previewMode==='plan012-repeat'){draft.repeat.mode='weekly';draft.repeat.weekdays=[1,4];}
+      if(previewMode==='plan012-reminder'&&!draft.reminders.length)draft.reminders=[{id:newId('reminder'),value:1,unit:'week'},{id:newId('reminder'),value:1,unit:'day'}];
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planEditSheet" data-plan-sheet-panel>${dragHeader('PLAN',editing?'予定を編集':'新しい予定')}<label class="planField wide">名前<input id="planTitleInput" value="${escapeHtml(draft.title)}" placeholder="例：手賀沼ドライブ散歩"></label><label class="allDayToggle"><input id="planAllDayInput" type="checkbox" ${draft.allDay?'checked':''}><span>終日</span></label><div class="planFormGrid dateTimeGrid"><label class="planField">開始日<input id="planStartInput" type="date" value="${draft.start}"></label><label class="planField timeField ${draft.allDay?'disabled':''}">開始時間<input id="planStartTimeInput" type="time" value="${draft.startTime}" ${draft.allDay?'disabled':''}></label><label class="planField">終了日<input id="planEndInput" type="date" value="${draft.end}"></label><label class="planField timeField ${draft.allDay?'disabled':''}">終了時間<input id="planEndTimeInput" type="time" value="${draft.endTime}" ${draft.allDay?'disabled':''}></label></div>${typeChipsMarkup(draft.type)}${companionChipsMarkup(draft.companionIds)}<label class="planField wide">場所<input id="planLocationInput" value="${escapeHtml(draft.location)}" placeholder="場所は後でもOK"></label>${repeatMarkup(draft)}${reminderMarkup(draft)}<label class="planField wide">メモ<textarea id="planNoteInput" placeholder="準備や当日の補足">${escapeHtml(draft.note)}</textarea></label><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-save-plan>${editing?'更新':'追加'}</button></div></section></div>`;
     }
     if(planSheet==='type-manager'){
-      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet managerSheet"><div class="sheetHandle"></div><small>CUSTOM</small><h2>種類を編集</h2><p>初期種類も追加した種類も、名称・色の変更と削除ができます。</p><div class="managerRows">${planTypes.map(t=>`<div class="managerRow"><input value="${escapeHtml(t.name)}" data-type-name="${t.id}"><select data-type-tone="${t.id}">${['green','gold','blue','slate','red'].map(c=>`<option value="${c}" ${t.tone===c?'selected':''}>${{green:'緑',gold:'金',blue:'青',slate:'灰',red:'赤'}[c]}</option>`).join('')}</select><button data-type-delete="${t.id}">削除</button></div>`).join('')}</div><div class="managerAdd"><input id="newTypeName" placeholder="新しい種類"><button data-add-type>追加</button></div><div class="sheetActions"><button class="sheetPrimary" data-return-plan-editor>予定入力へ戻る</button></div></section></div>`;
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet managerSheet" data-plan-sheet-panel>${dragHeader('CUSTOM','種類を編集')}<p>初期種類も追加した種類も、名称・色の変更と削除ができます。</p><div class="managerRows">${planTypes.map(t=>`<div class="managerRow"><input value="${escapeHtml(t.name)}" data-type-name="${t.id}"><select data-type-tone="${t.id}">${['green','gold','blue','slate','red'].map(c=>`<option value="${c}" ${t.tone===c?'selected':''}>${{green:'緑',gold:'金',blue:'青',slate:'灰',red:'赤'}[c]}</option>`).join('')}</select><button data-type-delete="${t.id}">削除</button></div>`).join('')}</div><div class="managerAdd"><input id="newTypeName" placeholder="新しい種類"><button data-add-type>追加</button></div><div class="sheetActions"><button class="sheetPrimary" data-return-plan-editor>予定入力へ戻る</button></div></section></div>`;
     }
     if(planSheet==='companion-manager'){
-      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet managerSheet"><div class="sheetHandle"></div><small>CUSTOM</small><h2>同行者を編集</h2><p>同行者は複数選択できます。「ひとり」は他と同時選択できません。</p><div class="managerRows">${companions.map(c=>`<div class="managerRow companionManagerRow"><input value="${escapeHtml(c.name)}" data-companion-name="${c.id}"><span>${c.solo?'固定':''}</span><button data-companion-delete="${c.id}" ${c.solo?'disabled':''}>削除</button></div>`).join('')}</div><div class="managerAdd"><input id="newCompanionName" placeholder="新しい同行者"><button data-add-companion>追加</button></div><div class="sheetActions"><button class="sheetPrimary" data-return-plan-editor>予定入力へ戻る</button></div></section></div>`;
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet managerSheet" data-plan-sheet-panel>${dragHeader('CUSTOM','同行者を編集')}<p>同行者は複数選択できます。「ひとり」は他と同時選択できません。</p><div class="managerRows">${companions.map(c=>`<div class="managerRow companionManagerRow"><input value="${escapeHtml(c.name)}" data-companion-name="${c.id}"><span>${c.solo?'固定':''}</span><button data-companion-delete="${c.id}" ${c.solo?'disabled':''}>削除</button></div>`).join('')}</div><div class="managerAdd"><input id="newCompanionName" placeholder="新しい同行者"><button data-add-companion>追加</button></div><div class="sheetActions"><button class="sheetPrimary" data-return-plan-editor>予定入力へ戻る</button></div></section></div>`;
     }
     if(planSheet==='detail'&&plan){
-      const status=planStatus(plan),companionsText=planCompanionLabel(plan);
-      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planDetailSheet"><div class="sheetHandle"></div><small>${escapeHtml(planTypeLabel(plan.type))}</small><h2>${escapeHtml(plan.title)}</h2><div class="planDetailHero"><div><small>日時</small><b>${escapeHtml(planRangeLabel(plan))}</b></div><div><small>状態</small><b>${escapeHtml(status)}</b></div></div><div class="planDetailMeta">${plan.location?`<p><span>場所</span><b>${escapeHtml(plan.location)}</b></p>`:''}${companionsText?`<p><span>同行</span><b>${escapeHtml(companionsText)}</b></p>`:''}<p><span>準備</span><b>${escapeHtml(plan.prep||'未着手')}</b></p>${plan.seriesId?`<p><span>繰り返し</span><b>繰り返し予定</b></p>`:''}${plan.note?`<p><span>メモ</span><b>${escapeHtml(plan.note)}</b></p>`:''}</div><button class="planPrimaryAction" data-plan-set-active="${plan.id}">この予定を主役にする</button><div class="planActionGrid three"><button data-plan-prepare="${plan.id}">準備を始める</button><button data-plan-record="${plan.id}">この予定で記録</button><button data-plan-edit="${plan.id}">編集</button></div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="planDanger" data-plan-delete="${plan.id}">削除</button></div></section></div>`;
+      const status=planStatus(plan),companionsText=planCompanionLabel(plan),notice=reminderSummary(plan);
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planDetailSheet" data-plan-sheet-panel>${dragHeader(escapeHtml(planTypeLabel(plan.type)),escapeHtml(plan.title))}<div class="planDetailHero"><div><small>日時</small><b>${escapeHtml(planRangeLabel(plan))}</b></div><div><small>状態</small><b>${escapeHtml(status)}</b></div></div><div class="planDetailMeta">${plan.location?`<p><span>場所</span><b>${escapeHtml(plan.location)}</b></p>`:''}${companionsText?`<p><span>同行</span><b>${escapeHtml(companionsText)}</b></p>`:''}<p><span>準備</span><b>${escapeHtml(plan.prep||'未着手')}</b></p>${plan.seriesId?`<p><span>繰り返し</span><b>${escapeHtml(repeatSummary(plan.repeat))}</b></p>`:''}${notice?`<p><span>お知らせ</span><b>${escapeHtml(notice)}</b></p>`:''}${plan.note?`<p><span>メモ</span><b>${escapeHtml(plan.note)}</b></p>`:''}</div><button class="planPrimaryAction" data-plan-set-active="${plan.id}">この予定を主役にする</button><div class="planActionGrid three"><button data-plan-prepare="${plan.id}">準備を始める</button><button data-plan-record="${plan.id}">この予定で記録</button><button data-plan-edit="${plan.id}">編集</button></div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="planDanger" data-plan-delete="${plan.id}">削除</button></div></section></div>`;
     }
     if(planSheet==='list'){
       const sorted=[...plans].sort((a,b)=>compareYmd(a.start,b.start)||(a.startTime||a.time||'').localeCompare(b.startTime||b.time||''));
-      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planListSheet"><div class="sheetHandle"></div><small>ALL PLANS</small><h2>すべての予定・出来事</h2><div class="planListRows">${sorted.map(p=>`<button data-plan-id="${p.id}"><time>${escapeHtml(planRangeLabel(p))}</time><i class="dot ${planTone(p)}"></i><div><small>${escapeHtml(planTypeLabel(p.type))}・${escapeHtml(planStatus(p))}</small><b>${escapeHtml(p.title)}</b></div><span>›</span></button>`).join('')}</div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-open-plan-add>＋追加</button></div></section></div>`;
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planListSheet" data-plan-sheet-panel>${dragHeader('ALL PLANS','すべての予定')}<div class="planListRows">${sorted.map(p=>`<button data-plan-id="${p.id}"><time>${escapeHtml(planRangeLabel(p))}</time><i class="dot ${planTone(p)}"></i><div><small>${escapeHtml(planTypeLabel(p.type))}・${escapeHtml(planStatus(p))}</small><b>${escapeHtml(p.title)}</b></div><span>›</span></button>`).join('')}</div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-open-plan-add>＋追加</button></div></section></div>`;
     }
     return '';
   }
@@ -960,9 +1042,11 @@
 
   function bindPlanActions(){
     document.querySelectorAll('[data-plan-date]').forEach(el=>{
-      el.addEventListener('click',()=>{
+      el.addEventListener('click',e=>{
+        e.preventDefault();e.stopPropagation();
+        if(Date.now()<planCalendarSwipeSuppressUntil)return;
         const date=el.dataset.planDate;
-        if(selectedPlanDate===date){openPlanEditor(null);planDraft.start=date;planDraft.end=date;persistPlans();render();return;}
+        if(selectedPlanDate===date){openPlanEditor(null);planDraft.start=date;planDraft.end=date;render();return;}
         selectedPlanDate=date;planMonth=date.slice(0,7);persistPlans();render();
       });
     });
@@ -974,49 +1058,64 @@
     document.querySelectorAll('[data-plan-today]').forEach(el=>el.addEventListener('click',()=>{selectedPlanDate=new Date().toISOString().slice(0,10);planMonth=selectedPlanDate.slice(0,7);persistPlans();render();}));
     const calendar=document.querySelector('[data-plan-calendar-swipe]');
     if(calendar){
-      calendar.addEventListener('touchstart',e=>{const t=e.touches[0];planCalendarTouchStart={x:t.clientX,y:t.clientY};},{passive:true});
-      calendar.addEventListener('touchend',e=>{if(!planCalendarTouchStart)return;const t=e.changedTouches[0],dx=t.clientX-planCalendarTouchStart.x,dy=t.clientY-planCalendarTouchStart.y;planCalendarTouchStart=null;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.3){changePlanMonth(dx<0?1:-1);render();}},{passive:true});
+      calendar.addEventListener('pointerdown',e=>{if(e.target.closest('.monthBtns button'))return;planCalendarTouchStart={x:e.clientX,y:e.clientY,id:e.pointerId};},{passive:true});
+      calendar.addEventListener('pointerup',e=>{if(!planCalendarTouchStart||planCalendarTouchStart.id!==e.pointerId)return;const dx=e.clientX-planCalendarTouchStart.x,dy=e.clientY-planCalendarTouchStart.y;planCalendarTouchStart=null;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.3){planCalendarSwipeSuppressUntil=Date.now()+450;changePlanMonth(dx<0?1:-1);render();}},{passive:true});
+      calendar.addEventListener('pointercancel',()=>{planCalendarTouchStart=null;},{passive:true});
     }
-    document.querySelectorAll('[data-plan-mode]').forEach(el=>el.addEventListener('click',()=>{syncPlanDraftFromForm();planDraftMode=el.dataset.planMode;planDraftDirty=true;render();}));
     document.querySelectorAll('[data-plan-edit]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planEdit);if(!p)return;openPlanEditor(p);render();}));
     document.querySelectorAll('[data-plan-set-active]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planSetActive;persistPlans();planSheet='';render();}));
-    document.querySelectorAll('[data-plan-prepare]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planPrepare;persistPlans();planSheet='';active='prep';history.replaceState(null,'',`?tab=prep&v=clean-v6-plan011`);render();window.scrollTo({top:0,behavior:'instant'});}));
-    document.querySelectorAll('[data-plan-record]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planRecord);if(!p)return;activePlanId=p.id;recordTarget=p.title;localStorage.setItem('outbase_record_target',recordTarget);persistPlans();planSheet='';active='record';history.replaceState(null,'',`?tab=record&v=clean-v6-plan011`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-plan-prepare]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planPrepare;persistPlans();planSheet='';active='prep';history.replaceState(null,'',`?tab=prep&v=clean-v6-plan012`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-plan-record]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planRecord);if(!p)return;activePlanId=p.id;recordTarget=p.title;localStorage.setItem('outbase_record_target',recordTarget);persistPlans();planSheet='';active='record';history.replaceState(null,'',`?tab=record&v=clean-v6-plan012`);render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-delete]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planDelete);if(!p)return;if(!confirm(`「${p.title}」を削除しますか？`))return;plans=plans.filter(x=>x.id!==p.id);if(activePlanId===p.id)activePlanId=plans[0]?.id||'';persistPlans();planSheet='';selectedPlanId='';render();}));
 
     const backdrop=document.querySelector('[data-plan-backdrop]');
-    if(backdrop) backdrop.addEventListener('click',e=>{if(e.target===backdrop) attemptClosePlanSheet();});
-    const panel=document.querySelector('[data-plan-sheet-panel]');
-    if(panel){panel.addEventListener('touchstart',e=>{planSheetTouchStartY=e.touches[0].clientY;},{passive:true});panel.addEventListener('touchend',e=>{if(planSheetTouchStartY==null)return;const dy=e.changedTouches[0].clientY-planSheetTouchStartY;planSheetTouchStartY=null;if(dy>85)attemptClosePlanSheet();},{passive:true});}
+    if(backdrop)backdrop.addEventListener('pointerup',e=>{if(e.target===backdrop)attemptClosePlanSheet();});
+    const panel=document.querySelector('[data-plan-sheet-panel]'),dragZone=document.querySelector('[data-plan-drag-zone]');
+    if(panel&&dragZone){
+      const finishDrag=e=>{
+        if(!planSheetDrag||planSheetDrag.id!==e.pointerId)return;
+        const dy=Math.max(0,e.clientY-planSheetDrag.y);panel.classList.remove('dragging');panel.style.transition='transform .2s ease';
+        if(dy>72){panel.style.transform='translateY(110%)';setTimeout(()=>attemptClosePlanSheet(),150);}else{panel.style.transform='';setTimeout(()=>{panel.style.transition='';},210);}
+        planSheetDrag=null;
+      };
+      dragZone.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;planSheetDrag={id:e.pointerId,y:e.clientY};try{dragZone.setPointerCapture(e.pointerId);}catch(_e){}panel.classList.add('dragging');panel.style.transition='none';e.preventDefault();});
+      dragZone.addEventListener('pointermove',e=>{if(!planSheetDrag||planSheetDrag.id!==e.pointerId)return;const dy=Math.max(0,e.clientY-planSheetDrag.y);panel.style.transform=`translateY(${dy}px)`;e.preventDefault();});
+      dragZone.addEventListener('pointerup',finishDrag);dragZone.addEventListener('pointercancel',finishDrag);
+    }
 
     const draftInputs=document.querySelectorAll('.planEditSheet input,.planEditSheet textarea,.planEditSheet select');
     draftInputs.forEach(el=>{el.addEventListener('input',()=>{syncPlanDraftFromForm();planDraftDirty=true;});el.addEventListener('change',()=>{syncPlanDraftFromForm();planDraftDirty=true;});});
-    const allDay=document.getElementById('planAllDayInput');if(allDay) allDay.addEventListener('change',()=>{syncPlanDraftFromForm();planDraftDirty=true;render();});
+    const rerenderOnChange=['planAllDayInput','planRepeatMode','planRepeatCustomFrequency','planRepeatMonthlyMode','planRepeatEndMode'];
+    rerenderOnChange.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',()=>{syncPlanDraftFromForm();planDraftDirty=true;render();});});
+    const startInput=document.getElementById('planStartInput');if(startInput)startInput.addEventListener('change',()=>{syncPlanDraftFromForm();const d=parseYmd(planDraft.start);if(planDraft.repeat.mode==='none'){planDraft.repeat.weekdays=[d.getDay()];planDraft.repeat.monthDay=d.getDate();}planDraftDirty=true;render();});
     document.querySelectorAll('[data-plan-type-choice]').forEach(el=>el.addEventListener('click',()=>{if(!planDraft)return;planDraft.type=el.dataset.planTypeChoice;planDraftDirty=true;document.querySelectorAll('[data-plan-type-choice]').forEach(x=>x.classList.toggle('selected',x===el));}));
     document.querySelectorAll('[data-companion-choice]').forEach(el=>el.addEventListener('click',()=>{if(!planDraft)return;const id=el.dataset.companionChoice,c=companions.find(x=>x.id===id);let ids=[...planDraft.companionIds];if(c?.solo){ids=ids.includes(id)?[]:[id];}else{ids=ids.filter(x=>companions.find(c2=>c2.id===x)?.solo!==true);ids=ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];}planDraft.companionIds=ids;planDraftDirty=true;document.querySelectorAll('[data-companion-choice]').forEach(x=>x.classList.toggle('selected',ids.includes(x.dataset.companionChoice)));}));
     document.querySelectorAll('[data-repeat-weekday]').forEach(el=>el.addEventListener('click',()=>{if(!planDraft)return;const day=Number(el.dataset.repeatWeekday),days=[...planDraft.repeat.weekdays];planDraft.repeat.weekdays=days.includes(day)?days.filter(x=>x!==day):[...days,day].sort();if(!planDraft.repeat.weekdays.length)planDraft.repeat.weekdays=[parseYmd(planDraft.start).getDay()];planDraftDirty=true;render();}));
-    const repeatFrequency=document.getElementById('planRepeatFrequency');if(repeatFrequency)repeatFrequency.addEventListener('change',()=>{syncPlanDraftFromForm();planDraftDirty=true;render();});
-    const repeatEnd=document.getElementById('planRepeatEndMode');if(repeatEnd)repeatEnd.addEventListener('change',()=>{syncPlanDraftFromForm();planDraftDirty=true;render();});
+    document.querySelectorAll('[data-weekday-preset]').forEach(el=>el.addEventListener('click',()=>{if(!planDraft)return;planDraft.repeat.weekdays=el.dataset.weekdayPreset==='weekday'?[1,2,3,4,5]:[0,6];planDraftDirty=true;render();}));
+    const addReminder=document.querySelector('[data-add-reminder]');if(addReminder)addReminder.addEventListener('click',()=>{syncPlanDraftFromForm();planDraft.reminders.push({id:newId('reminder'),value:1,unit:'day'});planDraftDirty=true;render();});
+    document.querySelectorAll('[data-remove-reminder]').forEach(el=>el.addEventListener('click',()=>{syncPlanDraftFromForm();planDraft.reminders=planDraft.reminders.filter(r=>r.id!==el.dataset.removeReminder);planDraftDirty=true;render();}));
 
     document.querySelectorAll('[data-manage-types]').forEach(el=>el.addEventListener('click',()=>{syncPlanDraftFromForm();planSheet='type-manager';render();}));
     document.querySelectorAll('[data-manage-companions]').forEach(el=>el.addEventListener('click',()=>{syncPlanDraftFromForm();planSheet='companion-manager';render();}));
     document.querySelectorAll('[data-return-plan-editor]').forEach(el=>el.addEventListener('click',()=>{planSheet=planDraft?.editingId?'edit':'add';render();}));
-    document.querySelectorAll('[data-type-name]').forEach(el=>el.addEventListener('change',()=>{const row=planTypes.find(t=>t.id===el.dataset.typeName),name=el.value.trim();if(row&&name){row.name=name;persistPlans();}}));
+    document.querySelectorAll('[data-type-name]').forEach(el=>el.addEventListener('change',()=>{const row=planTypes.find(t=>t.id===el.dataset.typeName),old=row?.name,name=el.value.trim();if(row&&name){row.name=name;if(planDraft?.type===old)planDraft.type=name;persistPlans();}}));
     document.querySelectorAll('[data-type-tone]').forEach(el=>el.addEventListener('change',()=>{const row=planTypes.find(t=>t.id===el.dataset.typeTone);if(row){row.tone=el.value;persistPlans();}}));
-    document.querySelectorAll('[data-type-delete]').forEach(el=>el.addEventListener('click',()=>{const row=planTypes.find(t=>t.id===el.dataset.typeDelete);if(!row||!confirm(`種類「${row.name}」を削除しますか？\n過去の予定に保存された種類名は残ります。`))return;planTypes=planTypes.filter(t=>t.id!==row.id);if(planDraft?.type===row.name)planDraft.type='';persistPlans();render();}));
+    document.querySelectorAll('[data-type-delete]').forEach(el=>el.addEventListener('click',()=>{const row=planTypes.find(t=>t.id===el.dataset.typeDelete);if(!row||!confirm(`種類「${row.name}」を削除しますか？
+過去の予定に保存された種類名は残ります。`))return;planTypes=planTypes.filter(t=>t.id!==row.id);if(planDraft?.type===row.name)planDraft.type='';persistPlans();render();}));
     const addType=document.querySelector('[data-add-type]');if(addType)addType.addEventListener('click',()=>{const input=document.getElementById('newTypeName'),name=input?.value.trim();if(!name)return;if(planTypes.some(t=>t.name===name)){alert('同じ種類が既にあります');return;}planTypes.push({id:newId('type'),name,tone:'slate',hidden:false});persistPlans();render();});
-    document.querySelectorAll('[data-companion-name]').forEach(el=>el.addEventListener('change',()=>{const row=companions.find(c=>c.id===el.dataset.companionName),name=el.value.trim();if(row&&name){row.name=name;persistPlans();}}));
-    document.querySelectorAll('[data-companion-delete]').forEach(el=>el.addEventListener('click',()=>{const row=companions.find(c=>c.id===el.dataset.companionDelete);if(!row||row.solo||!confirm(`同行者「${row.name}」を削除しますか？\n過去の予定に保存された名前は残ります。`))return;companions=companions.filter(c=>c.id!==row.id);if(planDraft)planDraft.companionIds=planDraft.companionIds.filter(id=>id!==row.id);persistPlans();render();}));
+    document.querySelectorAll('[data-companion-name]').forEach(el=>el.addEventListener('change',()=>{const row=companions.find(c=>c.id===el.dataset.companionName),old=row?.name,name=el.value.trim();if(row&&name){row.name=name;if(planDraft){const idx=planDraft.companionNames.indexOf(old);if(idx>=0)planDraft.companionNames[idx]=name;}persistPlans();}}));
+    document.querySelectorAll('[data-companion-delete]').forEach(el=>el.addEventListener('click',()=>{const row=companions.find(c=>c.id===el.dataset.companionDelete);if(!row||row.solo||!confirm(`同行者「${row.name}」を削除しますか？
+過去の予定に保存された名前は残ります。`))return;companions=companions.filter(c=>c.id!==row.id);if(planDraft)planDraft.companionIds=planDraft.companionIds.filter(id=>id!==row.id);persistPlans();render();}));
     const addCompanion=document.querySelector('[data-add-companion]');if(addCompanion)addCompanion.addEventListener('click',()=>{const input=document.getElementById('newCompanionName'),name=input?.value.trim();if(!name)return;if(companions.some(c=>c.name===name)){alert('同じ同行者が既にあります');return;}companions.push({id:newId('comp'),name,hidden:false});persistPlans();render();});
 
-    const save=document.querySelector('[data-save-plan]');if(save) save.addEventListener('click',()=>{
+    const save=document.querySelector('[data-save-plan]');if(save)save.addEventListener('click',()=>{
       syncPlanDraftFromForm();if(!planDraft?.title.trim()){alert('名前を入力してください');return;}
       if(compareYmd(planDraft.end,planDraft.start)<0){alert('終了日は開始日以降にしてください');return;}
       if(!planDraft.allDay&&planDraft.start===planDraft.end&&planDraft.startTime&&planDraft.endTime&&planDraft.endTime<planDraft.startTime){alert('終了時間は開始時間以降にしてください');return;}
       const rows=rowsFromPlanDraft(planDraft);
       if(planDraft.editingId){const idx=plans.findIndex(p=>p.id===planDraft.editingId);if(idx>=0)plans[idx]={...plans[idx],...rows[0],id:planDraft.editingId};selectedPlanId=planDraft.editingId;}
       else{plans.push(...rows);selectedPlanId=rows[0].id;}
-      selectedPlanDate=rows[0].start;planMonth=rows[0].start.slice(0,7);activePlanId=activePlanId||rows[0].id;persistPlans();planDraftDirty=false;planDraft=null;planSheet='detail';render();
+      selectedPlanDate=rows[0].start;planMonth=rows[0].start.slice(0,7);activePlanId=activePlanId||rows[0].id;persistPlans();if(rows[0].reminders.length)requestPlanNotificationPermission();planDraftDirty=false;planDraft=null;planSheet='detail';render();
     });
   }
 
@@ -1096,12 +1195,14 @@
 
   function render(){
     document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';planSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-plan011`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';planSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-plan012`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
     bindRecordActions();
     initializeRecordRuntime();
   }
 
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&recordSessionState==='active'){keepScreenAwake();startGeoWatch();}});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(recordSessionState==='active'){keepScreenAwake();startGeoWatch();}checkPlanReminders();}});
   render();
+  checkPlanReminders();
+  planReminderTimer=setInterval(checkPlanReminders,30000);
 })();
