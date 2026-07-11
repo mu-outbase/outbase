@@ -54,7 +54,10 @@
   const defaultCompanions=[
     {id:'comp-solo',name:'ひとり',hidden:false,solo:true},
     {id:'comp-rin',name:'リン',hidden:false},
-    {id:'comp-kota',name:'コタ',hidden:false}
+    {id:'comp-kota',name:'コタ',hidden:false},
+    {id:'comp-ao',name:'アオ',hidden:false},
+    {id:'comp-ela',name:'エラ',hidden:false},
+    {id:'comp-yuki',name:'ユキ',hidden:false}
   ];
   const defaultPlans=[
     {id:'plan-kota-5',title:'コタ散歩',type:'散歩',start:'2026-07-05',end:'2026-07-05',startTime:'07:00',endTime:'08:00',allDay:false,companionNames:['コタ'],location:'近所',prep:'準備不要',note:''},
@@ -79,15 +82,107 @@
   let planCalendarSwipeSuppressUntil=0;
   let planReminderTimer=null;
   let activePlanId=localStorage.getItem('outbase_active_plan_id')||'plan-drive-13';
+  function seedGear(id,name,category,quantity=1,brand='Snow Peak',storage='自宅',model='',role='本体'){
+    return {id,name,category,quantity,brand,storage,model,role,relations:[],condition:'使用可',purchaseDate:'',purchasePrice:'',tags:[],memo:'',favorite:false,stockAmount:'',stockUnit:'個',reorderPoint:'',stockStep:'1',openedDate:'',expiryDate:'',updatedAt:0};
+  }
   const defaultGearLibrary=[
-    {id:'gear-living-shell',name:'リビングシェル アイボリー',category:'テント',quantity:1,storage:'自宅',condition:'使用可',memo:''},
-    {id:'gear-amenity-dome',name:'アメニティドームM アイボリー',category:'テント',quantity:1,storage:'自宅',condition:'使用可',memo:''},
-    {id:'gear-igt4',name:'IGT 4ユニット',category:'テーブル',quantity:1,storage:'自宅',condition:'使用可',memo:''},
-    {id:'gear-delta3',name:'EcoFlow DELTA 3 1500',category:'電源',quantity:1,storage:'自宅',condition:'使用可',memo:''},
-    {id:'gear-glacier',name:'EcoFlow Glacier Classic',category:'冷蔵',quantity:1,storage:'自宅',condition:'使用可',memo:''},
-    {id:'gear-kota-cart',name:'AirBuggy Dome3 Large',category:'ペット',quantity:1,storage:'玄関',condition:'使用可',memo:''}
+    seedGear('gear-living-shell','リビングシェル アイボリー','テント'),
+    seedGear('gear-amenity-dome','アメニティドームM アイボリー','テント'),
+    seedGear('gear-hexa-evo','HDタープ ヘキサエヴォ Pro. アイボリー','タープ'),
+    seedGear('gear-takibi-tarp','TAKIBIタープ M','タープ'),
+    seedGear('gear-igt4','IGT 4ユニット','テーブル'),
+    seedGear('gear-igt2','IGT 2ユニット','テーブル'),
+    seedGear('gear-mytable','Myテーブル竹','テーブル',2),
+    seedGear('gear-lowchair','ローチェア30','チェア',2),
+    seedGear('gear-recline','リクライニングワイドチェア','チェア',2),
+    seedGear('gear-cot','コット','寝具',2),
+    seedGear('gear-ground-futon','グランドオフトン シングル','寝具',2),
+    seedGear('gear-mat25','インフレータブルマット 2.5W','寝具',2),
+    seedGear('gear-ss-single','SSシングル','寝具',2),
+    seedGear('gear-shelf50','シェルフコンテナ50','収納',2),
+    seedGear('gear-multi-l','マルチコンテナL','収納'),
+    seedGear('gear-unit220','ユニットギアバッグ220','収納'),
+    seedGear('gear-soft38','ソフトクーラー38','冷蔵'),
+    seedGear('gear-delta3','DELTA 3 1500','電源',1,'EcoFlow'),
+    seedGear('gear-delta3-extra','DELTA 3 拡張バッテリー','電源',1,'EcoFlow'),
+    seedGear('gear-wave3','WAVE 3','空調',1,'EcoFlow'),
+    seedGear('gear-wave3-addon','WAVE 3 Add-On Battery','電源',1,'EcoFlow'),
+    seedGear('gear-glacier','GLACIER Classic','冷蔵',1,'EcoFlow'),
+    seedGear('gear-panel220','220W 両面ソーラーパネル','電源',1,'EcoFlow'),
+    seedGear('gear-alternator','Alternator Charger','電源',1,'EcoFlow'),
+    seedGear('gear-glow-stove','グローストーブ','暖房'),
+    seedGear('gear-ks67','KS-67H','暖房',1,'TOYOTOMI'),
+    seedGear('gear-mk-stove','MKストーブ','暖房',1,'MK'),
+    seedGear('gear-hozuki','ほおずき','照明'),
+    seedGear('gear-tane','たねほおずき','照明',7),
+    seedGear('gear-spot','スポットほおずき','照明'),
+    seedGear('gear-giga-hl','ギガパワーランタン HL','照明'),
+    seedGear('gear-giga-tl','ギガパワーランタン TL','照明'),
+    seedGear('gear-giga-bf','ギガパワーBFランタン','照明'),
+    seedGear('gear-celes','セレス','照明'),
+    seedGear('gear-homecamp','HOME&CAMPランタン','照明'),
+    seedGear('gear-pile','パイルドライバー','照明'),
+    seedGear('gear-lantern-hanger','ランタンハンガー','照明'),
+    seedGear('gear-dog-futon','ドッグオフトン','ペット'),
+    seedGear('gear-dog-cushion','ドッグクッション','ペット'),
+    seedGear('gear-dog-bowl','フードボウルL','ペット',2),
+    seedGear('gear-kota-cart','AirBuggy Dome3 Large','ペット',1,'AirBuggy','玄関'),
+    seedGear('gear-flask250','チタンスキットル250','キッチン'),
+    seedGear('gear-bowl600','チタンダブルボウル600','キッチン',2),
+    seedGear('gear-peltier','ペルチェクーリングデバイスベスト','空調'),
+    seedGear('gear-dtpack','SPK DTパックP DC','収納'),
+    seedGear('gear-gm70','トランクカーゴ 70L','収納',1,'GORDON MILLER'),
+    seedGear('gear-gm50','トランクカーゴ 50L','収納',2,'GORDON MILLER'),
+    seedGear('gear-gm20','トランクカーゴ 20L','収納',1,'GORDON MILLER'),
+    seedGear('gear-gm18','トランクカーゴ 18L Low','収納',1,'GORDON MILLER'),
+    seedGear('gear-gm22','トランクカーゴ 22L Low','収納',2,'GORDON MILLER')
   ];
+  const defaultMobilityLibrary=[
+    {id:'mobility-alphard',type:'車',name:'アルファード 30後期 Executive Lounge',maker:'TOYOTA',model:'2018',color:'ブラック',plate:'',storage:'自宅',condition:'使用可',primary:true,memo:'キャンプ・ドライブ散歩の主車両'},
+    {id:'mobility-roadbike',type:'自転車',name:'ロードバイク',maker:'',model:'',color:'',plate:'',storage:'自宅',condition:'使用可',primary:false,memo:'メーカー・車種は未登録'}
+  ];
+  const defaultPetLibrary=[
+    {id:'pet-kota',name:'コタ',species:'犬',breed:'フレンチブルドッグ',sex:'オス',age:'4',size:'最大',collarColor:'ダークブラウン',personality:'',medicalNote:'',photo:''},
+    {id:'pet-ao',name:'アオ',species:'猫',breed:'茶トラ',sex:'オス',age:'4',size:'',collarColor:'薄青',personality:'甘えん坊・泣き虫',medicalNote:'',photo:''},
+    {id:'pet-ela',name:'エラ',species:'猫',breed:'メインクーン',sex:'メス',age:'4',size:'',collarColor:'グレー',personality:'一人好き、たまに甘える',medicalNote:'',photo:''},
+    {id:'pet-yuki',name:'ユキ',species:'猫',breed:'アメリカンショートヘア',sex:'メス',age:'4',size:'最小',collarColor:'白',personality:'',medicalNote:'',photo:''}
+  ];
+  const defaultStorageLibrary=[
+    {id:'storage-home',name:'自宅',type:'住居',memo:'基本の保管場所'},
+    {id:'storage-entry',name:'玄関',type:'住居',memo:'散歩・ペット用品'},
+    {id:'storage-car',name:'車内',type:'車両',memo:'常備品'},
+    {id:'storage-shed',name:'物置',type:'収納',memo:'季節用品・大型用品'}
+  ];
+  const defaultGearKits=[
+    {id:'kit-power',name:'EcoFlow 電源システム',kind:'セット',gearIds:['gear-delta3','gear-delta3-extra','gear-panel220','gear-alternator'],memo:'電源本体・拡張・充電系をまとめて確認',favorite:true,updatedAt:0},
+    {id:'kit-lantern',name:'ランタンスタンドまわり',kind:'組み合わせ',gearIds:['gear-giga-bf','gear-pile','gear-lantern-hanger'],memo:'本体・取付部品・スタンドの組み合わせ例',favorite:true,updatedAt:0},
+    {id:'kit-kota',name:'コタ外出セット',kind:'持出しセット',gearIds:['gear-kota-cart','gear-dog-bowl','gear-dog-futon'],memo:'散歩・キャンプ時にまとめて確認',favorite:false,updatedAt:0}
+  ];
+  const defaultGearCustoms=[];
+  const defaultAssetEvents=[];
   let gearLibrary=readStored('outbase_gear_library_v1',defaultGearLibrary);
+  let mobilityLibrary=readStored('outbase_mobility_library_v1',defaultMobilityLibrary);
+  let petLibrary=readStored('outbase_pet_library_v1',defaultPetLibrary);
+  let storageLibrary=readStored('outbase_storage_library_v1',defaultStorageLibrary);
+  let gearKits=readStored('outbase_gear_kits_v1',defaultGearKits);
+  let gearCustoms=readStored('outbase_gear_customs_v1',defaultGearCustoms);
+  let assetEvents=readStored('outbase_asset_events_v1',defaultAssetEvents);
+  let libraryTab=localStorage.getItem('outbase_library_tab_v1')||'gear';
+  let libraryGearView=localStorage.getItem('outbase_library_gear_view_v1')||'items';
+  let libraryEditorType='';
+  let libraryEditorId='';
+  let libraryEditorRelationsDraft=[];
+  let libraryEditorKitGearIds=[];
+  let libraryEditorCustomPartIds=[];
+  let libraryEditorDraft=null;
+  let libraryKitQuery='';
+  let libraryGearQuery='';
+  let libraryGearCategory='すべて';
+  let libraryGearSort='name';
+  let libraryGearLimit=30;
+  let libraryRelationFilter='すべて';
+  let libraryStockFilter='すべて';
+  let libraryEventFilter='すべて';
   let prepStore=readStored('outbase_prep_v1',{});
   let prepCommonStore=readStored('outbase_prep_common_v1',{modules:{},updatedAt:0});
   let prepSheet='';
@@ -120,6 +215,70 @@
     }
   }
   migratePlanData();
+  function normalizeLibraryData(){
+    const librarySchema=Number(localStorage.getItem('outbase_library_schema')||0);
+    if(librarySchema<1&&Array.isArray(gearLibrary)&&gearLibrary.length<=10){const names=new Set(gearLibrary.map(x=>String(x.name||'').toLowerCase()));defaultGearLibrary.forEach(x=>{if(!names.has(x.name.toLowerCase()))gearLibrary.push({...x});});}
+    gearLibrary=(Array.isArray(gearLibrary)?gearLibrary:[]).map((g,index)=>({
+      id:g.id||newId('gear'),name:String(g.name||`名称未登録 ${index+1}`),category:g.category||'その他',role:g.role||'本体',brand:g.brand||'',model:g.model||'',quantity:Math.max(1,Number(g.quantity)||1),storage:g.storage||'',condition:g.condition||'使用可',purchaseDate:g.purchaseDate||'',purchasePrice:g.purchasePrice??'',tags:Array.isArray(g.tags)?g.tags:String(g.tags||'').split(/[、,]/).map(x=>x.trim()).filter(Boolean),memo:g.memo||'',favorite:Boolean(g.favorite),relations:Array.isArray(g.relations)?g.relations.filter(r=>r&&r.type&&r.targetId).map(r=>({type:r.type,targetId:r.targetId})):[],stockAmount:g.stockAmount===''||g.stockAmount==null?'':Math.max(0,Number(g.stockAmount)||0),stockUnit:g.stockUnit||'個',reorderPoint:g.reorderPoint===''||g.reorderPoint==null?'':Math.max(0,Number(g.reorderPoint)||0),stockStep:String(g.stockStep||'1'),openedDate:g.openedDate||'',expiryDate:g.expiryDate||'',updatedAt:Number(g.updatedAt||0)
+    }));
+    const gearIds=new Set(gearLibrary.map(g=>g.id));
+    gearLibrary.forEach(g=>{g.relations=g.relations.filter(r=>gearIds.has(r.targetId)&&r.targetId!==g.id);});
+    const ensureRelation=(sourceId,type,targetId)=>{const source=gearLibrary.find(g=>g.id===sourceId);if(source&&gearIds.has(targetId)&&!source.relations.some(r=>r.type===type&&r.targetId===targetId))source.relations.push({type,targetId});};
+    if(librarySchema<2){
+      const roleMap={
+        'gear-delta3-extra':'専用品','gear-wave3-addon':'専用品','gear-lantern-hanger':'取付部品','gear-panel220':'アクセサリー','gear-alternator':'アクセサリー',
+        'gear-shelf50':'収納ケース','gear-multi-l':'収納ケース','gear-unit220':'収納ケース','gear-dtpack':'収納ケース','gear-gm70':'収納ケース','gear-gm50':'収納ケース','gear-gm20':'収納ケース','gear-gm18':'収納ケース','gear-gm22':'収納ケース'
+      };
+      gearLibrary.forEach(g=>{if(roleMap[g.id])g.role=roleMap[g.id];});
+      ensureRelation('gear-delta3-extra','dedicatedFor','gear-delta3');
+      ensureRelation('gear-wave3-addon','dedicatedFor','gear-wave3');
+      ensureRelation('gear-lantern-hanger','mountsOn','gear-pile');
+      ensureRelation('gear-panel220','useWith','gear-delta3');
+      ensureRelation('gear-alternator','useWith','gear-delta3');
+    }
+    mobilityLibrary=Array.isArray(mobilityLibrary)?mobilityLibrary:[];
+    petLibrary=Array.isArray(petLibrary)?petLibrary:[];
+    storageLibrary=Array.isArray(storageLibrary)?storageLibrary:[];
+    gearKits=(Array.isArray(gearKits)?gearKits:[]).map((k,index)=>({id:k.id||newId('kit'),name:String(k.name||`セット ${index+1}`),kind:k.kind||'セット',gearIds:Array.isArray(k.gearIds)?k.gearIds.filter(id=>gearIds.has(id)):[],memo:k.memo||'',favorite:Boolean(k.favorite),updatedAt:Number(k.updatedAt||0)}));
+    gearCustoms=(Array.isArray(gearCustoms)?gearCustoms:[]).map((c,index)=>({id:c.id||newId('custom'),name:String(c.name||`カスタム ${index+1}`),baseGearId:gearIds.has(c.baseGearId)?c.baseGearId:'',partGearIds:Array.isArray(c.partGearIds)?c.partGearIds.filter(id=>gearIds.has(id)&&id!==c.baseGearId):[],status:['現在の仕様','保存構成','過去構成'].includes(c.status)?c.status:'保存構成',memo:c.memo||'',updatedAt:Number(c.updatedAt||0)})).filter(c=>c.baseGearId);
+    assetEvents=(Array.isArray(assetEvents)?assetEvents:[]).map((e,index)=>({id:e.id||newId('event'),targetType:['gear','mobility','pet'].includes(e.targetType)?e.targetType:'gear',targetId:e.targetId||'',eventType:e.eventType||'使用',date:e.date||new Date().toISOString().slice(0,10),title:e.title||`履歴 ${index+1}`,detail:e.detail||'',cost:e.cost??'',nextDate:e.nextDate||'',createdAt:Number(e.createdAt||Date.now())})).filter(e=>e.targetId);
+    if(librarySchema<2&&gearKits.length===0)gearKits=defaultGearKits.map(k=>({...k,gearIds:k.gearIds.filter(id=>gearIds.has(id))}));
+    if(!['gear','mobility','pets','storage','transfer'].includes(libraryTab))libraryTab='gear';
+    if(!['dashboard','items','kits','customs','stock','lifecycle','relations'].includes(libraryGearView))libraryGearView='dashboard';
+    const companionNames=new Set(companions.map(x=>x.name));
+    petLibrary.forEach(p=>{if(p.name&&!companionNames.has(p.name)){companions.push({id:newId('comp'),name:p.name,hidden:false});companionNames.add(p.name);}});
+    localStorage.setItem('outbase_plan_companions_v2',JSON.stringify(companions));
+    localStorage.setItem('outbase_library_schema','3');
+    persistGearLibrary();persistGearKits();persistGearCustoms();persistAssetEvents();persistMobilityLibrary();persistPetLibrary();persistStorageLibrary();
+  }
+  normalizeLibraryData();
+  function seedLibrary03PreviewData(){
+    if(!String(previewMode).startsWith('library03-')&&!String(previewMode).startsWith('library05-'))return;
+    active='prep';activePlanId='none';prepSheet='gear-manager';libraryTab='gear';
+    const add=x=>{if(!gearLibrary.some(g=>g.id===x.id))gearLibrary.push(x);};
+    const demo=(id,name,category,role,stockAmount='',stockUnit='個',reorderPoint='',stockStep='1',relations=[])=>({id,name,category,quantity:1,brand:'',storage:'自宅',model:'名称未登録',role,relations,condition:'使用可',purchaseDate:'',purchasePrice:'',tags:['画面確認用'],memo:'画面確認用データ',favorite:false,stockAmount,stockUnit,reorderPoint,stockStep,openedDate:'',expiryDate:'',updatedAt:Date.now()});
+    add(demo('demo-flat-burner','フラットバーナー','キッチン','本体'));
+    add(demo('demo-lantern-shade','ランタン用カスタムシェード','照明','カスタムパーツ','','個','','1',[{type:'installedOn',targetId:'gear-giga-bf'}]));
+    add(demo('demo-burner-trivet','フラットバーナー用カスタム五徳','キッチン','カスタムパーツ','','個','','1',[{type:'installedOn',targetId:'demo-flat-burner'}]));
+    add(demo('demo-wick','ランタン替芯','照明','消耗品',2,'本',1,'1',[{type:'consumableFor',targetId:'gear-giga-bf'}]));
+    add(demo('demo-mantle','ランタン用マントル','照明','消耗品',1,'枚',2,'1',[{type:'consumableFor',targetId:'gear-giga-bf'}]));
+    add({...demo('demo-oil','ランタンオイル','照明','燃料',0.4,'L',0.5,'0.1',[{type:'fuelFor',targetId:'gear-giga-bf'}]),openedDate:'2026-06-20'});
+    gearCustoms=[
+      {id:'demo-custom-lantern',name:'BFランタン 現在仕様',baseGearId:'gear-giga-bf',partGearIds:['demo-lantern-shade'],status:'現在の仕様',memo:'カスタムシェード装着',updatedAt:Date.now()},
+      {id:'demo-custom-burner',name:'フラットバーナー 現在仕様',baseGearId:'demo-flat-burner',partGearIds:['demo-burner-trivet'],status:'現在の仕様',memo:'カスタム五徳へ交換',updatedAt:Date.now()}
+    ];
+    if(previewMode==='library03-customs')libraryGearView='customs';
+    if(previewMode==='library03-stock')libraryGearView='stock';
+    if(previewMode==='library03-stock-editor'){libraryGearView='stock';libraryOpenEditor('gear','demo-oil');}
+    if(previewMode==='library03-custom-editor'){libraryGearView='customs';libraryOpenEditor('custom','demo-custom-lantern');}
+    if(String(previewMode).startsWith('library05-')){assetEvents=[
+      {id:'demo-event-1',targetType:'gear',targetId:'gear-giga-bf',eventType:'カスタム',date:'2026-07-11',title:'カスタムシェードへ交換',detail:'純正シェードは物置へ保管',cost:'',nextDate:'',createdAt:4},
+      {id:'demo-event-2',targetType:'gear',targetId:'demo-oil',eventType:'補充',date:'2026-07-10',title:'ランタンオイルを補充',detail:'残量0.4L。次回前に追加購入',cost:'',nextDate:'2026-07-24',createdAt:3},
+      {id:'demo-event-3',targetType:'mobility',targetId:'mobility-alphard',eventType:'点検',date:'2026-06-28',title:'キャンプ後の車内清掃',detail:'ルーフボックスと車載BOXも確認',cost:'',nextDate:'2026-08-01',createdAt:2},
+      {id:'demo-event-4',targetType:'pet',targetId:'pet-kota',eventType:'通院',date:'2026-06-15',title:'定期診察',detail:'体調問題なし',cost:'5800',nextDate:'2026-09-15',createdAt:1}
+    ];libraryGearView=previewMode==='library05-dashboard'?'dashboard':'lifecycle';if(previewMode==='library05-event-editor')libraryOpenEditor('event','demo-event-2');}
+  }
+  seedLibrary03PreviewData();
 
   if(recordSessionState==='idle'){
     elapsedMs=0;
@@ -529,6 +688,9 @@
     bookmark:'<svg class="icon" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg>',
     folder:'<svg class="icon" viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/><path d="M3 7V5h7l2 2"/></svg>',
     car:'<svg class="icon" viewBox="0 0 24 24"><path d="M5 14l2-5h10l2 5"/><rect x="4" y="13" width="16" height="6" rx="2"/><circle cx="7" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg>',
+    bike:'<svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="17" r="4"/><circle cx="18" cy="17" r="4"/><path d="M6 17l4-8h4l4 8M9 11h7M12 17l-3-6M13 6h3"/></svg>',
+    database:'<svg class="icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>',
+    box:'<svg class="icon" viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></svg>',
     people:'<svg class="icon" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 20c.5-4 2.5-6 5.5-6s5 2 5.5 6M10.5 20c.5-4 2.5-6 5.5-6s5 2 5.5 6"/></svg>',
     person:'<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M6 20c.7-5 2.7-7 6-7s5.3 2 6 7"/></svg>',
     bag:'<svg class="icon" viewBox="0 0 24 24"><path d="M7 8V7a5 5 0 0 1 10 0v1"/><rect x="5" y="8" width="14" height="13" rx="3"/><path d="M9 12v5M15 12v5"/></svg>',
@@ -681,6 +843,61 @@
 
   function persistPrepStore(){localStorage.setItem('outbase_prep_v1',JSON.stringify(prepStore));}
   function persistGearLibrary(){localStorage.setItem('outbase_gear_library_v1',JSON.stringify(gearLibrary));}
+  function persistGearKits(){localStorage.setItem('outbase_gear_kits_v1',JSON.stringify(gearKits));}
+  function persistGearCustoms(){localStorage.setItem('outbase_gear_customs_v1',JSON.stringify(gearCustoms));}
+  function persistAssetEvents(){localStorage.setItem('outbase_asset_events_v1',JSON.stringify(assetEvents));}
+  function persistMobilityLibrary(){localStorage.setItem('outbase_mobility_library_v1',JSON.stringify(mobilityLibrary));}
+  function persistPetLibrary(){localStorage.setItem('outbase_pet_library_v1',JSON.stringify(petLibrary));}
+  function persistStorageLibrary(){localStorage.setItem('outbase_storage_library_v1',JSON.stringify(storageLibrary));}
+  function persistLibraryTab(){localStorage.setItem('outbase_library_tab_v1',libraryTab);}
+  function persistLibraryGearView(){localStorage.setItem('outbase_library_gear_view_v1',libraryGearView);}
+  const gearRelationTypes={
+    useWith:{label:'ペア使い',inverse:'ペア使い',tone:'pair'},
+    dedicatedFor:{label:'専用品',inverse:'専用元',tone:'dedicated'},
+    mountsOn:{label:'取付先',inverse:'取付部品',tone:'mount'},
+    installedOn:{label:'装着中',inverse:'装着パーツ',tone:'custom'},
+    compatibleWith:{label:'対応品',inverse:'対応パーツ',tone:'custom'},
+    originalFor:{label:'純正部品',inverse:'純正構成',tone:'original'},
+    consumableFor:{label:'消耗先',inverse:'消耗品',tone:'consumable'},
+    fuelFor:{label:'燃料先',inverse:'燃料',tone:'fuel'},
+    packedWith:{label:'一緒に収納',inverse:'一緒に収納',tone:'packed'},
+    storedIn:{label:'収納先',inverse:'収納物',tone:'storage'},
+    alternative:{label:'代替',inverse:'代替',tone:'alternative'}
+  };
+  function gearById(id){return gearLibrary.find(g=>g.id===id)||null;}
+  function gearRelationsFor(id){
+    const direct=(gearById(id)?.relations||[]).map(r=>({...r,direction:'out',label:gearRelationTypes[r.type]?.label||r.type,gear:gearById(r.targetId)}));
+    const inverse=[];gearLibrary.forEach(g=>(g.relations||[]).forEach(r=>{if(r.targetId===id)inverse.push({...r,direction:'in',label:gearRelationTypes[r.type]?.inverse||r.type,gear:g});}));
+    return [...direct,...inverse].filter(r=>r.gear);
+  }
+  function gearRelationEdges(){return gearLibrary.flatMap(g=>(g.relations||[]).map(r=>({source:g,target:gearById(r.targetId),type:r.type}))).filter(x=>x.target);}
+  function gearRelationCount(){return gearRelationEdges().length;}
+  function relationTone(type){return gearRelationTypes[type]?.tone||'pair';}
+  function relationLabel(type,direction='out'){const def=gearRelationTypes[type];return def?(direction==='in'?def.inverse:def.label):type;}
+  function gearRoleFor(g){return g.role||'本体';}
+  function isStockRole(g){return ['消耗品','燃料'].includes(gearRoleFor(g));}
+  function customById(id){return gearCustoms.find(c=>c.id===id)||null;}
+  function currentCustomForBase(id){return gearCustoms.find(c=>c.baseGearId===id&&c.status==='現在の仕様')||null;}
+  function customsUsingPart(id){return gearCustoms.filter(c=>(c.partGearIds||[]).includes(id));}
+  function stockNumber(g){return g.stockAmount===''||g.stockAmount==null?0:Math.max(0,Number(g.stockAmount)||0);}
+  function stockState(g){const amount=stockNumber(g),min=g.reorderPoint===''||g.reorderPoint==null?null:Math.max(0,Number(g.reorderPoint)||0);if(amount<=0)return {id:'empty',label:'在庫なし'};if(min!==null&&amount<=min)return {id:'low',label:'補充必要'};return {id:'ok',label:'在庫あり'};}
+  function stockDisplay(g){const amount=stockNumber(g);return `${Number.isInteger(amount)?amount:amount.toFixed(1)} ${g.stockUnit||'個'}`;}
+
+  function libraryOpenEditor(type,id=''){
+    libraryEditorType=type;libraryEditorId=id;libraryKitQuery='';
+    if(type==='gear'){const row=gearById(id);libraryEditorDraft=row?JSON.parse(JSON.stringify(row)):{name:'',category:'その他',role:'本体',brand:'',model:'',quantity:1,storage:'',condition:'使用可',purchaseDate:'',purchasePrice:'',tags:[],memo:'',favorite:false,relations:[],stockAmount:'',stockUnit:'個',reorderPoint:'',stockStep:'1',openedDate:'',expiryDate:''};libraryEditorRelationsDraft=(row?.relations||[]).map(r=>({...r}));libraryEditorKitGearIds=[];libraryEditorCustomPartIds=[];}
+    else if(type==='event'){const row=assetEvents.find(e=>e.id===id);libraryEditorDraft=row?JSON.parse(JSON.stringify(row)):{targetType:'gear',targetId:'',eventType:'使用',date:new Date().toISOString().slice(0,10),title:'',detail:'',cost:'',nextDate:''};libraryEditorRelationsDraft=[];libraryEditorKitGearIds=[];libraryEditorCustomPartIds=[];}
+    else if(type==='kit'){const row=gearKits.find(k=>k.id===id);libraryEditorDraft=row?JSON.parse(JSON.stringify(row)):{name:'',kind:'セット',gearIds:[],memo:'',favorite:false};libraryEditorKitGearIds=[...(row?.gearIds||[])];libraryEditorRelationsDraft=[];libraryEditorCustomPartIds=[];}
+    else if(type==='custom'){const row=customById(id);libraryEditorDraft=row?JSON.parse(JSON.stringify(row)):{name:'',baseGearId:'',partGearIds:[],status:'現在の仕様',memo:''};libraryEditorCustomPartIds=[...(row?.partGearIds||[])];libraryEditorRelationsDraft=[];libraryEditorKitGearIds=[];}
+    else{libraryEditorDraft=null;libraryEditorRelationsDraft=[];libraryEditorKitGearIds=[];libraryEditorCustomPartIds=[];}
+  }
+  function syncLibraryEditorDraftFromForm(){
+    const value=id=>document.getElementById(id)?.value??'',check=id=>Boolean(document.getElementById(id)?.checked);
+    if(libraryEditorType==='gear'&&libraryEditorDraft){libraryEditorDraft={...libraryEditorDraft,name:value('lib-name'),category:value('lib-category')||'その他',role:value('lib-role')||'本体',quantity:Math.max(1,Number(value('lib-quantity'))||1),brand:value('lib-brand'),model:value('lib-model'),storage:value('lib-storage'),condition:value('lib-condition')||'使用可',purchaseDate:value('lib-date'),purchasePrice:value('lib-price'),tags:String(value('lib-tags')).split(/[、,]/).map(x=>x.trim()).filter(Boolean),memo:value('lib-memo'),favorite:check('lib-favorite'),stockAmount:value('lib-stock-amount'),stockUnit:value('lib-stock-unit')||'個',reorderPoint:value('lib-reorder-point'),stockStep:value('lib-stock-step')||'1',openedDate:value('lib-opened-date'),expiryDate:value('lib-expiry-date')};}
+    if(libraryEditorType==='kit'&&libraryEditorDraft){libraryEditorDraft={...libraryEditorDraft,name:value('lib-name'),kind:value('lib-kind')||'セット',memo:value('lib-memo'),favorite:check('lib-favorite')};}
+    if(libraryEditorType==='custom'&&libraryEditorDraft){libraryEditorDraft={...libraryEditorDraft,name:value('lib-name'),baseGearId:value('lib-custom-base'),status:value('lib-custom-status')||'保存構成',memo:value('lib-memo')};}
+  }
+  function libraryCloseEditor(){libraryEditorType='';libraryEditorId='';libraryEditorRelationsDraft=[];libraryEditorKitGearIds=[];libraryEditorCustomPartIds=[];libraryEditorDraft=null;libraryKitQuery='';}
   function persistPrepCommonStore(){prepCommonStore.updatedAt=Date.now();localStorage.setItem('outbase_prep_common_v1',JSON.stringify(prepCommonStore));}
   function prepModuleDefinitions(_plan){
     const library={
@@ -747,11 +964,11 @@
   }
   function prepCommonCard(module){
     const state=prepCommonState(module.id),count=module.id==='gear'?gearLibrary.length:state.items.length;
-    const foot=module.id==='gear'?`所有 ${gearLibrary.length}点を管理`:count?`保存 ${count}件`:'タップして検討を保存';
+    const foot=module.id==='gear'?`共通台帳 ${gearLibrary.length}点・車両${mobilityLibrary.length}台・ペット${petLibrary.length}匹`:count?`保存 ${count}件`:'タップして検討を保存';
     return `<button class="prepModuleCard prepCommonCard" data-prep-common-module="${module.id}"><div class="prepModuleIcon">${module.icon}</div><div class="prepModuleCopy"><h3>${escapeHtml(module.title)}</h3><small>${escapeHtml(module.sub)}</small><span>${escapeHtml(foot)}</span></div><span class="prepModuleCount">${count}</span><b>›</b></button>`;
   }
   function prepCommandBar(plan,candidateCount){
-    return `<div class="prepCommandBar"><button data-open-plan-switcher><span>${I.calendar}</span><div><small>${plan?'主役予定':'予定との紐付け'}</small><b>${plan?`${candidateCount}件から切替`:'予定を選ぶ'}</b></div><em>›</em></button><button data-open-gear-manager><span>${I.bag}</span><div><small>共通ギア</small><b>${gearLibrary.length}点を管理</b></div><em>›</em></button></div>`;
+    return `<div class="prepCommandBar"><button data-open-plan-switcher><span>${I.calendar}</span><div><small>${plan?'主役予定':'予定との紐付け'}</small><b>${plan?`${candidateCount}件から切替`:'予定を選ぶ'}</b></div><em>›</em></button><button data-open-gear-manager><span>${I.bag}</span><div><small>共通台帳</small><b>ギア${gearLibrary.length}・車両${mobilityLibrary.length}・ペット${petLibrary.length}</b></div><em>›</em></button></div>`;
   }
   function prepPage(){
     const plan=activePlan(),candidateCount=activePlanCandidates().length;
@@ -762,9 +979,135 @@
     const modules=prepModuleDefinitions(plan),progress=prepProgress(plan),status=prepStatusLabel(plan),days=Math.ceil((parseYmd(plan.start)-new Date(new Date().setHours(0,0,0,0)))/86400000),dayText=days>0?`あと${days}日`:days===0?'今日':days===-1?'昨日':'開始済み';
     return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepHero prepHero01" data-prep-plan-detail><img src="assets/prep_hero_art.png" alt=""><div class="prepHeroCopy"><small>PREPARATION</small><h1>準備</h1><p>${escapeHtml(plan.title)}</p><span>${escapeHtml(dayText)} ・ ${escapeHtml(planRangeLabel(plan))}</span></div><div class="prepPercent" style="--prep:${progress.percent}"><b>${progress.percent}<small>%</small></b><span>${escapeHtml(status)}</span></div><em class="prepHeroLink">予定詳細&nbsp;›</em></section>${prepCommandBar(plan,candidateCount)}<div class="prepSectionHead compact"><div><small>${escapeHtml(status)}</small><h2>準備項目</h2></div><span>${progress.done}/${progress.total}</span></div><div class="prepModuleGrid compact">${modules.map(module=>prepCard(plan,module)).join('')}</div></section>`;
   }
+  function libraryCounts(){const stockRows=gearLibrary.filter(isStockRole),lowStock=stockRows.filter(g=>stockState(g).id!=='ok').length;return {gear:gearLibrary.reduce((n,g)=>n+(Number(g.quantity)||1),0),gearRows:gearLibrary.length,kits:gearKits.length,customs:gearCustoms.length,stockRows:stockRows.length,lowStock,events:assetEvents.length,relations:gearRelationCount(),mobility:mobilityLibrary.length,pets:petLibrary.length,storage:storageLibrary.length};}
+  function libraryStorageCount(name){
+    return gearLibrary.filter(g=>g.storage===name).reduce((n,g)=>n+(Number(g.quantity)||1),0)+mobilityLibrary.filter(g=>g.storage===name).length;
+  }
+  function libraryTabsMarkup(){
+    const c=libraryCounts(),tabs=[['gear','ギア',c.gearRows,I.bag],['mobility','車・自転車',c.mobility,I.car],['pets','ペット',c.pets,I.paw],['storage','保管場所',c.storage,I.box],['transfer','取込・出力','',I.database]];
+    return `<div class="libraryTabs">${tabs.map(([id,label,count,icon])=>`<button class="${libraryTab===id?'active':''}" data-library-tab="${id}"><i>${icon}</i><span>${label}</span>${count!==''?`<b>${count}</b>`:''}</button>`).join('')}</div>`;
+  }
+  function gearGlyph(category){const map={テント:I.tent,タープ:I.tent,照明:I.sun,電源:I.link,収納:I.box,ペット:I.paw,キッチン:I.cup,冷蔵:I.box,空調:I.sun,暖房:I.sun};return map[category]||I.bag;}
+  function filteredGearLibrary(){
+    const q=libraryGearQuery.trim().toLowerCase();
+    const rows=gearLibrary.filter(g=>{
+      const relationNames=gearRelationsFor(g.id).map(r=>r.gear?.name||'').join(' ');
+      const customNames=[currentCustomForBase(g.id)?.name||'',...customsUsingPart(g.id).map(c=>c.name)].join(' ');return (libraryGearCategory==='すべて'||g.category===libraryGearCategory)&&(!q||[g.name,g.brand,g.model,g.storage,g.memo,g.role,relationNames,customNames,(g.tags||[]).join(' ')].join(' ').toLowerCase().includes(q));
+    });
+    const compare={name:(a,b)=>a.name.localeCompare(b.name,'ja'),category:(a,b)=>a.category.localeCompare(b.category,'ja')||a.name.localeCompare(b.name,'ja'),updated:(a,b)=>(b.updatedAt||0)-(a.updatedAt||0),quantity:(a,b)=>(b.quantity||1)-(a.quantity||1),connections:(a,b)=>gearRelationsFor(b.id).length-gearRelationsFor(a.id).length,stock:(a,b)=>stockNumber(a)-stockNumber(b)}[libraryGearSort];
+    return rows.sort(compare||((a,b)=>a.name.localeCompare(b.name,'ja')));
+  }
+  function gearSystemHero(){
+    const c=libraryCounts();
+    return `<div class="gearSystemHero library03Hero"><div class="gearSystemCopy"><small>GEAR ECOSYSTEM</small><h3>所有品から、<br><em>現在仕様と残量</em>まで。</h3><p>カスタム構成・交換部品・消耗品・燃料を、本体との関係ごと管理します。</p></div><div class="gearSystemStats"><div><b>${c.gearRows}</b><span>種類</span></div><div><b>${c.customs}</b><span>カスタム</span></div><div><b>${c.stockRows}</b><span>在庫品</span></div><div class="${c.lowStock?'alert':''}"><b>${c.lowStock}</b><span>補充</span></div></div></div>`;
+  }
+  function gearModeMarkup(){
+    const c=libraryCounts(),tabs=[['dashboard','概要',''],['items','アイテム',c.gearRows],['kits','セット',c.kits],['customs','カスタム',c.customs],['stock','在庫',c.stockRows],['lifecycle','履歴',c.events],['relations','つながり',c.relations]];
+    return `<div class="gearModeTabs">${tabs.map(([id,label,count])=>`<button class="${libraryGearView===id?'active':''}" data-library-gear-view="${id}"><span>${label}</span><b>${count}</b></button>`).join('')}</div>`;
+  }
+  function gearDashboardMarkup(plan){
+    const c=libraryCounts();
+    const selectedIds=plan?prepModuleState(plan,prepModuleDefinitions(plan)[1]).gearIds:[];
+    const upcoming=assetEvents.filter(e=>e.nextDate).sort((a,b)=>a.nextDate.localeCompare(b.nextDate)).slice(0,4);
+    const favorites=gearLibrary.filter(g=>g.favorite).slice(0,5);
+    const recent=assetEvents.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.createdAt||0)-(a.createdAt||0)).slice(0,5);
+    const low=gearLibrary.filter(isStockRole).filter(g=>stockState(g).id!=='ok').slice(0,4);
+    const planLabel=plan?plan.title:'予定未選択';
+    return `<div class="gearViewBody assetDashboard"><section class="assetDashboardHero"><div><small>ASSET CONTROL</small><h3>持ち物の今が、<br><em>ひと目で分かる。</em></h3><p>準備・在庫・整備・使用履歴を、次の行動につなげます。</p></div><button data-library-gear-view="items">すべての資産を見る <b>›</b></button></section><div class="assetMetricGrid"><button data-dashboard-jump="items"><small>TOTAL ASSETS</small><b>${c.gear}</b><span>${c.gearRows}種類</span></button><button data-dashboard-jump="stock" class="${c.lowStock?'warn':''}"><small>RESTOCK</small><b>${c.lowStock}</b><span>補充・在庫確認</span></button><button data-dashboard-jump="lifecycle"><small>NEXT CARE</small><b>${upcoming.length}</b><span>点検・交換予定</span></button><button data-dashboard-jump="items"><small>THIS PLAN</small><b>${selectedIds.length}</b><span>${escapeHtml(planLabel)}</span></button></div><section class="assetDashboardSection"><div class="assetDashboardTitle"><div><small>NOW</small><h4>今やること</h4></div><button data-dashboard-jump="lifecycle">履歴を見る</button></div><div class="assetActionCards">${low.map(g=>`<button data-library-edit="gear" data-library-id="${g.id}" class="danger"><i>${gearGlyph(g.category)}</i><span><small>${escapeHtml(stockState(g).label)}</small><b>${escapeHtml(g.name)}</b><em>${escapeHtml(stockDisplay(g))}</em></span><strong>›</strong></button>`).join('')}${upcoming.map(e=>`<button data-library-edit="event" data-library-id="${e.id}"><i>${I.calendar}</i><span><small>${escapeHtml(e.nextDate)}</small><b>${escapeHtml(assetTargetName(e))}</b><em>${escapeHtml(e.title)}</em></span><strong>›</strong></button>`).join('')||`<div class="assetDashboardEmpty"><b>今すぐ対応する項目はありません</b><span>在庫と次回予定を登録すると、ここに自動表示されます。</span></div>`}</div></section><section class="assetDashboardSection"><div class="assetDashboardTitle"><div><small>FAVORITES</small><h4>よく使う資産</h4></div><button data-dashboard-jump="items">一覧へ</button></div><div class="assetFavoriteRail">${favorites.map(g=>`<button data-library-edit="gear" data-library-id="${g.id}"><i>${gearGlyph(g.category)}</i><small>${escapeHtml(g.category)}</small><b>${escapeHtml(g.name)}</b><span>${escapeHtml(g.storage||'保管場所未設定')}</span></button>`).join('')||`<div class="assetDashboardEmpty"><b>お気に入りはまだありません</b><span>ギア編集でお気に入りを付けられます。</span></div>`}</div></section><section class="assetDashboardSection"><div class="assetDashboardTitle"><div><small>RECENT ACTIVITY</small><h4>最近の動き</h4></div><button data-dashboard-jump="lifecycle">すべて見る</button></div><div class="assetRecentList">${recent.map(e=>`<button data-library-edit="event" data-library-id="${e.id}"><time>${escapeHtml(e.date.slice(5).replace('-','/'))}</time><span><small>${escapeHtml(e.eventType)} ・ ${escapeHtml(assetTargetName(e))}</small><b>${escapeHtml(e.title)}</b></span><strong>›</strong></button>`).join('')||`<div class="assetDashboardEmpty"><b>履歴はまだありません</b><span>購入・使用・交換・修理などを追加すると表示されます。</span></div>`}</div></section></div>`;
+  }
+  function gearItemsMarkup(plan){
+    const module=plan?prepModuleDefinitions(plan)[1]:null,selected=plan&&module?prepModuleState(plan,module).gearIds:[];
+    const categories=['すべて',...new Set(gearLibrary.map(g=>g.category).filter(Boolean))];
+    const filtered=filteredGearLibrary(),shown=filtered.slice(0,libraryGearLimit);
+    return `<div class="gearViewBody"><div class="libraryToolbar premium"><label class="librarySearch">${I.search}<input id="libraryGearSearch" value="${escapeHtml(libraryGearQuery)}" placeholder="名前・型番・関係・保管場所を検索"></label><button class="libraryAddPrimary" data-library-add="gear">＋追加</button></div><div class="libraryCategoryChips">${categories.map(c=>`<button class="${libraryGearCategory===c?'active':''}" data-gear-filter="${escapeHtml(c)}">${escapeHtml(c)}<b>${c==='すべて'?gearLibrary.length:gearLibrary.filter(g=>g.category===c).length}</b></button>`).join('')}</div><div class="libraryResultBar"><span><b>${filtered.length}</b>件中 ${shown.length}件を表示</span><select id="libraryGearSort"><option value="name" ${libraryGearSort==='name'?'selected':''}>名前順</option><option value="category" ${libraryGearSort==='category'?'selected':''}>分類順</option><option value="connections" ${libraryGearSort==='connections'?'selected':''}>つながり順</option><option value="updated" ${libraryGearSort==='updated'?'selected':''}>更新順</option><option value="quantity" ${libraryGearSort==='quantity'?'selected':''}>数量順</option><option value="stock" ${libraryGearSort==='stock'?'selected':''}>在庫少ない順</option></select></div><div class="libraryGearRows">${shown.map(g=>{const rels=gearRelationsFor(g.id),currentCustom=currentCustomForBase(g.id),partCustoms=customsUsingPart(g.id),relationBadges=rels.slice(0,2).map(r=>`<span class="gearRelationBadge ${relationTone(r.type)}"><i></i>${escapeHtml(r.label)}：${escapeHtml(r.gear.name)}</span>`).join(''),specialBadge=currentCustom?`<span class="gearSpecialBadge custom">CUSTOM：${escapeHtml(currentCustom.name)}</span>`:partCustoms.length?`<span class="gearSpecialBadge part">構成パーツ：${escapeHtml(partCustoms[0].name)}</span>`:isStockRole(g)?`<span class="gearSpecialBadge stock ${stockState(g).id}">${escapeHtml(stockState(g).label)}：${escapeHtml(stockDisplay(g))}</span>`:'';return `<article class="libraryGearRow ${selected.includes(g.id)?'selected':''} ${rels.length||specialBadge?'connected':''}"><button class="libraryGearMain" data-library-edit="gear" data-library-id="${g.id}"><i class="gearGlyph">${gearGlyph(g.category)}</i><div class="gearRowCopy"><small>${escapeHtml(g.category)} ・ ${escapeHtml(gearRoleFor(g))}${g.brand?` ・ ${escapeHtml(g.brand)}`:''}</small><b>${escapeHtml(g.name)}</b><span>${g.model?`${escapeHtml(g.model)} ・ `:''}${escapeHtml(g.storage||'保管場所未設定')} ・ ${escapeHtml(g.condition||'使用可')}</span>${specialBadge||''}${rels.length?`<div class="gearRelationMini">${relationBadges}${rels.length>2?`<em>＋${rels.length-2}</em>`:''}</div>`:''}</div><div class="gearRowMeta"><strong>${isStockRole(g)?escapeHtml(String(stockNumber(g))):Number(g.quantity)||1}</strong><small>${isStockRole(g)?escapeHtml(g.stockUnit||'個'):(rels.length?`${rels.length}関係`:'単品')}</small><em>›</em></div></button>${plan?`<button class="libraryPlanToggle ${selected.includes(g.id)?'active':''}" data-toggle-gear-plan="${g.id}">${selected.includes(g.id)?'今回✓':'今回＋'}</button>`:''}</article>`;}).join('')||`<div class="libraryEmpty">条件に合うギアがありません</div>`}</div>${filtered.length>shown.length?`<button class="libraryLoadMore" data-library-more>さらに${Math.min(30,filtered.length-shown.length)}件表示</button>`:''}</div>`;
+  }
+  function gearKitsMarkup(plan){
+    const module=plan?prepModuleDefinitions(plan)[1]:null,selected=plan&&module?prepModuleState(plan,module).gearIds:[];
+    return `<div class="gearViewBody"><div class="gearSectionLead"><div><small>REUSABLE SETS</small><b>一式を、ワンタップで。</b><p>ペア使いや専用品を、持出し単位としてまとめます。</p></div><button data-library-add="kit">＋セット</button></div><div class="gearKitGrid">${gearKits.map(k=>{const members=k.gearIds.map(gearById).filter(Boolean),allSelected=members.length&&members.every(g=>selected.includes(g.id));return `<article class="gearKitCard ${k.favorite?'favorite':''}"><button class="gearKitMain" data-library-edit="kit" data-library-id="${k.id}"><div class="gearKitMark">${I.link}</div><div><small>${escapeHtml(k.kind)} ・ ${members.length}点</small><b>${escapeHtml(k.name)}</b><p>${escapeHtml(k.memo||'組み合わせメモなし')}</p><div class="gearKitMembers">${members.slice(0,4).map(g=>`<span title="${escapeHtml(g.name)}">${escapeHtml((g.name||'?').slice(0,1))}</span>`).join('')}${members.length>4?`<em>＋${members.length-4}</em>`:''}</div></div><strong>›</strong></button>${plan?`<button class="gearKitPlan ${allSelected?'active':''}" data-library-kit-plan="${k.id}">${allSelected?'今回から外す':'今回へ一式追加'}</button>`:''}</article>`;}).join('')||`<div class="libraryEmpty">セットはまだありません</div>`}</div></div>`;
+  }
+  function customGearPickerMarkup(){
+    const baseId=libraryEditorDraft?.baseGearId||'',rows=gearLibrary.filter(g=>g.id!==baseId&&!isStockRole(g)).slice(0,60);
+    const selected=libraryEditorCustomPartIds.map(gearById).filter(Boolean);
+    return `<section class="customPicker"><div class="kitPickerHead"><span><b>装着・構成パーツ</b><small>${selected.length}点を選択中</small></span></div>${selected.length?`<div class="kitSelectedChips">${selected.map(g=>`<span>${escapeHtml(g.name)}<button type="button" data-custom-part-toggle="${g.id}">×</button></span>`).join('')}</div>`:''}<div class="kitGearRows">${rows.map(g=>`<button type="button" class="${libraryEditorCustomPartIds.includes(g.id)?'selected':''}" data-custom-part-toggle="${g.id}"><i>${gearGlyph(g.category)}</i><span><small>${escapeHtml(gearRoleFor(g))} ・ ${escapeHtml(g.storage||'未設定')}</small><b>${escapeHtml(g.name)}</b></span><em>${libraryEditorCustomPartIds.includes(g.id)?'✓':'＋'}</em></button>`).join('')}</div></section>`;
+  }
+  function gearCustomsMarkup(){
+    return `<div class="gearViewBody"><div class="gearSectionLead customLead"><div><small>CUSTOM CONFIGURATIONS</small><b>今の仕様を、ひと目で。</b><p>本体と装着パーツを構成として保存。純正戻しや別仕様も残せます。</p></div><button data-library-add="custom">＋構成</button></div><div class="customConfigGrid">${gearCustoms.map(c=>{const base=gearById(c.baseGearId),parts=(c.partGearIds||[]).map(gearById).filter(Boolean);return `<article class="customConfigCard ${c.status==='現在の仕様'?'current':''}"><button data-library-edit="custom" data-library-id="${c.id}"><div class="customBase"><i>${gearGlyph(base?.category||'その他')}</i><span><small>${escapeHtml(c.status)} ・ ${parts.length}パーツ</small><b>${escapeHtml(c.name)}</b><em>${escapeHtml(base?.name||'本体未設定')}</em></span></div><div class="customPartFlow">${parts.length?parts.map(p=>`<span><i>${gearGlyph(p.category)}</i><b>${escapeHtml(p.name)}</b><small>${escapeHtml(gearRoleFor(p))}</small></span>`).join(''):`<p>構成パーツ未登録</p>`}</div><div class="customMemo">${escapeHtml(c.memo||'構成メモなし')}<strong>›</strong></div></button></article>`;}).join('')||`<div class="libraryEmpty customEmpty"><b>カスタム構成はまだありません</b><span>ランタン＋シェード、フラットバーナー＋五徳などを「現在の仕様」として登録できます。</span></div>`}</div><div class="customGuide"><b>カスタム品の持ち方</b><p>シェードや五徳は単品ギアとして登録し、ここで本体へ組み込みます。外した純正品も「交換部品」として残せます。</p></div></div>`;
+  }
+
+  function assetTargetName(e){if(e.targetType==='gear')return gearById(e.targetId)?.name||'削除済みギア';if(e.targetType==='mobility')return mobilityLibrary.find(x=>x.id===e.targetId)?.name||'削除済み車両';return petLibrary.find(x=>x.id===e.targetId)?.name||'削除済みペット';}
+  function gearLifecycleMarkup(){
+    const types=['すべて','購入','カスタム','使用','補充','交換','点検','修理','売却','廃棄','通院','ワクチン'];
+    const rows=assetEvents.filter(e=>libraryEventFilter==='すべて'||e.eventType===libraryEventFilter).sort((a,b)=>String(b.date).localeCompare(String(a.date))||b.createdAt-a.createdAt);
+    const upcoming=assetEvents.filter(e=>e.nextDate&&e.nextDate>=new Date().toISOString().slice(0,10)).sort((a,b)=>a.nextDate.localeCompare(b.nextDate)).slice(0,3);
+    return `<div class="gearViewBody"><div class="gearSectionLead lifecycleLead"><div><small>ASSET LIFECYCLE</small><b>買ってから、使い終えるまで。</b><p>購入・装着変更・交換・修理・売却まで、資産ごとの履歴を残します。</p></div><button data-library-add="event">＋履歴</button></div>${upcoming.length?`<div class="lifecycleUpcoming"><small>NEXT CARE</small>${upcoming.map(e=>`<div><b>${escapeHtml(e.nextDate)}</b><span>${escapeHtml(assetTargetName(e))}</span><em>${escapeHtml(e.title)}</em></div>`).join('')}</div>`:''}<div class="relationFilterChips lifecycleFilters">${types.map(t=>`<button class="${libraryEventFilter===t?'active':''}" data-event-filter="${t}">${t}</button>`).join('')}</div><div class="lifecycleTimeline">${rows.map(e=>`<article><div class="lifecycleDate"><b>${escapeHtml(e.date.slice(5).replace('-','/'))}</b><span>${escapeHtml(e.date.slice(0,4))}</span></div><button data-library-edit="event" data-library-id="${e.id}"><small>${escapeHtml(e.eventType)} ・ ${escapeHtml(assetTargetName(e))}</small><b>${escapeHtml(e.title)}</b><p>${escapeHtml(e.detail||'詳細メモなし')}</p>${e.nextDate?`<em>次回 ${escapeHtml(e.nextDate)}</em>`:''}${e.cost!==''?`<strong>¥${Number(e.cost||0).toLocaleString()}</strong>`:''}</button></article>`).join('')||`<div class="libraryEmpty"><b>履歴はまだありません</b><span>ギア・車・ペットの購入、使用、交換、修理などを残せます。</span></div>`}</div></div>`;
+  }
+  function gearStockMarkup(){
+    const rows=gearLibrary.filter(isStockRole).filter(g=>libraryStockFilter==='すべて'||gearRoleFor(g)===libraryStockFilter).sort((a,b)=>{const sa=stockState(a).id,sb=stockState(b).id,rank={empty:0,low:1,ok:2};return rank[sa]-rank[sb]||stockNumber(a)-stockNumber(b);});
+    const low=rows.filter(g=>stockState(g).id!=='ok').length;
+    return `<div class="gearViewBody"><div class="gearSectionLead stockLead"><div><small>CONSUMABLE & FUEL</small><b>替芯・マントル・燃料。</b><p>残量と補充ラインを持ち、本体との対応関係まで確認します。</p></div><button data-library-add="gear">＋在庫品</button></div><div class="stockSummary"><div><b>${rows.length}</b><span>在庫品</span></div><div class="${low?'alert':''}"><b>${low}</b><span>補充対象</span></div><div><b>${rows.filter(g=>gearRoleFor(g)==='燃料').length}</b><span>燃料</span></div></div><div class="relationFilterChips stockFilters">${['すべて','消耗品','燃料'].map(x=>`<button class="${libraryStockFilter===x?'active':''}" data-stock-filter="${x}">${x}<b>${x==='すべて'?gearLibrary.filter(isStockRole).length:gearLibrary.filter(g=>gearRoleFor(g)===x).length}</b></button>`).join('')}</div><div class="stockCardGrid">${rows.map(g=>{const state=stockState(g),targets=gearRelationsFor(g.id).filter(r=>['consumableFor','fuelFor'].includes(r.type));return `<article class="stockCard ${state.id}"><button class="stockCardMain" data-library-edit="gear" data-library-id="${g.id}"><div class="stockIcon">${gearGlyph(g.category)}</div><div><small>${escapeHtml(gearRoleFor(g))} ・ ${escapeHtml(state.label)}</small><b>${escapeHtml(g.name)}</b><span>${targets.length?`使用先：${escapeHtml(targets.slice(0,2).map(r=>r.gear.name).join('・'))}`:'使用先未設定'}</span>${g.expiryDate?`<em>期限 ${escapeHtml(g.expiryDate)}</em>`:''}</div><strong>${escapeHtml(stockDisplay(g))}</strong></button><div class="stockMeter"><i style="--stock:${Math.min(100,Math.max(4,stockNumber(g)/Math.max(stockNumber(g),Number(g.reorderPoint)||1)*55))}%"></i></div><div class="stockActions"><button data-stock-adjust="-${escapeHtml(String(g.stockStep||1))}" data-stock-id="${g.id}">− 使用</button><span>補充目安 ${g.reorderPoint===''?'未設定':escapeHtml(String(g.reorderPoint))+' '+escapeHtml(g.stockUnit||'個')}</span><button data-stock-adjust="${escapeHtml(String(g.stockStep||1))}" data-stock-id="${g.id}">＋ 補充</button></div></article>`;}).join('')||`<div class="libraryEmpty stockEmpty"><b>消耗品・燃料はまだありません</b><span>役割を「消耗品」または「燃料」にして登録すると、ここで残量管理できます。</span></div>`}</div></div>`;
+  }
+  function gearRelationsMarkup(){
+    const edges=gearRelationEdges().filter(e=>libraryRelationFilter==='すべて'||e.type===libraryRelationFilter);
+    const filters=[['すべて','すべて'],...Object.entries(gearRelationTypes).map(([id,v])=>[id,v.label])];
+    return `<div class="gearViewBody"><div class="gearSectionLead relationLead"><div><small>CONNECTION MAP</small><b>何と使うかを忘れない。</b><p>保管場所とは別に、使い方と収納の関係を記録します。</p></div><button data-library-add="gear">＋関係</button></div><div class="relationFilterChips">${filters.map(([id,label])=>`<button class="${libraryRelationFilter===id?'active':''}" data-relation-filter="${id}">${escapeHtml(label)}<b>${id==='すべて'?gearRelationCount():gearRelationEdges().filter(e=>e.type===id).length}</b></button>`).join('')}</div><div class="gearRelationRows">${edges.map(e=>`<button class="gearRelationCard ${relationTone(e.type)}" data-library-edit="gear" data-library-id="${e.source.id}"><div class="relationNode"><i>${gearGlyph(e.source.category)}</i><span><small>${escapeHtml(e.source.category)}</small><b>${escapeHtml(e.source.name)}</b></span></div><div class="relationArrow"><small>${escapeHtml(relationLabel(e.type))}</small><span>→</span></div><div class="relationNode target"><i>${gearGlyph(e.target.category)}</i><span><small>${escapeHtml(e.target.category)}</small><b>${escapeHtml(e.target.name)}</b></span></div></button>`).join('')||`<div class="libraryEmpty">この種類のつながりはありません</div>`}</div><div class="relationGuide"><b>対応する関係</b><p>ペア使い／専用品／装着中／対応品／純正部品／消耗先／燃料先／収納／代替</p><small>例：シェード → ランタン（装着中）、替芯 → ランタン（消耗先）、オイル → ランタン（燃料先）。</small></div></div>`;
+  }
+  function gearLibraryPanel(plan){
+    const body=libraryGearView==='dashboard'?gearDashboardMarkup(plan):libraryGearView==='kits'?gearKitsMarkup(plan):libraryGearView==='customs'?gearCustomsMarkup():libraryGearView==='stock'?gearStockMarkup():libraryGearView==='lifecycle'?gearLifecycleMarkup():libraryGearView==='relations'?gearRelationsMarkup():gearItemsMarkup(plan);
+    return `<section class="libraryPanel gearLibraryPanel">${gearSystemHero()}${gearModeMarkup()}${body}</section>`;
+  }
+  function mobilityLibraryPanel(){
+    return `<section class="libraryPanel entityLibraryPanel"><div class="entityHero mobilityHero"><div>${I.car}</div><span><small>MOBILITY GARAGE</small><b>移動手段</b><p>積載・散歩・走行記録へ共通接続</p></span><strong>${mobilityLibrary.length}</strong></div><div class="libraryActionLine"><span>車・自転車・バイクを登録</span><button data-library-add="mobility">＋登録</button></div><div class="libraryCardRows">${mobilityLibrary.map(m=>`<button class="libraryEntityCard" data-library-edit="mobility" data-library-id="${m.id}"><i>${m.type==='自転車'?I.bike:I.car}</i><div><small>${escapeHtml(m.type)}${m.primary?' ・ PRIMARY':''}</small><b>${escapeHtml(m.name)}</b><span>${escapeHtml([m.maker,m.model,m.color].filter(Boolean).join(' / ')||'メーカー・型式未登録')}</span><em>${escapeHtml(m.storage||'保管場所未設定')} ・ ${escapeHtml(m.condition||'使用可')}</em></div><strong>›</strong></button>`).join('')||`<div class="libraryEmpty">車・自転車はまだありません</div>`}</div></section>`;
+  }
+  function petLibraryPanel(){
+    return `<section class="libraryPanel entityLibraryPanel"><div class="entityHero petHero"><div>${I.paw}</div><span><small>FAMILY PROFILE</small><b>家族・ペット</b><p>同行者・散歩・体調メモへ共通接続</p></span><strong>${petLibrary.length}</strong></div><div class="libraryActionLine"><span>登録すると予定の同行者にも追加</span><button data-library-add="pet">＋登録</button></div><div class="petGrid">${petLibrary.map(p=>`<button class="petCard" data-library-edit="pet" data-library-id="${p.id}"><i>${escapeHtml((p.name||'?').slice(0,1))}</i><div><small>${escapeHtml(p.species||'種類未登録')} ・ ${escapeHtml(p.age?`${p.age}歳`:'年齢未登録')}</small><b>${escapeHtml(p.name)}</b><span>${escapeHtml([p.breed,p.size,p.collarColor?`首輪 ${p.collarColor}`:''].filter(Boolean).join(' / ')||'プロフィールを追加')}</span><em>${escapeHtml(p.personality||'性格メモなし')}</em></div><strong>›</strong></button>`).join('')||`<div class="libraryEmpty">ペットはまだ登録されていません</div>`}</div></section>`;
+  }
+  function storageLibraryPanel(){
+    return `<section class="libraryPanel entityLibraryPanel"><div class="entityHero storageHero"><div>${I.box}</div><span><small>STORAGE MAP</small><b>保管場所</b><p>自宅・物置・車内・収納箱を階層化</p></span><strong>${storageLibrary.length}</strong></div><div class="libraryActionLine"><span>場所と収納物をつなげて探しやすく</span><button data-library-add="storage">＋追加</button></div><div class="libraryCardRows">${storageLibrary.map(x=>`<button class="libraryEntityCard storageCard" data-library-edit="storage" data-library-id="${x.id}"><i>${I.folder}</i><div><small>${escapeHtml(x.type||'保管場所')}</small><b>${escapeHtml(x.name)}</b><span>${escapeHtml(x.memo||'メモなし')}</span><em>登録品 ${libraryStorageCount(x.name)}点</em></div><strong>›</strong></button>`).join('')||`<div class="libraryEmpty">保管場所はまだありません</div>`}</div></section>`;
+  }
+  function transferLibraryPanel(){
+    return `<section class="libraryPanel transferLibraryPanel"><div class="transferHero"><div>${I.database}</div><span><small>DATA CONTROL</small><b>大量登録を、軽く。</b><p>写真・PDF・Excel・テキストを同じ台帳へ集約します。</p></span></div><div class="transferGrid"><article><b>まとめて追加</b><small>1行に1つ、ギア名を貼り付け</small><textarea id="libraryBulkText" placeholder="例：\nランドロックM\nソフトクーラー38\nたねほおずき"></textarea><div><select id="libraryBulkCategory"><option>その他</option><option>テント</option><option>タープ</option><option>寝具</option><option>テーブル</option><option>キッチン</option><option>照明</option><option>電源</option><option>収納</option><option>ペット</option></select><input id="libraryBulkBrand" placeholder="ブランド（任意）"><button data-library-bulk-add>追加</button></div></article><article><b>バックアップ</b><small>ギア・セット・関係・車両・ペット・保管場所を一括保存</small><div class="transferActions"><button data-library-export>JSONを書き出す</button><button data-library-import-open>JSONを読み込む</button><input id="libraryImportFile" type="file" accept="application/json,.json" hidden></div></article><article><b>Excel・PDF・写真</b><small>AI整理・重複確認・関係候補の抽出へ接続</small><div class="transferActions"><button data-library-placeholder="Excel取込">Excel取込</button><button data-library-placeholder="PDF・写真取込">PDF・写真</button></div></article></div></section>`;
+  }
+  function libraryField(label,content){return `<label class="libraryField"><span>${label}</span>${content}</label>`;}
+  function gearRelationEditorMarkup(){
+    const currentId=libraryEditorId||'',targets=gearLibrary.filter(g=>g.id!==currentId);
+    const options=Object.entries(gearRelationTypes).map(([id,v])=>`<option value="${id}">${escapeHtml(v.label)}</option>`).join('');
+    const targetOptions=targets.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    return `<section class="relationEditorSection"><div class="relationEditorTitle"><div>${I.link}</div><span><b>つながり</b><small>保管場所とは別に、使い方・専用品・収納関係を登録</small></span></div><div class="relationComposer"><select id="lib-relation-type">${options}</select><select id="lib-relation-target"><option value="">相手を選択</option>${targetOptions}</select><button type="button" data-library-relation-add>追加</button></div><div class="relationDraftList">${libraryEditorRelationsDraft.map((r,index)=>{const target=gearById(r.targetId);return target?`<div class="relationDraftRow ${relationTone(r.type)}"><span><small>${escapeHtml(relationLabel(r.type))}</small><b>${escapeHtml(target.name)}</b></span><button type="button" data-library-relation-remove="${index}">×</button></div>`:'';}).join('')||`<p>まだつながりはありません</p>`}</div></section>`;
+  }
+  function kitGearPickerMarkup(){
+    const q=libraryKitQuery.trim().toLowerCase(),rows=gearLibrary.filter(g=>!q||[g.name,g.category,g.brand,g.storage].join(' ').toLowerCase().includes(q)).slice(0,40);
+    const selectedNames=libraryEditorKitGearIds.map(gearById).filter(Boolean);
+    return `<section class="kitPicker"><div class="kitPickerHead"><span><b>セット内容</b><small>${selectedNames.length}点を選択中</small></span><label>${I.search}<input id="lib-kit-search" value="${escapeHtml(libraryKitQuery)}" placeholder="ギアを検索"></label></div>${selectedNames.length?`<div class="kitSelectedChips">${selectedNames.slice(0,8).map(g=>`<span>${escapeHtml(g.name)}<button type="button" data-kit-gear-toggle="${g.id}">×</button></span>`).join('')}${selectedNames.length>8?`<em>＋${selectedNames.length-8}</em>`:''}</div>`:''}<div class="kitGearRows">${rows.map(g=>`<button type="button" class="${libraryEditorKitGearIds.includes(g.id)?'selected':''}" data-kit-gear-toggle="${g.id}"><i>${gearGlyph(g.category)}</i><span><small>${escapeHtml(g.category)} ・ ${escapeHtml(g.storage||'未設定')}</small><b>${escapeHtml(g.name)}</b></span><em>${libraryEditorKitGearIds.includes(g.id)?'✓':'＋'}</em></button>`).join('')}</div></section>`;
+  }
+  function libraryEditorMarkup(){
+    if(!libraryEditorType)return '';
+    const isNew=!libraryEditorId;
+    let row={};
+    if(libraryEditorType==='gear')row=libraryEditorDraft||gearById(libraryEditorId)||{name:'',category:'その他',role:'本体',brand:'',model:'',quantity:1,storage:'',condition:'使用可',purchaseDate:'',purchasePrice:'',tags:[],memo:'',favorite:false,relations:[],stockAmount:'',stockUnit:'個',reorderPoint:'',stockStep:'1',openedDate:'',expiryDate:''};
+    if(libraryEditorType==='event')row=libraryEditorDraft||assetEvents.find(x=>x.id===libraryEditorId)||{targetType:'gear',targetId:'',eventType:'使用',date:new Date().toISOString().slice(0,10),title:'',detail:'',cost:'',nextDate:''};
+    if(libraryEditorType==='kit')row=libraryEditorDraft||gearKits.find(x=>x.id===libraryEditorId)||{name:'',kind:'セット',gearIds:[],memo:'',favorite:false};
+    if(libraryEditorType==='custom')row=libraryEditorDraft||customById(libraryEditorId)||{name:'',baseGearId:'',partGearIds:[],status:'現在の仕様',memo:''};
+    if(libraryEditorType==='mobility')row=mobilityLibrary.find(x=>x.id===libraryEditorId)||{type:'車',name:'',maker:'',model:'',color:'',plate:'',storage:'',condition:'使用可',primary:false,memo:''};
+    if(libraryEditorType==='pet')row=petLibrary.find(x=>x.id===libraryEditorId)||{name:'',species:'犬',breed:'',sex:'',age:'',size:'',collarColor:'',personality:'',medicalNote:''};
+    if(libraryEditorType==='storage')row=storageLibrary.find(x=>x.id===libraryEditorId)||{name:'',type:'収納',memo:''};
+    const storageOptions=`<option value="">未設定</option>${storageLibrary.map(x=>`<option value="${escapeHtml(x.name)}" ${row.storage===x.name?'selected':''}>${escapeHtml(x.name)}</option>`).join('')}`;
+    let fields='';
+    if(libraryEditorType==='event'){const targets=[...gearLibrary.map(x=>({id:x.id,type:'gear',name:x.name,group:'ギア'})),...mobilityLibrary.map(x=>({id:x.id,type:'mobility',name:x.name,group:'車・自転車'})),...petLibrary.map(x=>({id:x.id,type:'pet',name:x.name,group:'ペット'}))];fields=`${libraryField('対象',`<select id="lib-event-target"><option value="">選択してください</option>${targets.map(x=>`<option value="${x.type}:${x.id}" ${(row.targetType+':'+row.targetId)===(x.type+':'+x.id)?'selected':''}>${escapeHtml(x.group)}｜${escapeHtml(x.name)}</option>`).join('')}</select>`)}<div class="libraryFieldGrid">${libraryField('種類',`<select id="lib-event-type">${['購入','カスタム','使用','補充','交換','点検','修理','売却','廃棄','通院','ワクチン'].map(x=>`<option ${row.eventType===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('日付',`<input id="lib-event-date" type="date" value="${escapeHtml(row.date||'')}">`)}</div>${libraryField('内容',`<input id="lib-name" value="${escapeHtml(row.title||'')}" placeholder="例：替芯を交換">`)}${libraryField('詳細',`<textarea id="lib-memo">${escapeHtml(row.detail||'')}</textarea>`)}<div class="libraryFieldGrid">${libraryField('費用',`<input id="lib-event-cost" type="number" min="0" value="${escapeHtml(row.cost??'')}">`)}${libraryField('次回予定日',`<input id="lib-event-next" type="date" value="${escapeHtml(row.nextDate||'')}">`)}</div>`;}
+    if(libraryEditorType==='gear'){
+      const stockSection=isStockRole(row)?`<section class="stockEditorSection"><div class="relationEditorTitle"><div>${I.database}</div><span><b>在庫・残量</b><small>替芯・マントル・燃料などの残量を管理</small></span></div><div class="libraryFieldGrid three">${libraryField('現在量',`<input id="lib-stock-amount" type="number" min="0" step="any" value="${escapeHtml(row.stockAmount??'')}">`)}${libraryField('単位',`<select id="lib-stock-unit">${['個','本','枚','セット','箱','缶','ボトル','ml','L','g','kg','m'].map(x=>`<option ${row.stockUnit===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('増減単位',`<input id="lib-stock-step" type="number" min="0.01" step="any" value="${escapeHtml(row.stockStep||'1')}">`)}</div><div class="libraryFieldGrid three">${libraryField('補充ライン',`<input id="lib-reorder-point" type="number" min="0" step="any" value="${escapeHtml(row.reorderPoint??'')}">`)}${libraryField('開封日',`<input id="lib-opened-date" type="date" value="${escapeHtml(row.openedDate||'')}">`)}${libraryField('使用期限',`<input id="lib-expiry-date" type="date" value="${escapeHtml(row.expiryDate||'')}">`)}</div></section>`:`<input id="lib-stock-amount" type="hidden" value="${escapeHtml(row.stockAmount??'')}"><input id="lib-stock-unit" type="hidden" value="${escapeHtml(row.stockUnit||'個')}"><input id="lib-reorder-point" type="hidden" value="${escapeHtml(row.reorderPoint??'')}"><input id="lib-stock-step" type="hidden" value="${escapeHtml(row.stockStep||'1')}"><input id="lib-opened-date" type="hidden" value="${escapeHtml(row.openedDate||'')}"><input id="lib-expiry-date" type="hidden" value="${escapeHtml(row.expiryDate||'')}">`;
+      fields=`${libraryField('名称',`<input id="lib-name" value="${escapeHtml(row.name)}" required>`)}<div class="libraryFieldGrid three">${libraryField('カテゴリ',`<select id="lib-category">${['テント','タープ','寝具','チェア','テーブル','キッチン','照明','電源','冷蔵','空調','暖房','収納','ペット','その他'].map(x=>`<option ${row.category===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('役割',`<select id="lib-role">${['本体','アクセサリー','専用品','取付部品','収納ケース','カスタムパーツ','交換部品','消耗品','燃料','その他'].map(x=>`<option ${gearRoleFor(row)===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('数量',`<input id="lib-quantity" type="number" min="1" value="${Number(row.quantity)||1}">`)}</div><div class="libraryFieldGrid">${libraryField('ブランド',`<input id="lib-brand" value="${escapeHtml(row.brand||'')}">`)}${libraryField('型番・モデル',`<input id="lib-model" value="${escapeHtml(row.model||'')}">`)}</div><div class="libraryFieldGrid">${libraryField('保管場所',`<select id="lib-storage">${storageOptions}</select>`)}${libraryField('状態',`<select id="lib-condition">${['使用可','点検','修理','買替','手放した'].map(x=>`<option ${row.condition===x?'selected':''}>${x}</option>`).join('')}</select>`)}</div>${stockSection}${gearRelationEditorMarkup()}<div class="libraryFieldGrid">${libraryField('購入日',`<input id="lib-date" type="date" value="${escapeHtml(row.purchaseDate||'')}">`)}${libraryField('購入金額',`<input id="lib-price" type="number" min="0" value="${escapeHtml(row.purchasePrice||'')}">`)}</div>${libraryField('タグ',`<input id="lib-tags" value="${escapeHtml((row.tags||[]).join('、'))}" placeholder="冬、デュオ、常備など">`)}${libraryField('メモ',`<textarea id="lib-memo">${escapeHtml(row.memo||'')}</textarea>`)}<label class="libraryCheck"><input id="lib-favorite" type="checkbox" ${row.favorite?'checked':''}>お気に入り</label>`;
+    }
+    if(libraryEditorType==='custom')fields=`${libraryField('構成名',`<input id="lib-name" value="${escapeHtml(row.name||'')}" placeholder="例：ランタン 現在仕様">`)}<div class="libraryFieldGrid">${libraryField('本体',`<select id="lib-custom-base"><option value="">本体を選択</option>${gearLibrary.filter(g=>!isStockRole(g)).map(g=>`<option value="${g.id}" ${row.baseGearId===g.id?'selected':''}>${escapeHtml(g.name)}</option>`).join('')}</select>`)}${libraryField('状態',`<select id="lib-custom-status">${['現在の仕様','保存構成','過去構成'].map(x=>`<option ${row.status===x?'selected':''}>${x}</option>`).join('')}</select>`)}</div>${libraryField('メモ',`<textarea id="lib-memo">${escapeHtml(row.memo||'')}</textarea>`)}${customGearPickerMarkup()}`;
+    if(libraryEditorType==='kit')fields=`${libraryField('セット名',`<input id="lib-name" value="${escapeHtml(row.name)}" placeholder="例：ランタン一式">`)}<div class="libraryFieldGrid">${libraryField('用途',`<select id="lib-kind">${['セット','組み合わせ','持出しセット','積載グループ','収納単位'].map(x=>`<option ${row.kind===x?'selected':''}>${x}</option>`).join('')}</select>`)}<label class="libraryCheck"><input id="lib-favorite" type="checkbox" ${row.favorite?'checked':''}>よく使う</label></div>${libraryField('メモ',`<textarea id="lib-memo">${escapeHtml(row.memo||'')}</textarea>`)}${kitGearPickerMarkup()}`;
+    if(libraryEditorType==='mobility')fields=`<div class="libraryFieldGrid">${libraryField('種類',`<select id="lib-type">${['車','自転車','バイク','その他'].map(x=>`<option ${row.type===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('状態',`<select id="lib-condition">${['使用可','点検','修理','手放した'].map(x=>`<option ${row.condition===x?'selected':''}>${x}</option>`).join('')}</select>`)}</div>${libraryField('登録名',`<input id="lib-name" value="${escapeHtml(row.name)}" placeholder="アルファード、ロードバイクなど">`)}<div class="libraryFieldGrid">${libraryField('メーカー',`<input id="lib-maker" value="${escapeHtml(row.maker||'')}">`)}${libraryField('型式・年式',`<input id="lib-model" value="${escapeHtml(row.model||'')}">`)}</div><div class="libraryFieldGrid">${libraryField('色',`<input id="lib-color" value="${escapeHtml(row.color||'')}">`)}${libraryField('保管場所',`<select id="lib-storage">${storageOptions}</select>`)}</div>${libraryField('ナンバー（任意）',`<input id="lib-plate" value="${escapeHtml(row.plate||'')}" placeholder="未入力でも利用できます">`)}${libraryField('メモ',`<textarea id="lib-memo">${escapeHtml(row.memo||'')}</textarea>`)}<label class="libraryCheck"><input id="lib-primary" type="checkbox" ${row.primary?'checked':''}>メインの移動手段</label>`;
+    if(libraryEditorType==='pet')fields=`${libraryField('名前',`<input id="lib-name" value="${escapeHtml(row.name)}">`)}<div class="libraryFieldGrid">${libraryField('種類',`<select id="lib-species">${['犬','猫','その他'].map(x=>`<option ${row.species===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('品種',`<input id="lib-breed" value="${escapeHtml(row.breed||'')}">`)}</div><div class="libraryFieldGrid three">${libraryField('性別',`<select id="lib-sex"><option value="">未登録</option>${['オス','メス'].map(x=>`<option ${row.sex===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('年齢',`<input id="lib-age" inputmode="decimal" value="${escapeHtml(row.age||'')}">`)}${libraryField('大きさ',`<input id="lib-size" value="${escapeHtml(row.size||'')}">`)}</div>${libraryField('首輪・目印',`<input id="lib-collar" value="${escapeHtml(row.collarColor||'')}">`)}${libraryField('性格・特徴',`<textarea id="lib-personality">${escapeHtml(row.personality||'')}</textarea>`)}${libraryField('体調・注意事項',`<textarea id="lib-medical">${escapeHtml(row.medicalNote||'')}</textarea>`)}`;
+    if(libraryEditorType==='storage')fields=`${libraryField('保管場所名',`<input id="lib-name" value="${escapeHtml(row.name)}" placeholder="物置、車内、棚Aなど">`)}${libraryField('種類',`<select id="lib-type">${['住居','収納','車両','倉庫','その他'].map(x=>`<option ${row.type===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('メモ',`<textarea id="lib-memo">${escapeHtml(row.memo||'')}</textarea>`)}`;
+    const title={gear:'ギア',kit:'セット',custom:'カスタム構成',event:'履歴',mobility:'車・自転車',pet:'ペット',storage:'保管場所'}[libraryEditorType];
+    return `<div class="libraryEditorBackdrop"><section class="libraryEditor"><div class="libraryEditorHead"><div><small>${isNew?'NEW ENTRY':'EDIT ENTRY'}</small><h3>${title}${isNew?'を追加':'を編集'}</h3></div><button data-library-editor-close>×</button></div><div class="libraryEditorBody">${fields}</div><div class="libraryEditorActions">${!isNew?`<button class="danger" data-library-delete>削除</button>`:'<span></span>'}<button data-library-editor-close>キャンセル</button><button class="primary" data-library-save>保存</button></div></section></div>`;
+  }
   function gearManagerMarkup(plan){
-    const gearModule=prepModuleDefinitions(plan)[1],selected=plan?prepModuleState(plan,gearModule).gearIds:[],categories=['テント','タープ','寝具','テーブル','キッチン','照明','電源','冷蔵','収納','ペット','その他'],conditions=['使用可','点検','修理','買替'];
-    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet gearManagerSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>GEAR LIBRARY</small><h2>共通ギア管理</h2><p>所有 ${gearLibrary.length}点${plan?` ・ ${escapeHtml(plan.title)}へ ${selected.length}点選択`:' ・ 予定なしでも編集可能'}</p></div><div class="gearManagerRows">${gearLibrary.map(g=>`<article class="gearManagerRow ${selected.includes(g.id)?'selected':''}" data-gear-row="${g.id}"><div class="gearManagerTop"><button data-toggle-gear-plan="${g.id}" ${plan?'':'disabled'}>${selected.includes(g.id)?'今回から外す':'今回に追加'}</button><input value="${escapeHtml(g.name)}" data-gear-name="${g.id}" aria-label="ギア名"><button class="gearDelete" data-delete-gear="${g.id}">×</button></div><div class="gearManagerMeta"><select data-gear-category="${g.id}">${categories.map(c=>`<option value="${c}" ${g.category===c?'selected':''}>${c}</option>`).join('')}</select><label>数量<input type="number" min="1" max="99" value="${Number(g.quantity)||1}" data-gear-quantity="${g.id}"></label><input value="${escapeHtml(g.storage||'')}" placeholder="保管場所" data-gear-storage="${g.id}"><select data-gear-condition="${g.id}">${conditions.map(c=>`<option value="${c}" ${g.condition===c?'selected':''}>${c}</option>`).join('')}</select></div></article>`).join('')}</div><div class="gearAddBox"><h3>ギアを追加</h3><div><input id="newGearName" placeholder="ギア名"><select id="newGearCategory">${categories.map(c=>`<option value="${c}">${c}</option>`).join('')}</select><input id="newGearQuantity" type="number" min="1" max="99" value="1"><button data-add-gear>追加</button></div></div><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div></section></div>`;
+    const c=libraryCounts(),panel=libraryTab==='gear'?gearLibraryPanel(plan):libraryTab==='mobility'?mobilityLibraryPanel():libraryTab==='pets'?petLibraryPanel():libraryTab==='storage'?storageLibraryPanel():transferLibraryPanel();
+    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet gearManagerSheet librarySheet library02 library03 library04 library05" data-prep-sheet-panel><div class="prepSheetDragZone libraryHead" data-prep-drag-zone><div class="sheetHandle"></div><small>OUTBASE ASSET LIBRARY</small><h2>共通台帳</h2><p>${c.gearRows}種類 / ${c.gear}点 ・ ${c.customs}カスタム ・ ${c.stockRows}在庫品 ・ ${c.events}履歴</p></div>${libraryTabsMarkup()}${panel}<div class="sheetActions librarySheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div>${libraryEditorMarkup()}</section></div>`;
   }
   function prepCommonSheetMarkup(module){
     const state=prepCommonState(module.id),plan=activePlan(),items=state.items;
@@ -781,7 +1124,7 @@
     const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,allDone=items.length&&done===items.length;
     const selectedGear=module.id==='gear'?state.gearIds.map(id=>gearLibrary.find(g=>g.id===id)).filter(Boolean):[];
     const commonCount=module.id==='gear'?0:prepCommonState(module.id).items.length;
-    const primaryAction=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所と駐車場を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:module.id==='gear'?`<button class="prepExternalAction" data-open-gear-manager>${I.bag}<span><b>共通ギア管理を開く</b><small>${selectedGear.length?`今回 ${selectedGear.length}点：${selectedGear.slice(0,2).map(g=>g.name).join('・')}${selectedGear.length>2?'ほか':''}`:'所有ギアから今回の持出しを選ぶ'}</small></span><em>›</em></button>`:'';
+    const primaryAction=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所と駐車場を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:module.id==='gear'?`<button class="prepExternalAction" data-open-gear-manager>${I.bag}<span><b>共通台帳を開く</b><small>${selectedGear.length?`今回 ${selectedGear.length}点：${selectedGear.slice(0,2).map(g=>g.name).join('・')}${selectedGear.length>2?'ほか':''}`:'所有ギアから今回の持出しを選ぶ'}</small></span><em>›</em></button>`:'';
     const noteAction=module.id!=='gear'?`<button class="prepExternalAction prepNoteAction" data-open-common-module="${module.id}">${module.icon}<span><b>${escapeHtml(module.title)}ノートを開く</b><small>予定前から保存した案 ${commonCount}件</small></span><em>›</em></button>`:'';
     return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet prepDetailSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>PREPARATION</small><h2>${escapeHtml(module.title)}</h2><p>${escapeHtml(module.sub)} ・ ${done}/${items.length}完了</p></div><div class="prepChecklist">${items.map((item,index)=>`<div class="prepCheckRow ${state.checked.includes(index)?'checked':''}"><button data-prep-check="${index}"><i>${state.checked.includes(index)?'✓':''}</i><span>${escapeHtml(item)}</span></button>${index>=module.tasks.length?`<button class="prepRemoveItem" data-prep-remove="${index}">×</button>`:''}</div>`).join('')}</div><div class="prepAddRow"><input id="prepNewItem" placeholder="この予定だけの項目を追加"><button data-prep-add>追加</button></div>${primaryAction}${noteAction}<label class="prepNoteField"><span>メモ</span><textarea id="prepModuleNote" placeholder="確認したことや当日の注意点">${escapeHtml(state.note||'')}</textarea></label><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-prep-mark-all>${allDone?'未完了に戻す':'この項目を完了'}</button></div></section></div>`;
   }
@@ -1185,7 +1528,7 @@
     });
     document.querySelectorAll('[data-open-plan-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();recordSheet='';prepSheet='';prepModuleId='';planSheet='switcher';render();}));
     document.querySelectorAll('[data-switch-active-plan]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activePlanId=el.dataset.switchActivePlan||'none';persistPlans();blockUnderlyingNavigation(250);planSheet='';render();}));
-    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep012`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library05`);render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-id]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectedPlanId=el.dataset.planId;planDraft=null;planSheet='detail';render();}));
     document.querySelectorAll('[data-open-plan-add]').forEach(el=>el.addEventListener('click',()=>{openPlanEditor(null);render();}));
     document.querySelectorAll('[data-open-plan-list]').forEach(el=>el.addEventListener('click',()=>{planSheet='list';render();}));
@@ -1286,10 +1629,79 @@
     const commonNote=document.getElementById('prepCommonNote');if(commonNote)commonNote.addEventListener('input',()=>{prepCommonState(prepModuleId).note=commonNote.value;persistPrepCommonStore();});
 
     document.querySelectorAll('[data-toggle-gear-plan]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;const module=prepModuleDefinitions(plan)[1],state=prepModuleState(plan,module),id=el.dataset.toggleGearPlan;state.gearIds=state.gearIds.includes(id)?state.gearIds.filter(x=>x!==id):[...state.gearIds,id];persistPrepStore();render();}));
-    const addGear=document.querySelector('[data-add-gear]');if(addGear)addGear.addEventListener('click',()=>{const name=document.getElementById('newGearName')?.value.trim();if(!name)return;gearLibrary.push({id:newId('gear'),name,category:document.getElementById('newGearCategory')?.value||'その他',quantity:Math.max(1,Number(document.getElementById('newGearQuantity')?.value)||1),storage:'',condition:'使用可',memo:''});persistGearLibrary();render();});
-    document.querySelectorAll('[data-delete-gear]').forEach(el=>el.addEventListener('click',()=>{const gear=gearLibrary.find(g=>g.id===el.dataset.deleteGear);if(!gear||!confirm(`「${gear.name}」を共通ギア管理から削除しますか？`))return;gearLibrary=gearLibrary.filter(g=>g.id!==gear.id);Object.values(prepStore).forEach(bucket=>Object.values(bucket.modules||{}).forEach(state=>{if(Array.isArray(state.gearIds))state.gearIds=state.gearIds.filter(id=>id!==gear.id);}));persistGearLibrary();persistPrepStore();render();}));
-    const gearFields=['name','category','quantity','storage','condition'];
-    gearFields.forEach(field=>document.querySelectorAll(`[data-gear-${field}]`).forEach(el=>el.addEventListener('change',()=>{const row=gearLibrary.find(g=>g.id===el.dataset[`gear${field[0].toUpperCase()+field.slice(1)}`]);if(!row)return;row[field]=field==='quantity'?Math.max(1,Number(el.value)||1):el.value.trim();persistGearLibrary();})));
+    document.querySelectorAll('[data-library-tab]').forEach(el=>el.addEventListener('click',()=>{libraryTab=el.dataset.libraryTab;libraryCloseEditor();persistLibraryTab();render();}));
+    document.querySelectorAll('[data-library-gear-view]').forEach(el=>el.addEventListener('click',()=>{libraryGearView=el.dataset.libraryGearView;persistLibraryGearView();libraryCloseEditor();render();}));
+    document.querySelectorAll('[data-dashboard-jump]').forEach(el=>el.addEventListener('click',()=>{libraryGearView=el.dataset.dashboardJump||'dashboard';persistLibraryGearView();libraryCloseEditor();render();}));
+    document.querySelectorAll('[data-library-add]').forEach(el=>el.addEventListener('click',()=>{libraryOpenEditor(el.dataset.libraryAdd,'');render();}));
+    document.querySelectorAll('[data-library-edit]').forEach(el=>el.addEventListener('click',()=>{libraryOpenEditor(el.dataset.libraryEdit,el.dataset.libraryId||'');render();}));
+    document.querySelectorAll('[data-library-editor-close]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();libraryCloseEditor();render();}));
+    const gearSearch=document.getElementById('libraryGearSearch');if(gearSearch){let searchTimer;gearSearch.addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{libraryGearQuery=gearSearch.value;libraryGearLimit=30;render();setTimeout(()=>{const input=document.getElementById('libraryGearSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},0);},220);});}
+    document.querySelectorAll('[data-gear-filter]').forEach(el=>el.addEventListener('click',()=>{libraryGearCategory=el.dataset.gearFilter;libraryGearLimit=30;render();}));
+    document.querySelectorAll('[data-relation-filter]').forEach(el=>el.addEventListener('click',()=>{libraryRelationFilter=el.dataset.relationFilter;render();}));
+    document.querySelectorAll('[data-event-filter]').forEach(el=>el.addEventListener('click',()=>{libraryEventFilter=el.dataset.eventFilter;render();}));
+    document.querySelectorAll('[data-stock-filter]').forEach(el=>el.addEventListener('click',()=>{libraryStockFilter=el.dataset.stockFilter;render();}));
+    const gearSort=document.getElementById('libraryGearSort');if(gearSort)gearSort.addEventListener('change',()=>{libraryGearSort=gearSort.value;libraryGearLimit=30;render();});
+    const more=document.querySelector('[data-library-more]');if(more)more.addEventListener('click',()=>{libraryGearLimit+=30;render();});
+    document.querySelectorAll('[data-library-kit-plan]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),kit=gearKits.find(k=>k.id===el.dataset.libraryKitPlan);if(!plan||!kit)return;const state=prepModuleState(plan,prepModuleDefinitions(plan)[1]),valid=kit.gearIds.filter(id=>gearById(id)),all=valid.length&&valid.every(id=>state.gearIds.includes(id));state.gearIds=all?state.gearIds.filter(id=>!valid.includes(id)):[...new Set([...state.gearIds,...valid])];persistPrepStore();render();setTimeout(()=>showRecordToast(all?'セットを今回から外しました':'セットを今回へ追加しました'),0);}));
+    const relationAdd=document.querySelector('[data-library-relation-add]');if(relationAdd)relationAdd.addEventListener('click',()=>{syncLibraryEditorDraftFromForm();const type=document.getElementById('lib-relation-type')?.value||'useWith',targetId=document.getElementById('lib-relation-target')?.value||'';if(!targetId){showRecordToast('つなぐ相手を選んでください');return;}if(libraryEditorRelationsDraft.some(r=>r.type===type&&r.targetId===targetId)){showRecordToast('同じ関係は登録済みです');return;}libraryEditorRelationsDraft.push({type,targetId});render();});
+    document.querySelectorAll('[data-library-relation-remove]').forEach(el=>el.addEventListener('click',()=>{syncLibraryEditorDraftFromForm();const index=Number(el.dataset.libraryRelationRemove);if(index>=0)libraryEditorRelationsDraft.splice(index,1);render();}));
+    document.querySelectorAll('[data-kit-gear-toggle]').forEach(el=>el.addEventListener('click',()=>{syncLibraryEditorDraftFromForm();const id=el.dataset.kitGearToggle;libraryEditorKitGearIds=libraryEditorKitGearIds.includes(id)?libraryEditorKitGearIds.filter(x=>x!==id):[...libraryEditorKitGearIds,id];render();}));
+    document.querySelectorAll('[data-custom-part-toggle]').forEach(el=>el.addEventListener('click',()=>{syncLibraryEditorDraftFromForm();const id=el.dataset.customPartToggle;libraryEditorCustomPartIds=libraryEditorCustomPartIds.includes(id)?libraryEditorCustomPartIds.filter(x=>x!==id):[...libraryEditorCustomPartIds,id];render();}));
+    const roleSelect=document.getElementById('lib-role');if(roleSelect)roleSelect.addEventListener('change',()=>{syncLibraryEditorDraftFromForm();libraryEditorDraft.role=roleSelect.value;render();});
+    const customBase=document.getElementById('lib-custom-base');if(customBase)customBase.addEventListener('change',()=>{syncLibraryEditorDraftFromForm();libraryEditorDraft.baseGearId=customBase.value;libraryEditorCustomPartIds=libraryEditorCustomPartIds.filter(id=>id!==customBase.value);render();});
+    const kitSearch=document.getElementById('lib-kit-search');if(kitSearch){let kitTimer;kitSearch.addEventListener('input',()=>{clearTimeout(kitTimer);kitTimer=setTimeout(()=>{syncLibraryEditorDraftFromForm();libraryKitQuery=kitSearch.value;render();setTimeout(()=>{const input=document.getElementById('lib-kit-search');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},0);},180);});}
+    const saveLibrary=document.querySelector('[data-library-save]');if(saveLibrary)saveLibrary.addEventListener('click',()=>{
+      const value=id=>document.getElementById(id)?.value.trim()||'',check=id=>Boolean(document.getElementById(id)?.checked),now=Date.now();
+      if(libraryEditorType==='event'){const targets=[...gearLibrary.map(x=>({id:x.id,type:'gear',name:x.name,group:'ギア'})),...mobilityLibrary.map(x=>({id:x.id,type:'mobility',name:x.name,group:'車・自転車'})),...petLibrary.map(x=>({id:x.id,type:'pet',name:x.name,group:'ペット'}))];fields=`${libraryField('対象',`<select id="lib-event-target"><option value="">選択してください</option>${targets.map(x=>`<option value="${x.type}:${x.id}" ${(row.targetType+':'+row.targetId)===(x.type+':'+x.id)?'selected':''}>${escapeHtml(x.group)}｜${escapeHtml(x.name)}</option>`).join('')}</select>`)}<div class="libraryFieldGrid">${libraryField('種類',`<select id="lib-event-type">${['購入','カスタム','使用','補充','交換','点検','修理','売却','廃棄','通院','ワクチン'].map(x=>`<option ${row.eventType===x?'selected':''}>${x}</option>`).join('')}</select>`)}${libraryField('日付',`<input id="lib-event-date" type="date" value="${escapeHtml(row.date||'')}">`)}</div>${libraryField('内容',`<input id="lib-name" value="${escapeHtml(row.title||'')}" placeholder="例：替芯を交換">`)}${libraryField('詳細',`<textarea id="lib-memo">${escapeHtml(row.detail||'')}</textarea>`)}<div class="libraryFieldGrid">${libraryField('費用',`<input id="lib-event-cost" type="number" min="0" value="${escapeHtml(row.cost??'')}">`)}${libraryField('次回予定日',`<input id="lib-event-next" type="date" value="${escapeHtml(row.nextDate||'')}">`)}</div>`;}
+    if(libraryEditorType==='gear'){
+        const name=value('lib-name');if(!name){showRecordToast('ギア名を入力してください');return;}
+        const row={id:libraryEditorId||newId('gear'),name,category:value('lib-category')||'その他',role:value('lib-role')||'本体',quantity:Math.max(1,Number(value('lib-quantity'))||1),brand:value('lib-brand'),model:value('lib-model'),storage:value('lib-storage'),condition:value('lib-condition')||'使用可',purchaseDate:value('lib-date'),purchasePrice:value('lib-price'),tags:value('lib-tags').split(/[、,]/).map(x=>x.trim()).filter(Boolean),memo:value('lib-memo'),favorite:check('lib-favorite'),relations:libraryEditorRelationsDraft.map(r=>({...r})),stockAmount:value('lib-stock-amount')===''?'':Math.max(0,Number(value('lib-stock-amount'))||0),stockUnit:value('lib-stock-unit')||'個',reorderPoint:value('lib-reorder-point')===''?'':Math.max(0,Number(value('lib-reorder-point'))||0),stockStep:value('lib-stock-step')||'1',openedDate:value('lib-opened-date'),expiryDate:value('lib-expiry-date'),updatedAt:now};
+        const index=gearLibrary.findIndex(x=>x.id===row.id);if(index>=0)gearLibrary[index]={...gearLibrary[index],...row};else gearLibrary.unshift(row);persistGearLibrary();
+      }
+      if(libraryEditorType==='kit'){
+        const name=value('lib-name');if(!name){showRecordToast('セット名を入力してください');return;}
+        if(!libraryEditorKitGearIds.length){showRecordToast('セットへギアを1点以上追加してください');return;}
+        const row={id:libraryEditorId||newId('kit'),name,kind:value('lib-kind')||'セット',gearIds:[...new Set(libraryEditorKitGearIds)].filter(id=>gearById(id)),memo:value('lib-memo'),favorite:check('lib-favorite'),updatedAt:now};
+        const index=gearKits.findIndex(x=>x.id===row.id);if(index>=0)gearKits[index]={...gearKits[index],...row};else gearKits.unshift(row);persistGearKits();
+      }
+      if(libraryEditorType==='custom'){
+        const name=value('lib-name'),baseGearId=value('lib-custom-base');if(!name){showRecordToast('構成名を入力してください');return;}if(!baseGearId){showRecordToast('本体を選択してください');return;}
+        if(!libraryEditorCustomPartIds.length){showRecordToast('構成パーツを1点以上追加してください');return;}
+        const status=value('lib-custom-status')||'保存構成';if(status==='現在の仕様')gearCustoms.forEach(c=>{if(c.baseGearId===baseGearId&&c.id!==libraryEditorId)c.status='保存構成';});
+        const row={id:libraryEditorId||newId('custom'),name,baseGearId,partGearIds:[...new Set(libraryEditorCustomPartIds)].filter(id=>gearById(id)&&id!==baseGearId),status,memo:value('lib-memo'),updatedAt:now};const index=gearCustoms.findIndex(x=>x.id===row.id);if(index>=0)gearCustoms[index]={...gearCustoms[index],...row};else gearCustoms.unshift(row);persistGearCustoms();
+      }
+      if(libraryEditorType==='mobility'){
+        const name=value('lib-name');if(!name){showRecordToast('登録名を入力してください');return;}
+        const row={id:libraryEditorId||newId('mobility'),type:value('lib-type')||'車',name,maker:value('lib-maker'),model:value('lib-model'),color:value('lib-color'),plate:value('lib-plate'),storage:value('lib-storage'),condition:value('lib-condition')||'使用可',primary:check('lib-primary'),memo:value('lib-memo')};
+        if(row.primary)mobilityLibrary.forEach(x=>x.primary=false);const index=mobilityLibrary.findIndex(x=>x.id===row.id);if(index>=0)mobilityLibrary[index]={...mobilityLibrary[index],...row};else mobilityLibrary.push(row);persistMobilityLibrary();
+      }
+      if(libraryEditorType==='pet'){
+        const name=value('lib-name');if(!name){showRecordToast('ペットの名前を入力してください');return;}
+        const row={id:libraryEditorId||newId('pet'),name,species:value('lib-species')||'その他',breed:value('lib-breed'),sex:value('lib-sex'),age:value('lib-age'),size:value('lib-size'),collarColor:value('lib-collar'),personality:value('lib-personality'),medicalNote:value('lib-medical'),photo:''};
+        const index=petLibrary.findIndex(x=>x.id===row.id);if(index>=0)petLibrary[index]={...petLibrary[index],...row};else petLibrary.push(row);if(!companions.some(x=>x.name===name)){companions.push({id:newId('comp'),name,hidden:false});localStorage.setItem('outbase_plan_companions_v2',JSON.stringify(companions));}persistPetLibrary();
+      }
+      if(libraryEditorType==='storage'){
+        const name=value('lib-name');if(!name){showRecordToast('保管場所名を入力してください');return;}
+        const row={id:libraryEditorId||newId('storage'),name,type:value('lib-type')||'収納',memo:value('lib-memo')};const index=storageLibrary.findIndex(x=>x.id===row.id);if(index>=0){const old=storageLibrary[index].name;storageLibrary[index]=row;if(old!==name){gearLibrary.forEach(g=>{if(g.storage===old)g.storage=name;});mobilityLibrary.forEach(x=>{if(x.storage===old)x.storage=name;});persistGearLibrary();persistMobilityLibrary();}}else storageLibrary.push(row);persistStorageLibrary();
+      }
+      libraryCloseEditor();render();setTimeout(()=>showRecordToast('共通台帳へ保存しました'),0);
+    });
+    const deleteLibrary=document.querySelector('[data-library-delete]');if(deleteLibrary)deleteLibrary.addEventListener('click',()=>{
+      const type=libraryEditorType,id=libraryEditorId;if(!id)return;const label={gear:'ギア',kit:'セット',custom:'カスタム構成',event:'履歴',mobility:'車・自転車',pet:'ペット',storage:'保管場所'}[type];if(!confirm(`${label}を削除しますか？`))return;
+      if(type==='event'){assetEvents=assetEvents.filter(x=>x.id!==id);persistAssetEvents();}
+      if(type==='gear'){gearLibrary=gearLibrary.filter(x=>x.id!==id);gearLibrary.forEach(g=>{g.relations=(g.relations||[]).filter(r=>r.targetId!==id);});gearKits.forEach(k=>{k.gearIds=(k.gearIds||[]).filter(x=>x!==id);});gearCustoms=gearCustoms.filter(c=>c.baseGearId!==id).map(c=>({...c,partGearIds:(c.partGearIds||[]).filter(x=>x!==id)}));Object.values(prepStore).forEach(bucket=>Object.values(bucket.modules||{}).forEach(state=>{if(Array.isArray(state.gearIds))state.gearIds=state.gearIds.filter(x=>x!==id);}));persistGearLibrary();persistGearKits();persistGearCustoms();persistPrepStore();}
+      if(type==='kit'){gearKits=gearKits.filter(x=>x.id!==id);persistGearKits();}
+      if(type==='custom'){gearCustoms=gearCustoms.filter(x=>x.id!==id);persistGearCustoms();}
+      if(type==='mobility'){mobilityLibrary=mobilityLibrary.filter(x=>x.id!==id);persistMobilityLibrary();}
+      if(type==='pet'){petLibrary=petLibrary.filter(x=>x.id!==id);persistPetLibrary();}
+      if(type==='storage'){const row=storageLibrary.find(x=>x.id===id);if(row&&libraryStorageCount(row.name)>0){showRecordToast('使用中の保管場所は削除できません');return;}storageLibrary=storageLibrary.filter(x=>x.id!==id);persistStorageLibrary();}
+      libraryCloseEditor();render();
+    });
+    document.querySelectorAll('[data-stock-adjust]').forEach(el=>el.addEventListener('click',()=>{const g=gearById(el.dataset.stockId);if(!g)return;const delta=Number(el.dataset.stockAdjust)||0;g.stockAmount=Math.max(0,stockNumber(g)+delta);g.updatedAt=Date.now();persistGearLibrary();render();setTimeout(()=>showRecordToast(`${g.name}：${stockDisplay(g)}`),0);}));
+    const bulkAdd=document.querySelector('[data-library-bulk-add]');if(bulkAdd)bulkAdd.addEventListener('click',()=>{const names=(document.getElementById('libraryBulkText')?.value||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),category=document.getElementById('libraryBulkCategory')?.value||'その他',brand=document.getElementById('libraryBulkBrand')?.value.trim()||'';if(!names.length){showRecordToast('1行に1つ入力してください');return;}const existing=new Set(gearLibrary.map(x=>x.name.toLowerCase()));let added=0;names.forEach(name=>{if(existing.has(name.toLowerCase()))return;gearLibrary.push({id:newId('gear'),name,category,role:'本体',brand,model:'',quantity:1,storage:'',condition:'使用可',purchaseDate:'',purchasePrice:'',tags:[],memo:'',favorite:false,relations:[],stockAmount:'',stockUnit:'個',reorderPoint:'',stockStep:'1',openedDate:'',expiryDate:'',updatedAt:Date.now()});existing.add(name.toLowerCase());added++;});persistGearLibrary();libraryTab='gear';persistLibraryTab();render();setTimeout(()=>showRecordToast(`${added}件を追加しました`),0);});
+    const exportBtn=document.querySelector('[data-library-export]');if(exportBtn)exportBtn.addEventListener('click',()=>{const data={version:'Library03',exportedAt:new Date().toISOString(),gear:gearLibrary,kits:gearKits,customs:gearCustoms,mobility:mobilityLibrary,pets:petLibrary,storage:storageLibrary};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`OUTBASE_共通台帳_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+    const importOpen=document.querySelector('[data-library-import-open]'),importFile=document.getElementById('libraryImportFile');if(importOpen&&importFile){importOpen.addEventListener('click',()=>importFile.click());importFile.addEventListener('change',()=>{const file=importFile.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!confirm('現在の共通台帳を、このバックアップで置き換えますか？'))return;gearLibrary=Array.isArray(data.gear)?data.gear:gearLibrary;gearKits=Array.isArray(data.kits)?data.kits:gearKits;gearCustoms=Array.isArray(data.customs)?data.customs:gearCustoms;mobilityLibrary=Array.isArray(data.mobility)?data.mobility:mobilityLibrary;petLibrary=Array.isArray(data.pets)?data.pets:petLibrary;storageLibrary=Array.isArray(data.storage)?data.storage:storageLibrary;normalizeLibraryData();render();setTimeout(()=>showRecordToast('バックアップを読み込みました'),0);}catch(_e){showRecordToast('JSONを読み込めませんでした');}};reader.readAsText(file);});}
+    document.querySelectorAll('[data-library-placeholder]').forEach(el=>el.addEventListener('click',()=>showRecordToast(`${el.dataset.libraryPlaceholder}は次工程でAI整理と接続します`)));
 
     const backdrop=document.querySelector('[data-prep-backdrop]');if(backdrop){backdrop.addEventListener('pointerdown',e=>{if(e.target===backdrop)blockUnderlyingNavigation();},{capture:true,passive:false});backdrop.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();if(e.target===backdrop)closePrepSheet();},{passive:false});}
     const panel=document.querySelector('[data-prep-sheet-panel]'),zone=document.querySelector('[data-prep-drag-zone]');
@@ -1377,7 +1789,7 @@
   function render(){
     const modalOpen=anySheetOpen();
     document.getElementById('app').innerHTML=`<div class="appShell ${modalOpen?'hasModal':''}">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep012`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library05`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
     bindPrepActions();
     bindRecordActions();
