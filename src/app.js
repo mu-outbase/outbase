@@ -89,12 +89,16 @@
   ];
   let gearLibrary=readStored('outbase_gear_library_v1',defaultGearLibrary);
   let prepStore=readStored('outbase_prep_v1',{});
+  let prepCommonStore=readStored('outbase_prep_common_v1',{modules:{},updatedAt:0});
   let prepSheet='';
   let prepModuleId='';
   let prepSheetDrag=null;
   let modalTapBlockUntil=0;
-  if(previewMode==='prep01'||previewMode==='prep01-module') activePlanId='plan-akagi';
+  let navShieldTimer=null;
+  if(['prep01','prep01-module','prep011','prep012'].includes(previewMode)) activePlanId='plan-akagi';
   if(previewMode==='prep01-module'){prepSheet='module';prepModuleId='gear';}
+  if(previewMode==='prep012-common'){activePlanId='none';prepSheet='common-module';prepModuleId='cooking';}
+  if(previewMode==='prep012-none')activePlanId='none';
   if(previewMode==='plan-add'||previewMode==='plan011-add') planSheet='add';
   if(previewMode==='plan-detail'){planSheet='detail';selectedPlanId='plan-drive-13';}
   if(previewMode==='plan-list') planSheet='list';
@@ -201,7 +205,18 @@
     return rows.slice(0,12);
   }
   function anySheetOpen(){return Boolean(planSheet||prepSheet||recordSheet);}
-  function blockUnderlyingNavigation(ms=420){modalTapBlockUntil=Math.max(modalTapBlockUntil,Date.now()+ms);}
+  function blockUnderlyingNavigation(ms=720){
+    modalTapBlockUntil=Math.max(modalTapBlockUntil,Date.now()+ms);
+    let shield=document.getElementById('outbaseNavShield');
+    if(!shield){
+      shield=document.createElement('div');shield.id='outbaseNavShield';shield.setAttribute('aria-hidden','true');
+      const stop=e=>{e.preventDefault();e.stopImmediatePropagation();};
+      ['pointerdown','pointerup','click','touchstart','touchend'].forEach(type=>shield.addEventListener(type,stop,{capture:true,passive:false}));
+      document.body.appendChild(shield);
+    }
+    clearTimeout(navShieldTimer);
+    navShieldTimer=setTimeout(()=>{document.getElementById('outbaseNavShield')?.remove();},ms+40);
+  }
   function planTypeLabel(type){return type||'予定';}
   function planTypeSetting(name){return planTypes.find(t=>t.name===name)||null;}
   function planTone(plan){return plan.tone||planTypeSetting(plan.type)?.tone||'slate';}
@@ -532,8 +547,8 @@
   function header(){
     const saveTarget=active==='record'?`<button class="saveBar saveBarButton" data-open-sheet="target"><b>保存先：${recordTarget}</b><span>タップで変更</span></button>`:'';
     const current=activePlan(),candidateCount=activePlanCandidates().length;
-    const chipTitle=current?current.title:'主役予定なし';
-    const chipMeta=current?`${planTypeLabel(current.type)}&nbsp; / &nbsp;${planRangeLabel(current)}${candidateCount>1?`&nbsp; / &nbsp;他${candidateCount-1}件`:''}`:'タップして主役予定を選択';
+    const chipTitle=current?current.title:(active==='prep'?'準備ノート':'予定を選ぶ');
+    const chipMeta=current?`${planTypeLabel(current.type)}&nbsp; / &nbsp;${planRangeLabel(current)}${candidateCount>1?`&nbsp; / &nbsp;他${candidateCount-1}件`:''}`:(active==='prep'?'予定前の検討を保存':'タップして主役予定を選択');
     return `<header class="header ${active==='record'?'recordHeader':'compactHeader'}">
       <div class="topLine">
         <div class="brand"><div class="ob">OB</div><div><div class="brandName">OUTBASE</div><div class="brandSub">route design</div></div></div>
@@ -614,7 +629,7 @@
     const dragHeader=(eyebrow,title)=>`<div class="planSheetDragZone" data-plan-drag-zone><div class="sheetHandle"></div><small>${eyebrow}</small><h2>${title}</h2></div>`;
     if(planSheet==='switcher'){
       const current=activePlan(),rows=activePlanCandidates();
-      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planSwitcherSheet" data-plan-sheet-panel>${dragHeader('CURRENT PLAN','主役予定を切り替える')}<p class="planSwitcherLead">複数の予定は同時に保持されます。ここで選んだ1件だけを、今見ている準備・記録の主役にします。</p><div class="planSwitcherRows">${rows.map(p=>{const progress=prepProgress(p),isActive=current?.id===p.id;return `<button class="planSwitcherRow ${isActive?'active':''}" data-switch-active-plan="${p.id}"><i class="dot ${planTone(p)}"></i><div><small>${escapeHtml(planTypeLabel(p.type))} ・ ${escapeHtml(planRangeLabel(p))}</small><b>${escapeHtml(p.title)}</b><span>準備 ${progress.done}/${progress.total} ・ ${escapeHtml(planStatus(p))}</span></div><em>${isActive?'選択中':'選ぶ'}</em></button>`;}).join('')}<button class="planSwitcherRow none ${!current?'active':''}" data-switch-active-plan="none"><i></i><div><small>主役を外す</small><b>予定なし</b><span>共通ギア管理は引き続き使えます</span></div><em>${!current?'選択中':'選ぶ'}</em></button></div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-tab-from-switcher="plan">予定を確認</button></div></section></div>`;
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planSwitcherSheet" data-plan-sheet-panel>${dragHeader('CURRENT PLAN','主役予定を切り替える')}<p class="planSwitcherLead">複数の予定は同時に保持されます。ここで選んだ1件だけを、今見ている準備・記録の主役にします。</p><div class="planSwitcherRows">${rows.map(p=>{const progress=prepProgress(p),isActive=current?.id===p.id;return `<button class="planSwitcherRow ${isActive?'active':''}" data-switch-active-plan="${p.id}"><i class="dot ${planTone(p)}"></i><div><small>${escapeHtml(planTypeLabel(p.type))} ・ ${escapeHtml(planRangeLabel(p))}</small><b>${escapeHtml(p.title)}</b><span>準備 ${progress.done}/${progress.total} ・ ${escapeHtml(planStatus(p))}</span></div><em>${isActive?'選択中':'選ぶ'}</em></button>`;}).join('')}<button class="planSwitcherRow none ${!current?'active':''}" data-switch-active-plan="none"><i></i><div><small>予定に紐付けない</small><b>準備ノート</b><span>料理案や買物メモを予定前から保存</span></div><em>${!current?'選択中':'選ぶ'}</em></button></div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-tab-from-switcher="plan">予定を確認</button></div></section></div>`;
     }
     if(planSheet==='add'||planSheet==='edit'){
       const editing=planSheet==='edit'&&plan,draft=ensurePlanDraft(editing?plan:null);
@@ -666,6 +681,7 @@
 
   function persistPrepStore(){localStorage.setItem('outbase_prep_v1',JSON.stringify(prepStore));}
   function persistGearLibrary(){localStorage.setItem('outbase_gear_library_v1',JSON.stringify(gearLibrary));}
+  function persistPrepCommonStore(){prepCommonStore.updatedAt=Date.now();localStorage.setItem('outbase_prep_common_v1',JSON.stringify(prepCommonStore));}
   function prepModuleDefinitions(_plan){
     const library={
       weather:{id:'weather',icon:I.sun,title:'天気',sub:'雨・気温・風・警報',tasks:['降水と雨雲を確認','気温と暑さ・寒さを確認','風と警報・撤収判断を確認']},
@@ -675,6 +691,15 @@
       route:{id:'route',icon:I.route,title:'ルート',sub:'出発・休憩・駐車・到着',tasks:['出発時刻を決める','休憩・買い出し地点を確認','到着方法と駐車場を確認']}
     };
     return ['weather','gear','cooking','shopping','route'].map(id=>library[id]);
+  }
+  function prepCommonModuleDefinitions(){
+    return [
+      {id:'weather',icon:I.sun,title:'天気',sub:'候補地・季節の条件を保存',placeholder:'例：標高が高く夜は冷える'},
+      {id:'gear',icon:I.bag,title:'ギア',sub:'所有品を共通管理',placeholder:''},
+      {id:'cooking',icon:I.cup,title:'料理',sub:'献立案・レシピを保存',placeholder:'例：初日の夜はガーリックシュリンプ'},
+      {id:'shopping',icon:I.cart,title:'買物',sub:'買いたい物・不足品を保存',placeholder:'例：ブラータチーズを買う'},
+      {id:'route',icon:I.route,title:'ルート',sub:'候補地・経由地を保存',placeholder:'例：6:30出発、途中で道の駅'}
+    ];
   }
   function prepPlanBucket(plan){
     if(!prepStore[plan.id]) prepStore[plan.id]={modules:{},updatedAt:0};
@@ -690,11 +715,22 @@
     if(!Array.isArray(state.gearIds))state.gearIds=[];
     return state;
   }
+  function prepCommonState(moduleId){
+    if(!prepCommonStore.modules)prepCommonStore.modules={};
+    if(!prepCommonStore.modules[moduleId])prepCommonStore.modules[moduleId]={items:[],note:''};
+    const state=prepCommonStore.modules[moduleId];
+    if(!Array.isArray(state.items))state.items=[];
+    state.note=String(state.note||'');
+    return state;
+  }
   function prepModuleItems(plan,module){const state=prepModuleState(plan,module);return [...module.tasks,...state.customItems];}
   function prepProgress(plan){
     const modules=prepModuleDefinitions(plan);let done=0,total=0;
     modules.forEach(module=>{const items=prepModuleItems(plan,module),checked=prepModuleState(plan,module).checked;total+=items.length;done+=items.filter((_,i)=>checked.includes(i)).length;});
     return {done,total,percent:total?Math.round(done/total*100):0};
+  }
+  function prepCommonSavedCount(){
+    return prepCommonModuleDefinitions().reduce((sum,module)=>sum+(module.id==='gear'?0:prepCommonState(module.id).items.length),0);
   }
   function syncPlanPrepStatus(plan){
     const progress=prepProgress(plan);let status='未着手';
@@ -709,30 +745,45 @@
     const foot=complete?'確認済み':module.id==='gear'&&gearCount?`今回 ${gearCount}点を選択`:next?`次：${next}`:'未着手';
     return `<button class="prepModuleCard ${complete?'complete':''}" style="--module-progress:${percent}%" data-prep-module="${module.id}"><div class="prepModuleIcon">${module.icon}</div><div class="prepModuleCopy"><h3>${escapeHtml(module.title)}</h3><small>${escapeHtml(module.sub)}</small><span>${escapeHtml(foot)}</span></div><span class="prepModuleCount">${done}/${items.length}</span><b>${complete?'✓':'›'}</b></button>`;
   }
+  function prepCommonCard(module){
+    const state=prepCommonState(module.id),count=module.id==='gear'?gearLibrary.length:state.items.length;
+    const foot=module.id==='gear'?`所有 ${gearLibrary.length}点を管理`:count?`保存 ${count}件`:'タップして検討を保存';
+    return `<button class="prepModuleCard prepCommonCard" data-prep-common-module="${module.id}"><div class="prepModuleIcon">${module.icon}</div><div class="prepModuleCopy"><h3>${escapeHtml(module.title)}</h3><small>${escapeHtml(module.sub)}</small><span>${escapeHtml(foot)}</span></div><span class="prepModuleCount">${count}</span><b>›</b></button>`;
+  }
+  function prepCommandBar(plan,candidateCount){
+    return `<div class="prepCommandBar"><button data-open-plan-switcher><span>${I.calendar}</span><div><small>${plan?'主役予定':'予定との紐付け'}</small><b>${plan?`${candidateCount}件から切替`:'予定を選ぶ'}</b></div><em>›</em></button><button data-open-gear-manager><span>${I.bag}</span><div><small>共通ギア</small><b>${gearLibrary.length}点を管理</b></div><em>›</em></button></div>`;
+  }
   function prepPage(){
     const plan=activePlan(),candidateCount=activePlanCandidates().length;
-    if(!plan)return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepEmpty prepEmpty01"><h1>準備</h1><p>主役予定を選ぶと、天気・ギア・料理・買物・ルートを表示します。</p><div><button data-open-plan-switcher>主役予定を選ぶ</button><button data-open-gear-manager>共通ギア管理</button></div></section></section>`;
+    if(!plan){
+      const modules=prepCommonModuleDefinitions(),saved=prepCommonSavedCount();
+      return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepHero prepHero01 prepNotebookHero"><img src="assets/prep_hero_art.png" alt=""><div class="prepHeroCopy"><small>PREPARATION NOTE</small><h1>準備</h1><p>予定前の準備ノート</p><span>料理案・買物メモ・ルート候補を先に保存</span></div><div class="prepNotebookStat"><b>${saved}</b><span>保存</span></div></section>${prepCommandBar(null,candidateCount)}<div class="prepSectionHead compact"><div><small>COMMON NOTE</small><h2>準備アイデア</h2></div><span>${saved}件</span></div><div class="prepModuleGrid compact">${modules.map(prepCommonCard).join('')}</div></section>`;
+    }
     const modules=prepModuleDefinitions(plan),progress=prepProgress(plan),status=prepStatusLabel(plan),days=Math.ceil((parseYmd(plan.start)-new Date(new Date().setHours(0,0,0,0)))/86400000),dayText=days>0?`あと${days}日`:days===0?'今日':days===-1?'昨日':'開始済み';
-    return `<section class="page ${active==='prep'?'active':''}" id="page-prep">
-      <section class="prepHero prepHero01" data-prep-plan-detail><img src="assets/prep_hero_art.png" alt=""><div class="prepHeroCopy"><small>PREPARATION</small><h1>準備</h1><p>${escapeHtml(plan.title)}</p><span>${escapeHtml(dayText)} ・ ${escapeHtml(planRangeLabel(plan))}</span></div><div class="prepPercent" style="--prep:${progress.percent}"><b>${progress.percent}<small>%</small></b><span>${escapeHtml(status)}</span></div><em class="prepHeroLink">予定詳細&nbsp;›</em></section>
-      <div class="prepQuickBar"><button data-open-plan-switcher><span>${I.calendar}</span><div><small>同時進行</small><b>${candidateCount}件・主役を切替</b></div><em>›</em></button><button data-open-gear-manager><span>${I.bag}</span><div><small>共通</small><b>ギア管理 ${gearLibrary.length}点</b></div><em>›</em></button></div>
-      <div class="prepSectionHead compact"><div><small>${escapeHtml(status)}</small><h2>準備項目</h2></div><span>${progress.done}/${progress.total}</span></div>
-      <div class="prepModuleGrid compact">${modules.map(module=>prepCard(plan,module)).join('')}</div>
-    </section>`;
+    return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepHero prepHero01" data-prep-plan-detail><img src="assets/prep_hero_art.png" alt=""><div class="prepHeroCopy"><small>PREPARATION</small><h1>準備</h1><p>${escapeHtml(plan.title)}</p><span>${escapeHtml(dayText)} ・ ${escapeHtml(planRangeLabel(plan))}</span></div><div class="prepPercent" style="--prep:${progress.percent}"><b>${progress.percent}<small>%</small></b><span>${escapeHtml(status)}</span></div><em class="prepHeroLink">予定詳細&nbsp;›</em></section>${prepCommandBar(plan,candidateCount)}<div class="prepSectionHead compact"><div><small>${escapeHtml(status)}</small><h2>準備項目</h2></div><span>${progress.done}/${progress.total}</span></div><div class="prepModuleGrid compact">${modules.map(module=>prepCard(plan,module)).join('')}</div></section>`;
   }
   function gearManagerMarkup(plan){
     const gearModule=prepModuleDefinitions(plan)[1],selected=plan?prepModuleState(plan,gearModule).gearIds:[],categories=['テント','タープ','寝具','テーブル','キッチン','照明','電源','冷蔵','収納','ペット','その他'],conditions=['使用可','点検','修理','買替'];
-    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet gearManagerSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>GEAR LIBRARY</small><h2>共通ギア管理</h2><p>所有 ${gearLibrary.length}点${plan?` ・ ${escapeHtml(plan.title)}へ ${selected.length}点選択`:''}</p></div>${!plan?'<p class="gearManagerNotice">主役予定なしでも所有ギアの追加・編集はできます。</p>':''}<div class="gearManagerRows">${gearLibrary.map(g=>`<article class="gearManagerRow ${selected.includes(g.id)?'selected':''}" data-gear-row="${g.id}"><div class="gearManagerTop"><button data-toggle-gear-plan="${g.id}" ${plan?'':'disabled'}>${selected.includes(g.id)?'今回から外す':'今回に追加'}</button><input value="${escapeHtml(g.name)}" data-gear-name="${g.id}" aria-label="ギア名"><button class="gearDelete" data-delete-gear="${g.id}">×</button></div><div class="gearManagerMeta"><select data-gear-category="${g.id}">${categories.map(c=>`<option value="${c}" ${g.category===c?'selected':''}>${c}</option>`).join('')}</select><label>数量<input type="number" min="1" max="99" value="${Number(g.quantity)||1}" data-gear-quantity="${g.id}"></label><input value="${escapeHtml(g.storage||'')}" placeholder="保管場所" data-gear-storage="${g.id}"><select data-gear-condition="${g.id}">${conditions.map(c=>`<option value="${c}" ${g.condition===c?'selected':''}>${c}</option>`).join('')}</select></div></article>`).join('')}</div><div class="gearAddBox"><h3>ギアを追加</h3><div><input id="newGearName" placeholder="ギア名"><select id="newGearCategory">${categories.map(c=>`<option value="${c}">${c}</option>`).join('')}</select><input id="newGearQuantity" type="number" min="1" max="99" value="1"><button data-add-gear>追加</button></div></div><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div></section></div>`;
+    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet gearManagerSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>GEAR LIBRARY</small><h2>共通ギア管理</h2><p>所有 ${gearLibrary.length}点${plan?` ・ ${escapeHtml(plan.title)}へ ${selected.length}点選択`:' ・ 予定なしでも編集可能'}</p></div><div class="gearManagerRows">${gearLibrary.map(g=>`<article class="gearManagerRow ${selected.includes(g.id)?'selected':''}" data-gear-row="${g.id}"><div class="gearManagerTop"><button data-toggle-gear-plan="${g.id}" ${plan?'':'disabled'}>${selected.includes(g.id)?'今回から外す':'今回に追加'}</button><input value="${escapeHtml(g.name)}" data-gear-name="${g.id}" aria-label="ギア名"><button class="gearDelete" data-delete-gear="${g.id}">×</button></div><div class="gearManagerMeta"><select data-gear-category="${g.id}">${categories.map(c=>`<option value="${c}" ${g.category===c?'selected':''}>${c}</option>`).join('')}</select><label>数量<input type="number" min="1" max="99" value="${Number(g.quantity)||1}" data-gear-quantity="${g.id}"></label><input value="${escapeHtml(g.storage||'')}" placeholder="保管場所" data-gear-storage="${g.id}"><select data-gear-condition="${g.id}">${conditions.map(c=>`<option value="${c}" ${g.condition===c?'selected':''}>${c}</option>`).join('')}</select></div></article>`).join('')}</div><div class="gearAddBox"><h3>ギアを追加</h3><div><input id="newGearName" placeholder="ギア名"><select id="newGearCategory">${categories.map(c=>`<option value="${c}">${c}</option>`).join('')}</select><input id="newGearQuantity" type="number" min="1" max="99" value="1"><button data-add-gear>追加</button></div></div><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div></section></div>`;
+  }
+  function prepCommonSheetMarkup(module){
+    const state=prepCommonState(module.id),plan=activePlan(),items=state.items;
+    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet prepDetailSheet prepCommonSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>PREPARATION NOTE</small><h2>${escapeHtml(module.title)}ノート</h2><p>予定を決める前の検討を保存${plan?` ・ ${escapeHtml(plan.title)}へ追加可能`:''}</p></div><div class="commonIdeaList">${items.length?items.map((item,index)=>`<div class="commonIdeaRow"><span>${escapeHtml(item)}</span><div>${plan?`<button data-common-use="${index}">今回に追加</button>`:''}<button data-common-remove="${index}">削除</button></div></div>`).join(''):`<div class="commonIdeaEmpty"><b>まだ保存はありません</b><span>${escapeHtml(module.placeholder||'検討内容を追加してください')}</span></div>`}</div><div class="prepAddRow commonAddRow"><input id="prepCommonNewItem" placeholder="${escapeHtml(module.placeholder||'検討内容を追加')}"><button data-common-add>保存</button></div><label class="prepNoteField"><span>まとめメモ</span><textarea id="prepCommonNote" placeholder="比較したことや判断理由を残す">${escapeHtml(state.note)}</textarea></label><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div></section></div>`;
   }
   function prepSheetMarkup(){
     if(!prepSheet)return '';
     const plan=activePlan();
     if(prepSheet==='gear-manager')return gearManagerMarkup(plan);
+    if(prepSheet==='common-module'){
+      const module=prepCommonModuleDefinitions().find(x=>x.id===prepModuleId);return module?prepCommonSheetMarkup(module):'';
+    }
     const module=plan?prepModuleDefinitions(plan).find(x=>x.id===prepModuleId):null;if(!plan||!module)return '';
     const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,allDone=items.length&&done===items.length;
     const selectedGear=module.id==='gear'?state.gearIds.map(id=>gearLibrary.find(g=>g.id===id)).filter(Boolean):[];
-    const action=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所と駐車場を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:module.id==='gear'?`<button class="prepExternalAction" data-open-gear-manager>${I.bag}<span><b>共通ギア管理を開く</b><small>${selectedGear.length?`今回 ${selectedGear.length}点：${selectedGear.slice(0,2).map(g=>g.name).join('・')}${selectedGear.length>2?'ほか':''}`:'所有ギアから今回の持出しを選ぶ'}</small></span><em>›</em></button>`:'';
-    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet prepDetailSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>PREPARATION</small><h2>${escapeHtml(module.title)}</h2><p>${escapeHtml(module.sub)} ・ ${done}/${items.length}完了</p></div><div class="prepChecklist">${items.map((item,index)=>`<div class="prepCheckRow ${state.checked.includes(index)?'checked':''}"><button data-prep-check="${index}"><i>${state.checked.includes(index)?'✓':''}</i><span>${escapeHtml(item)}</span></button>${index>=module.tasks.length?`<button class="prepRemoveItem" data-prep-remove="${index}">×</button>`:''}</div>`).join('')}</div><div class="prepAddRow"><input id="prepNewItem" placeholder="この予定だけの項目を追加"><button data-prep-add>追加</button></div>${action}<label class="prepNoteField"><span>メモ</span><textarea id="prepModuleNote" placeholder="確認したことや当日の注意点">${escapeHtml(state.note||'')}</textarea></label><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-prep-mark-all>${allDone?'未完了に戻す':'この項目を完了'}</button></div></section></div>`;
+    const commonCount=module.id==='gear'?0:prepCommonState(module.id).items.length;
+    const primaryAction=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所と駐車場を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:module.id==='gear'?`<button class="prepExternalAction" data-open-gear-manager>${I.bag}<span><b>共通ギア管理を開く</b><small>${selectedGear.length?`今回 ${selectedGear.length}点：${selectedGear.slice(0,2).map(g=>g.name).join('・')}${selectedGear.length>2?'ほか':''}`:'所有ギアから今回の持出しを選ぶ'}</small></span><em>›</em></button>`:'';
+    const noteAction=module.id!=='gear'?`<button class="prepExternalAction prepNoteAction" data-open-common-module="${module.id}">${module.icon}<span><b>${escapeHtml(module.title)}ノートを開く</b><small>予定前から保存した案 ${commonCount}件</small></span><em>›</em></button>`:'';
+    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet prepDetailSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>PREPARATION</small><h2>${escapeHtml(module.title)}</h2><p>${escapeHtml(module.sub)} ・ ${done}/${items.length}完了</p></div><div class="prepChecklist">${items.map((item,index)=>`<div class="prepCheckRow ${state.checked.includes(index)?'checked':''}"><button data-prep-check="${index}"><i>${state.checked.includes(index)?'✓':''}</i><span>${escapeHtml(item)}</span></button>${index>=module.tasks.length?`<button class="prepRemoveItem" data-prep-remove="${index}">×</button>`:''}</div>`).join('')}</div><div class="prepAddRow"><input id="prepNewItem" placeholder="この予定だけの項目を追加"><button data-prep-add>追加</button></div>${primaryAction}${noteAction}<label class="prepNoteField"><span>メモ</span><textarea id="prepModuleNote" placeholder="確認したことや当日の注意点">${escapeHtml(state.note||'')}</textarea></label><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-prep-mark-all>${allDone?'未完了に戻す':'この項目を完了'}</button></div></section></div>`;
   }
 
   function recordPage(){
@@ -1134,7 +1185,7 @@
     });
     document.querySelectorAll('[data-open-plan-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();recordSheet='';prepSheet='';prepModuleId='';planSheet='switcher';render();}));
     document.querySelectorAll('[data-switch-active-plan]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activePlanId=el.dataset.switchActivePlan||'none';persistPlans();blockUnderlyingNavigation(250);planSheet='';render();}));
-    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep011`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep012`);render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-id]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectedPlanId=el.dataset.planId;planDraft=null;planSheet='detail';render();}));
     document.querySelectorAll('[data-open-plan-add]').forEach(el=>el.addEventListener('click',()=>{openPlanEditor(null);render();}));
     document.querySelectorAll('[data-open-plan-list]').forEach(el=>el.addEventListener('click',()=>{planSheet='list';render();}));
@@ -1205,12 +1256,19 @@
   }
 
   function closePrepSheet(){
-    const note=document.getElementById('prepModuleNote'),plan=activePlan(),module=plan?prepModuleDefinitions(plan).find(x=>x.id===prepModuleId):null;
-    if(note&&plan&&module){prepModuleState(plan,module).note=note.value;syncPlanPrepStatus(plan);}
+    const plan=activePlan();
+    if(prepSheet==='common-module'){
+      const note=document.getElementById('prepCommonNote');if(note){prepCommonState(prepModuleId).note=note.value;persistPrepCommonStore();}
+    }else{
+      const note=document.getElementById('prepModuleNote'),module=plan?prepModuleDefinitions(plan).find(x=>x.id===prepModuleId):null;
+      if(note&&plan&&module){prepModuleState(plan,module).note=note.value;syncPlanPrepStatus(plan);}
+    }
     blockUnderlyingNavigation();prepSheet='';prepModuleId='';render();
   }
   function bindPrepActions(){
     document.querySelectorAll('[data-prep-module]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();prepModuleId=el.dataset.prepModule;prepSheet='module';render();}));
+    document.querySelectorAll('[data-prep-common-module]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const id=el.dataset.prepCommonModule;if(id==='gear'){prepSheet='gear-manager';prepModuleId='';}else{prepSheet='common-module';prepModuleId=id;}render();}));
+    document.querySelectorAll('[data-open-common-module]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();prepSheet='common-module';prepModuleId=el.dataset.openCommonModule;render();}));
     document.querySelectorAll('[data-open-gear-manager]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();prepSheet='gear-manager';render();}));
     const detail=document.querySelector('[data-prep-plan-detail]');if(detail)detail.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;selectedPlanId=plan.id;planSheet='detail';prepSheet='';render();});
     document.querySelectorAll('[data-close-prep-sheet]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closePrepSheet();}));
@@ -1220,7 +1278,12 @@
     const note=document.getElementById('prepModuleNote');if(note)note.addEventListener('input',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;prepModuleState(plan,module).note=note.value;persistPrepStore();});
     const all=document.querySelector('[data-prep-mark-all]');if(all)all.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),complete=items.length&&items.every((_,i)=>state.checked.includes(i));state.checked=complete?[]:items.map((_,i)=>i);syncPlanPrepStatus(plan);render();});
     const copy=document.querySelector('[data-prep-copy]');if(copy)copy.addEventListener('click',async()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),text=[`${plan.title}｜${module.title}`,...prepModuleItems(plan,module).filter((_,i)=>!state.checked.includes(i)).map(x=>`□ ${x}`)].join('\n');try{await navigator.clipboard.writeText(text);showRecordToast('未完了項目をコピーしました');}catch(_e){showRecordToast('コピーできませんでした');}});
-    document.querySelectorAll('[data-prep-external]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),kind=el.dataset.prepExternal;if(kind==='route'){const q=encodeURIComponent(plan.location||plan.title);window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank','noopener');}else if(kind==='weather'){const q=encodeURIComponent(`${plan.location||plan.title} 天気`);window.open(`https://www.google.com/search?q=${q}`,'_blank','noopener');}}));
+    document.querySelectorAll('[data-prep-external]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),kind=el.dataset.prepExternal;if(!plan)return;if(kind==='route'){const q=encodeURIComponent(plan.location||plan.title);window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank','noopener');}else if(kind==='weather'){const q=encodeURIComponent(`${plan.location||plan.title} 天気`);window.open(`https://www.google.com/search?q=${q}`,'_blank','noopener');}}));
+
+    const commonAdd=document.querySelector('[data-common-add]');if(commonAdd)commonAdd.addEventListener('click',()=>{const input=document.getElementById('prepCommonNewItem'),text=input?.value.trim();if(!text||!prepModuleId)return;const state=prepCommonState(prepModuleId);state.items.push(text);persistPrepCommonStore();render();});
+    document.querySelectorAll('[data-common-remove]').forEach(el=>el.addEventListener('click',()=>{const state=prepCommonState(prepModuleId),index=Number(el.dataset.commonRemove);if(index<0||index>=state.items.length)return;state.items.splice(index,1);persistPrepCommonStore();render();}));
+    document.querySelectorAll('[data-common-use]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),commonModule=prepCommonModuleDefinitions().find(x=>x.id===prepModuleId),module=plan?prepModuleDefinitions(plan).find(x=>x.id===prepModuleId):null,state=prepCommonState(prepModuleId),item=state.items[Number(el.dataset.commonUse)];if(!plan||!module||!item)return;const target=prepModuleState(plan,module);if(!target.customItems.includes(item))target.customItems.push(item);syncPlanPrepStatus(plan);showRecordToast(`「${item}」を今回の${commonModule?.title||'準備'}へ追加しました`);render();}));
+    const commonNote=document.getElementById('prepCommonNote');if(commonNote)commonNote.addEventListener('input',()=>{prepCommonState(prepModuleId).note=commonNote.value;persistPrepCommonStore();});
 
     document.querySelectorAll('[data-toggle-gear-plan]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;const module=prepModuleDefinitions(plan)[1],state=prepModuleState(plan,module),id=el.dataset.toggleGearPlan;state.gearIds=state.gearIds.includes(id)?state.gearIds.filter(x=>x!==id):[...state.gearIds,id];persistPrepStore();render();}));
     const addGear=document.querySelector('[data-add-gear]');if(addGear)addGear.addEventListener('click',()=>{const name=document.getElementById('newGearName')?.value.trim();if(!name)return;gearLibrary.push({id:newId('gear'),name,category:document.getElementById('newGearCategory')?.value||'その他',quantity:Math.max(1,Number(document.getElementById('newGearQuantity')?.value)||1),storage:'',condition:'使用可',memo:''});persistGearLibrary();render();});
@@ -1228,7 +1291,7 @@
     const gearFields=['name','category','quantity','storage','condition'];
     gearFields.forEach(field=>document.querySelectorAll(`[data-gear-${field}]`).forEach(el=>el.addEventListener('change',()=>{const row=gearLibrary.find(g=>g.id===el.dataset[`gear${field[0].toUpperCase()+field.slice(1)}`]);if(!row)return;row[field]=field==='quantity'?Math.max(1,Number(el.value)||1):el.value.trim();persistGearLibrary();})));
 
-    const backdrop=document.querySelector('[data-prep-backdrop]');if(backdrop)backdrop.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();if(e.target===backdrop)closePrepSheet();});
+    const backdrop=document.querySelector('[data-prep-backdrop]');if(backdrop){backdrop.addEventListener('pointerdown',e=>{if(e.target===backdrop)blockUnderlyingNavigation();},{capture:true,passive:false});backdrop.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();if(e.target===backdrop)closePrepSheet();},{passive:false});}
     const panel=document.querySelector('[data-prep-sheet-panel]'),zone=document.querySelector('[data-prep-drag-zone]');
     if(panel&&zone){
       const finish=e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;const dy=Math.max(0,e.clientY-prepSheetDrag.y);panel.classList.remove('dragging');panel.style.transition='transform .2s ease';if(dy>72){panel.style.transform='translateY(110%)';blockUnderlyingNavigation();setTimeout(closePrepSheet,150);}else{panel.style.transform='';setTimeout(()=>{panel.style.transition='';},210);}prepSheetDrag=null;};
@@ -1314,12 +1377,16 @@
   function render(){
     const modalOpen=anySheetOpen();
     document.getElementById('app').innerHTML=`<div class="appShell ${modalOpen?'hasModal':''}">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep011`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep012`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
     bindPrepActions();
     bindRecordActions();
     initializeRecordRuntime();
   }
+
+  ['pointerdown','pointerup','click'].forEach(type=>document.addEventListener(type,e=>{
+    if((anySheetOpen()||Date.now()<modalTapBlockUntil)&&e.target.closest?.('.bottomNav')){e.preventDefault();e.stopImmediatePropagation();}
+  },{capture:true,passive:false}));
 
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(recordSessionState==='active'){keepScreenAwake();startGeoWatch();}checkPlanReminders();}});
   render();

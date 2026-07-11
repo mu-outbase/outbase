@@ -1,0 +1,48 @@
+{
+  "no_plan_text": "PREPARATION NOTE\n準備\n\n予定前の準備ノート\n\n料理案・買物メモ・ルート候補を先に保存\n0\n保存\n予定との紐付け\n予定を選ぶ\n›\n共通ギア\n6点を管理\n›\nCOMMON NOTE\n準備アイデア\n0件\n天気\n候補地・季節の条件を保存\nタップして検討を保存\n0\n›\nギア\n所有品を共通管理\n所有 6点を管理\n6\n›\n料理\n献立案・レシピを保存\nタップして検討を保存\n0\n›\n買物\n買いたい物・不足品を保存\nタップして検討を保存\n0\n›\nルート\n候補地・経由地を保存\nタップして検討を保存\n0\n›",
+  "no_plan_layout": {
+    "doc": 768,
+    "nav": 694,
+    "last": 604
+  },
+  "common_saved": [
+    "初日の夜はガーリックシュリンプ\n削除"
+  ],
+  "common_store": {
+    "modules": {
+      "weather": {
+        "items": [],
+        "note": ""
+      },
+      "cooking": {
+        "items": [
+          "初日の夜はガーリックシュリンプ"
+        ],
+        "note": ""
+      },
+      "shopping": {
+        "items": [],
+        "note": ""
+      },
+      "route": {
+        "items": [],
+        "note": ""
+      },
+      "gear": {
+        "items": [],
+        "note": ""
+      }
+    },
+    "updatedAt": 1783775180678
+  },
+  "tab_after_close": "prep",
+  "shield_exists": 1,
+  "shield_removed": true,
+  "errors_no_plan": [],
+  "plan_cooking_note_action": 1,
+  "use_button": 1,
+  "linked_item": [
+    "初日の夜はガーリックシュリンプ"
+  ],
+  "errors_plan": []
+}
