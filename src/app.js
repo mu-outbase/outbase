@@ -183,6 +183,7 @@
   let libraryRelationFilter='すべて';
   let libraryStockFilter='すべて';
   let libraryEventFilter='すべて';
+  let libraryScrollPositions={};
   let prepStore=readStored('outbase_prep_v1',{});
   let prepCommonStore=readStored('outbase_prep_common_v1',{modules:{},updatedAt:0});
   let prepSheet='';
@@ -1053,7 +1054,7 @@
   }
   function gearLibraryPanel(plan){
     const body=libraryGearView==='dashboard'?gearDashboardMarkup(plan):libraryGearView==='kits'?gearKitsMarkup(plan):libraryGearView==='customs'?gearCustomsMarkup():libraryGearView==='stock'?gearStockMarkup():libraryGearView==='lifecycle'?gearLifecycleMarkup():libraryGearView==='relations'?gearRelationsMarkup():gearItemsMarkup(plan);
-    return `<section class="libraryPanel gearLibraryPanel">${gearSystemHero()}${gearModeMarkup()}${body}</section>`;
+    return `<section class="libraryPanel gearLibraryPanel">${gearSystemHero()}${body}</section>`;
   }
   function mobilityLibraryPanel(){
     return `<section class="libraryPanel entityLibraryPanel"><div class="entityHero mobilityHero"><div>${I.car}</div><span><small>MOBILITY GARAGE</small><b>移動手段</b><p>積載・散歩・走行記録へ共通接続</p></span><strong>${mobilityLibrary.length}</strong></div><div class="libraryActionLine"><span>車・自転車・バイクを登録</span><button data-library-add="mobility">＋登録</button></div><div class="libraryCardRows">${mobilityLibrary.map(m=>`<button class="libraryEntityCard" data-library-edit="mobility" data-library-id="${m.id}"><i>${m.type==='自転車'?I.bike:I.car}</i><div><small>${escapeHtml(m.type)}${m.primary?' ・ PRIMARY':''}</small><b>${escapeHtml(m.name)}</b><span>${escapeHtml([m.maker,m.model,m.color].filter(Boolean).join(' / ')||'メーカー・型式未登録')}</span><em>${escapeHtml(m.storage||'保管場所未設定')} ・ ${escapeHtml(m.condition||'使用可')}</em></div><strong>›</strong></button>`).join('')||`<div class="libraryEmpty">車・自転車はまだありません</div>`}</div></section>`;
@@ -1105,9 +1106,12 @@
     const title={gear:'ギア',kit:'セット',custom:'カスタム構成',event:'履歴',mobility:'車・自転車',pet:'ペット',storage:'保管場所'}[libraryEditorType];
     return `<div class="libraryEditorBackdrop"><section class="libraryEditor"><div class="libraryEditorHead"><div><small>${isNew?'NEW ENTRY':'EDIT ENTRY'}</small><h3>${title}${isNew?'を追加':'を編集'}</h3></div><button data-library-editor-close>×</button></div><div class="libraryEditorBody">${fields}</div><div class="libraryEditorActions">${!isNew?`<button class="danger" data-library-delete>削除</button>`:'<span></span>'}<button data-library-editor-close>キャンセル</button><button class="primary" data-library-save>保存</button></div></section></div>`;
   }
+  function libraryScrollKey(){return `${libraryTab}:${libraryTab==='gear'?libraryGearView:'main'}`;}
+  function rememberLibraryScroll(){const el=document.querySelector('.libraryPageScroll');if(el)libraryScrollPositions[libraryScrollKey()]=el.scrollTop;}
+  function restoreLibraryScroll(){const el=document.querySelector('.libraryPageScroll');if(el)el.scrollTop=Number(libraryScrollPositions[libraryScrollKey()]||0);}
   function gearManagerMarkup(plan){
     const c=libraryCounts(),panel=libraryTab==='gear'?gearLibraryPanel(plan):libraryTab==='mobility'?mobilityLibraryPanel():libraryTab==='pets'?petLibraryPanel():libraryTab==='storage'?storageLibraryPanel():transferLibraryPanel();
-    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet gearManagerSheet librarySheet library02 library03 library04 library05" data-prep-sheet-panel><div class="prepSheetDragZone libraryHead" data-prep-drag-zone><div class="sheetHandle"></div><small>OUTBASE ASSET LIBRARY</small><h2>共通台帳</h2><p>${c.gearRows}種類 / ${c.gear}点 ・ ${c.customs}カスタム ・ ${c.stockRows}在庫品 ・ ${c.events}履歴</p></div>${libraryTabsMarkup()}${panel}<div class="sheetActions librarySheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div>${libraryEditorMarkup()}</section></div>`;
+    return `<div class="libraryPageBackdrop" data-prep-backdrop><section class="libraryPage library02 library03 library04 library05 library06" data-prep-sheet-panel><header class="libraryPageHeader"><div><small>OUTBASE ASSETS</small><h2>資産</h2><p>${c.gearRows}種類・${c.gear}点　補充${c.lowStock}　履歴${c.events}</p></div><button class="libraryPageClose" data-close-prep-sheet aria-label="資産を閉じる">×</button></header><div class="libraryPageSticky">${libraryTabsMarkup()}${libraryTab==='gear'?gearModeMarkup():''}</div><div class="libraryPageScroll">${panel}<div class="libraryPageBottomSpace"></div></div>${libraryEditorMarkup()}</section></div>`;
   }
   function prepCommonSheetMarkup(module){
     const state=prepCommonState(module.id),plan=activePlan(),items=state.items;
@@ -1528,7 +1532,7 @@
     });
     document.querySelectorAll('[data-open-plan-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();recordSheet='';prepSheet='';prepModuleId='';planSheet='switcher';render();}));
     document.querySelectorAll('[data-switch-active-plan]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activePlanId=el.dataset.switchActivePlan||'none';persistPlans();blockUnderlyingNavigation(250);planSheet='';render();}));
-    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library05`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library06`);render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-id]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectedPlanId=el.dataset.planId;planDraft=null;planSheet='detail';render();}));
     document.querySelectorAll('[data-open-plan-add]').forEach(el=>el.addEventListener('click',()=>{openPlanEditor(null);render();}));
     document.querySelectorAll('[data-open-plan-list]').forEach(el=>el.addEventListener('click',()=>{planSheet='list';render();}));
@@ -1629,9 +1633,9 @@
     const commonNote=document.getElementById('prepCommonNote');if(commonNote)commonNote.addEventListener('input',()=>{prepCommonState(prepModuleId).note=commonNote.value;persistPrepCommonStore();});
 
     document.querySelectorAll('[data-toggle-gear-plan]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;const module=prepModuleDefinitions(plan)[1],state=prepModuleState(plan,module),id=el.dataset.toggleGearPlan;state.gearIds=state.gearIds.includes(id)?state.gearIds.filter(x=>x!==id):[...state.gearIds,id];persistPrepStore();render();}));
-    document.querySelectorAll('[data-library-tab]').forEach(el=>el.addEventListener('click',()=>{libraryTab=el.dataset.libraryTab;libraryCloseEditor();persistLibraryTab();render();}));
-    document.querySelectorAll('[data-library-gear-view]').forEach(el=>el.addEventListener('click',()=>{libraryGearView=el.dataset.libraryGearView;persistLibraryGearView();libraryCloseEditor();render();}));
-    document.querySelectorAll('[data-dashboard-jump]').forEach(el=>el.addEventListener('click',()=>{libraryGearView=el.dataset.dashboardJump||'dashboard';persistLibraryGearView();libraryCloseEditor();render();}));
+    document.querySelectorAll('[data-library-tab]').forEach(el=>el.addEventListener('click',()=>{rememberLibraryScroll();libraryTab=el.dataset.libraryTab;libraryCloseEditor();persistLibraryTab();render();}));
+    document.querySelectorAll('[data-library-gear-view]').forEach(el=>el.addEventListener('click',()=>{rememberLibraryScroll();libraryGearView=el.dataset.libraryGearView;persistLibraryGearView();libraryCloseEditor();render();}));
+    document.querySelectorAll('[data-dashboard-jump]').forEach(el=>el.addEventListener('click',()=>{rememberLibraryScroll();libraryGearView=el.dataset.dashboardJump||'dashboard';persistLibraryGearView();libraryCloseEditor();render();}));
     document.querySelectorAll('[data-library-add]').forEach(el=>el.addEventListener('click',()=>{libraryOpenEditor(el.dataset.libraryAdd,'');render();}));
     document.querySelectorAll('[data-library-edit]').forEach(el=>el.addEventListener('click',()=>{libraryOpenEditor(el.dataset.libraryEdit,el.dataset.libraryId||'');render();}));
     document.querySelectorAll('[data-library-editor-close]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();libraryCloseEditor();render();}));
@@ -1789,11 +1793,12 @@
   function render(){
     const modalOpen=anySheetOpen();
     document.getElementById('app').innerHTML=`<div class="appShell ${modalOpen?'hasModal':''}">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library05`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library06`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
     bindPrepActions();
     bindRecordActions();
     initializeRecordRuntime();
+    if(prepSheet==='gear-manager')setTimeout(restoreLibraryScroll,0);
   }
 
   ['pointerdown','pointerup','click'].forEach(type=>document.addEventListener(type,e=>{
