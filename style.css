@@ -833,3 +833,35 @@ main{padding:9px 12px 0}.page{display:none}.page.active{display:block}
   .library07 .libraryPageSticky .gearModeTabs{grid-template-columns:repeat(3,minmax(0,1fr))}
   .library07 .libraryPageSticky .libraryTabs button,.library07 .libraryPageSticky .gearModeTabs button{font-size:12px}
 }
+
+/* Library-08: compact one-screen overview and editor readability */
+.library08 .libraryPage{grid-template-rows:auto auto minmax(0,1fr)}
+.library08 .libraryPageHeader{min-height:64px;padding:10px 14px 8px}
+.library08 .libraryPageHeader small{font-size:8px;letter-spacing:.13em}
+.library08 .libraryPageHeader h2{font-size:23px;margin:1px 0 2px}
+.library08 .libraryPageHeader p{font-size:11px}
+.library08 .libraryPageClose{width:38px;height:38px;font-size:22px}
+.library08 .libraryPageSticky .libraryTabs{gap:5px;padding:6px 14px 4px}
+.library08 .libraryPageSticky .libraryTabs button{height:36px;border-radius:11px;font-size:12px;padding:0 5px;gap:4px}
+.library08 .libraryPageSticky .libraryTabs button i{width:16px;height:16px}
+.library08 .libraryPageSticky .libraryTabs button b{min-width:18px;height:18px;font-size:10px}
+.library08 .libraryPageSticky .gearModeTabs{gap:5px;padding:3px 14px 6px}
+.library08 .libraryPageSticky .gearModeTabs button{height:33px;border-radius:10px;font-size:12px;padding:0 3px}
+.library08 .libraryPanel{padding:10px 14px 6px}
+.library08 .gearSystemHero{min-height:104px;padding:14px;margin-bottom:10px}
+.library08 .gearSystemCopy h3{font-size:20px!important}.library08 .gearSystemCopy p{font-size:12px!important}.library08 .gearSystemStats b{font-size:20px!important}.library08 .gearSystemStats span{font-size:11px!important}
+.library08 .compactOverview{display:grid;gap:10px;padding:0}
+.library08 .assetOverviewTop{display:grid;grid-template-columns:1fr auto;gap:8px}
+.library08 .assetQuickSearch{height:42px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #ddd8cd;border-radius:13px;background:#fff;color:#9b8351}.library08 .assetQuickSearch svg{width:18px}.library08 .assetQuickSearch input{width:100%;border:0;outline:0;background:transparent;font-size:14px;color:#20342b}
+.library08 .assetOverviewTop>button{border:0;border-radius:13px;padding:0 14px;background:#173b2d;color:#fff;font-size:13px;font-weight:800}
+.library08 .assetMetricGrid.compact{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.library08 .assetMetricGrid.compact>button{min-height:74px;padding:9px 7px;border-radius:14px;text-align:center}
+.library08 .assetMetricGrid.compact small{font-size:9px}.library08 .assetMetricGrid.compact b{font-size:23px;margin:3px 0 0}.library08 .assetMetricGrid.compact span{font-size:9px;line-height:1.2}
+.library08 .overviewNow,.library08 .overviewRecent{border:1px solid #e2ddd3;border-radius:16px;background:#fff;padding:11px 12px}
+.library08 .overviewHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.library08 .overviewHead small{display:block;font-size:8px;letter-spacing:.14em;color:#b28a42}.library08 .overviewHead h3{margin:1px 0 0;font-size:16px;color:#1c3027}.library08 .overviewHead>b{display:grid;place-items:center;min-width:26px;height:26px;border-radius:13px;background:#edf2ef;color:#173b2d}.library08 .overviewHead>button{border:0;background:none;color:#776c5e;font-size:12px;font-weight:800}
+.library08 .overviewActionList{display:grid;gap:6px}.library08 .overviewActionList>button{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;text-align:left;border:0;border-radius:11px;background:#f7f6f2;padding:8px 10px}.library08 .overviewActionList small{display:block;font-size:9px;color:#9b8351}.library08 .overviewActionList b{display:block;font-size:12px;color:#263b32}.library08 .overviewActionList em{font-style:normal;font-size:10px;color:#766e61}.library08 .overviewEmpty{text-align:center;padding:10px}.library08 .overviewEmpty b{display:block;font-size:12px}.library08 .overviewEmpty span{font-size:10px;color:#8a8175}
+.library08 .overviewRecent>div:last-child{display:grid;grid-template-columns:1fr 1fr;gap:6px}.library08 .overviewRecent>div>button{display:flex;gap:7px;align-items:center;border:0;border-radius:10px;background:#f7f6f2;padding:8px;text-align:left}.library08 .overviewRecent time{font-size:9px;color:#9b8351}.library08 .overviewRecent span{font-size:10px;color:#34463e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.library08 .overviewRecent p{margin:0;font-size:11px;color:#837b70}
+.library08 .gearSectionLead{min-height:58px;padding:9px 10px;grid-template-columns:1fr 58px}.library08 .gearSectionLead b{font-size:13px}.library08 .gearSectionLead p{font-size:9px}.library08 .gearSectionLead>button{height:32px;font-size:11px}
+.library08 .libraryEditor{width:min(100%,700px);max-height:92svh;border-radius:24px 24px 0 0}.library08 .libraryEditorHead{padding:12px 16px 9px}.library08 .libraryEditorHead h3{font-size:21px}.library08 .libraryEditorHead small{font-size:10px}.library08 .libraryEditorBody{padding:10px 14px 18px}.library08 .libraryField{gap:4px}.library08 .libraryField>span{font-size:12px}.library08 .libraryField input,.library08 .libraryField select,.library08 .libraryField textarea{font-size:14px!important;min-height:42px}.library08 .libraryField textarea{height:76px}.library08 .libraryCheck{font-size:12px;min-height:42px}.library08 .libraryEditorActions{padding:9px 14px 12px}.library08 .libraryEditorActions button{font-size:13px;height:44px}
+.library08 .kitPicker{padding:10px;border-radius:16px}.library08 .kitPickerHead{grid-template-columns:1fr}.library08 .kitPickerHead label{height:42px;width:100%}.library08 .kitPickerHead input{font-size:14px}.library08 .kitSelectedChips{display:grid;grid-template-columns:1fr;gap:5px;max-height:140px;overflow:auto;padding:0}.library08 .kitSelectedChips span{width:100%;justify-content:space-between;font-size:12px;min-height:36px;border-radius:10px}.library08 .kitGearRows{max-height:270px}.library08 .kitGearRows button{min-height:52px;padding:8px}.library08 .kitGearRows small{font-size:9px}.library08 .kitGearRows b{font-size:12px}
+@media(max-width:380px){.library08 .libraryPageSticky .libraryTabs button,.library08 .libraryPageSticky .gearModeTabs button{font-size:11px}.library08 .assetMetricGrid.compact span{display:none}.library08 .assetMetricGrid.compact>button{min-height:60px}.library08 .libraryFieldGrid,.library08 .libraryFieldGrid.three{grid-template-columns:1fr}}
