@@ -79,6 +79,12 @@
   let planCalendarSwipeSuppressUntil=0;
   let planReminderTimer=null;
   let activePlanId=localStorage.getItem('outbase_active_plan_id')||'plan-drive-13';
+  let prepStore=readStored('outbase_prep_v1',{});
+  let prepSheet='';
+  let prepModuleId='';
+  let prepSheetDrag=null;
+  if(previewMode==='prep01'||previewMode==='prep01-module') activePlanId='plan-akagi';
+  if(previewMode==='prep01-module'){prepSheet='module';prepModuleId='gear';}
   if(previewMode==='plan-add'||previewMode==='plan011-add') planSheet='add';
   if(previewMode==='plan-detail'){planSheet='detail';selectedPlanId='plan-drive-13';}
   if(previewMode==='plan-list') planSheet='list';
@@ -633,24 +639,80 @@
     </section>`;
   }
 
-  function prepCard(icon,title,sub,tag){
-    return `<article class="prepCard"><div class="prepIcon">${icon}</div><div><h3>${title}</h3><p>${sub}</p><span>${tag}</span></div><b>›</b></article>`;
+  function persistPrepStore(){localStorage.setItem('outbase_prep_v1',JSON.stringify(prepStore));}
+  function prepModuleDefinitions(plan){
+    const names=planCompanionNames(plan),type=plan?.type||'';
+    const library={
+      weather:{id:'weather',icon:I.sun,title:'天気',sub:'雨・気温・風',tasks:['降水と雨雲を確認','気温と暑さ・寒さを確認','風と撤収判断を確認']},
+      gear:{id:'gear',icon:I.bag,title:'ギア',sub:'持ち物・積載・電源',tasks:['テント・タープ・寝具','照明・電源・冷暖房','積載と忘れ物を確認']},
+      cooking:{id:'cooking',icon:I.cup,title:'料理',sub:'献立・量・使用ギア',tasks:['食事ごとの献立を決める','量が多すぎないか確認','調理ギアと燃料を確認']},
+      shopping:{id:'shopping',icon:I.cart,title:'買物',sub:'食材・消耗品・不足品',tasks:['食材と飲み物を確認','調味料・消耗品を確認','不足品を購入']},
+      route:{id:'route',icon:I.route,title:'ルート',sub:'出発・休憩・到着',tasks:['出発時刻を決める','休憩・買い出し地点を確認','到着・駐車方法を確認']},
+      parking:{id:'parking',icon:I.car,title:'駐車場',sub:'入口・混雑・歩き出し',tasks:['駐車場の場所と時間','入口・料金・混雑','散歩開始地点を確認']},
+      items:{id:'items',icon:I.bag,title:'持ち物',sub:'必要な物だけ',tasks:['必須の持ち物を確認','飲み物・充電を確認','忘れ物がないか確認']},
+      companion:{id:'companion',icon:I.people,title:'同行',sub:'集合・役割・連絡',tasks:['同行者と時間を共有','集合場所を確認','必要な連絡を済ませる']}
+    };
+    let ids;
+    if(type==='キャンプ') ids=['weather','gear','cooking','shopping','route'];
+    else if(type==='ドライブ散歩') ids=['weather','route','parking','items'];
+    else if(type==='散歩') ids=['weather','items'];
+    else if(type==='ショッピング') ids=['shopping','route',...(names.length?['companion']:[])];
+    else if(type==='イベント') ids=['weather','items','route',...(names.length?['companion']:[])];
+    else ids=['weather','items','route',...(names.length?['companion']:[])];
+    return ids.map(id=>library[id]);
   }
-
+  function prepPlanBucket(plan){
+    if(!prepStore[plan.id]) prepStore[plan.id]={modules:{},updatedAt:0};
+    if(!prepStore[plan.id].modules) prepStore[plan.id].modules={};
+    return prepStore[plan.id];
+  }
+  function prepModuleState(plan,module){
+    const bucket=prepPlanBucket(plan);
+    if(!bucket.modules[module.id]) bucket.modules[module.id]={checked:[],customItems:[],note:''};
+    const state=bucket.modules[module.id];
+    if(!Array.isArray(state.checked))state.checked=[];
+    if(!Array.isArray(state.customItems))state.customItems=[];
+    return state;
+  }
+  function prepModuleItems(plan,module){const state=prepModuleState(plan,module);return [...module.tasks,...state.customItems];}
+  function prepProgress(plan){
+    const modules=prepModuleDefinitions(plan);let done=0,total=0;
+    modules.forEach(module=>{const items=prepModuleItems(plan,module),checked=prepModuleState(plan,module).checked;total+=items.length;done+=items.filter((_,i)=>checked.includes(i)).length;});
+    return {done,total,percent:total?Math.round(done/total*100):0};
+  }
+  function prepNextItems(plan){
+    const rows=[];
+    prepModuleDefinitions(plan).forEach(module=>{const state=prepModuleState(plan,module);prepModuleItems(plan,module).forEach((item,index)=>{if(!state.checked.includes(index)&&rows.length<3)rows.push({module,item});});});
+    return rows;
+  }
+  function syncPlanPrepStatus(plan){
+    const progress=prepProgress(plan);let status='未着手';
+    if(plan.type==='散歩'&&progress.done===0)status='準備不要';
+    else if(progress.total&&progress.done>=progress.total)status='準備完了';
+    else if(progress.done>0)status='準備中';
+    plan.prep=status;prepPlanBucket(plan).updatedAt=Date.now();persistPrepStore();persistPlans();return status;
+  }
+  function prepStatusLabel(plan){return syncPlanPrepStatus(plan);}
+  function prepCard(plan,module){
+    const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,complete=items.length&&done===items.length,percent=items.length?done/items.length*100:0;
+    return `<button class="prepModuleCard ${complete?'complete':''}" style="--module-progress:${percent}%" data-prep-module="${module.id}"><div class="prepModuleIcon">${module.icon}</div><div class="prepModuleCopy"><h3>${escapeHtml(module.title)}</h3><small>${escapeHtml(module.sub)}</small></div><span class="prepModuleCount">${done}/${items.length}</span><b>${complete?'✓':'›'}</b></button>`;
+  }
   function prepPage(){
+    const plan=activePlan();
+    if(!plan)return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepEmpty"><h1>準備</h1><p>予定を選ぶと、その予定に必要な準備を表示します。</p><button data-tab="plan">予定を見る</button></section></section>`;
+    const modules=prepModuleDefinitions(plan),progress=prepProgress(plan),status=prepStatusLabel(plan),days=Math.ceil((parseYmd(plan.start)-new Date(new Date().setHours(0,0,0,0)))/86400000),dayText=days>0?`あと${days}日`:days===0?'今日':days===-1?'昨日':'開始済み';
     return `<section class="page ${active==='prep'?'active':''}" id="page-prep">
-      <section class="prepHero"><img src="assets/prep_hero_art.png" alt=""><div><h1>準備</h1><p>通常散歩は準備不要。<br>必要な外出だけ準備する。</p></div></section>
-      <section class="saveTarget"><div class="folderCircle">${I.folder}</div><div><small>現在の保存先</small><b>コタ散歩&nbsp; / &nbsp;通常散歩&nbsp; / &nbsp;準備不要</b></div><span>›</span></section>
-      <div class="sectionLabel"><h2>必要な時だけ準備</h2><p>ドライブ散歩や特別な外出など、必要なときだけ準備します。</p></div>
-      <div class="prepGrid">${[
-        [I.car,'ドライブ散歩','駐車場・到着目安・ルート','駐車場・到着目安・ルート'],
-        [I.people,'同伴イベント','持ち物・暑さ対策','持ち物・暑さ対策'],
-        [I.tent,'キャンプ','ギア・天気・出発逆算','ギア・天気・出発逆算'],
-        [I.person,'人だけイベント','買物・下見・身軽','買物・下見・身軽']
-      ].map(x=>prepCard(...x)).join('')}</div>
-      <div class="sectionLabel basicsLabel"><h2>準備の基本（必要に応じて）</h2><p>散歩にも役立つ基本情報をすばやく確認。</p></div>
-      <div class="basicsGrid">${[[I.bag,'持ち物','チェックリスト'],[I.sun,'天気','天候・気温・暑さ指数'],[I.route,'ルート','地図・距離・時間']].map(x=>`<article><div>${x[0]}</div><span><b>${x[1]}</b><small>${x[2]}</small></span><em>›</em></article>`).join('')}</div>
+      <section class="prepHero prepHero01" data-prep-plan-detail><img src="assets/prep_hero_art.png" alt=""><div class="prepHeroCopy"><small>PREPARATION</small><h1>準備</h1><p>${escapeHtml(plan.title)}</p><span>${escapeHtml(dayText)} ・ ${escapeHtml(planRangeLabel(plan))}</span></div><div class="prepPercent" style="--prep:${progress.percent}"><b>${progress.percent}<small>%</small></b><span>${escapeHtml(status)}</span></div><em class="prepHeroLink">予定詳細&nbsp;›</em></section>
+      <div class="prepSectionHead compact"><div><small>${escapeHtml(status)}</small><h2>準備項目</h2></div><span>${progress.done}/${progress.total}</span></div>
+      <div class="prepModuleGrid compact">${modules.map(module=>prepCard(plan,module)).join('')}</div>
     </section>`;
+  }
+  function prepSheetMarkup(){
+    if(!prepSheet)return '';
+    const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return '';
+    const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,allDone=items.length&&done===items.length;
+    const action=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:'';
+    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet prepDetailSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>PREPARATION</small><h2>${escapeHtml(module.title)}</h2><p>${escapeHtml(module.sub)} ・ ${done}/${items.length}完了</p></div><div class="prepChecklist">${items.map((item,index)=>`<div class="prepCheckRow ${state.checked.includes(index)?'checked':''}"><button data-prep-check="${index}"><i>${state.checked.includes(index)?'✓':''}</i><span>${escapeHtml(item)}</span></button>${index>=module.tasks.length?`<button class="prepRemoveItem" data-prep-remove="${index}">×</button>`:''}</div>`).join('')}</div><div class="prepAddRow"><input id="prepNewItem" placeholder="この予定だけの項目を追加"><button data-prep-add>追加</button></div>${action}<label class="prepNoteField"><span>メモ</span><textarea id="prepModuleNote" placeholder="確認したことや当日の注意点">${escapeHtml(state.note||'')}</textarea></label><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-prep-mark-all>${allDone?'未完了に戻す':'この項目を完了'}</button></div></section></div>`;
   }
 
   function recordPage(){
@@ -1119,6 +1181,26 @@
     });
   }
 
+  function bindPrepActions(){
+    document.querySelectorAll('[data-prep-module]').forEach(el=>el.addEventListener('click',()=>{prepModuleId=el.dataset.prepModule;prepSheet='module';render();}));
+    const detail=document.querySelector('[data-prep-plan-detail]');if(detail)detail.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;selectedPlanId=plan.id;planSheet='detail';prepSheet='';render();});
+    document.querySelectorAll('[data-close-prep-sheet]').forEach(el=>el.addEventListener('click',()=>{const note=document.getElementById('prepModuleNote');const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(note&&plan&&module){prepModuleState(plan,module).note=note.value;syncPlanPrepStatus(plan);}prepSheet='';prepModuleId='';render();}));
+    document.querySelectorAll('[data-prep-check]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),index=Number(el.dataset.prepCheck);state.checked=state.checked.includes(index)?state.checked.filter(x=>x!==index):[...state.checked,index].sort((a,b)=>a-b);syncPlanPrepStatus(plan);render();}));
+    const add=document.querySelector('[data-prep-add]');if(add)add.addEventListener('click',()=>{const input=document.getElementById('prepNewItem'),text=input?.value.trim(),plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!text||!plan||!module)return;prepModuleState(plan,module).customItems.push(text);syncPlanPrepStatus(plan);render();});
+    document.querySelectorAll('[data-prep-remove]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),index=Number(el.dataset.prepRemove),customIndex=index-module.tasks.length;if(customIndex<0)return;state.customItems.splice(customIndex,1);state.checked=state.checked.filter(x=>x!==index).map(x=>x>index?x-1:x);syncPlanPrepStatus(plan);render();}));
+    const note=document.getElementById('prepModuleNote');if(note)note.addEventListener('input',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;prepModuleState(plan,module).note=note.value;persistPrepStore();});
+    const all=document.querySelector('[data-prep-mark-all]');if(all)all.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),complete=items.length&&items.every((_,i)=>state.checked.includes(i));state.checked=complete?[]:items.map((_,i)=>i);syncPlanPrepStatus(plan);render();});
+    const copy=document.querySelector('[data-prep-copy]');if(copy)copy.addEventListener('click',async()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),text=[`${plan.title}｜${module.title}`,...prepModuleItems(plan,module).filter((_,i)=>!state.checked.includes(i)).map(x=>`□ ${x}`)].join('\n');try{await navigator.clipboard.writeText(text);showRecordToast('未完了項目をコピーしました');}catch(_e){showRecordToast('コピーできませんでした');}});
+    document.querySelectorAll('[data-prep-external]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),kind=el.dataset.prepExternal;if(kind==='route'){const q=encodeURIComponent(plan.location||plan.title);window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank','noopener');}else if(kind==='weather'){const q=encodeURIComponent(`${plan.location||plan.title} 天気`);window.open(`https://www.google.com/search?q=${q}`,'_blank','noopener');}}));
+    const backdrop=document.querySelector('[data-prep-backdrop]');if(backdrop)backdrop.addEventListener('pointerup',e=>{if(e.target===backdrop){prepSheet='';prepModuleId='';render();}});
+    const panel=document.querySelector('[data-prep-sheet-panel]'),zone=document.querySelector('[data-prep-drag-zone]');
+    if(panel&&zone){
+      const finish=e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;const dy=Math.max(0,e.clientY-prepSheetDrag.y);panel.classList.remove('dragging');panel.style.transition='transform .2s ease';if(dy>72){panel.style.transform='translateY(110%)';setTimeout(()=>{prepSheet='';prepModuleId='';render();},150);}else{panel.style.transform='';setTimeout(()=>{panel.style.transition='';},210);}prepSheetDrag=null;};
+      zone.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;prepSheetDrag={id:e.pointerId,y:e.clientY};try{zone.setPointerCapture(e.pointerId);}catch(_e){}panel.classList.add('dragging');panel.style.transition='none';e.preventDefault();});
+      zone.addEventListener('pointermove',e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;panel.style.transform=`translateY(${Math.max(0,e.clientY-prepSheetDrag.y)}px)`;e.preventDefault();});zone.addEventListener('pointerup',finish);zone.addEventListener('pointercancel',finish);
+    }
+  }
+
   function bindRecordActions(){
     document.querySelectorAll('[data-open-sheet]').forEach(el=>el.addEventListener('click',()=>{recordSheet=el.dataset.openSheet;render();}));
     document.querySelectorAll('[data-open-parking-recall]').forEach(el=>el.addEventListener('click',()=>{recordSheet='parking-recall';render();}));
@@ -1194,9 +1276,10 @@
   }
 
   function render(){
-    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';planSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-plan012`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep01`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
+    bindPrepActions();
     bindRecordActions();
     initializeRecordRuntime();
   }
