@@ -37,15 +37,25 @@
   let parkingSpeechHoldTimer=null;
   let parkingSpeechRecognition=null;
   let parkingSpeechActive=false;
+  let currentSessionId=localStorage.getItem('outbase_record_session_id')||'';
+  let sessionStartedAt=Number(localStorage.getItem('outbase_record_session_started_at')||0);
+  let recoverableSession=readStored('outbase_record_recoverable_session',null);
+  let resumeBreakPending=localStorage.getItem('outbase_record_resume_break_pending')==='1';
   const previewMode=params.get('preview')||'';
 
   if(recordSessionState==='idle'){
     elapsedMs=0;
     activeStartedAt=0;
     trackPoints=[];
+    currentSessionId='';
+    sessionStartedAt=0;
+    resumeBreakPending=false;
     localStorage.setItem('outbase_record_elapsed_ms','0');
     localStorage.setItem('outbase_record_track_points','[]');
     localStorage.removeItem('outbase_record_active_started_at');
+    localStorage.removeItem('outbase_record_session_id');
+    localStorage.removeItem('outbase_record_session_started_at');
+    localStorage.removeItem('outbase_record_resume_break_pending');
   }else if(recordSessionState==='paused'){
     activeStartedAt=0;
   }
@@ -96,6 +106,91 @@
     const pillar=(t.match(/[A-Za-zＡ-Ｚａ-ｚ][0-9０-９-]*(?:柱|エリア)?/)||[])[0]||'';
     const number=(t.match(/[0-9０-９]+(?:番|台|区画)/)||[])[0]||'';
     return {floor,area:[color,pillar].filter(Boolean).join('・'),number};
+  }
+
+  function clearRecoverableSession(){
+    recoverableSession=null;
+    localStorage.removeItem('outbase_record_recoverable_session');
+  }
+  function currentSessionRecords(){
+    if(!currentSessionId) return [];
+    return savedRecords.filter(r=>r.sessionId===currentSessionId&&!r.keepWithParking&&!r.parkingAssist);
+  }
+  function currentSessionPins(){
+    if(!currentSessionId) return [];
+    return savedPins.filter(pin=>pin.sessionId===currentSessionId&&pin.category!=='parking');
+  }
+  function destructiveSummary(){
+    const rows=currentSessionRecords(),pins=currentSessionPins();
+    const counts={photo:0,video:0,speech:0,memo:0,pin:pins.length};
+    rows.forEach(r=>{if(r.kind!=='pin'&&Object.prototype.hasOwnProperty.call(counts,r.kind)) counts[r.kind]+=1;});
+    const labels=[];
+    if(counts.photo) labels.push(`写真${counts.photo}件`);
+    if(counts.video) labels.push(`動画${counts.video}件`);
+    if(counts.speech) labels.push(`音声${counts.speech}件`);
+    if(counts.memo) labels.push(`メモ${counts.memo}件`);
+    if(counts.pin) labels.push(`場所${counts.pin}件`);
+    return labels.length?`${labels.join('・')}も削除されます`:'軌跡と経過時間が削除されます';
+  }
+  function snapshotCurrentSession(finishedElapsed,finishedDistance){
+    return {
+      sessionId:currentSessionId||newId('session'),
+      startedAt:sessionStartedAt||Date.now(),
+      finishedAt:Date.now(),
+      target:recordTarget,
+      elapsedMs:finishedElapsed,
+      distanceKm:finishedDistance,
+      trackPoints:trackPoints.map(p=>({...p})),
+      records:currentSessionRecords().map(r=>({...r})),
+      pins:currentSessionPins().map(pin=>({...pin,parking:pin.parking?{...pin.parking}:{}}))
+    };
+  }
+  function resetSessionToIdle(){
+    activeStartedAt=0;
+    elapsedMs=0;
+    recordSessionState='idle';
+    currentSessionId='';
+    sessionStartedAt=0;
+    resumeBreakPending=false;
+    recordSheet='';
+    stopGeoWatch();
+    releaseScreenAwake();
+    trackPoints=[];
+    savedPins=savedPins.filter(pin=>pin.category==='parking'&&!pin.clearedAt);
+    gpsStatus=currentPosition?`現在地取得済み ±${currentPosition.accuracy||'-'}m`:'現在地を確認中';
+  }
+  function restoreRecoverableSession(){
+    const snap=recoverableSession;
+    if(!snap) return false;
+    currentSessionId=snap.sessionId||newId('session');
+    sessionStartedAt=Number(snap.startedAt||Date.now());
+    elapsedMs=Number(snap.elapsedMs||0);
+    trackPoints=Array.isArray(snap.trackPoints)?snap.trackPoints.map(p=>({...p})):[];
+    const recordIds=new Set(savedRecords.map(r=>r.id));
+    for(const row of (snap.records||[])) if(!recordIds.has(row.id)) savedRecords.push({...row});
+    const pinIds=new Set(savedPins.map(pin=>pin.id));
+    for(const pin of (snap.pins||[])) if(!pinIds.has(pin.id)) savedPins.push({...pin,parking:pin.parking?{...pin.parking}:{}});
+    recordTarget=snap.target||recordTarget;
+    recordSessionState='active';
+    activeStartedAt=Date.now();
+    resumeBreakPending=true;
+    mapFollow=true;
+    gpsStatus=currentPosition?`GPS記録中 ±${currentPosition.accuracy||'-'}m`:'GPSを取得しています';
+    clearRecoverableSession();
+    persistRecordState();
+    return true;
+  }
+  function discardCurrentSession(){
+    const records=currentSessionRecords();
+    const recordIds=new Set(records.map(r=>r.id));
+    savedRecords=savedRecords.filter(r=>!recordIds.has(r.id));
+    recordCount=Math.max(0,recordCount-records.length);
+    records.forEach(r=>deleteRecordDB(r.id));
+    const pinIds=new Set(currentSessionPins().map(pin=>pin.id));
+    savedPins=savedPins.filter(pin=>!pinIds.has(pin.id)||pin.category==='parking');
+    clearRecoverableSession();
+    resetSessionToIdle();
+    persistRecordState();
   }
 
   if(previewMode==='parking'||previewMode==='parking-recall'||previewMode==='parking-main'){
@@ -244,13 +339,16 @@
     const elapsed=formatElapsed(elapsedNow());
     const speechPreview=previewMode==='speech';
     const screenState=recordSessionState==='active'?'画面ON':'画面通常';
-    return `<section class="page ${active==='record'?'active':''}" id="page-record">
+    const canRecover=recordSessionState==='idle'&&recoverableSession;
+    const idleMode=recordSessionState==='idle';
+    return `<section class="page ${active==='record'?'active':''} ${canRecover?'hasRecoverable':''}" id="page-record">
       <section class="recordHero">
         <div class="recordHeroTitle"><small>RECORD</small><h1>記録</h1></div>
         <div class="recordState"><i class="statusDot ${recordSessionState}"></i><span>${stateText}</span></div>
         <div class="recordHeroSide"><span>同伴 コタ</span></div>
       </section>
-      <section class="recordMapCard">
+      ${canRecover?`<section class="resumeSessionBar"><div><small>直前の散歩を終了しました</small><b>${formatElapsed(Number(recoverableSession.elapsedMs||0))}・${Number(recoverableSession.distanceKm||0).toFixed(2)} km</b></div><button data-resume-session>散歩を再開</button></section>`:''}
+      <section class="recordMapCard ${idleMode?'idleMode':''}">
         <div class="mapHead">
           <div><h2>散歩MAP</h2><p><i class="statusDot"></i><span id="gpsStatusText">${gpsStatus}</span>&nbsp; / &nbsp;端末保存&nbsp; / &nbsp;${screenState}</p></div>
           <div class="mapHeadActions">${recordSessionState!=='idle'?'<button class="endButton" data-open-sheet="end">終了</button>':''}<button data-record-action="map-mode">${mapMode===0?'記録を隠す':'記録を表示'}</button></div>
@@ -258,7 +356,7 @@
         <div class="mapStage">
           <div id="recordLiveMap" class="recordLiveMap" role="application" aria-label="現在地に追従する散歩地図">
             <div class="mapTilePane"></div>
-            <svg class="mapTrackSvg" aria-hidden="true"><polyline></polyline></svg>
+            <svg class="mapTrackSvg" aria-hidden="true"></svg>
             <div class="mapMarkerPane"></div>
             <div class="mapZoom"><button data-map-zoom="in" aria-label="拡大">＋</button><button data-map-zoom="out" aria-label="縮小">−</button></div>
             <div class="mapAttribution">© OpenStreetMap</div>
@@ -276,12 +374,12 @@
             <div class="mapButtons">
               <button class="gold sessionButton" data-record-action="session">${sessionLabel}</button>
               <button data-record-action="current">現在地</button>
-              <button data-record-action="pin">場所を記録</button>
+              <button data-record-action="pin">${idleMode?'駐車位置を記録':'場所を記録'}</button>
               <button data-record-action="google-map">Google<br>Map</button>
             </div>
           </div>
         </div>
-        <div class="quickArea"><h3>クイック記録 <span>すべて日時・位置つきで保存</span></h3><div>${quick.map(q=>`<button data-record-action="${q[3]}" class="quick-${q[3]}">${q[0]}<b>${q[1]}</b><small>${q[2]}</small></button>`).join('')}</div></div>
+        ${idleMode?`<div class="quickIdleNotice"><div>${I.record}</div><span><b>散歩を開始するとクイック記録が使えます</b><small>駐車位置は開始前でも保存できます</small></span></div>`:`<div class="quickArea"><h3>クイック記録 <span>すべて日時・位置つきで保存</span></h3><div>${quick.map(q=>`<button data-record-action="${q[3]}" class="quick-${q[3]}">${q[0]}<b>${q[1]}</b><small>${q[2]}</small></button>`).join('')}</div></div>`}
       </section>
     </section>`;
   }
@@ -320,7 +418,8 @@
       const p=pin.parking||{};
       return `<div class="recordSheetBackdrop"><section class="recordSheet parkingRecallSheet"><div class="sheetHandle"></div><small>PARKING POSITION</small><h2>駐車位置</h2><div class="parkingRecallHero">${I.car}<div><small>${new Date(pin.time||Date.now()).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} に保存</small><b>${escapeHtml(parkingSummary(pin))}</b><p>${escapeHtml(pin.note||'位置と時刻を保存しています')}</p></div></div><div class="parkingRecallEvidence"><div>${I.pin}<span><small>位置</small><b>${pin.lat!=null?`${Number(pin.lat).toFixed(5)}, ${Number(pin.lng).toFixed(5)}`:'自動補完中'}</b></span></div><div>${I.mic}<span><small>音声</small><b>${p.speechText?'保存済み':'なし'}</b></span></div><div>${I.camera}<span><small>写真</small><b>${p.photoName?'保存済み':'なし'}</b></span></div></div><div class="parkingRecallActions"><button data-parking-action="map">${I.pin}<span>地図で確認</span></button><button class="primary" data-parking-action="route">${I.route}<span>ここへ戻る</span></button><button data-parking-action="photo">${I.camera}<span>写真を見る</span></button><button data-parking-action="note">${I.memo}<span>音声・メモ</span></button></div><button class="parkingArrived" data-parking-action="arrived">車に戻ったので表示を終了</button><div class="sheetActions single"><button data-close-sheet>閉じる</button></div></section></div>`;
     }
-    if(recordSheet==='end') return `<div class="recordSheetBackdrop"><section class="recordSheet endSheet"><div class="sheetHandle"></div><small>SESSION SUMMARY</small><h2>散歩記録を終了しますか？</h2><div class="summaryName"><b>${recordTarget}</b><span>${currentPosition?'現在地を保存済み':'位置情報を確認中'}</span></div><div class="summaryGrid summaryGridTwo"><div><small>経過時間</small><b>${formatElapsed(elapsedNow())}</b></div><div><small>距離</small><b>${sessionDistanceKm().toFixed(2)} km</b></div></div><div class="syncSummary"><i></i>端末保存済み・同期待ち 0件</div><div class="sheetActions"><button data-close-sheet>記録へ戻る</button><button class="sheetPrimary" data-finish-session>終了して保存</button></div></section></div>`;
+    if(recordSheet==='end') return `<div class="recordSheetBackdrop"><section class="recordSheet endSheet"><div class="sheetHandle"></div><small>SESSION SUMMARY</small><h2>散歩記録を終了しますか？</h2><div class="summaryName"><b>${recordTarget}</b><span>${currentPosition?'現在地を保存済み':'位置情報を確認中'}</span></div><div class="summaryGrid summaryGridTwo"><div><small>経過時間</small><b>${formatElapsed(elapsedNow())}</b></div><div><small>距離</small><b>${sessionDistanceKm().toFixed(2)} km</b></div></div><div class="syncSummary"><i></i>端末保存済み・同期待ち 0件</div><div class="endActionStack"><button class="sheetPrimary" data-finish-session>終了して保存</button><button data-close-sheet>散歩に戻る</button><button class="sheetDanger" data-discard-session-request>この散歩を破棄</button></div></section></div>`;
+    if(recordSheet==='discard-confirm') return `<div class="recordSheetBackdrop"><section class="recordSheet discardSheet"><div class="sheetHandle"></div><small>DISCARD SESSION</small><h2>この散歩を破棄しますか？</h2><div class="discardWarning"><b>元に戻せません</b><p>${escapeHtml(destructiveSummary())}</p><small>駐車位置は車に戻るため残します。</small></div><div class="sheetActions"><button data-open-sheet="end">戻る</button><button class="sheetDangerPrimary" data-discard-session-confirm>破棄する</button></div></section></div>`;
     if(recordSheet==='target') return `<div class="recordSheetBackdrop"><section class="recordSheet targetSheet"><div class="sheetHandle"></div><small>RECORD TARGET</small><h2>記録先を変更</h2><p>表示中プランとは別に、保存先だけを変更します。</p><button class="targetOption selected" data-record-target="コタ通常散歩"><span><b>コタ通常散歩</b><small>散歩セッション</small></span><em>選択中</em></button><button class="targetOption" data-record-target="手賀沼ドライブ散歩 ＞ コタ場内散歩"><span><b>手賀沼ドライブ散歩</b><small>コタ場内散歩へ保存</small></span><em>選ぶ</em></button><button class="targetOption" data-record-target="未確認箱へ仮保存"><span><b>未確認箱へ仮保存</b><small>あとで関連付け</small></span><em>選ぶ</em></button><div class="sheetActions single"><button data-close-sheet>閉じる</button></div></section></div>`;
     return `<div class="recordSheetBackdrop"><section class="recordSheet detailSheet"><div class="sheetHandle"></div><small>RECORD DETAIL</small><h2>直近の記録</h2><div class="detailPreview">${I.camera}<span><b>写真</b><small>日時・位置つきで端末保存</small></span></div><dl><div><dt>記録先</dt><dd>${recordTarget}</dd></div><div><dt>GPS精度</dt><dd>${currentPosition?`± ${currentPosition.accuracy||'-'} m`:'位置は自動保存'}</dd></div><div><dt>同期状態</dt><dd>端末保存済み</dd></div><div><dt>公開範囲</dt><dd>非公開</dd></div></dl><div class="detailLinks"><button data-open-sheet="target">記録先を変更</button><button>テキスト修正</button><button>削除候補へ</button></div><div class="sheetActions single"><button data-close-sheet>閉じる</button></div></section></div>`;
   }
@@ -344,6 +443,10 @@
     localStorage.setItem('outbase_record_current_position',JSON.stringify(currentPosition));
     localStorage.setItem('outbase_record_map_zoom',String(mapZoom));
     localStorage.setItem('outbase_record_saved_records',JSON.stringify(savedRecords.slice(-500)));
+    if(currentSessionId) localStorage.setItem('outbase_record_session_id',currentSessionId);else localStorage.removeItem('outbase_record_session_id');
+    if(sessionStartedAt) localStorage.setItem('outbase_record_session_started_at',String(sessionStartedAt));else localStorage.removeItem('outbase_record_session_started_at');
+    if(resumeBreakPending) localStorage.setItem('outbase_record_resume_break_pending','1');else localStorage.removeItem('outbase_record_resume_break_pending');
+    if(recoverableSession) localStorage.setItem('outbase_record_recoverable_session',JSON.stringify(recoverableSession));else localStorage.removeItem('outbase_record_recoverable_session');
     if(activeParkingId) localStorage.setItem('outbase_active_parking_id',activeParkingId);else localStorage.removeItem('outbase_active_parking_id');
   }
 
@@ -361,7 +464,7 @@
     const q=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
     return 2*R*Math.asin(Math.sqrt(q));
   }
-  function sessionDistanceKm(){if(recordSessionState==='idle') return 0;let d=0;for(let i=1;i<trackPoints.length;i++) d+=haversineKm(trackPoints[i-1],trackPoints[i]);return d;}
+  function sessionDistanceKm(){if(recordSessionState==='idle') return 0;let d=0;for(let i=1;i<trackPoints.length;i++){if(trackPoints[i].breakBefore) continue;d+=haversineKm(trackPoints[i-1],trackPoints[i]);}return d;}
   function updateMetrics(){
     const distance=document.getElementById('distanceValue');if(distance) distance.innerHTML=`${sessionDistanceKm().toFixed(2)}<small>km</small>`;
     const elapsed=document.getElementById('elapsedValue');if(elapsed) elapsed.textContent=formatElapsed(elapsedNow());
@@ -405,7 +508,8 @@
   function saveRecord(kind,data={},location=locationSnapshot(),blob=null){
     const createdAt=Number(data.createdAt||Date.now());
     const resolvedLocation=location&&location.lat!=null?location:locationSnapshot(createdAt);
-    const record={id:data.id||newId(kind),kind,createdAt,target:recordTarget,sessionState:recordSessionState,location:resolvedLocation,...data};
+    const explicitSession=Object.prototype.hasOwnProperty.call(data,'sessionId')?data.sessionId:(recordSessionState==='idle'?null:currentSessionId);
+    const record={...data,id:data.id||newId(kind),kind,createdAt,target:recordTarget,sessionState:recordSessionState,sessionId:explicitSession,location:resolvedLocation};
     const i=savedRecords.findIndex(x=>x.id===record.id);if(i>=0) savedRecords[i]=record;else savedRecords.push(record);
     recordCount+=i>=0?0:1;persistRecordState();putRecordDB(record,blob);return record;
   }
@@ -453,7 +557,7 @@
     const small=el.querySelector('small');if(small) small.textContent='話している内容を整理中';
     rec.onresult=e=>{let finalText='',interim='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal) finalText+=t;else interim+=t;}text=(finalText+interim).trim();const summary=document.getElementById('parkingAutoSummary');if(summary) summary.textContent=text||'話してください…';};
     rec.onerror=e=>{if(e.error!=='aborted') showRecordToast(e.error==='not-allowed'?'マイクの使用を許可してください':'音声を確認できませんでした');};
-    rec.onend=()=>{parkingSpeechActive=false;parkingSpeechRecognition=null;el.classList.remove('holding');if(text){refreshParkingAssist(pin,text);saveRecord('speech',{text,linkedPinId:pin.id,parkingAssist:true},locationSnapshot());render();setTimeout(()=>showRecordToast(`駐車情報を「${parkingSummary(pin)}」として整理しました`),0);}else{if(small) small.textContent='階・色・柱・番号を自動整理';showRecordToast('音声は保存されませんでした');}};
+    rec.onend=()=>{parkingSpeechActive=false;parkingSpeechRecognition=null;el.classList.remove('holding');if(text){refreshParkingAssist(pin,text);saveRecord('speech',{text,linkedPinId:pin.id,parkingAssist:true,keepWithParking:true,sessionId:null},locationSnapshot());render();setTimeout(()=>showRecordToast(`駐車情報を「${parkingSummary(pin)}」として整理しました`),0);}else{if(small) small.textContent='階・色・柱・番号を自動整理';showRecordToast('音声は保存されませんでした');}};
     try{rec.start();}catch(_e){parkingSpeechActive=false;el.classList.remove('holding');}
   }
   function stopParkingSpeechHold(){clearTimeout(parkingSpeechHoldTimer);parkingSpeechHoldTimer=null;if(parkingSpeechActive&&parkingSpeechRecognition){try{parkingSpeechRecognition.stop();}catch(_e){}}}
@@ -468,7 +572,7 @@
   }
   function captureParkingPhoto(){
     const pin=currentPendingPin();if(!pin) return;const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';
-    input.addEventListener('change',async()=>{if(!(input.files&&input.files.length)) return;const file=input.files[0],loc=locationSnapshot();const rec=saveRecord('photo',{name:file.name,type:file.type,size:file.size,linkedPinId:pin.id,parkingAssist:true},loc,file);pin.parking=pin.parking||{};pin.parking.photoRecordId=rec.id;pin.parking.photoName=file.name;pin.parking.photoSavedAt=Date.now();pin.parking.ocrState='reading';refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast('写真を保存しました。表示の文字を自動で読んでいます'),0);const text=await extractParkingPhotoText(file);pin.parking.ocrState=text?'done':'unreadable';if(text){pin.parking.ocrText=text;const parsed=parseParkingText(text);pin.parking={...pin.parking,...Object.fromEntries(Object.entries(parsed).filter(([,v])=>v))};pin.note=pin.note||text;}refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast(text?`写真から「${parkingSummary(pin)}」を自動補完しました`:'文字を読めませんでしたが、写真は保存済みです'),0);},{once:true});input.click();
+    input.addEventListener('change',async()=>{if(!(input.files&&input.files.length)) return;const file=input.files[0],loc=locationSnapshot();const rec=saveRecord('photo',{name:file.name,type:file.type,size:file.size,linkedPinId:pin.id,parkingAssist:true,keepWithParking:true,sessionId:null},loc,file);pin.parking=pin.parking||{};pin.parking.photoRecordId=rec.id;pin.parking.photoName=file.name;pin.parking.photoSavedAt=Date.now();pin.parking.ocrState='reading';refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast('写真を保存しました。表示の文字を自動で読んでいます'),0);const text=await extractParkingPhotoText(file);pin.parking.ocrState=text?'done':'unreadable';if(text){pin.parking.ocrText=text;const parsed=parseParkingText(text);pin.parking={...pin.parking,...Object.fromEntries(Object.entries(parsed).filter(([,v])=>v))};pin.note=pin.note||text;}refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast(text?`写真から「${parkingSummary(pin)}」を自動補完しました`:'文字を読めませんでしたが、写真は保存済みです'),0);},{once:true});input.click();
   }
   async function showParkingPhoto(pin){
     const id=pin?.parking?.photoRecordId;if(!id){showRecordToast('駐車場の写真はまだありません');return;}
@@ -489,7 +593,7 @@
   }
   function renderLiveMap(){
     const map=document.getElementById('recordLiveMap');if(!map) return;
-    const tilePane=map.querySelector('.mapTilePane'),markerPane=map.querySelector('.mapMarkerPane'),svg=map.querySelector('.mapTrackSvg'),line=svg.querySelector('polyline');
+    const tilePane=map.querySelector('.mapTilePane'),markerPane=map.querySelector('.mapMarkerPane'),svg=map.querySelector('.mapTrackSvg');
     const box={width:map.clientWidth||380,height:map.clientHeight||292},center=projectPoint(mapCenter.lat,mapCenter.lng,mapZoom),n=Math.pow(2,mapZoom);
     const left=center.x-box.width/2,top=center.y-box.height/2;
     const minX=Math.floor(left/256),maxX=Math.floor((left+box.width)/256),minY=Math.floor(top/256),maxY=Math.floor((top+box.height)/256);
@@ -500,7 +604,12 @@
     }
     tilePane.innerHTML=tiles;
     svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);
-    if(mapMode===0&&trackPoints.length>1) line.setAttribute('points',trackPoints.map(p=>{const q=pointOnMap(p,box);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`;}).join(' ')); else line.setAttribute('points','');
+    if(mapMode===0&&trackPoints.length>1){
+      const segments=[];let segment=[];
+      for(const p of trackPoints){if(p.breakBefore&&segment.length){segments.push(segment);segment=[];}segment.push(p);}
+      if(segment.length) segments.push(segment);
+      svg.innerHTML=segments.filter(seg=>seg.length>1).map(seg=>`<polyline points="${seg.map(p=>{const q=pointOnMap(p,box);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`;}).join(' ')}"></polyline>`).join('');
+    }else svg.innerHTML='';
     let marks='';
     if(mapMode===0) savedPins.forEach((p,i)=>{if(p.lat==null||p.lng==null) return;const q=pointOnMap(p,box);marks+=`<button class="livePin" data-live-pin="${i}" style="left:${q.x}px;top:${q.y}px" aria-label="保存したピン">${I.pin}</button>`;});
     if(currentPosition){const q=pointOnMap(currentPosition,box);marks+=`<div class="liveCurrent" style="left:${q.x}px;top:${q.y}px"><i></i></div>`;}
@@ -546,8 +655,13 @@
         ?`一時停止中・現在地取得済み ±${next.accuracy}m`
         :`現在地取得済み ±${next.accuracy}m`;
     if(recordSessionState==='active'){
-      const last=trackPoints[trackPoints.length-1],jump=last?haversineKm(last,next):0;
-      if(!last||(jump>=0.002&&jump<=1)) trackPoints.push(next);
+      if(resumeBreakPending){
+        trackPoints.push({...next,breakBefore:true});
+        resumeBreakPending=false;
+      }else{
+        const last=trackPoints[trackPoints.length-1],jump=last?haversineKm(last,next):0;
+        if(!last||(jump>=0.002&&jump<=1)) trackPoints.push(next);
+      }
       if(trackPoints.length>5000) trackPoints=trackPoints.slice(-5000);
     }
     autoAttachMissingLocations();
@@ -572,12 +686,12 @@
     navigator.geolocation.getCurrentPosition(p=>{onPosition(p);if(centerAfter){mapFollow=true;mapCenter={lat:currentPosition.lat,lng:currentPosition.lng};renderLiveMap();showRecordToast('現在地を中央に表示しました');}},e=>{onPositionError(e);showRecordToast('位置情報を許可してください');},{enableHighAccuracy:true,maximumAge:0,timeout:12000});
   }
   function addCurrentPin(){
-    const createdAt=Date.now(),loc=locationSnapshot(createdAt);
-    const pin={id:newId('pin'),lat:loc.lat,lng:loc.lng,accuracy:loc.accuracy,time:createdAt,category:'unclassified',label:'未分類の場所',note:'',parking:{},locationSource:loc.lat!=null?'auto':'pending-auto'};
-    savedPins.push(pin);pendingPinId=pin.id;
-    saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:'',parking:{},createdAt},loc);
+    const createdAt=Date.now(),loc=locationSnapshot(createdAt),parkingOnly=recordSessionState==='idle';
+    const pin={id:newId('pin'),lat:loc.lat,lng:loc.lng,accuracy:loc.accuracy,time:createdAt,category:parkingOnly?'parking':'unclassified',label:parkingOnly?'駐車場':'未分類の場所',note:'',parking:{},sessionId:parkingOnly?null:currentSessionId,locationSource:loc.lat!=null?'auto':'pending-auto'};
+    savedPins.push(pin);pendingPinId=pin.id;if(parkingOnly) activeParkingId=pin.id;
+    saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:'',parking:{},createdAt,sessionId:pin.sessionId,keepWithParking:parkingOnly},loc);
     persistRecordState();recordSheet='pin';render();
-    setTimeout(()=>showRecordToast('場所を保存しました'),0);
+    setTimeout(()=>showRecordToast(parkingOnly?'駐車位置を保存しました':'場所を保存しました'),0);
     if(loc.lat==null&&navigator.geolocation){
       navigator.geolocation.getCurrentPosition(onPosition,()=>{}, {enableHighAccuracy:true,maximumAge:0,timeout:12000});
     }
@@ -602,6 +716,9 @@
   function bindRecordActions(){
     document.querySelectorAll('[data-open-sheet]').forEach(el=>el.addEventListener('click',()=>{recordSheet=el.dataset.openSheet;render();}));
     document.querySelectorAll('[data-open-parking-recall]').forEach(el=>el.addEventListener('click',()=>{recordSheet='parking-recall';render();}));
+    document.querySelectorAll('[data-resume-session]').forEach(el=>el.addEventListener('click',()=>{if(restoreRecoverableSession()){render();keepScreenAwake();setTimeout(()=>showRecordToast('直前の散歩を再開しました'),0);}}));
+    document.querySelectorAll('[data-discard-session-request]').forEach(el=>el.addEventListener('click',()=>{recordSheet='discard-confirm';render();}));
+    document.querySelectorAll('[data-discard-session-confirm]').forEach(el=>el.addEventListener('click',()=>{discardCurrentSession();render();setTimeout(()=>showRecordToast('この散歩を破棄しました'),0);}));
     document.querySelectorAll('[data-parking-speech]').forEach(el=>{el.addEventListener('pointerdown',e=>{e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_e){}clearTimeout(parkingSpeechHoldTimer);parkingSpeechHoldTimer=setTimeout(()=>beginParkingSpeechHold(el),280);});el.addEventListener('pointerup',e=>{e.preventDefault();stopParkingSpeechHold();if(!parkingSpeechActive&&!parkingSpeechRecognition) showRecordToast('駐車情報は長押しで話してください');});el.addEventListener('pointercancel',stopParkingSpeechHold);});
     document.querySelectorAll('[data-parking-photo]').forEach(el=>el.addEventListener('click',captureParkingPhoto));
     document.querySelectorAll('[data-parking-action]').forEach(el=>el.addEventListener('click',()=>{const pin=activeParking();if(!pin) return;const action=el.dataset.parkingAction;if(action==='map'){active='record';recordSheet='';mapFollow=false;mapCenter={lat:pin.lat??mapCenter.lat,lng:pin.lng??mapCenter.lng};render();setTimeout(()=>showRecordToast('駐車位置を地図中央に表示しました'),0);}else if(action==='route'){if(pin.lat==null){showRecordToast('駐車位置を自動補完中です');return;}window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}&travelmode=walking`,'_blank','noopener');}else if(action==='photo') showParkingPhoto(pin);else if(action==='note'){showRecordToast(pin.parking?.speechText||pin.note||'音声・メモはありません');}else if(action==='arrived'){pin.clearedAt=Date.now();activeParkingId='';persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast('駐車位置の常時表示を終了しました'),0);}}));
@@ -620,6 +737,10 @@
         if(action==='session'){
           let toast='';
           if(recordSessionState==='idle'){
+            clearRecoverableSession();
+            currentSessionId=newId('session');
+            sessionStartedAt=Date.now();
+            resumeBreakPending=false;
             const freshCurrent=currentPosition&&Date.now()-Number(currentPosition.time||0)<=15000;
             trackPoints=freshCurrent?[{...currentPosition,time:Date.now()}]:[];
             savedPins=savedPins.filter(pin=>pin.category==='parking'&&!pin.clearedAt);
@@ -653,29 +774,22 @@
       });
     });
     const saveMemo=document.querySelector('[data-save-memo]');if(saveMemo) saveMemo.addEventListener('click',()=>{const text=document.getElementById('recordMemo').value.trim();if(!text){showRecordToast('メモを入力してください');return;}const loc=locationSnapshot();if(editingRecordId){const old=savedRecords.find(x=>x.id===editingRecordId);const record=saveRecord(old?.kind||'speech',{...(old||{}),id:editingRecordId,text},old?.location||loc);editingRecordId=null;memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast('文字起こしを更新しました'),0);}else{saveRecord('memo',{text},loc);memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast('メモを位置つきで保存しました'),0);}});
-    const savePin=document.querySelector('[data-save-pin-detail]');if(savePin) savePin.addEventListener('click',()=>{const pin=savedPins.find(x=>x.id===pendingPinId)||savedPins[savedPins.length-1];if(!pin) return;const selected=document.querySelector('[data-pin-category].selected');pin.category=selected?selected.dataset.pinCategory:(pin.category||'unclassified');const names={water:'水飲み場',toilet:'トイレ',parking:'駐車場',vending:'自販機',bench:'ベンチ',shade:'日陰・休憩',entrance:'出入口',caution:'注意場所',other:'その他',unclassified:'未分類の場所'};pin.label=names[pin.category]||'未分類の場所';pin.note=(document.getElementById('pinNote')?.value||'').trim();pin.parking=pin.category==='parking'?{...(pin.parking||{}),floor:(document.getElementById('parkingFloor')?.value||pin.parking?.floor||'').trim(),area:(document.getElementById('parkingArea')?.value||pin.parking?.area||'').trim(),number:(document.getElementById('parkingNumber')?.value||pin.parking?.number||'').trim()}:{};if(pin.category==='parking') activeParkingId=pin.id;const loc={lat:pin.lat,lng:pin.lng,accuracy:pin.accuracy,time:pin.time,pending:pin.lat==null};saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:pin.note,parking:pin.parking},loc);persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast(`${pin.label}として保存しました`),0);});
+    const savePin=document.querySelector('[data-save-pin-detail]');if(savePin) savePin.addEventListener('click',()=>{const pin=savedPins.find(x=>x.id===pendingPinId)||savedPins[savedPins.length-1];if(!pin) return;const selected=document.querySelector('[data-pin-category].selected');pin.category=selected?selected.dataset.pinCategory:(pin.category||'unclassified');const names={water:'水飲み場',toilet:'トイレ',parking:'駐車場',vending:'自販機',bench:'ベンチ',shade:'日陰・休憩',entrance:'出入口',caution:'注意場所',other:'その他',unclassified:'未分類の場所'};pin.label=names[pin.category]||'未分類の場所';pin.note=(document.getElementById('pinNote')?.value||'').trim();pin.parking=pin.category==='parking'?{...(pin.parking||{}),floor:(document.getElementById('parkingFloor')?.value||pin.parking?.floor||'').trim(),area:(document.getElementById('parkingArea')?.value||pin.parking?.area||'').trim(),number:(document.getElementById('parkingNumber')?.value||pin.parking?.number||'').trim()}:{};if(pin.category==='parking'){activeParkingId=pin.id;pin.sessionId=null;}const loc={lat:pin.lat,lng:pin.lng,accuracy:pin.accuracy,time:pin.time,pending:pin.lat==null};saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:pin.note,parking:pin.parking,sessionId:pin.category==='parking'?null:pin.sessionId,keepWithParking:pin.category==='parking'},loc);persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast(`${pin.label}として保存しました`),0);});
     const finish=document.querySelector('[data-finish-session]');if(finish) finish.addEventListener('click',()=>{
       const finishedElapsed=elapsedNow();
       const finishedDistance=sessionDistanceKm();
       autoAttachMissingLocations();
-      const hasAnyLocation=trackPoints.some(p=>p.lat!=null)||savedPins.some(p=>p.lat!=null)||savedRecords.some(r=>r.location&&r.location.lat!=null);
-      localStorage.setItem('outbase_last_session_summary',JSON.stringify({finishedAt:Date.now(),target:recordTarget,elapsedMs:finishedElapsed,distanceKm:finishedDistance,trackPoints:[...trackPoints]}));
-      activeStartedAt=0;
-      elapsedMs=0;
-      recordSessionState='idle';
-      recordSheet='';
-      stopGeoWatch();
-      releaseScreenAwake();
-      trackPoints=[];
-      savedPins=savedPins.filter(pin=>pin.category==='parking'&&!pin.clearedAt);
-      gpsStatus=currentPosition?`現在地取得済み ±${currentPosition.accuracy||'-'}m`:'現在地を確認中';
-      persistRecordState();render();setTimeout(()=>showRecordToast(hasAnyLocation?'散歩記録を保存しました':'散歩記録を保存しました。今回は位置情報を取得できませんでした'),0);
+      const hasAnyLocation=trackPoints.some(p=>p.lat!=null)||savedPins.some(p=>p.lat!=null)||savedRecords.some(r=>r.sessionId===currentSessionId&&r.location&&r.location.lat!=null);
+      recoverableSession=snapshotCurrentSession(finishedElapsed,finishedDistance);
+      localStorage.setItem('outbase_last_session_summary',JSON.stringify({finishedAt:recoverableSession.finishedAt,target:recordTarget,elapsedMs:finishedElapsed,distanceKm:finishedDistance,trackPoints:[...trackPoints]}));
+      resetSessionToIdle();
+      persistRecordState();render();setTimeout(()=>showRecordToast(hasAnyLocation?'散歩記録を保存しました。間違いなら再開できます':'散歩記録を保存しました。今回は位置情報を取得できませんでした'),0);
     });
   }
 
   function render(){
     document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-record02-1-state-sync`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-record02-2-mistake-guard`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindRecordActions();
     initializeRecordRuntime();
   }

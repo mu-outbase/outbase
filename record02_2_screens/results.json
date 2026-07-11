@@ -1,0 +1,18 @@
+{
+  "idle_quick_hidden": true,
+  "idle_notice": true,
+  "idle_parking_button": true,
+  "active_quick_visible": true,
+  "active_state": true,
+  "end_three_actions": true,
+  "recover_bar": true,
+  "idle_after_finish": true,
+  "resumed_active": true,
+  "discard_confirm": true,
+  "discard_lists_memo": true,
+  "idle_after_discard": true,
+  "no_recover_after_discard": true,
+  "quick_hidden_after_discard": true,
+  "idle_pin_parking_selected": true,
+  "parking_survives_discard": true
+}
