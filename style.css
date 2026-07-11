@@ -99,3 +99,47 @@ main{padding:9px 12px 0}.page{display:none}.page.active{display:block}
 .memoryListHead h2{font-size:15px}
 .memoryRow b{font-size:12.5px}
 .memoryRow p{font-size:8.5px}
+/* Record-01: approved field recording behavior without changing CLEAN v6 design */
+.recordHero{grid-template-columns:92px 1fr 76px}
+.recordHeroTitle h1{font-size:27px}
+.recordTargetText{min-width:0;cursor:pointer}
+.recordTargetText>small{display:block;color:#b8ad98;font-size:8px}
+.recordTargetText>b{display:block;margin-top:3px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recordTargetText>span{display:block;margin-top:3px;color:#d6ad63;font-size:7px;font-weight:800}
+.recordHeroSide{text-align:center}
+.recordHeroSide>span{display:block;padding:7px 8px;border-radius:17px;background:linear-gradient(180deg,#e0b666,#c89345);color:#17120d;font-size:10px;font-weight:900;white-space:nowrap}
+.recordHeroSide>small{display:block;margin-top:5px;color:#cfc4af;font-size:7.5px}
+.mapHeadActions{display:flex;gap:5px;align-items:flex-start}
+.mapHeadActions button{white-space:nowrap}
+.mapHeadActions .endButton{color:#d9b7a8;border-color:rgba(199,114,89,.42);padding-left:9px;padding-right:9px}
+.mapHead p{display:flex;align-items:center}
+.statusDot{width:6px;height:6px;margin-right:5px;border-radius:50%;background:#70a786;box-shadow:0 0 0 3px rgba(112,167,134,.12)}
+.mapStage{isolation:isolate}
+.mapStage.baseMapOnly .mapRecordPoint{opacity:0;pointer-events:none}
+.mapModeBadge{position:absolute;z-index:4;left:8px;top:8px;padding:4px 7px;border-radius:10px;background:rgba(8,17,13,.76);color:#f3dfb4;font-size:7px;font-weight:900;backdrop-filter:blur(4px)}
+.mapRecordPoint{position:absolute;z-index:5;width:28px;height:28px;padding:0;border-radius:50%;border:2px solid #fff5df;background:#a47838;color:#fff7e9;display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.mapRecordPoint .icon{width:16px;height:16px;stroke-width:2}
+.pointPhoto1{left:33%;top:32px}.pointPhoto2{right:19%;top:95px}.pointMemo{right:34%;top:140px;background:#365d49}.pointCurrent{left:49%;top:56px;background:#2f6b98;width:32px;height:32px}
+.stats>button{border:1px solid rgba(255,255,255,.11);border-radius:11px;background:transparent;color:inherit;display:flex;align-items:center;justify-content:center;gap:5px;padding:0}
+.mapButtons{grid-template-columns:1.18fr .9fr .8fr .9fr}
+.quickArea h3{display:flex;align-items:center;justify-content:space-between}
+.quickArea h3 span{color:#a59c89;font-size:6.8px;font-weight:600}
+.quickArea button small{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.quickArea button.holding{background:linear-gradient(180deg,#d9ad5e,#b67d35);color:#17120d;transform:scale(.97)}
+.quickArea button.holding .icon,.quickArea button.holding small{color:#17120d}
+.recordSheetBackdrop{position:fixed;z-index:80;inset:0;background:rgba(3,9,6,.58);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.recordSheet{width:100%;max-width:432px;padding:9px 16px calc(16px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;background:linear-gradient(155deg,#16221b,#08110d 70%);color:var(--cream);box-shadow:0 -16px 40px rgba(0,0,0,.42)}
+.sheetHandle{width:42px;height:4px;margin:0 auto 10px;border-radius:2px;background:rgba(255,255,255,.25)}
+.recordSheet>small{color:#d3aa60;font-size:8px;font-weight:900;letter-spacing:.16em}
+.recordSheet h2{margin:6px 0 0;font-size:21px}.recordSheet>p{margin:7px 0 12px;color:#bdb3a0;font-size:10px;line-height:1.45}
+.memoSheet textarea{width:100%;height:92px;padding:12px;border:1px solid rgba(255,255,255,.13);border-radius:15px;background:rgba(255,255,255,.045);color:#fff7e9;font:inherit;font-size:13px;resize:none;outline:none}
+.memoSheet textarea:focus{border-color:rgba(220,177,98,.65)}
+.sheetActions{display:grid;grid-template-columns:1fr 1.25fr;gap:8px;margin-top:12px}.sheetActions.single{grid-template-columns:1fr}
+.sheetActions button{height:42px;border:1px solid rgba(255,255,255,.13);border-radius:14px;background:rgba(255,255,255,.04);color:#efe6d5;font-size:11px;font-weight:900}
+.sheetActions .sheetPrimary{border:0;background:linear-gradient(180deg,#dfb565,#bd873d);color:#17120d}
+.summaryName{margin-top:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.045);display:flex;align-items:center;justify-content:space-between}.summaryName b{font-size:13px}.summaryName span{color:#bdb3a0;font-size:9px}
+.summaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.summaryGrid>div{padding:8px 3px;border:1px solid rgba(255,255,255,.11);border-radius:12px;text-align:center}.summaryGrid small{display:block;color:#a9a08e;font-size:7px}.summaryGrid b{display:block;margin-top:4px;font-size:11px;white-space:nowrap}
+.syncSummary{margin-top:9px;color:#bfb5a3;font-size:9px}.syncSummary i{display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#6fa381}
+.targetOption{width:100%;height:55px;margin-top:7px;padding:0 12px;border:1px solid rgba(255,255,255,.11);border-radius:15px;background:rgba(255,255,255,.035);color:#efe6d5;display:flex;align-items:center;justify-content:space-between;text-align:left}.targetOption.selected{border-color:rgba(222,179,99,.52);background:rgba(222,179,99,.08)}.targetOption b{display:block;font-size:12px}.targetOption small{display:block;margin-top:3px;color:#a9a08e;font-size:8px}.targetOption em{font-style:normal;color:#d9b166;font-size:8px;font-weight:900}
+.detailPreview{height:58px;margin-top:10px;padding:9px 11px;border-radius:15px;background:rgba(255,255,255,.045);display:flex;align-items:center;gap:11px}.detailPreview>.icon{width:30px;height:30px;color:#d9b166}.detailPreview b{display:block;font-size:13px}.detailPreview small{display:block;margin-top:4px;color:#aaa18f;font-size:8px}.detailSheet dl{margin:8px 0 0}.detailSheet dl>div{height:29px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between}.detailSheet dt{color:#aaa18f;font-size:9px}.detailSheet dd{margin:0;font-size:10px;font-weight:800}.detailLinks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.detailLinks button{height:34px;border:1px solid rgba(255,255,255,.11);border-radius:11px;background:rgba(255,255,255,.03);color:#d7cdbb;font-size:8px;font-weight:900}
+.recordToast{position:fixed;z-index:120;left:50%;bottom:88px;transform:translate(-50%,14px);width:max-content;max-width:calc(100% - 32px);padding:10px 14px;border-radius:16px;background:rgba(7,17,12,.94);color:#f7eddb;font-size:10px;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.2s}.recordToast.show{opacity:1;transform:translate(-50%,0)}

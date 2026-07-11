@@ -3,6 +3,15 @@
   let active=new URLSearchParams(location.search).get('tab')||location.hash.replace('#','')||'plan';
   if(!tabs.includes(active)) active='plan';
 
+  const params=new URLSearchParams(location.search);
+  let recordSessionState=params.get('recordState')||localStorage.getItem('outbase_record_session_state')||'active';
+  if(!['idle','active','paused'].includes(recordSessionState)) recordSessionState='active';
+  let recordCount=Number(localStorage.getItem('outbase_record_count')||18);
+  let recordTarget=localStorage.getItem('outbase_record_target')||'コタ通常散歩';
+  let recordSheet=params.get('sheet')||'';
+  let mapMode=Number(localStorage.getItem('outbase_record_map_mode')||0)%2;
+  let wakeLock=null;
+
   const I={
     calendar:'<svg class="icon" viewBox="0 0 24 24"><path d="M5 4v3M9 4v3M15 4v3M19 4v3M4 8h16v12H4zM8 8v12M12 8v12M16 8v12M4 12h16M4 16h16"/></svg>',
     search:'<svg class="icon" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.8"/><path d="m16 16 4.5 4.5"/></svg>',
@@ -124,12 +133,50 @@
   }
 
   function recordPage(){
-    const quick=[[I.mic,'話す','音声を記録'],[I.camera,'撮る','写真を撮影'],[I.movie,'動画','動画を撮影'],[I.pin,'場所','場所を記録'],[I.record,'ピン','ピンを追加'],[I.memo,'メモ','メモを残す']];
+    const quick=[
+      [I.mic,'話す','文字起こしメモ','talk'],
+      [I.camera,'撮る','写真を残す','photo'],
+      [I.movie,'動画','動画を残す','video'],
+      [I.pin,'場所','今いる場所','place'],
+      [I.record,'ピン','現在地に印','pin'],
+      [I.memo,'メモ','文字で残す','memo']
+    ];
+    const sessionLabel=recordSessionState==='idle'?'散歩開始':recordSessionState==='paused'?'再開':'一時停止';
+    const stateText=recordSessionState==='idle'?'開始前':recordSessionState==='paused'?'一時停止中':'記録中';
     return `<section class="page ${active==='record'?'active':''}" id="page-record">
-      <section class="recordHero"><div><small>RECORD</small><h1>記録</h1></div><p>保存先はコタ散歩。<br>表示を変えても保存先は変わらない。</p><span>同伴 コタ</span></section>
-      <section class="recordMapCard"><div class="mapHead"><div><h2>散歩MAP</h2><p>実際の地図で、歩いた軌跡と記録を確認できます。</p></div><button>MAP 切替</button></div>
-        <div class="mapStage"><img src="assets/map_teganuma.png" alt="手賀沼周辺の地図"><div class="mapControl"><div class="stats"><div><span>GPS</span><b>612<small>点</small></b></div><div><span>距離</span><b>4.32<small>km</small></b></div><div><span>時間</span><b>1:24:37</b></div><div><span>ピン数</span><b>18</b></div></div><div class="mapButtons"><button class="gold">散歩開始</button><button>現在地</button><button>ピン</button><button>Google<br>Map</button></div></div></div>
-        <div class="quickArea"><h3>クイック記録</h3><div>${quick.map(q=>`<button>${q[0]}<b>${q[1]}</b><small>${q[2]}</small></button>`).join('')}</div></div>
+      <section class="recordHero">
+        <div class="recordHeroTitle"><small>RECORD</small><h1>記録</h1></div>
+        <div class="recordTargetText" data-open-sheet="target"><small>記録先</small><b>${recordTarget}</b><span>タップで変更</span></div>
+        <div class="recordHeroSide"><span>同伴 コタ</span><small>${stateText}</small></div>
+      </section>
+      <section class="recordMapCard">
+        <div class="mapHead">
+          <div><h2>散歩MAP</h2><p><i class="statusDot"></i>GPS取得中&nbsp; / &nbsp;オフライン保存&nbsp; / &nbsp;画面ON</p></div>
+          <div class="mapHeadActions">${recordSessionState!=='idle'?'<button class="endButton" data-open-sheet="end">終了</button>':''}<button data-record-action="map-mode">MAP 切替</button></div>
+        </div>
+        <div class="mapStage ${mapMode===1?'baseMapOnly':''}">
+          <img src="assets/map_teganuma.png" alt="手賀沼周辺の地図">
+          <button class="mapRecordPoint pointPhoto pointPhoto1" data-record-detail="photo" aria-label="写真記録">${I.camera}</button>
+          <button class="mapRecordPoint pointPhoto pointPhoto2" data-record-detail="photo" aria-label="写真記録">${I.camera}</button>
+          <button class="mapRecordPoint pointMemo" data-record-detail="memo" aria-label="メモ記録">${I.memo}</button>
+          <button class="mapRecordPoint pointCurrent" data-record-action="current" aria-label="現在地">${I.pin}</button>
+          <div class="mapModeBadge">${mapMode===0?'地図＋記録地点':'実地図'}</div>
+          <div class="mapControl">
+            <div class="stats">
+              <button data-open-sheet="detail"><span>GPS点</span><b>612<small>点</small></b></button>
+              <div><span>距離</span><b>4.32<small>km</small></b></div>
+              <div><span>経過時間</span><b>1:24:37</b></div>
+              <button data-open-sheet="detail"><span>記録数</span><b>${recordCount}</b></button>
+            </div>
+            <div class="mapButtons">
+              <button class="gold sessionButton" data-record-action="session">${sessionLabel}</button>
+              <button data-record-action="current">現在地</button>
+              <button data-record-action="pin">ピン</button>
+              <button data-record-action="google-map">Google<br>Map</button>
+            </div>
+          </div>
+        </div>
+        <div class="quickArea"><h3>クイック記録 <span>3秒以内に保存</span></h3><div>${quick.map(q=>`<button data-record-action="${q[3]}" class="quick-${q[3]}">${q[0]}<b>${q[1]}</b><small>${q[2]}</small></button>`).join('')}</div></div>
       </section>
     </section>`;
   }
@@ -153,9 +200,73 @@
     </section>`;
   }
 
-  function render(){
-    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${nav()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;history.replaceState(null,'',`?tab=${active}&v=clean-v6-1`);render();window.scrollTo({top:0,behavior:'instant'});}));
+  function sheetMarkup(){
+    if(!recordSheet) return '';
+    if(recordSheet==='memo') return `<div class="recordSheetBackdrop"><section class="recordSheet memoSheet"><div class="sheetHandle"></div><small>クイック記録</small><h2>メモを残す</h2><p>GPSセッションを止めず、${recordTarget}へ保存します。</p><textarea id="recordMemo" placeholder="今の気づきや、あとで確認したいこと"></textarea><div class="sheetActions"><button data-close-sheet>記録へ戻る</button><button class="sheetPrimary" data-save-memo>保存</button></div></section></div>`;
+    if(recordSheet==='end') return `<div class="recordSheetBackdrop"><section class="recordSheet endSheet"><div class="sheetHandle"></div><small>SESSION SUMMARY</small><h2>散歩記録を終了しますか？</h2><div class="summaryName"><b>${recordTarget}</b><span>10:12 − 11:36</span></div><div class="summaryGrid"><div><small>経過時間</small><b>1:24:37</b></div><div><small>距離</small><b>4.32 km</b></div><div><small>記録</small><b>${recordCount}件</b></div><div><small>GPS欠測</small><b>なし</b></div></div><div class="syncSummary"><i></i>端末保存済み・同期待ち 0件</div><div class="sheetActions"><button data-close-sheet>記録へ戻る</button><button class="sheetPrimary" data-finish-session>終了して保存</button></div></section></div>`;
+    if(recordSheet==='target') return `<div class="recordSheetBackdrop"><section class="recordSheet targetSheet"><div class="sheetHandle"></div><small>RECORD TARGET</small><h2>記録先を変更</h2><p>表示中プランとは別に、保存先だけを変更します。</p><button class="targetOption selected" data-record-target="コタ通常散歩"><span><b>コタ通常散歩</b><small>散歩セッション</small></span><em>選択中</em></button><button class="targetOption" data-record-target="手賀沼ドライブ散歩 ＞ コタ場内散歩"><span><b>手賀沼ドライブ散歩</b><small>コタ場内散歩へ保存</small></span><em>選ぶ</em></button><button class="targetOption" data-record-target="未確認箱へ仮保存"><span><b>未確認箱へ仮保存</b><small>あとで関連付け</small></span><em>選ぶ</em></button><div class="sheetActions single"><button data-close-sheet>閉じる</button></div></section></div>`;
+    return `<div class="recordSheetBackdrop"><section class="recordSheet detailSheet"><div class="sheetHandle"></div><small>RECORD DETAIL</small><h2>直近の記録</h2><div class="detailPreview">${I.camera}<span><b>写真</b><small>11:28　手賀沼親水広場付近</small></span></div><dl><div><dt>記録先</dt><dd>${recordTarget}</dd></div><div><dt>GPS精度</dt><dd>± 6 m</dd></div><div><dt>同期状態</dt><dd>端末保存済み</dd></div><div><dt>公開範囲</dt><dd>非公開</dd></div></dl><div class="detailLinks"><button data-open-sheet="target">記録先を変更</button><button>テキスト修正</button><button>削除候補へ</button></div><div class="sheetActions single"><button data-close-sheet>閉じる</button></div></section></div>`;
   }
+
+  function showRecordToast(message){
+    let toast=document.getElementById('recordToast');
+    if(!toast){toast=document.createElement('div');toast.id='recordToast';toast.className='recordToast';document.body.appendChild(toast);}
+    toast.textContent=message;toast.classList.add('show');
+    clearTimeout(showRecordToast.timer);showRecordToast.timer=setTimeout(()=>toast.classList.remove('show'),2100);
+  }
+
+  function persistRecordState(){
+    localStorage.setItem('outbase_record_session_state',recordSessionState);
+    localStorage.setItem('outbase_record_count',String(recordCount));
+    localStorage.setItem('outbase_record_target',recordTarget);
+    localStorage.setItem('outbase_record_map_mode',String(mapMode));
+  }
+
+  async function keepScreenAwake(){
+    try{if('wakeLock' in navigator&&recordSessionState==='active') wakeLock=await navigator.wakeLock.request('screen');}catch(_e){}
+  }
+
+  function incrementRecord(message){recordCount+=1;persistRecordState();render();setTimeout(()=>showRecordToast(message),0);}
+
+  function openCapture(kind){
+    const input=document.createElement('input');input.type='file';input.accept=kind==='photo'?'image/*':'video/*';input.capture='environment';
+    input.addEventListener('change',()=>{if(input.files&&input.files.length) incrementRecord(`${kind==='photo'?'写真':'動画'}を${recordTarget}に保存しました`);},{once:true});input.click();
+  }
+
+  function bindRecordActions(){
+    document.querySelectorAll('[data-open-sheet]').forEach(el=>el.addEventListener('click',()=>{recordSheet=el.dataset.openSheet;render();}));
+    document.querySelectorAll('[data-close-sheet]').forEach(el=>el.addEventListener('click',()=>{recordSheet='';render();}));
+    document.querySelectorAll('[data-record-target]').forEach(el=>el.addEventListener('click',()=>{recordTarget=el.dataset.recordTarget;recordSheet='';persistRecordState();render();setTimeout(()=>showRecordToast(`記録先を「${recordTarget}」に変更しました`),0);}));
+    document.querySelectorAll('[data-record-detail]').forEach(el=>el.addEventListener('click',()=>{recordSheet='detail';render();}));
+    document.querySelectorAll('[data-record-action]').forEach(el=>{
+      const action=el.dataset.recordAction;
+      if(action==='talk'){
+        const start=()=>{el.classList.add('holding');el.querySelector('small').textContent='話している間だけ記録';};
+        const finish=()=>{if(!el.classList.contains('holding')) return;el.classList.remove('holding');incrementRecord(`文字起こしメモを${recordTarget}に保存しました`);};
+        el.addEventListener('pointerdown',start);el.addEventListener('pointerup',finish);el.addEventListener('pointercancel',finish);el.addEventListener('pointerleave',finish);return;
+      }
+      el.addEventListener('click',()=>{
+        if(action==='session'){
+          recordSessionState=recordSessionState==='idle'?'active':recordSessionState==='active'?'paused':'active';persistRecordState();render();if(recordSessionState==='active') keepScreenAwake();setTimeout(()=>showRecordToast(recordSessionState==='active'?'GPS記録を開始しました':'一時停止しました'),0);
+        }else if(action==='map-mode'){mapMode=(mapMode+1)%2;persistRecordState();render();}
+        else if(action==='current'){
+          if(navigator.geolocation) navigator.geolocation.getCurrentPosition(()=>showRecordToast('現在地へ戻りました'),()=>showRecordToast('現在地を確認しています'),{enableHighAccuracy:true,timeout:2500}); else showRecordToast('現在地へ戻りました');
+        }else if(action==='pin') incrementRecord(`現在地にピンを保存しました`);
+        else if(action==='place') incrementRecord(`今いる場所を${recordTarget}に保存しました`);
+        else if(action==='photo'||action==='video') openCapture(action);
+        else if(action==='memo'){recordSheet='memo';render();}
+        else if(action==='google-map') window.open('https://www.google.com/maps?q=35.8667,140.0123','_blank','noopener');
+      });
+    });
+    const saveMemo=document.querySelector('[data-save-memo]');if(saveMemo) saveMemo.addEventListener('click',()=>{const text=document.getElementById('recordMemo').value.trim();if(!text){showRecordToast('メモを入力してください');return;}recordSheet='';incrementRecord(`メモを${recordTarget}に保存しました`);});
+    const finish=document.querySelector('[data-finish-session]');if(finish) finish.addEventListener('click',()=>{recordSessionState='idle';recordSheet='';persistRecordState();render();setTimeout(()=>showRecordToast('散歩記録を保存しました'),0);});
+  }
+
+  function render(){
+    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${nav()}${sheetMarkup()}</div>`;
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-record01`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    bindRecordActions();
+  }
+
   render();
 })();
