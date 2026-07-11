@@ -43,6 +43,27 @@
   let resumeBreakPending=localStorage.getItem('outbase_record_resume_break_pending')==='1';
   const previewMode=params.get('preview')||'';
 
+  const defaultPlans=[
+    {id:'plan-oz',title:'尾瀬トレッキング',type:'登山',start:'2026-07-01',end:'2026-07-03',allDay:true,companion:'',location:'尾瀬',status:'予定',prep:'準備中',tone:'green',note:'早朝出発。天気と装備を確認。'},
+    {id:'plan-kota-5',title:'コタ散歩',type:'散歩',start:'2026-07-05',end:'2026-07-05',time:'07:00',companion:'コタ',location:'近所',status:'予定',prep:'準備不要',tone:'green',note:''},
+    {id:'plan-drive-6',title:'手賀沼ドライブ散歩',type:'ドライブ散歩',start:'2026-07-06',end:'2026-07-06',time:'09:00',companion:'コタ',location:'手賀沼',status:'予定',prep:'駐車場確認',tone:'gold',note:'駐車位置も記録する。'},
+    {id:'plan-check-10',title:'車の点検',type:'日常',start:'2026-07-10',end:'2026-07-10',time:'10:00',companion:'',location:'',status:'予定',prep:'準備不要',tone:'slate',note:''},
+    {id:'plan-kota-12',title:'コタ散歩',type:'散歩',start:'2026-07-12',end:'2026-07-12',time:'07:00',companion:'コタ',location:'近所',status:'予定',prep:'準備不要',tone:'green',note:''},
+    {id:'plan-drive-13',title:'手賀沼ドライブ散歩',type:'ドライブ散歩',start:'2026-07-13',end:'2026-07-13',time:'09:00',companion:'コタ',location:'手賀沼',status:'予定',prep:'準備中',tone:'gold',note:'駐車場、水飲み場、日陰を確認する。'},
+    {id:'plan-akagi',title:'スノーピーク赤城山CF',type:'キャンプ',start:'2026-07-18',end:'2026-07-20',allDay:true,companion:'コタ・友人',location:'群馬県前橋市',status:'予定',prep:'準備中',tone:'green',note:'2泊。買い物・料理・ギア・ルートを準備。'},
+    {id:'plan-tani',title:'谷川岳山行',type:'登山',start:'2026-07-31',end:'2026-08-01',allDay:true,companion:'',location:'谷川岳',status:'予定',prep:'未着手',tone:'green',note:''}
+  ];
+  let plans=readStored('outbase_plans_v1',defaultPlans);
+  let selectedPlanDate=localStorage.getItem('outbase_selected_plan_date')||'2026-07-13';
+  let planMonth=localStorage.getItem('outbase_plan_month')||selectedPlanDate.slice(0,7);
+  let planSheet=params.get('planSheet')||'';
+  let selectedPlanId=params.get('planId')||'';
+  let planDraftMode='plan';
+  let activePlanId=localStorage.getItem('outbase_active_plan_id')||'plan-drive-13';
+  if(previewMode==='plan-add') planSheet='add';
+  if(previewMode==='plan-detail'){planSheet='detail';selectedPlanId='plan-drive-13';}
+  if(previewMode==='plan-list') planSheet='list';
+
   if(recordSessionState==='idle'){
     elapsedMs=0;
     activeStartedAt=0;
@@ -106,6 +127,51 @@
     const pillar=(t.match(/[A-Za-zＡ-Ｚａ-ｚ][0-9０-９-]*(?:柱|エリア)?/)||[])[0]||'';
     const number=(t.match(/[0-9０-９]+(?:番|台|区画)/)||[])[0]||'';
     return {floor,area:[color,pillar].filter(Boolean).join('・'),number};
+  }
+
+
+  function parseYmd(value){
+    const [y,m,d]=String(value).split('-').map(Number);
+    return new Date(y,m-1,d,12,0,0,0);
+  }
+  function toYmd(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
+  function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d;}
+  function compareYmd(a,b){return String(a).localeCompare(String(b));}
+  function planForId(id){return plans.find(p=>p.id===id)||null;}
+  function activePlan(){return planForId(activePlanId)||plans.find(p=>compareYmd(p.end,new Date().toISOString().slice(0,10))>=0)||plans[0]||null;}
+  function planTypeLabel(type){return type||'予定';}
+  function planRangeLabel(plan){
+    if(!plan) return '';
+    const s=parseYmd(plan.start),e=parseYmd(plan.end||plan.start);
+    const left=`${s.getMonth()+1}/${s.getDate()}`;
+    const right=plan.end&&plan.end!==plan.start?`−${e.getMonth()+1}/${e.getDate()}`:'';
+    return `${left}${right}${plan.time?` ${plan.time}`:''}`;
+  }
+  function selectedDateLabel(value){const d=parseYmd(value),w=['日','月','火','水','木','金','土'][d.getDay()];return `${d.getMonth()+1}月${d.getDate()}日（${w}）`;}
+  function plansForDate(value){return plans.filter(p=>compareYmd(p.start,value)<=0&&compareYmd(p.end||p.start,value)>=0).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));}
+  function persistPlans(){localStorage.setItem('outbase_plans_v1',JSON.stringify(plans));localStorage.setItem('outbase_selected_plan_date',selectedPlanDate);localStorage.setItem('outbase_plan_month',planMonth);localStorage.setItem('outbase_active_plan_id',activePlanId);}
+  function monthCalendar(monthKey){
+    const [y,m]=monthKey.split('-').map(Number),first=new Date(y,m-1,1,12),last=new Date(y,m,0,12);
+    const start=addDays(first,-first.getDay()),end=addDays(last,6-last.getDay());
+    const days=[];for(let d=new Date(start);d<=end;d=addDays(d,1)) days.push(new Date(d));
+    return {year:y,month:m,days,weeks:days.length/7,start:toYmd(start),end:toYmd(end)};
+  }
+  function calendarSegments(meta){
+    const visible=plans.filter(p=>compareYmd(p.end||p.start,meta.start)>=0&&compareYmd(p.start,meta.end)<=0);
+    const occupied=Array.from({length:meta.weeks},()=>[[],[]]);
+    const html=[];
+    for(const plan of visible.sort((a,b)=>compareYmd(a.start,b.start)||compareYmd(b.end||b.start,a.end||a.start))){
+      const ps=parseYmd(plan.start),pe=parseYmd(plan.end||plan.start);
+      for(let week=0;week<meta.weeks;week++){
+        const ws=meta.days[week*7],we=meta.days[week*7+6];
+        const ss=ps>ws?ps:ws,se=pe<we?pe:we;if(ss>se) continue;
+        const col=Math.round((ss-ws)/86400000)+1,span=Math.round((se-ss)/86400000)+1;
+        let lane=0;while(lane<2&&occupied[week][lane].some(r=>!(col+span-1<r[0]||col>r[1]))) lane++;
+        if(lane>=2) continue;occupied[week][lane].push([col,col+span-1]);
+        html.push(`<button class="eventBar ${plan.tone||'green'} planSegment" style="grid-column:${col}/span ${span};grid-row:${week+1};--lane:${lane}" data-plan-id="${plan.id}">${escapeHtml(plan.title)}</button>`);
+      }
+    }
+    return html.join('');
   }
 
   function clearRecoverableSession(){
@@ -232,10 +298,13 @@
 
   function header(){
     const saveTarget=active==='record'?`<button class="saveBar saveBarButton" data-open-sheet="target"><b>保存先：${recordTarget}</b><span>タップで変更</span></button>`:'';
+    const current=activePlan();
+    const chipTitle=current?current.title:'予定を選択';
+    const chipMeta=current?`${planTypeLabel(current.type)}&nbsp; / &nbsp;${planRangeLabel(current)}${current.companion?`&nbsp; / &nbsp;同伴 ${escapeHtml(current.companion)}`:''}`:'カレンダーから予定を選択';
     return `<header class="header ${active==='record'?'recordHeader':'compactHeader'}">
       <div class="topLine">
         <div class="brand"><div class="ob">OB</div><div><div class="brandName">OUTBASE</div><div class="brandSub">route design</div></div></div>
-        <button class="planChip"><span class="planTitle"><i></i>手賀沼ドライブ散歩</span><span>ドライブ散歩&nbsp; / &nbsp;7/13&nbsp; / &nbsp;同伴 コタ</span></button>
+        <button class="planChip" ${current?`data-plan-id="${current.id}"`:''}><span class="planTitle"><i></i>${escapeHtml(chipTitle)}</span><span>${chipMeta}</span></button>
       </div>
       ${saveTarget}
     </header>`;
@@ -252,33 +321,53 @@
   }
 
   function planPage(){
-    const dates=[
-      ['28','sun other'],['29','other'],['30','other'],['1',''],['2',''],['3',''],['4','sat'],
-      ['5','sun'],['6',''],['7',''],['8',''],['9',''],['10','selected'],['11','sat'],
-      ['12','sun'],['13',''],['14',''],['15',''],['16',''],['17',''],['18','sat'],
-      ['19','sun'],['20','sun holiday','海の日'],['21',''],['22',''],['23','holiday','スポーツの日'],['24',''],['25','sat'],
-      ['26','sun'],['27',''],['28',''],['29',''],['30',''],['31',''],['1','sat other','8月']
-    ];
+    const meta=monthCalendar(planMonth);
+    const selectedRows=plansForDate(selectedPlanDate);
+    const today=new Date().toISOString().slice(0,10);
+    const dayCells=meta.days.map((d,index)=>{
+      const key=toYmd(d),other=d.getMonth()+1!==meta.month,selected=key===selectedPlanDate,isToday=key===today,sun=d.getDay()===0,sat=d.getDay()===6;
+      const classes=[other?'other':'',selected?'selected':'',isToday?'today':'',sun?'sun':'',sat?'sat':''].filter(Boolean).join(' ');
+      const col=index%7+1,row=Math.floor(index/7)+1;
+      return `<button class="day ${classes}" style="grid-column:${col};grid-row:${row}" data-plan-date="${key}"><span class="num">${d.getDate()}</span>${plansForDate(key).length>2?`<small class="dayMore">+${plansForDate(key).length-2}</small>`:''}</button>`;
+    }).join('');
     return `<section class="page ${active==='plan'?'active':''}" id="page-plan">
-      <section class="calendarCard">
-        <div class="calendarHead"><div class="month">2026.07</div><div class="monthBtns"><button>‹</button><button>›</button></div><span>日付を2回タップで新規予定</span></div>
+      <section class="calendarCard planCalendarCard" style="--weeks:${meta.weeks}">
+        <div class="calendarHead planCalendarHead"><div class="month">${meta.year}.${String(meta.month).padStart(2,'0')}</div><div class="monthBtns"><button data-plan-month="prev">‹</button><button data-plan-today>今日</button><button data-plan-month="next">›</button></div><button class="planAddTop" data-open-plan-add>＋予定</button></div>
         <div class="week"><span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span></div>
-        <div class="monthGrid">${dates.map(d=>`<div class="day ${d[1]}"><span class="num">${d[0]}</span>${d[2]?`<small>${d[2]}</small>`:''}</div>`).join('')}
-          <div class="eventBar green e-oz">尾瀬トレッキング</div>
-          <div class="eventBar green e-kota1">コタ散歩</div><div class="eventBar gold e-drive1">手賀沼<br>ドライブ散歩</div>
-          <div class="eventBar green e-kota2">コタ散歩</div><div class="eventBar gold e-drive2">手賀沼<br>ドライブ散歩</div>
-          <div class="eventBar green e-akagi1">スノーピーク赤城山CF</div><div class="eventBar green e-akagi2">スノーピーク赤城山CF</div>
-          <div class="eventBar green e-tani">谷川岳山行</div>
-        </div>
+        <div class="monthGrid planMonthGrid" style="--weeks:${meta.weeks}">${dayCells}${calendarSegments(meta)}</div>
+        <p class="calendarHint">日付を選択。空いている日を2回タップでも追加できます。</p>
       </section>
-      <section class="scheduleCard">
-        <div class="scheduleTitle">選択日の予定</div>
-        ${[
-          ['7/12','日','green','散歩','コタ散歩'],['7/13','月','gold','ドライブ散歩','手賀沼ドライブ散歩'],['7/18−7/20','土−月・祝','green','イベント','スノーピーク赤城山CF'],['7/31−8/1','金−土','green','登山','谷川岳山行']
-        ].map(r=>`<div class="scheduleRow"><div class="dateBlock"><b>${r[0]}</b><span>${r[1]}</span></div><i class="dot ${r[2]}"></i><div class="kind">${r[3]}</div><div class="scheduleName">${r[4]}</div><div class="chev">›</div></div>`).join('')}
-        <div class="scheduleMore">すべての予定を見る&nbsp; ›</div>
+      <section class="scheduleCard selectedDayCard">
+        <div class="selectedDayHead"><div><small>選択日</small><h2>${selectedDateLabel(selectedPlanDate)}</h2></div><button data-open-plan-add>＋追加</button></div>
+        <div class="selectedDayRows">${selectedRows.length?selectedRows.map(plan=>`<button class="selectedPlanRow" data-plan-id="${plan.id}"><time>${plan.time||'終日'}</time><i class="dot ${plan.tone||'green'}"></i><div><small>${escapeHtml(plan.type)}${plan.companion?`・${escapeHtml(plan.companion)}`:''}</small><b>${escapeHtml(plan.title)}</b></div><em>${escapeHtml(plan.prep||plan.status||'予定')}</em><span>›</span></button>`).join(''):`<div class="selectedDayEmpty"><b>予定はありません</b><span>予定・今から始める出来事・過去の実績を追加できます。</span></div>`}</div>
+        <button class="scheduleMore planAllButton" data-open-plan-list>すべての予定を見る&nbsp; ›</button>
       </section>
     </section>`;
+  }
+
+  function planSheetMarkup(){
+    if(!planSheet) return '';
+    const plan=planForId(selectedPlanId);
+    if(planSheet==='add'||planSheet==='edit'){
+      const editing=planSheet==='edit'&&plan;
+      const startValue=editing?plan.start:selectedPlanDate;
+      const endValue=editing?(plan.end||plan.start):selectedPlanDate;
+      const title=editing?plan.title:'';
+      const type=editing?plan.type:'予定';
+      const time=editing?(plan.time||''):'';
+      const companion=editing?(plan.companion||''):'';
+      const location=editing?(plan.location||''):'';
+      const note=editing?(plan.note||''):'';
+      return `<div class="recordSheetBackdrop planSheetBackdrop"><section class="recordSheet planEditSheet"><div class="sheetHandle"></div><small>PLAN / EXPERIENCE</small><h2>${editing?'予定・出来事を編集':'予定・出来事を追加'}</h2><div class="planModeSwitch"><button class="${planDraftMode==='plan'?'selected':''}" data-plan-mode="plan">予定</button><button class="${planDraftMode==='now'?'selected':''}" data-plan-mode="now">今から</button><button class="${planDraftMode==='past'?'selected':''}" data-plan-mode="past">過去から</button></div><p class="planModeHelp">${planDraftMode==='plan'?'これからの予定として追加します。':planDraftMode==='now'?'予定がなくても、今始める出来事として追加します。':'写真やメモから、過去の実績として追加します。'}</p><label class="planField wide">名前<input id="planTitleInput" value="${escapeHtml(title)}" placeholder="例：手賀沼ドライブ散歩"></label><div class="planFormGrid"><label class="planField">開始日<input id="planStartInput" type="date" value="${startValue}"></label><label class="planField">終了日<input id="planEndInput" type="date" value="${endValue}"></label><label class="planField">時間<input id="planTimeInput" type="time" value="${time}"></label><label class="planField">種類<select id="planTypeInput">${['予定','散歩','ドライブ散歩','キャンプ','登山','イベント','買い物','日常'].map(v=>`<option ${v===type?'selected':''}>${v}</option>`).join('')}</select></label><label class="planField">同行者<input id="planCompanionInput" value="${escapeHtml(companion)}" placeholder="例：コタ"></label><label class="planField">場所<input id="planLocationInput" value="${escapeHtml(location)}" placeholder="場所は後でもOK"></label></div><label class="planField wide">メモ<textarea id="planNoteInput" placeholder="準備や当日の補足">${escapeHtml(note)}</textarea></label><div class="sheetActions"><button data-close-plan-sheet>戻る</button><button class="sheetPrimary" data-save-plan>${editing?'更新':'追加'}</button></div></section></div>`;
+    }
+    if(planSheet==='detail'&&plan){
+      return `<div class="recordSheetBackdrop planSheetBackdrop"><section class="recordSheet planDetailSheet"><div class="sheetHandle"></div><small>${escapeHtml(plan.type||'予定')}</small><h2>${escapeHtml(plan.title)}</h2><div class="planDetailHero"><div><small>日付</small><b>${escapeHtml(planRangeLabel(plan))}</b></div><div><small>状態</small><b>${escapeHtml(plan.status||'予定')}</b></div></div><div class="planDetailMeta">${plan.location?`<p><span>場所</span><b>${escapeHtml(plan.location)}</b></p>`:''}${plan.companion?`<p><span>同行</span><b>${escapeHtml(plan.companion)}</b></p>`:''}<p><span>準備</span><b>${escapeHtml(plan.prep||'未着手')}</b></p>${plan.note?`<p><span>メモ</span><b>${escapeHtml(plan.note)}</b></p>`:''}</div><button class="planPrimaryAction" data-plan-set-active="${plan.id}">この予定を主役にする</button><div class="planActionGrid"><button data-plan-prepare="${plan.id}">準備を始める</button><button data-plan-record="${plan.id}">この予定で記録</button><button data-plan-edit="${plan.id}">編集</button><button data-plan-complete="${plan.id}">${plan.status==='完了'?'予定に戻す':'完了にする'}</button></div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="planDanger" data-plan-delete="${plan.id}">削除</button></div></section></div>`;
+    }
+    if(planSheet==='list'){
+      const sorted=[...plans].sort((a,b)=>compareYmd(a.start,b.start)||(a.time||'').localeCompare(b.time||''));
+      return `<div class="recordSheetBackdrop planSheetBackdrop"><section class="recordSheet planListSheet"><div class="sheetHandle"></div><small>ALL PLANS</small><h2>すべての予定・出来事</h2><div class="planListRows">${sorted.map(p=>`<button data-plan-id="${p.id}"><time>${escapeHtml(planRangeLabel(p))}</time><i class="dot ${p.tone||'green'}"></i><div><small>${escapeHtml(p.type)}・${escapeHtml(p.status||'予定')}</small><b>${escapeHtml(p.title)}</b></div><span>›</span></button>`).join('')}</div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-open-plan-add>＋追加</button></div></section></div>`;
+    }
+    return '';
   }
 
   function searchCard(icon,title,sub,tags=[]){
@@ -713,6 +802,27 @@
     }
   }
 
+  function bindPlanActions(){
+    document.querySelectorAll('[data-plan-date]').forEach(el=>{
+      el.addEventListener('click',()=>{selectedPlanDate=el.dataset.planDate;planMonth=selectedPlanDate.slice(0,7);persistPlans();render();});
+      el.addEventListener('dblclick',()=>{selectedPlanDate=el.dataset.planDate;planDraftMode='plan';planSheet='add';persistPlans();render();});
+    });
+    document.querySelectorAll('[data-plan-id]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectedPlanId=el.dataset.planId;planSheet='detail';render();}));
+    document.querySelectorAll('[data-open-plan-add]').forEach(el=>el.addEventListener('click',()=>{selectedPlanId='';planDraftMode='plan';planSheet='add';render();}));
+    document.querySelectorAll('[data-open-plan-list]').forEach(el=>el.addEventListener('click',()=>{planSheet='list';render();}));
+    document.querySelectorAll('[data-close-plan-sheet]').forEach(el=>el.addEventListener('click',()=>{planSheet='';selectedPlanId='';render();}));
+    document.querySelectorAll('[data-plan-month]').forEach(el=>el.addEventListener('click',()=>{const [y,m]=planMonth.split('-').map(Number),d=new Date(y,m-1+(el.dataset.planMonth==='next'?1:-1),1);planMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;selectedPlanDate=`${planMonth}-01`;persistPlans();render();}));
+    document.querySelectorAll('[data-plan-today]').forEach(el=>el.addEventListener('click',()=>{selectedPlanDate=new Date().toISOString().slice(0,10);planMonth=selectedPlanDate.slice(0,7);persistPlans();render();}));
+    document.querySelectorAll('[data-plan-mode]').forEach(el=>el.addEventListener('click',()=>{planDraftMode=el.dataset.planMode;render();}));
+    document.querySelectorAll('[data-plan-edit]').forEach(el=>el.addEventListener('click',()=>{selectedPlanId=el.dataset.planEdit;planSheet='edit';render();}));
+    document.querySelectorAll('[data-plan-set-active]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planSetActive;persistPlans();planSheet='';render();}));
+    document.querySelectorAll('[data-plan-prepare]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planPrepare;persistPlans();planSheet='';active='prep';history.replaceState(null,'',`?tab=prep&v=clean-v6-plan01`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-plan-record]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planRecord);if(!p)return;activePlanId=p.id;recordTarget=p.title;localStorage.setItem('outbase_record_target',recordTarget);persistPlans();planSheet='';active='record';history.replaceState(null,'',`?tab=record&v=clean-v6-plan01`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-plan-complete]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planComplete);if(!p)return;p.status=p.status==='完了'?'予定':'完了';persistPlans();render();}));
+    document.querySelectorAll('[data-plan-delete]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planDelete);if(!p)return;if(!confirm(`「${p.title}」を削除しますか？`))return;plans=plans.filter(x=>x.id!==p.id);if(activePlanId===p.id)activePlanId=plans[0]?.id||'';persistPlans();planSheet='';selectedPlanId='';render();}));
+    const save=document.querySelector('[data-save-plan]');if(save) save.addEventListener('click',()=>{const title=document.getElementById('planTitleInput')?.value.trim();if(!title){alert('名前を入力してください');return;}const start=document.getElementById('planStartInput').value||selectedPlanDate,end=document.getElementById('planEndInput').value||start;const row={id:selectedPlanId||newId('plan'),title,type:document.getElementById('planTypeInput').value,start,end,time:document.getElementById('planTimeInput').value,companion:document.getElementById('planCompanionInput').value.trim(),location:document.getElementById('planLocationInput').value.trim(),note:document.getElementById('planNoteInput').value.trim(),status:planDraftMode==='past'?'完了':planDraftMode==='now'?'実施中':'予定',prep:'未着手',tone:document.getElementById('planTypeInput').value==='ドライブ散歩'?'gold':document.getElementById('planTypeInput').value==='日常'?'slate':'green'};const idx=plans.findIndex(p=>p.id===row.id);if(idx>=0)plans[idx]={...plans[idx],...row};else plans.push(row);selectedPlanDate=start;planMonth=start.slice(0,7);activePlanId=activePlanId||row.id;persistPlans();planSheet='detail';selectedPlanId=row.id;render();});
+  }
+
   function bindRecordActions(){
     document.querySelectorAll('[data-open-sheet]').forEach(el=>el.addEventListener('click',()=>{recordSheet=el.dataset.openSheet;render();}));
     document.querySelectorAll('[data-open-parking-recall]').forEach(el=>el.addEventListener('click',()=>{recordSheet='parking-recall';render();}));
@@ -788,8 +898,9 @@
   }
 
   function render(){
-    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-record02-2-mistake-guard`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${sheetMarkup()}</div>`;
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';planSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-plan01`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    bindPlanActions();
     bindRecordActions();
     initializeRecordRuntime();
   }
