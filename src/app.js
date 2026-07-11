@@ -4,8 +4,8 @@
   if(!tabs.includes(active)) active='plan';
 
   const params=new URLSearchParams(location.search);
-  let recordSessionState=params.get('recordState')||localStorage.getItem('outbase_record_session_state')||'active';
-  if(!['idle','active','paused'].includes(recordSessionState)) recordSessionState='active';
+  let recordSessionState=params.get('recordState')||localStorage.getItem('outbase_record_session_state')||'idle';
+  if(!['idle','active','paused'].includes(recordSessionState)) recordSessionState='idle';
   let recordCount=Number(localStorage.getItem('outbase_record_count')||18);
   let recordTarget=localStorage.getItem('outbase_record_target')||'コタ通常散歩';
   let recordSheet=params.get('sheet')||'';
@@ -13,12 +13,13 @@
   let wakeLock=null;
   let geoWatchId=null;
   let timerId=null;
-  let gpsStatus='位置情報を確認中';
+  let gpsStatus='現在地を確認中';
   let currentPosition=readStored('outbase_record_current_position',null);
   let trackPoints=readStored('outbase_record_track_points',[]);
   let savedPins=readStored('outbase_record_saved_pins',[]);
   let elapsedMs=Number(localStorage.getItem('outbase_record_elapsed_ms')||0);
   let activeStartedAt=recordSessionState==='active'?Number(localStorage.getItem('outbase_record_active_started_at')||Date.now()):0;
+  let lastOneShotRequestAt=0;
   let mapCenter=currentPosition?{lat:currentPosition.lat,lng:currentPosition.lng}:{lat:35.8667,lng:140.0123};
   let mapZoom=Number(localStorage.getItem('outbase_record_map_zoom')||16);
   let mapFollow=true;
@@ -37,6 +38,24 @@
   let parkingSpeechRecognition=null;
   let parkingSpeechActive=false;
   const previewMode=params.get('preview')||'';
+
+  if(recordSessionState==='idle'){
+    elapsedMs=0;
+    activeStartedAt=0;
+    trackPoints=[];
+    localStorage.setItem('outbase_record_elapsed_ms','0');
+    localStorage.setItem('outbase_record_track_points','[]');
+    localStorage.removeItem('outbase_record_active_started_at');
+  }else if(recordSessionState==='paused'){
+    activeStartedAt=0;
+  }
+  if(currentPosition){
+    gpsStatus=recordSessionState==='active'
+      ?`GPS記録中 ±${currentPosition.accuracy||'-'}m`
+      :recordSessionState==='paused'
+        ?`一時停止中・現在地取得済み ±${currentPosition.accuracy||'-'}m`
+        :`現在地取得済み ±${currentPosition.accuracy||'-'}m`;
+  }
 
   function readStored(key,fallback){try{const v=JSON.parse(localStorage.getItem(key));return v??fallback;}catch(_e){return fallback;}}
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -224,6 +243,7 @@
     const distance=sessionDistanceKm().toFixed(2);
     const elapsed=formatElapsed(elapsedNow());
     const speechPreview=previewMode==='speech';
+    const screenState=recordSessionState==='active'?'画面ON':'画面通常';
     return `<section class="page ${active==='record'?'active':''}" id="page-record">
       <section class="recordHero">
         <div class="recordHeroTitle"><small>RECORD</small><h1>記録</h1></div>
@@ -232,7 +252,7 @@
       </section>
       <section class="recordMapCard">
         <div class="mapHead">
-          <div><h2>散歩MAP</h2><p><i class="statusDot"></i><span id="gpsStatusText">${gpsStatus}</span>&nbsp; / &nbsp;端末保存&nbsp; / &nbsp;画面ON</p></div>
+          <div><h2>散歩MAP</h2><p><i class="statusDot"></i><span id="gpsStatusText">${gpsStatus}</span>&nbsp; / &nbsp;端末保存&nbsp; / &nbsp;${screenState}</p></div>
           <div class="mapHeadActions">${recordSessionState!=='idle'?'<button class="endButton" data-open-sheet="end">終了</button>':''}<button data-record-action="map-mode">${mapMode===0?'記録を隠す':'記録を表示'}</button></div>
         </div>
         <div class="mapStage">
@@ -327,7 +347,7 @@
     if(activeParkingId) localStorage.setItem('outbase_active_parking_id',activeParkingId);else localStorage.removeItem('outbase_active_parking_id');
   }
 
-  function elapsedNow(){return elapsedMs+(recordSessionState==='active'&&activeStartedAt?Date.now()-activeStartedAt:0);}
+  function elapsedNow(){if(recordSessionState==='idle') return 0;return elapsedMs+(recordSessionState==='active'&&activeStartedAt?Date.now()-activeStartedAt:0);}
   function formatElapsed(ms){
     const total=Math.max(0,Math.floor(ms/1000));
     const h=Math.floor(total/3600);
@@ -341,7 +361,7 @@
     const q=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
     return 2*R*Math.asin(Math.sqrt(q));
   }
-  function sessionDistanceKm(){let d=0;for(let i=1;i<trackPoints.length;i++) d+=haversineKm(trackPoints[i-1],trackPoints[i]);return d;}
+  function sessionDistanceKm(){if(recordSessionState==='idle') return 0;let d=0;for(let i=1;i<trackPoints.length;i++) d+=haversineKm(trackPoints[i-1],trackPoints[i]);return d;}
   function updateMetrics(){
     const distance=document.getElementById('distanceValue');if(distance) distance.innerHTML=`${sessionDistanceKm().toFixed(2)}<small>km</small>`;
     const elapsed=document.getElementById('elapsedValue');if(elapsed) elapsed.textContent=formatElapsed(elapsedNow());
@@ -351,6 +371,9 @@
 
   async function keepScreenAwake(){
     try{if('wakeLock' in navigator&&recordSessionState==='active') wakeLock=await navigator.wakeLock.request('screen');}catch(_e){}
+  }
+  async function releaseScreenAwake(){
+    try{if(wakeLock){await wakeLock.release();wakeLock=null;}}catch(_e){wakeLock=null;}
   }
 
   function openRecordDB(){
@@ -516,7 +539,12 @@
   }
   function onPosition(position){
     const next={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:Math.round(position.coords.accuracy||0),time:position.timestamp||Date.now()};
-    currentPosition=next;gpsStatus=`GPS取得中 ±${next.accuracy}m`;
+    currentPosition=next;
+    gpsStatus=recordSessionState==='active'
+      ?`GPS記録中 ±${next.accuracy}m`
+      :recordSessionState==='paused'
+        ?`一時停止中・現在地取得済み ±${next.accuracy}m`
+        :`現在地取得済み ±${next.accuracy}m`;
     if(recordSessionState==='active'){
       const last=trackPoints[trackPoints.length-1],jump=last?haversineKm(last,next):0;
       if(!last||(jump>=0.002&&jump<=1)) trackPoints.push(next);
@@ -527,7 +555,10 @@
     persistRecordState();updateMetrics();renderLiveMap();
   }
   function onPositionError(error){
-    gpsStatus=error&&error.code===1?'位置情報の許可が必要です':'GPSを再取得しています';updateMetrics();
+    gpsStatus=error&&error.code===1
+      ?'位置情報の許可が必要です'
+      :recordSessionState==='active'?'GPSを再取得しています':recordSessionState==='paused'?'一時停止中':'現在地を再取得しています';
+    updateMetrics();
   }
   function startGeoWatch(){
     if(geoWatchId!==null||recordSessionState!=='active'||!navigator.geolocation) return;
@@ -537,7 +568,7 @@
   function stopGeoWatch(){if(geoWatchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(geoWatchId);geoWatchId=null;}}
   function requestOnePosition(centerAfter=false){
     if(!navigator.geolocation){showRecordToast('この端末では現在地を取得できません');return;}
-    gpsStatus='現在地を確認しています';updateMetrics();
+    gpsStatus='現在地を確認しています';lastOneShotRequestAt=Date.now();updateMetrics();
     navigator.geolocation.getCurrentPosition(p=>{onPosition(p);if(centerAfter){mapFollow=true;mapCenter={lat:currentPosition.lat,lng:currentPosition.lng};renderLiveMap();showRecordToast('現在地を中央に表示しました');}},e=>{onPositionError(e);showRecordToast('位置情報を許可してください');},{enableHighAccuracy:true,maximumAge:0,timeout:12000});
   }
   function addCurrentPin(){
@@ -554,8 +585,18 @@
 
   function initializeRecordRuntime(){
     startMetricTimer();
-    if(recordSessionState==='active') startGeoWatch();else stopGeoWatch();
-    if(active==='record'){renderLiveMap();bindMapGestures();if(!currentPosition) requestOnePosition(false);}
+    if(recordSessionState==='active'){
+      startGeoWatch();
+      keepScreenAwake();
+    }else{
+      stopGeoWatch();
+      releaseScreenAwake();
+    }
+    if(active==='record'){
+      renderLiveMap();bindMapGestures();
+      const stale=!currentPosition||Date.now()-Number(currentPosition.time||0)>15000;
+      if(recordSessionState!=='active'&&stale&&Date.now()-lastOneShotRequestAt>15000) requestOnePosition(false);
+    }
   }
 
   function bindRecordActions(){
@@ -577,10 +618,32 @@
       }
       el.addEventListener('click',()=>{
         if(action==='session'){
-          if(recordSessionState==='idle'){trackPoints=[];savedPins=[];elapsedMs=0;activeStartedAt=Date.now();recordSessionState='active';mapFollow=true;}
-          else if(recordSessionState==='active'){elapsedMs=elapsedNow();activeStartedAt=0;recordSessionState='paused';stopGeoWatch();}
-          else{activeStartedAt=Date.now();recordSessionState='active';}
-          persistRecordState();render();if(recordSessionState==='active') keepScreenAwake();setTimeout(()=>showRecordToast(recordSessionState==='active'?'GPS記録を開始しました':'一時停止しました'),0);
+          let toast='';
+          if(recordSessionState==='idle'){
+            const freshCurrent=currentPosition&&Date.now()-Number(currentPosition.time||0)<=15000;
+            trackPoints=freshCurrent?[{...currentPosition,time:Date.now()}]:[];
+            savedPins=savedPins.filter(pin=>pin.category==='parking'&&!pin.clearedAt);
+            elapsedMs=0;
+            activeStartedAt=Date.now();
+            recordSessionState='active';
+            mapFollow=true;
+            gpsStatus=freshCurrent?`GPS記録中 ±${currentPosition.accuracy||'-'}m`:'GPSを取得しています';
+            toast='散歩記録を開始しました';
+          }else if(recordSessionState==='active'){
+            elapsedMs=elapsedNow();
+            activeStartedAt=0;
+            recordSessionState='paused';
+            stopGeoWatch();
+            releaseScreenAwake();
+            gpsStatus=currentPosition?`一時停止中・現在地取得済み ±${currentPosition.accuracy||'-'}m`:'一時停止中';
+            toast='散歩記録を一時停止しました';
+          }else{
+            activeStartedAt=Date.now();
+            recordSessionState='active';
+            gpsStatus=currentPosition?`GPS記録中 ±${currentPosition.accuracy||'-'}m`:'GPSを取得しています';
+            toast='散歩記録を再開しました';
+          }
+          persistRecordState();render();if(recordSessionState==='active') keepScreenAwake();setTimeout(()=>showRecordToast(toast),0);
         }else if(action==='map-mode'){mapMode=(mapMode+1)%2;persistRecordState();render();}
         else if(action==='current') centerMapOnCurrent();
         else if(action==='pin') addCurrentPin();
@@ -591,12 +654,28 @@
     });
     const saveMemo=document.querySelector('[data-save-memo]');if(saveMemo) saveMemo.addEventListener('click',()=>{const text=document.getElementById('recordMemo').value.trim();if(!text){showRecordToast('メモを入力してください');return;}const loc=locationSnapshot();if(editingRecordId){const old=savedRecords.find(x=>x.id===editingRecordId);const record=saveRecord(old?.kind||'speech',{...(old||{}),id:editingRecordId,text},old?.location||loc);editingRecordId=null;memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast('文字起こしを更新しました'),0);}else{saveRecord('memo',{text},loc);memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast('メモを位置つきで保存しました'),0);}});
     const savePin=document.querySelector('[data-save-pin-detail]');if(savePin) savePin.addEventListener('click',()=>{const pin=savedPins.find(x=>x.id===pendingPinId)||savedPins[savedPins.length-1];if(!pin) return;const selected=document.querySelector('[data-pin-category].selected');pin.category=selected?selected.dataset.pinCategory:(pin.category||'unclassified');const names={water:'水飲み場',toilet:'トイレ',parking:'駐車場',vending:'自販機',bench:'ベンチ',shade:'日陰・休憩',entrance:'出入口',caution:'注意場所',other:'その他',unclassified:'未分類の場所'};pin.label=names[pin.category]||'未分類の場所';pin.note=(document.getElementById('pinNote')?.value||'').trim();pin.parking=pin.category==='parking'?{...(pin.parking||{}),floor:(document.getElementById('parkingFloor')?.value||pin.parking?.floor||'').trim(),area:(document.getElementById('parkingArea')?.value||pin.parking?.area||'').trim(),number:(document.getElementById('parkingNumber')?.value||pin.parking?.number||'').trim()}:{};if(pin.category==='parking') activeParkingId=pin.id;const loc={lat:pin.lat,lng:pin.lng,accuracy:pin.accuracy,time:pin.time,pending:pin.lat==null};saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:pin.note,parking:pin.parking},loc);persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast(`${pin.label}として保存しました`),0);});
-    const finish=document.querySelector('[data-finish-session]');if(finish) finish.addEventListener('click',()=>{elapsedMs=elapsedNow();activeStartedAt=0;recordSessionState='idle';recordSheet='';stopGeoWatch();autoAttachMissingLocations();const hasAnyLocation=trackPoints.some(p=>p.lat!=null)||savedPins.some(p=>p.lat!=null)||savedRecords.some(r=>r.location&&r.location.lat!=null);persistRecordState();render();setTimeout(()=>showRecordToast(hasAnyLocation?'散歩記録を保存しました':'散歩記録を保存しました。今回は位置情報を取得できませんでした'),0);});
+    const finish=document.querySelector('[data-finish-session]');if(finish) finish.addEventListener('click',()=>{
+      const finishedElapsed=elapsedNow();
+      const finishedDistance=sessionDistanceKm();
+      autoAttachMissingLocations();
+      const hasAnyLocation=trackPoints.some(p=>p.lat!=null)||savedPins.some(p=>p.lat!=null)||savedRecords.some(r=>r.location&&r.location.lat!=null);
+      localStorage.setItem('outbase_last_session_summary',JSON.stringify({finishedAt:Date.now(),target:recordTarget,elapsedMs:finishedElapsed,distanceKm:finishedDistance,trackPoints:[...trackPoints]}));
+      activeStartedAt=0;
+      elapsedMs=0;
+      recordSessionState='idle';
+      recordSheet='';
+      stopGeoWatch();
+      releaseScreenAwake();
+      trackPoints=[];
+      savedPins=savedPins.filter(pin=>pin.category==='parking'&&!pin.clearedAt);
+      gpsStatus=currentPosition?`現在地取得済み ±${currentPosition.accuracy||'-'}m`:'現在地を確認中';
+      persistRecordState();render();setTimeout(()=>showRecordToast(hasAnyLocation?'散歩記録を保存しました':'散歩記録を保存しました。今回は位置情報を取得できませんでした'),0);
+    });
   }
 
   function render(){
     document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-record02-v4`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-record02-1-state-sync`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindRecordActions();
     initializeRecordRuntime();
   }

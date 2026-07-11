@@ -1,0 +1,31 @@
+{
+  "idle": {
+    "state": "開始前",
+    "button": "散歩開始",
+    "distance": "0.00km",
+    "elapsed": "0:00:00",
+    "gps": "現在地取得済み ±8m"
+  },
+  "active_before_move": {
+    "state": "記録中",
+    "button": "一時停止",
+    "distance": "0.00km",
+    "elapsed": "0:00:01",
+    "gps": "GPS記録中 ±8m"
+  },
+  "active_after_move": {
+    "state": "記録中",
+    "button": "一時停止",
+    "distance": "0.03km",
+    "elapsed": "0:00:01",
+    "gps": "GPS記録中 ±7m"
+  },
+  "paused": {
+    "state": "一時停止中",
+    "button": "再開",
+    "distance": "0.03km",
+    "elapsed_before": "0:00:01",
+    "elapsed_after": "0:00:01",
+    "gps": "一時停止中・現在地取得済み ±7m"
+  }
+}
