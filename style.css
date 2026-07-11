@@ -383,3 +383,67 @@ main{padding:9px 12px 0}.page{display:none}.page.active{display:block}
   .prepHero01>.prepPercent{width:52px;height:52px;top:10px}
   .prepModuleGrid.compact{gap:5px}.prepModuleGrid.compact .prepModuleCard{height:53px;min-height:53px}
 }
+
+/* Prep-01.1: fixed five modules, plan switcher, shared gear library, modal tap shield */
+.appShell.hasModal .bottomNav{pointer-events:none!important;filter:saturate(.72)}
+.recordSheetBackdrop{z-index:120!important;touch-action:none;overscroll-behavior:contain}
+.planSheetBackdrop,.prepSheetBackdrop{inset:0!important}
+
+.planSwitcherSheet{max-height:88svh;overflow:auto;padding-top:7px}
+.planSwitcherLead{margin:1px 0 10px;color:#aaa08e;font-size:8px;line-height:1.55}
+.planSwitcherRows{display:grid;gap:7px}
+.planSwitcherRow{width:100%;min-height:64px;padding:8px 10px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.035);color:var(--cream);display:grid;grid-template-columns:9px 1fr 42px;gap:9px;align-items:center;text-align:left}
+.planSwitcherRow.active{border-color:rgba(217,177,95,.50);background:linear-gradient(145deg,rgba(217,177,95,.13),rgba(255,255,255,.035));box-shadow:inset 0 0 0 1px rgba(217,177,95,.12)}
+.planSwitcherRow>i{width:8px;height:8px;border-radius:50%;background:#7f837c}
+.planSwitcherRow>div{min-width:0}
+.planSwitcherRow small{display:block;color:#a99f8d;font-size:7px}
+.planSwitcherRow b{display:block;margin-top:3px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.planSwitcherRow span{display:block;margin-top:3px;color:#bdb3a1;font-size:7.2px}
+.planSwitcherRow em{font-style:normal;color:#d7b267;font-size:7.5px;font-weight:900;text-align:right}
+.planSwitcherRow.none>i{background:transparent;border:1px solid rgba(255,255,255,.25)}
+
+.prepQuickBar{height:50px;margin:7px 0 6px;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.prepQuickBar>button{min-width:0;padding:6px 8px;border:1px solid rgba(38,83,62,.13);border-radius:15px;background:rgba(255,255,255,.60);color:var(--ink);display:grid;grid-template-columns:27px 1fr 9px;gap:7px;align-items:center;text-align:left;box-shadow:0 5px 13px rgba(30,45,35,.06)}
+.prepQuickBar>button>span{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#123d2c;color:#d8b46d}
+.prepQuickBar>button>span .icon{width:17px;height:17px}
+.prepQuickBar small{display:block;color:#8a7d68;font-size:6.6px;font-weight:900}
+.prepQuickBar b{display:block;margin-top:2px;font-size:8.7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prepQuickBar em{font-style:normal;color:#9b773b;font-size:15px}
+
+#page-prep{height:calc(100svh - 151px);overflow:hidden;padding-bottom:0}
+.prepHero01{height:101px}
+.prepSectionHead.compact{height:27px;margin:3px 2px 5px}
+.prepModuleGrid.compact{gap:5px}
+.prepModuleGrid.compact .prepModuleCard{height:63px;min-height:63px;padding:7px 10px;grid-template-columns:35px 1fr 34px 11px}
+.prepModuleGrid.compact .prepModuleCopy h3{font-size:12.5px}
+.prepModuleGrid.compact .prepModuleCopy small{margin-top:2px;font-size:7.1px}
+.prepModuleGrid.compact .prepModuleCopy span{margin-top:3px;font-size:7px;color:#d1c7b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prepModuleGrid.compact .prepModuleCard:after{left:54px}
+.prepEmpty01>div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.prepEmpty01>div button{width:100%}
+
+.gearManagerSheet{max-height:91svh;overflow:auto;padding-top:7px}
+.gearManagerNotice{margin:3px 0 9px;padding:8px 10px;border-radius:12px;background:rgba(217,177,95,.07);color:#c8bda9;font-size:8px;line-height:1.45}
+.gearManagerRows{display:grid;gap:8px}
+.gearManagerRow{padding:8px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.035)}
+.gearManagerRow.selected{border-color:rgba(217,177,95,.42);background:rgba(217,177,95,.07)}
+.gearManagerTop{display:grid;grid-template-columns:72px 1fr 29px;gap:6px;align-items:center}
+.gearManagerTop>button:first-child{height:31px;border:1px solid rgba(217,177,95,.30);border-radius:10px;background:rgba(217,177,95,.08);color:#ddb76e;font-size:7.3px;font-weight:900}
+.gearManagerTop>button:first-child:disabled{opacity:.35}
+.gearManagerTop input,.gearManagerMeta input,.gearManagerMeta select,.gearAddBox input,.gearAddBox select{height:32px;padding:0 8px;border:1px solid rgba(255,255,255,.11);border-radius:10px;background:rgba(255,255,255,.045);color:#efe7d8;font-size:8.5px}
+.gearManagerMeta select option,.gearAddBox select option{color:#111}
+.gearDelete{width:29px;height:29px;border:0;border-radius:50%;background:rgba(178,83,65,.14);color:#d9a293;font-size:15px}
+.gearManagerMeta{margin-top:7px;display:grid;grid-template-columns:1fr 65px 1fr 78px;gap:5px;align-items:center}
+.gearManagerMeta label{height:32px;padding:0 5px;border:1px solid rgba(255,255,255,.11);border-radius:10px;color:#a99f8d;font-size:6px;display:grid;grid-template-columns:23px 1fr;align-items:center}
+.gearManagerMeta label input{width:100%;height:27px;padding:0;border:0;background:transparent;text-align:center}
+.gearAddBox{margin-top:10px;padding:9px;border:1px dashed rgba(217,177,95,.28);border-radius:14px}
+.gearAddBox h3{margin:0 0 7px;color:#d9b15f;font-size:9px}
+.gearAddBox>div{display:grid;grid-template-columns:1.4fr .9fr 50px 54px;gap:5px}
+.gearAddBox button{border:0;border-radius:10px;background:#d1a95f;color:#132018;font-size:8px;font-weight:900}
+
+@media(max-height:700px){
+  .prepQuickBar{height:45px;margin-top:5px}
+  .prepModuleGrid.compact .prepModuleCard{height:56px;min-height:56px}
+  .prepModuleGrid.compact .prepModuleCopy span{display:none}
+  .prepHero01{height:91px}
+}

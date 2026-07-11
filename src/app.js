@@ -79,10 +79,20 @@
   let planCalendarSwipeSuppressUntil=0;
   let planReminderTimer=null;
   let activePlanId=localStorage.getItem('outbase_active_plan_id')||'plan-drive-13';
+  const defaultGearLibrary=[
+    {id:'gear-living-shell',name:'リビングシェル アイボリー',category:'テント',quantity:1,storage:'自宅',condition:'使用可',memo:''},
+    {id:'gear-amenity-dome',name:'アメニティドームM アイボリー',category:'テント',quantity:1,storage:'自宅',condition:'使用可',memo:''},
+    {id:'gear-igt4',name:'IGT 4ユニット',category:'テーブル',quantity:1,storage:'自宅',condition:'使用可',memo:''},
+    {id:'gear-delta3',name:'EcoFlow DELTA 3 1500',category:'電源',quantity:1,storage:'自宅',condition:'使用可',memo:''},
+    {id:'gear-glacier',name:'EcoFlow Glacier Classic',category:'冷蔵',quantity:1,storage:'自宅',condition:'使用可',memo:''},
+    {id:'gear-kota-cart',name:'AirBuggy Dome3 Large',category:'ペット',quantity:1,storage:'玄関',condition:'使用可',memo:''}
+  ];
+  let gearLibrary=readStored('outbase_gear_library_v1',defaultGearLibrary);
   let prepStore=readStored('outbase_prep_v1',{});
   let prepSheet='';
   let prepModuleId='';
   let prepSheetDrag=null;
+  let modalTapBlockUntil=0;
   if(previewMode==='prep01'||previewMode==='prep01-module') activePlanId='plan-akagi';
   if(previewMode==='prep01-module'){prepSheet='module';prepModuleId='gear';}
   if(previewMode==='plan-add'||previewMode==='plan011-add') planSheet='add';
@@ -181,7 +191,17 @@
   function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d;}
   function compareYmd(a,b){return String(a).localeCompare(String(b));}
   function planForId(id){return plans.find(p=>p.id===id)||null;}
-  function activePlan(){return planForId(activePlanId)||plans.find(p=>compareYmd(p.end||p.start,new Date().toISOString().slice(0,10))>=0)||plans[0]||null;}
+  function activePlan(){
+    if(activePlanId==='none')return null;
+    return planForId(activePlanId)||plans.find(p=>compareYmd(p.end||p.start,new Date().toISOString().slice(0,10))>=0)||plans[0]||null;
+  }
+  function activePlanCandidates(){
+    const today=new Date().toISOString().slice(0,10),current=planForId(activePlanId);
+    const rows=plans.filter(p=>p.id===current?.id||compareYmd(p.end||p.start,today)>=0).sort((a,b)=>compareYmd(a.start,b.start)||(a.startTime||'').localeCompare(b.startTime||''));
+    return rows.slice(0,12);
+  }
+  function anySheetOpen(){return Boolean(planSheet||prepSheet||recordSheet);}
+  function blockUnderlyingNavigation(ms=420){modalTapBlockUntil=Math.max(modalTapBlockUntil,Date.now()+ms);}
   function planTypeLabel(type){return type||'予定';}
   function planTypeSetting(name){return planTypes.find(t=>t.name===name)||null;}
   function planTone(plan){return plan.tone||planTypeSetting(plan.type)?.tone||'slate';}
@@ -315,6 +335,7 @@
   function openPlanEditor(plan=null){selectedPlanId=plan?.id||'';planDraft=blankPlanDraft(plan);planDraftDirty=false;planSheet=plan?'edit':'add';}
   function attemptClosePlanSheet(){
     if((planSheet==='add'||planSheet==='edit')&&planDraftDirty&&!confirm('入力内容を破棄して閉じますか？')) return false;
+    blockUnderlyingNavigation();
     planSheet='';selectedPlanId='';planDraft=null;planDraftDirty=false;render();return true;
   }
   function nthWeekdayOfMonth(year,month,weekday,ordinal){
@@ -510,13 +531,13 @@
 
   function header(){
     const saveTarget=active==='record'?`<button class="saveBar saveBarButton" data-open-sheet="target"><b>保存先：${recordTarget}</b><span>タップで変更</span></button>`:'';
-    const current=activePlan();
-    const chipTitle=current?current.title:'予定を選択';
-    const chipMeta=current?`${planTypeLabel(current.type)}&nbsp; / &nbsp;${planRangeLabel(current)}${planCompanionLabel(current)?`&nbsp; / &nbsp;同伴 ${escapeHtml(planCompanionLabel(current))}`:''}`:'カレンダーから予定を選択';
+    const current=activePlan(),candidateCount=activePlanCandidates().length;
+    const chipTitle=current?current.title:'主役予定なし';
+    const chipMeta=current?`${planTypeLabel(current.type)}&nbsp; / &nbsp;${planRangeLabel(current)}${candidateCount>1?`&nbsp; / &nbsp;他${candidateCount-1}件`:''}`:'タップして主役予定を選択';
     return `<header class="header ${active==='record'?'recordHeader':'compactHeader'}">
       <div class="topLine">
         <div class="brand"><div class="ob">OB</div><div><div class="brandName">OUTBASE</div><div class="brandSub">route design</div></div></div>
-        <button class="planChip" ${current?`data-plan-id="${current.id}"`:''}><span class="planTitle"><i></i>${escapeHtml(chipTitle)}</span><span>${chipMeta}</span></button>
+        <button class="planChip" data-open-plan-switcher><span class="planTitle"><i></i>${escapeHtml(chipTitle)}</span><span>${chipMeta}</span></button>
       </div>
       ${saveTarget}
     </header>`;
@@ -591,6 +612,10 @@
     if(!planSheet) return '';
     const plan=planForId(selectedPlanId);
     const dragHeader=(eyebrow,title)=>`<div class="planSheetDragZone" data-plan-drag-zone><div class="sheetHandle"></div><small>${eyebrow}</small><h2>${title}</h2></div>`;
+    if(planSheet==='switcher'){
+      const current=activePlan(),rows=activePlanCandidates();
+      return `<div class="recordSheetBackdrop planSheetBackdrop" data-plan-backdrop><section class="recordSheet planSwitcherSheet" data-plan-sheet-panel>${dragHeader('CURRENT PLAN','主役予定を切り替える')}<p class="planSwitcherLead">複数の予定は同時に保持されます。ここで選んだ1件だけを、今見ている準備・記録の主役にします。</p><div class="planSwitcherRows">${rows.map(p=>{const progress=prepProgress(p),isActive=current?.id===p.id;return `<button class="planSwitcherRow ${isActive?'active':''}" data-switch-active-plan="${p.id}"><i class="dot ${planTone(p)}"></i><div><small>${escapeHtml(planTypeLabel(p.type))} ・ ${escapeHtml(planRangeLabel(p))}</small><b>${escapeHtml(p.title)}</b><span>準備 ${progress.done}/${progress.total} ・ ${escapeHtml(planStatus(p))}</span></div><em>${isActive?'選択中':'選ぶ'}</em></button>`;}).join('')}<button class="planSwitcherRow none ${!current?'active':''}" data-switch-active-plan="none"><i></i><div><small>主役を外す</small><b>予定なし</b><span>共通ギア管理は引き続き使えます</span></div><em>${!current?'選択中':'選ぶ'}</em></button></div><div class="sheetActions"><button data-close-plan-sheet>閉じる</button><button class="sheetPrimary" data-tab-from-switcher="plan">予定を確認</button></div></section></div>`;
+    }
     if(planSheet==='add'||planSheet==='edit'){
       const editing=planSheet==='edit'&&plan,draft=ensurePlanDraft(editing?plan:null);
       if(previewMode==='plan011-repeat'||previewMode==='plan012-repeat'){draft.repeat.mode='weekly';draft.repeat.weekdays=[1,4];}
@@ -640,26 +665,16 @@
   }
 
   function persistPrepStore(){localStorage.setItem('outbase_prep_v1',JSON.stringify(prepStore));}
-  function prepModuleDefinitions(plan){
-    const names=planCompanionNames(plan),type=plan?.type||'';
+  function persistGearLibrary(){localStorage.setItem('outbase_gear_library_v1',JSON.stringify(gearLibrary));}
+  function prepModuleDefinitions(_plan){
     const library={
-      weather:{id:'weather',icon:I.sun,title:'天気',sub:'雨・気温・風',tasks:['降水と雨雲を確認','気温と暑さ・寒さを確認','風と撤収判断を確認']},
-      gear:{id:'gear',icon:I.bag,title:'ギア',sub:'持ち物・積載・電源',tasks:['テント・タープ・寝具','照明・電源・冷暖房','積載と忘れ物を確認']},
-      cooking:{id:'cooking',icon:I.cup,title:'料理',sub:'献立・量・使用ギア',tasks:['食事ごとの献立を決める','量が多すぎないか確認','調理ギアと燃料を確認']},
-      shopping:{id:'shopping',icon:I.cart,title:'買物',sub:'食材・消耗品・不足品',tasks:['食材と飲み物を確認','調味料・消耗品を確認','不足品を購入']},
-      route:{id:'route',icon:I.route,title:'ルート',sub:'出発・休憩・到着',tasks:['出発時刻を決める','休憩・買い出し地点を確認','到着・駐車方法を確認']},
-      parking:{id:'parking',icon:I.car,title:'駐車場',sub:'入口・混雑・歩き出し',tasks:['駐車場の場所と時間','入口・料金・混雑','散歩開始地点を確認']},
-      items:{id:'items',icon:I.bag,title:'持ち物',sub:'必要な物だけ',tasks:['必須の持ち物を確認','飲み物・充電を確認','忘れ物がないか確認']},
-      companion:{id:'companion',icon:I.people,title:'同行',sub:'集合・役割・連絡',tasks:['同行者と時間を共有','集合場所を確認','必要な連絡を済ませる']}
+      weather:{id:'weather',icon:I.sun,title:'天気',sub:'雨・気温・風・警報',tasks:['降水と雨雲を確認','気温と暑さ・寒さを確認','風と警報・撤収判断を確認']},
+      gear:{id:'gear',icon:I.bag,title:'ギア',sub:'今回の持出し・積載・共通管理',tasks:['今回使うギアを選ぶ','積載順と忘れ物を確認','電源・燃料・電池を確認']},
+      cooking:{id:'cooking',icon:I.cup,title:'料理',sub:'献立・量・調理順',tasks:['食事ごとの献立を決める','量と食べ切れるか確認','調理順と使用ギアを確認']},
+      shopping:{id:'shopping',icon:I.cart,title:'買物',sub:'食材・消耗品・不足品',tasks:['食材と飲み物を確認','調味料・消耗品を確認','不足品と買い忘れを確認']},
+      route:{id:'route',icon:I.route,title:'ルート',sub:'出発・休憩・駐車・到着',tasks:['出発時刻を決める','休憩・買い出し地点を確認','到着方法と駐車場を確認']}
     };
-    let ids;
-    if(type==='キャンプ') ids=['weather','gear','cooking','shopping','route'];
-    else if(type==='ドライブ散歩') ids=['weather','route','parking','items'];
-    else if(type==='散歩') ids=['weather','items'];
-    else if(type==='ショッピング') ids=['shopping','route',...(names.length?['companion']:[])];
-    else if(type==='イベント') ids=['weather','items','route',...(names.length?['companion']:[])];
-    else ids=['weather','items','route',...(names.length?['companion']:[])];
-    return ids.map(id=>library[id]);
+    return ['weather','gear','cooking','shopping','route'].map(id=>library[id]);
   }
   function prepPlanBucket(plan){
     if(!prepStore[plan.id]) prepStore[plan.id]={modules:{},updatedAt:0};
@@ -668,10 +683,11 @@
   }
   function prepModuleState(plan,module){
     const bucket=prepPlanBucket(plan);
-    if(!bucket.modules[module.id]) bucket.modules[module.id]={checked:[],customItems:[],note:''};
+    if(!bucket.modules[module.id]) bucket.modules[module.id]={checked:[],customItems:[],note:'',gearIds:[]};
     const state=bucket.modules[module.id];
     if(!Array.isArray(state.checked))state.checked=[];
     if(!Array.isArray(state.customItems))state.customItems=[];
+    if(!Array.isArray(state.gearIds))state.gearIds=[];
     return state;
   }
   function prepModuleItems(plan,module){const state=prepModuleState(plan,module);return [...module.tasks,...state.customItems];}
@@ -680,38 +696,42 @@
     modules.forEach(module=>{const items=prepModuleItems(plan,module),checked=prepModuleState(plan,module).checked;total+=items.length;done+=items.filter((_,i)=>checked.includes(i)).length;});
     return {done,total,percent:total?Math.round(done/total*100):0};
   }
-  function prepNextItems(plan){
-    const rows=[];
-    prepModuleDefinitions(plan).forEach(module=>{const state=prepModuleState(plan,module);prepModuleItems(plan,module).forEach((item,index)=>{if(!state.checked.includes(index)&&rows.length<3)rows.push({module,item});});});
-    return rows;
-  }
   function syncPlanPrepStatus(plan){
     const progress=prepProgress(plan);let status='未着手';
-    if(plan.type==='散歩'&&progress.done===0)status='準備不要';
-    else if(progress.total&&progress.done>=progress.total)status='準備完了';
+    if(progress.total&&progress.done>=progress.total)status='準備完了';
     else if(progress.done>0)status='準備中';
     plan.prep=status;prepPlanBucket(plan).updatedAt=Date.now();persistPrepStore();persistPlans();return status;
   }
   function prepStatusLabel(plan){return syncPlanPrepStatus(plan);}
   function prepCard(plan,module){
-    const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,complete=items.length&&done===items.length,percent=items.length?done/items.length*100:0;
-    return `<button class="prepModuleCard ${complete?'complete':''}" style="--module-progress:${percent}%" data-prep-module="${module.id}"><div class="prepModuleIcon">${module.icon}</div><div class="prepModuleCopy"><h3>${escapeHtml(module.title)}</h3><small>${escapeHtml(module.sub)}</small></div><span class="prepModuleCount">${done}/${items.length}</span><b>${complete?'✓':'›'}</b></button>`;
+    const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,complete=items.length&&done===items.length,percent=items.length?done/items.length*100:0,next=items.find((_,i)=>!state.checked.includes(i));
+    const gearCount=module.id==='gear'?state.gearIds.filter(id=>gearLibrary.some(g=>g.id===id)).length:0;
+    const foot=complete?'確認済み':module.id==='gear'&&gearCount?`今回 ${gearCount}点を選択`:next?`次：${next}`:'未着手';
+    return `<button class="prepModuleCard ${complete?'complete':''}" style="--module-progress:${percent}%" data-prep-module="${module.id}"><div class="prepModuleIcon">${module.icon}</div><div class="prepModuleCopy"><h3>${escapeHtml(module.title)}</h3><small>${escapeHtml(module.sub)}</small><span>${escapeHtml(foot)}</span></div><span class="prepModuleCount">${done}/${items.length}</span><b>${complete?'✓':'›'}</b></button>`;
   }
   function prepPage(){
-    const plan=activePlan();
-    if(!plan)return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepEmpty"><h1>準備</h1><p>予定を選ぶと、その予定に必要な準備を表示します。</p><button data-tab="plan">予定を見る</button></section></section>`;
+    const plan=activePlan(),candidateCount=activePlanCandidates().length;
+    if(!plan)return `<section class="page ${active==='prep'?'active':''}" id="page-prep"><section class="prepEmpty prepEmpty01"><h1>準備</h1><p>主役予定を選ぶと、天気・ギア・料理・買物・ルートを表示します。</p><div><button data-open-plan-switcher>主役予定を選ぶ</button><button data-open-gear-manager>共通ギア管理</button></div></section></section>`;
     const modules=prepModuleDefinitions(plan),progress=prepProgress(plan),status=prepStatusLabel(plan),days=Math.ceil((parseYmd(plan.start)-new Date(new Date().setHours(0,0,0,0)))/86400000),dayText=days>0?`あと${days}日`:days===0?'今日':days===-1?'昨日':'開始済み';
     return `<section class="page ${active==='prep'?'active':''}" id="page-prep">
       <section class="prepHero prepHero01" data-prep-plan-detail><img src="assets/prep_hero_art.png" alt=""><div class="prepHeroCopy"><small>PREPARATION</small><h1>準備</h1><p>${escapeHtml(plan.title)}</p><span>${escapeHtml(dayText)} ・ ${escapeHtml(planRangeLabel(plan))}</span></div><div class="prepPercent" style="--prep:${progress.percent}"><b>${progress.percent}<small>%</small></b><span>${escapeHtml(status)}</span></div><em class="prepHeroLink">予定詳細&nbsp;›</em></section>
+      <div class="prepQuickBar"><button data-open-plan-switcher><span>${I.calendar}</span><div><small>同時進行</small><b>${candidateCount}件・主役を切替</b></div><em>›</em></button><button data-open-gear-manager><span>${I.bag}</span><div><small>共通</small><b>ギア管理 ${gearLibrary.length}点</b></div><em>›</em></button></div>
       <div class="prepSectionHead compact"><div><small>${escapeHtml(status)}</small><h2>準備項目</h2></div><span>${progress.done}/${progress.total}</span></div>
       <div class="prepModuleGrid compact">${modules.map(module=>prepCard(plan,module)).join('')}</div>
     </section>`;
   }
+  function gearManagerMarkup(plan){
+    const gearModule=prepModuleDefinitions(plan)[1],selected=plan?prepModuleState(plan,gearModule).gearIds:[],categories=['テント','タープ','寝具','テーブル','キッチン','照明','電源','冷蔵','収納','ペット','その他'],conditions=['使用可','点検','修理','買替'];
+    return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet gearManagerSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>GEAR LIBRARY</small><h2>共通ギア管理</h2><p>所有 ${gearLibrary.length}点${plan?` ・ ${escapeHtml(plan.title)}へ ${selected.length}点選択`:''}</p></div>${!plan?'<p class="gearManagerNotice">主役予定なしでも所有ギアの追加・編集はできます。</p>':''}<div class="gearManagerRows">${gearLibrary.map(g=>`<article class="gearManagerRow ${selected.includes(g.id)?'selected':''}" data-gear-row="${g.id}"><div class="gearManagerTop"><button data-toggle-gear-plan="${g.id}" ${plan?'':'disabled'}>${selected.includes(g.id)?'今回から外す':'今回に追加'}</button><input value="${escapeHtml(g.name)}" data-gear-name="${g.id}" aria-label="ギア名"><button class="gearDelete" data-delete-gear="${g.id}">×</button></div><div class="gearManagerMeta"><select data-gear-category="${g.id}">${categories.map(c=>`<option value="${c}" ${g.category===c?'selected':''}>${c}</option>`).join('')}</select><label>数量<input type="number" min="1" max="99" value="${Number(g.quantity)||1}" data-gear-quantity="${g.id}"></label><input value="${escapeHtml(g.storage||'')}" placeholder="保管場所" data-gear-storage="${g.id}"><select data-gear-condition="${g.id}">${conditions.map(c=>`<option value="${c}" ${g.condition===c?'selected':''}>${c}</option>`).join('')}</select></div></article>`).join('')}</div><div class="gearAddBox"><h3>ギアを追加</h3><div><input id="newGearName" placeholder="ギア名"><select id="newGearCategory">${categories.map(c=>`<option value="${c}">${c}</option>`).join('')}</select><input id="newGearQuantity" type="number" min="1" max="99" value="1"><button data-add-gear>追加</button></div></div><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-close-prep-sheet>保存して戻る</button></div></section></div>`;
+  }
   function prepSheetMarkup(){
     if(!prepSheet)return '';
-    const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return '';
+    const plan=activePlan();
+    if(prepSheet==='gear-manager')return gearManagerMarkup(plan);
+    const module=plan?prepModuleDefinitions(plan).find(x=>x.id===prepModuleId):null;if(!plan||!module)return '';
     const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),done=items.filter((_,i)=>state.checked.includes(i)).length,allDone=items.length&&done===items.length;
-    const action=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:'';
+    const selectedGear=module.id==='gear'?state.gearIds.map(id=>gearLibrary.find(g=>g.id===id)).filter(Boolean):[];
+    const action=module.id==='route'?`<button class="prepExternalAction" data-prep-external="route">${I.route}<span><b>Google Mapsで場所と駐車場を確認</b><small>${escapeHtml(plan.location||'目的地は予定詳細で設定')}</small></span><em>›</em></button>`:module.id==='weather'?`<button class="prepExternalAction" data-prep-external="weather">${I.sun}<span><b>最新の天気を確認</b><small>${escapeHtml(plan.location||plan.title)}</small></span><em>›</em></button>`:module.id==='shopping'?`<button class="prepExternalAction" data-prep-copy>${I.cart}<span><b>未完了項目をコピー</b><small>LINEやメモへ貼り付け</small></span><em>›</em></button>`:module.id==='gear'?`<button class="prepExternalAction" data-open-gear-manager>${I.bag}<span><b>共通ギア管理を開く</b><small>${selectedGear.length?`今回 ${selectedGear.length}点：${selectedGear.slice(0,2).map(g=>g.name).join('・')}${selectedGear.length>2?'ほか':''}`:'所有ギアから今回の持出しを選ぶ'}</small></span><em>›</em></button>`:'';
     return `<div class="recordSheetBackdrop prepSheetBackdrop" data-prep-backdrop><section class="recordSheet prepDetailSheet" data-prep-sheet-panel><div class="prepSheetDragZone" data-prep-drag-zone><div class="sheetHandle"></div><small>PREPARATION</small><h2>${escapeHtml(module.title)}</h2><p>${escapeHtml(module.sub)} ・ ${done}/${items.length}完了</p></div><div class="prepChecklist">${items.map((item,index)=>`<div class="prepCheckRow ${state.checked.includes(index)?'checked':''}"><button data-prep-check="${index}"><i>${state.checked.includes(index)?'✓':''}</i><span>${escapeHtml(item)}</span></button>${index>=module.tasks.length?`<button class="prepRemoveItem" data-prep-remove="${index}">×</button>`:''}</div>`).join('')}</div><div class="prepAddRow"><input id="prepNewItem" placeholder="この予定だけの項目を追加"><button data-prep-add>追加</button></div>${action}<label class="prepNoteField"><span>メモ</span><textarea id="prepModuleNote" placeholder="確認したことや当日の注意点">${escapeHtml(state.note||'')}</textarea></label><div class="sheetActions"><button data-close-prep-sheet>閉じる</button><button class="sheetPrimary" data-prep-mark-all>${allDone?'未完了に戻す':'この項目を完了'}</button></div></section></div>`;
   }
 
@@ -1112,6 +1132,9 @@
         selectedPlanDate=date;planMonth=date.slice(0,7);persistPlans();render();
       });
     });
+    document.querySelectorAll('[data-open-plan-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();recordSheet='';prepSheet='';prepModuleId='';planSheet='switcher';render();}));
+    document.querySelectorAll('[data-switch-active-plan]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activePlanId=el.dataset.switchActivePlan||'none';persistPlans();blockUnderlyingNavigation(250);planSheet='';render();}));
+    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep011`);render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-id]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectedPlanId=el.dataset.planId;planDraft=null;planSheet='detail';render();}));
     document.querySelectorAll('[data-open-plan-add]').forEach(el=>el.addEventListener('click',()=>{openPlanEditor(null);render();}));
     document.querySelectorAll('[data-open-plan-list]').forEach(el=>el.addEventListener('click',()=>{planSheet='list';render();}));
@@ -1131,7 +1154,7 @@
     document.querySelectorAll('[data-plan-delete]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planDelete);if(!p)return;if(!confirm(`「${p.title}」を削除しますか？`))return;plans=plans.filter(x=>x.id!==p.id);if(activePlanId===p.id)activePlanId=plans[0]?.id||'';persistPlans();planSheet='';selectedPlanId='';render();}));
 
     const backdrop=document.querySelector('[data-plan-backdrop]');
-    if(backdrop)backdrop.addEventListener('pointerup',e=>{if(e.target===backdrop)attemptClosePlanSheet();});
+    if(backdrop)backdrop.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();if(e.target===backdrop)attemptClosePlanSheet();});
     const panel=document.querySelector('[data-plan-sheet-panel]'),dragZone=document.querySelector('[data-plan-drag-zone]');
     if(panel&&dragZone){
       const finishDrag=e=>{
@@ -1181,10 +1204,16 @@
     });
   }
 
+  function closePrepSheet(){
+    const note=document.getElementById('prepModuleNote'),plan=activePlan(),module=plan?prepModuleDefinitions(plan).find(x=>x.id===prepModuleId):null;
+    if(note&&plan&&module){prepModuleState(plan,module).note=note.value;syncPlanPrepStatus(plan);}
+    blockUnderlyingNavigation();prepSheet='';prepModuleId='';render();
+  }
   function bindPrepActions(){
-    document.querySelectorAll('[data-prep-module]').forEach(el=>el.addEventListener('click',()=>{prepModuleId=el.dataset.prepModule;prepSheet='module';render();}));
+    document.querySelectorAll('[data-prep-module]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();prepModuleId=el.dataset.prepModule;prepSheet='module';render();}));
+    document.querySelectorAll('[data-open-gear-manager]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();prepSheet='gear-manager';render();}));
     const detail=document.querySelector('[data-prep-plan-detail]');if(detail)detail.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;selectedPlanId=plan.id;planSheet='detail';prepSheet='';render();});
-    document.querySelectorAll('[data-close-prep-sheet]').forEach(el=>el.addEventListener('click',()=>{const note=document.getElementById('prepModuleNote');const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(note&&plan&&module){prepModuleState(plan,module).note=note.value;syncPlanPrepStatus(plan);}prepSheet='';prepModuleId='';render();}));
+    document.querySelectorAll('[data-close-prep-sheet]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closePrepSheet();}));
     document.querySelectorAll('[data-prep-check]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),index=Number(el.dataset.prepCheck);state.checked=state.checked.includes(index)?state.checked.filter(x=>x!==index):[...state.checked,index].sort((a,b)=>a-b);syncPlanPrepStatus(plan);render();}));
     const add=document.querySelector('[data-prep-add]');if(add)add.addEventListener('click',()=>{const input=document.getElementById('prepNewItem'),text=input?.value.trim(),plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!text||!plan||!module)return;prepModuleState(plan,module).customItems.push(text);syncPlanPrepStatus(plan);render();});
     document.querySelectorAll('[data-prep-remove]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),index=Number(el.dataset.prepRemove),customIndex=index-module.tasks.length;if(customIndex<0)return;state.customItems.splice(customIndex,1);state.checked=state.checked.filter(x=>x!==index).map(x=>x>index?x-1:x);syncPlanPrepStatus(plan);render();}));
@@ -1192,12 +1221,19 @@
     const all=document.querySelector('[data-prep-mark-all]');if(all)all.addEventListener('click',()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),items=prepModuleItems(plan,module),complete=items.length&&items.every((_,i)=>state.checked.includes(i));state.checked=complete?[]:items.map((_,i)=>i);syncPlanPrepStatus(plan);render();});
     const copy=document.querySelector('[data-prep-copy]');if(copy)copy.addEventListener('click',async()=>{const plan=activePlan(),module=prepModuleDefinitions(plan).find(x=>x.id===prepModuleId);if(!plan||!module)return;const state=prepModuleState(plan,module),text=[`${plan.title}｜${module.title}`,...prepModuleItems(plan,module).filter((_,i)=>!state.checked.includes(i)).map(x=>`□ ${x}`)].join('\n');try{await navigator.clipboard.writeText(text);showRecordToast('未完了項目をコピーしました');}catch(_e){showRecordToast('コピーできませんでした');}});
     document.querySelectorAll('[data-prep-external]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan(),kind=el.dataset.prepExternal;if(kind==='route'){const q=encodeURIComponent(plan.location||plan.title);window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank','noopener');}else if(kind==='weather'){const q=encodeURIComponent(`${plan.location||plan.title} 天気`);window.open(`https://www.google.com/search?q=${q}`,'_blank','noopener');}}));
-    const backdrop=document.querySelector('[data-prep-backdrop]');if(backdrop)backdrop.addEventListener('pointerup',e=>{if(e.target===backdrop){prepSheet='';prepModuleId='';render();}});
+
+    document.querySelectorAll('[data-toggle-gear-plan]').forEach(el=>el.addEventListener('click',()=>{const plan=activePlan();if(!plan)return;const module=prepModuleDefinitions(plan)[1],state=prepModuleState(plan,module),id=el.dataset.toggleGearPlan;state.gearIds=state.gearIds.includes(id)?state.gearIds.filter(x=>x!==id):[...state.gearIds,id];persistPrepStore();render();}));
+    const addGear=document.querySelector('[data-add-gear]');if(addGear)addGear.addEventListener('click',()=>{const name=document.getElementById('newGearName')?.value.trim();if(!name)return;gearLibrary.push({id:newId('gear'),name,category:document.getElementById('newGearCategory')?.value||'その他',quantity:Math.max(1,Number(document.getElementById('newGearQuantity')?.value)||1),storage:'',condition:'使用可',memo:''});persistGearLibrary();render();});
+    document.querySelectorAll('[data-delete-gear]').forEach(el=>el.addEventListener('click',()=>{const gear=gearLibrary.find(g=>g.id===el.dataset.deleteGear);if(!gear||!confirm(`「${gear.name}」を共通ギア管理から削除しますか？`))return;gearLibrary=gearLibrary.filter(g=>g.id!==gear.id);Object.values(prepStore).forEach(bucket=>Object.values(bucket.modules||{}).forEach(state=>{if(Array.isArray(state.gearIds))state.gearIds=state.gearIds.filter(id=>id!==gear.id);}));persistGearLibrary();persistPrepStore();render();}));
+    const gearFields=['name','category','quantity','storage','condition'];
+    gearFields.forEach(field=>document.querySelectorAll(`[data-gear-${field}]`).forEach(el=>el.addEventListener('change',()=>{const row=gearLibrary.find(g=>g.id===el.dataset[`gear${field[0].toUpperCase()+field.slice(1)}`]);if(!row)return;row[field]=field==='quantity'?Math.max(1,Number(el.value)||1):el.value.trim();persistGearLibrary();})));
+
+    const backdrop=document.querySelector('[data-prep-backdrop]');if(backdrop)backdrop.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();if(e.target===backdrop)closePrepSheet();});
     const panel=document.querySelector('[data-prep-sheet-panel]'),zone=document.querySelector('[data-prep-drag-zone]');
     if(panel&&zone){
-      const finish=e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;const dy=Math.max(0,e.clientY-prepSheetDrag.y);panel.classList.remove('dragging');panel.style.transition='transform .2s ease';if(dy>72){panel.style.transform='translateY(110%)';setTimeout(()=>{prepSheet='';prepModuleId='';render();},150);}else{panel.style.transform='';setTimeout(()=>{panel.style.transition='';},210);}prepSheetDrag=null;};
-      zone.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;prepSheetDrag={id:e.pointerId,y:e.clientY};try{zone.setPointerCapture(e.pointerId);}catch(_e){}panel.classList.add('dragging');panel.style.transition='none';e.preventDefault();});
-      zone.addEventListener('pointermove',e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;panel.style.transform=`translateY(${Math.max(0,e.clientY-prepSheetDrag.y)}px)`;e.preventDefault();});zone.addEventListener('pointerup',finish);zone.addEventListener('pointercancel',finish);
+      const finish=e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;const dy=Math.max(0,e.clientY-prepSheetDrag.y);panel.classList.remove('dragging');panel.style.transition='transform .2s ease';if(dy>72){panel.style.transform='translateY(110%)';blockUnderlyingNavigation();setTimeout(closePrepSheet,150);}else{panel.style.transform='';setTimeout(()=>{panel.style.transition='';},210);}prepSheetDrag=null;};
+      zone.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;prepSheetDrag={id:e.pointerId,y:e.clientY};try{zone.setPointerCapture(e.pointerId);}catch(_e){}panel.classList.add('dragging');panel.style.transition='none';e.preventDefault();e.stopPropagation();});
+      zone.addEventListener('pointermove',e=>{if(!prepSheetDrag||prepSheetDrag.id!==e.pointerId)return;panel.style.transform=`translateY(${Math.max(0,e.clientY-prepSheetDrag.y)}px)`;e.preventDefault();e.stopPropagation();});zone.addEventListener('pointerup',finish);zone.addEventListener('pointercancel',finish);
     }
   }
 
@@ -1210,7 +1246,7 @@
     document.querySelectorAll('[data-parking-speech]').forEach(el=>{el.addEventListener('pointerdown',e=>{e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_e){}clearTimeout(parkingSpeechHoldTimer);parkingSpeechHoldTimer=setTimeout(()=>beginParkingSpeechHold(el),280);});el.addEventListener('pointerup',e=>{e.preventDefault();stopParkingSpeechHold();if(!parkingSpeechActive&&!parkingSpeechRecognition) showRecordToast('駐車情報は長押しで話してください');});el.addEventListener('pointercancel',stopParkingSpeechHold);});
     document.querySelectorAll('[data-parking-photo]').forEach(el=>el.addEventListener('click',captureParkingPhoto));
     document.querySelectorAll('[data-parking-action]').forEach(el=>el.addEventListener('click',()=>{const pin=activeParking();if(!pin) return;const action=el.dataset.parkingAction;if(action==='map'){active='record';recordSheet='';mapFollow=false;mapCenter={lat:pin.lat??mapCenter.lat,lng:pin.lng??mapCenter.lng};render();setTimeout(()=>showRecordToast('駐車位置を地図中央に表示しました'),0);}else if(action==='route'){if(pin.lat==null){showRecordToast('駐車位置を自動補完中です');return;}window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}&travelmode=walking`,'_blank','noopener');}else if(action==='photo') showParkingPhoto(pin);else if(action==='note'){showRecordToast(pin.parking?.speechText||pin.note||'音声・メモはありません');}else if(action==='arrived'){pin.clearedAt=Date.now();activeParkingId='';persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast('駐車位置の常時表示を終了しました'),0);}}));
-    document.querySelectorAll('[data-close-sheet]').forEach(el=>el.addEventListener('click',()=>{recordSheet='';memoDraft='';editingRecordId=null;render();}));
+    document.querySelectorAll('[data-close-sheet]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation();recordSheet='';memoDraft='';editingRecordId=null;render();}));
     document.querySelectorAll('[data-record-target]').forEach(el=>el.addEventListener('click',()=>{recordTarget=el.dataset.recordTarget;recordSheet='';persistRecordState();render();setTimeout(()=>showRecordToast(`記録先を「${recordTarget}」に変更しました`),0);}));
     document.querySelectorAll('[data-record-detail]').forEach(el=>el.addEventListener('click',()=>{recordSheet='detail';render();}));
     document.querySelectorAll('[data-pin-category]').forEach(el=>el.addEventListener('click',()=>{document.querySelectorAll('[data-pin-category]').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');const parking=document.getElementById('parkingFields');if(parking) parking.classList.toggle('show',el.dataset.pinCategory==='parking');}));
@@ -1276,8 +1312,9 @@
   }
 
   function render(){
-    document.getElementById('app').innerHTML=`<div class="appShell">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',()=>{active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep01`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    const modalOpen=anySheetOpen();
+    document.getElementById('app').innerHTML=`<div class="appShell ${modalOpen?'hasModal':''}">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(anySheetOpen()||Date.now()<modalTapBlockUntil)return;active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-prep011`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
     bindPrepActions();
     bindRecordActions();

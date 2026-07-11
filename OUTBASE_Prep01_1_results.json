@@ -1,0 +1,41 @@
+{
+  "fixed_modules": [
+    "天気",
+    "ギア",
+    "料理",
+    "買物",
+    "ルート"
+  ],
+  "fixed_modules_pass": true,
+  "parking_card_absent": true,
+  "carrying_absent": true,
+  "quickbar_buttons": 2,
+  "geometry": {
+    "innerHeight": 768,
+    "scrollHeight": 768,
+    "bodyScrollHeight": 768,
+    "navTop": 694,
+    "lastBottom": 609
+  },
+  "one_screen_pass": true,
+  "switcher_open": true,
+  "switcher_rows": 5,
+  "switched_to_drive": true,
+  "fixed_after_switch": true,
+  "gear_module_open": true,
+  "gear_manager_open": true,
+  "gear_added": true,
+  "gear_selected_for_drive": true,
+  "gear_not_selected_other_plan": true,
+  "gear_persisted_original_plan": true,
+  "nav_not_switched_while_sheet_open": true,
+  "sheet_remained_above_nav": true,
+  "drag_closed": true,
+  "nav_not_switched_after_drag": true,
+  "nav_works_after_shield": true,
+  "none_selected": true,
+  "gear_manager_without_plan": true,
+  "nav_shield_active": true,
+  "page_errors": [],
+  "page_errors_pass": true
+}
