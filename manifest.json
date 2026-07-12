@@ -2,8 +2,8 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "display": "standalone",
-  "start_url": "./?v=outbase-clean-v6-library07",
-  "theme_color": "#0b130f",
-  "background_color": "#ede5cf",
+  "start_url": "./?v=outbase-library10a-root-bridge1",
+  "theme_color": "#f6f5f1",
+  "background_color": "#f6f5f1",
   "icons": []
 }
