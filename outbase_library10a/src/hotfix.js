@@ -6,7 +6,7 @@
   const KIT_KEY='outbase_gear_kits_v1';
   const EDITOR_TYPE_KEY='outbase_library_hotfix_editor_type';
   const EDITOR_ID_KEY='outbase_library_hotfix_editor_id';
-  const SCROLL_PREFIX='outbase_library_scroll_fix1:';
+  const SCROLL_PREFIX='outbase_library_scroll_fix2:';
 
   const readJson=(key,fallback)=>{
     try{
@@ -131,7 +131,9 @@
       setTimeout(()=>{bindScroller();restoreScroll();fixTransferIcon();},40);
     }
 
-    const save=event.target.closest?.('[data-library-save]');
+    const button=event.target.closest?.('button');
+    const save=event.target.closest?.('[data-library-save],[data-library-editor-save],[data-save-library]')
+      ||(button&&document.querySelector('.libraryEditor')&&document.getElementById('lib-event-target')&&button.textContent.trim()==='保存'?button:null);
     if(save&&document.getElementById('lib-event-target')){
       event.preventDefault();
       event.stopPropagation();
