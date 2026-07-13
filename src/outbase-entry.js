@@ -100,6 +100,7 @@
         <button data-instant="record"><span>＋</span><b>今すぐ記録</b></button>
         <button data-instant="buy"><span>🛒</span><b>買う物メモ</b></button>
         <button data-instant="memo-list"><span>📒</span><b>メモ一覧</b></button>
+        <button data-instant="chappy"><span>✨</span><b>Chappyへ相談</b></button>
       </div>
 
       ${latest?`<button class="instantParkingLatest" data-instant="parking-map">
@@ -426,6 +427,7 @@
       else if(action==='memo')openMemoComposer('memo');
       else if(action==='buy')openMemoComposer('buy');
       else if(action==='memo-list')openMemoList();
+      else if(action==='chappy'){globalThis.dispatchEvent(new CustomEvent('outbase:open-chappy'));}
       else if(action==='more'){
         const panel=document.querySelector('[data-instant-panel]');
         if(panel)panel.hidden=!panel.hidden;
