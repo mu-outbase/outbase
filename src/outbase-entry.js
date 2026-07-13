@@ -19,6 +19,16 @@
 
   function nowIso(){return new Date().toISOString();}
 
+  function core(){return globalThis.OUTBASE_CORE||null;}
+  function currentSessionId(){return localStorage.getItem('outbase_record_session_id')||null;}
+  function currentActivityId(){return localStorage.getItem('outbase_core_activity_id')||null;}
+  function currentPlanId(){const id=localStorage.getItem('outbase_active_plan_id')||'';return id&&id!=='none'?id:null;}
+  function locationFrom(item){
+    return item&&item.lat!=null&&item.lng!=null
+      ?{lat:item.lat,lng:item.lng,accuracy:item.accuracy??null}
+      :null;
+  }
+
   function currentTab(){
     const params=new URLSearchParams(location.search);
     return params.get('tab')||location.hash.replace('#','')||'plan';
@@ -131,11 +141,39 @@
   function goRecord(target='',autoStart=false){
     if(target)localStorage.setItem('outbase_record_target',target);
     if(autoStart){
+      const startedAt=Date.now();
       localStorage.setItem('outbase_record_session_state','active');
-      localStorage.setItem('outbase_record_active_started_at',String(Date.now()));
-      localStorage.setItem('outbase_record_session_started_at',String(Date.now()));
+      localStorage.setItem('outbase_record_active_started_at',String(startedAt));
+      localStorage.setItem('outbase_record_session_started_at',String(startedAt));
       if(!localStorage.getItem('outbase_record_session_id')){
-        localStorage.setItem('outbase_record_session_id',`session-${Date.now()}`);
+        localStorage.setItem('outbase_record_session_id',`session-${startedAt}`);
+      }
+      const sessionId=currentSessionId();
+      const activityId=currentActivityId()||`activity_${sessionId}`;
+      localStorage.setItem('outbase_core_activity_id',activityId);
+      const api=core();
+      if(api){
+        api.upsertActivity({
+          activityId,
+          activityType:target||'記録',
+          title:target||'記録',
+          state:'active',
+          currentPhase:target==='通常散歩'||target==='ドライブ'?'実行中':'記録中',
+          startedAt:new Date(startedAt).toISOString(),
+          planIds:currentPlanId()?[currentPlanId()]:[],
+          source:'entry-02',
+          legacySessionId:sessionId
+        });
+        api.appendEvent({
+          eventId:`entry_start_${sessionId}`,
+          eventType:target==='通常散歩'?'walk_started':target==='ドライブ'?'drive_started':'activity_started',
+          observedAt:new Date(startedAt).toISOString(),
+          source:'entry-02',
+          sessionId,
+          activityId,
+          planId:currentPlanId(),
+          payload:{target}
+        });
       }
     }
     location.href='?tab=record';
@@ -145,6 +183,36 @@
     const facts=read(FACT_KEY,[]);
     facts.unshift(fact);
     write(FACT_KEY,facts.slice(0,500));
+    const api=core();
+    if(api){
+      const activityId=currentActivityId();
+      const eventId=`entry_evt_${fact.id}`;
+      api.appendEvent({
+        eventId,
+        eventType:fact.type||'quick_fact_created',
+        observedAt:fact.time,
+        source:fact.source||'entry-02',
+        sessionId:currentSessionId(),
+        activityId,
+        planId:fact.planId??currentPlanId(),
+        location:locationFrom(fact),
+        payload:fact,
+        legacyRef:fact.id
+      });
+      api.addFact({
+        factId:`entry_fact_${fact.id}`,
+        factType:fact.type||'quick_fact',
+        observedAt:fact.time,
+        source:fact.source||'entry-02',
+        eventId,
+        sessionId:currentSessionId(),
+        activityId,
+        planId:fact.planId??currentPlanId(),
+        location:locationFrom(fact),
+        value:fact,
+        legacyRef:fact.id
+      });
+    }
   }
 
   function saveParking(){
@@ -212,6 +280,22 @@
     const memos=read(MEMO_KEY,[]);
     memos.unshift(item);
     write(MEMO_KEY,memos.slice(0,1000));
+    const api=core();
+    if(api){
+      api.addMemo({
+        memoId:`entry_memo_${item.id}`,
+        kind:item.kind,
+        text:item.text,
+        observedAt:item.time,
+        source:item.source||'entry-02',
+        completed:item.completed,
+        pinned:item.pinned,
+        planIds:currentPlanId()?[currentPlanId()]:[],
+        activityIds:currentActivityId()?[currentActivityId()]:[],
+        status:item.status,
+        legacyRef:item.id
+      });
+    }
     saveFact({...item,status:'fact'});
     queueMount();
     showToast(kind==='buy'?'買う物メモを保存しました':'メモを保存しました');
@@ -365,5 +449,6 @@
   window.addEventListener('DOMContentLoaded',queueMount);
   window.addEventListener('hashchange',queueMount);
   window.addEventListener('popstate',queueMount);
-  new MutationObserver(queueMount).observe(document.documentElement,{childList:true,subtree:true});
+  globalThis.addEventListener('outbase:core-ready',queueMount);
+  globalThis.addEventListener('outbase:entry-refresh',queueMount);
 })();

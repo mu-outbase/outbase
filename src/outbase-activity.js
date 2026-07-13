@@ -6,6 +6,16 @@
   const RECOVERY_KEY='outbase_activity_recovery_v1';
   const LIFECYCLE_KEY='outbase_activity_lifecycle_v1';
 
+  function core(){return globalThis.OUTBASE_CORE||null;}
+  function coreActivityId(sessionId=''){
+    const stored=localStorage.getItem('outbase_core_activity_id')||'';
+    return stored||(sessionId?`activity_${sessionId}`:'');
+  }
+  function currentPlanIds(){
+    const id=localStorage.getItem('outbase_active_plan_id')||'';
+    return id&&id!=='none'?[id]:[];
+  }
+
   function read(key,fallback){
     try{
       const value=JSON.parse(localStorage.getItem(key)||'null');
@@ -93,15 +103,31 @@
 
   function appendEvent(type,extra={}){
     const events=read(EVENT_KEY,[]);
-    events.unshift({
+    const item={
       id:`activity-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
       type,
       time:new Date().toISOString(),
       sessionId:localStorage.getItem('outbase_record_session_id')||'',
       target:localStorage.getItem('outbase_record_target')||'記録',
       ...extra
-    });
+    };
+    events.unshift(item);
     write(EVENT_KEY,events.slice(0,1000));
+    const api=core();
+    if(api){
+      api.appendEvent({
+        eventId:`activity_evt_${item.id}`,
+        eventType:type,
+        observedAt:item.time,
+        source:'activity-02',
+        sessionId:item.sessionId||null,
+        activityId:coreActivityId(item.sessionId)||null,
+        planId:currentPlanIds()[0]||null,
+        payload:item,
+        legacyRef:item.id
+      });
+    }
+    return item;
   }
 
   function setPhase(phase,source='user'){
@@ -115,6 +141,25 @@
       updatedAt:Date.now()
     };
     write(LIFECYCLE_KEY,lifecycle);
+    const activityId=coreActivityId(info.sessionId);
+    const api=core();
+    if(api&&activityId){
+      api.setLifecycle(activityId,phase,source,{
+        observedAt:new Date().toISOString(),
+        reason:'activity-phase-change'
+      });
+      api.upsertActivity({
+        activityId,
+        activityType:info.target,
+        title:info.target,
+        state:info.status,
+        currentPhase:phase,
+        startedAt:info.startedAt?new Date(info.startedAt).toISOString():null,
+        planIds:currentPlanIds(),
+        source:'activity-02',
+        legacySessionId:info.sessionId
+      });
+    }
     appendEvent('phase-change',{phase,source});
     mount();
   }
@@ -158,6 +203,17 @@
     };
     write(RECOVERY_KEY,snapshot);
     localStorage.setItem('outbase_record_recoverable_session',JSON.stringify(snapshot));
+    const api=core();
+    const activityId=coreActivityId(info.sessionId);
+    if(api){
+      api.saveRecovery({
+        recoveryId:`activity_recovery_${info.sessionId||'current'}`,
+        activityId:activityId||null,
+        sessionId:info.sessionId||null,
+        savedAt:new Date(snapshot.savedAt).toISOString(),
+        state:snapshot
+      });
+    }
   }
 
   function pause(){
@@ -168,6 +224,9 @@
     if(activeStartedAt)localStorage.setItem('outbase_record_elapsed_ms',String(base+Date.now()-activeStartedAt));
     localStorage.setItem('outbase_record_active_started_at','0');
     localStorage.setItem('outbase_record_session_state','paused');
+    const api=core();
+    const activityId=coreActivityId(info.sessionId);
+    if(api&&activityId)api.upsertActivity({activityId,activityType:info.target,title:info.target,state:'paused',currentPhase:'休止',startedAt:info.startedAt?new Date(info.startedAt).toISOString():null,planIds:currentPlanIds(),source:'activity-02',legacySessionId:info.sessionId});
     setPhase('休止');
     appendEvent('pause');
     ensureRecoverable();
@@ -179,6 +238,9 @@
     if(info.status!=='paused')return;
     localStorage.setItem('outbase_record_session_state','active');
     localStorage.setItem('outbase_record_active_started_at',String(Date.now()));
+    const api=core();
+    const activityId=coreActivityId(info.sessionId);
+    if(api&&activityId)api.upsertActivity({activityId,activityType:info.target,title:info.target,state:'active',currentPhase:info.phase==='休止'?defaultPhase(info.target,'active'):info.phase,startedAt:info.startedAt?new Date(info.startedAt).toISOString():null,planIds:currentPlanIds(),source:'activity-02',legacySessionId:info.sessionId});
     if(info.phase==='休止')setPhase(defaultPhase(info.target,'active'));
     appendEvent('resume');
     ensureRecoverable();
@@ -195,6 +257,9 @@
     });
     setPhase('整理');
     localStorage.setItem('outbase_record_elapsed_ms',String(info.elapsed));
+    const api=core();
+    const activityId=coreActivityId(info.sessionId);
+    if(api&&activityId)api.upsertActivity({activityId,activityType:info.target,title:info.target,state:'inactive',currentPhase:'整理',startedAt:info.startedAt?new Date(info.startedAt).toISOString():null,becameInactiveAt:new Date().toISOString(),planIds:currentPlanIds(),source:'activity-02',legacySessionId:info.sessionId});
     localStorage.setItem('outbase_record_session_state','idle');
     localStorage.setItem('outbase_record_active_started_at','0');
     localStorage.setItem('outbase_record_resume_break_pending','0');
@@ -220,6 +285,13 @@
     if(info.status==='active'&&!Number(localStorage.getItem('outbase_record_active_started_at')||0)){
       localStorage.setItem('outbase_record_active_started_at',String(Date.now()));
       changed=true;
+    }
+    const refreshed=currentInfo();
+    const activityId=coreActivityId(refreshed.sessionId)||`activity_${refreshed.sessionId}`;
+    if(activityId)localStorage.setItem('outbase_core_activity_id',activityId);
+    const api=core();
+    if(api&&activityId){
+      api.upsertActivity({activityId,activityType:refreshed.target,title:refreshed.target,state:refreshed.status,currentPhase:refreshed.phase,startedAt:refreshed.startedAt?new Date(refreshed.startedAt).toISOString():null,planIds:currentPlanIds(),source:'activity-02',legacySessionId:refreshed.sessionId});
     }
     if(changed)appendEvent('recovered-metadata');
     ensureRecoverable();
@@ -269,6 +341,6 @@
     if(document.visibilityState==='hidden')ensureRecoverable();
     else {repairSession();mount();}
   });
-  // ACTIVITY-02: 自己再描画ループを防ぐため全DOM監視は行わない。
-  // 画面遷移・15秒更新・visibilitychangeで活動バーを同期する。
+  globalThis.addEventListener('outbase:core-ready',()=>{repairSession();mount();});
+  globalThis.addEventListener('outbase:activity-refresh',mount);
 })();
