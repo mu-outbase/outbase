@@ -3124,3 +3124,129 @@
     if(!history.state?.outbase)history.replaceState({outbase:true},'',location.href);
   });
 })();
+
+/* OUTBASE FIELD03 Integrated Production Cleanup */
+(function(){
+  'use strict';
+  const CLEANUP_VERSION='OUTBASE_PRODUCTION_CLEANUP_1';
+  const CLEANUP_KEY='outbase_production_cleanup_version';
+
+  const read=(key,fallback)=>{
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw==null)return fallback;
+      const value=JSON.parse(raw);
+      return value==null?fallback:value;
+    }catch(_e){return fallback;}
+  };
+  const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+
+  const demoPlanRules=[
+    {id:'plan-walk-13',title:'近所の朝散歩'},
+    {id:'plan-drive-13',title:'手賀沼ドライブ散歩'},
+    {id:'plan-akagi',title:'スノーピーク赤城山CF'},
+    {id:'plan-event-23',title:'地域イベント'}
+  ];
+
+  function isUntouchedDemoPlan(plan){
+    if(!plan||typeof plan!=='object')return false;
+    const rule=demoPlanRules.find(item=>item.id===plan.id&&item.title===plan.title);
+    if(!rule)return false;
+    const hasUserSignals=
+      Number(plan.updatedAt||0)>Number(plan.createdAt||0)||
+      Boolean(plan.userEdited)||
+      Boolean(plan.completedAt)||
+      (Array.isArray(plan.customItems)&&plan.customItems.length>0);
+    return !hasUserSignals;
+  }
+
+  function cleanupDemoPlans(){
+    const keys=['outbase_plans_v1','outbase_plan_library_v1','outbase_plan_list_v1'];
+    let removed=0;
+    keys.forEach(key=>{
+      const rows=read(key,null);
+      if(!Array.isArray(rows))return;
+      const next=rows.filter(plan=>{
+        const remove=isUntouchedDemoPlan(plan);
+        if(remove)removed++;
+        return !remove;
+      });
+      if(next.length!==rows.length)write(key,next);
+    });
+
+    const activeId=localStorage.getItem('outbase_active_plan_id_v1');
+    if(activeId&&demoPlanRules.some(rule=>rule.id===activeId)){
+      const remaining=read('outbase_plans_v1',[]);
+      if(!Array.isArray(remaining)||!remaining.some(plan=>plan?.id===activeId)){
+        localStorage.removeItem('outbase_active_plan_id_v1');
+      }
+    }
+    return removed;
+  }
+
+  function cleanupEmptyBrokenValues(){
+    const removeKeys=[];
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(!key||!key.startsWith('outbase_'))continue;
+      const value=localStorage.getItem(key);
+      if(value==='undefined'||value==='[object Object]')removeKeys.push(key);
+    }
+    removeKeys.forEach(key=>localStorage.removeItem(key));
+    return removeKeys.length;
+  }
+
+  function runCleanup(){
+    if(localStorage.getItem(CLEANUP_KEY)===CLEANUP_VERSION)return;
+    const removedPlans=cleanupDemoPlans();
+    const removedBroken=cleanupEmptyBrokenValues();
+    localStorage.setItem(CLEANUP_KEY,CLEANUP_VERSION);
+    localStorage.setItem('outbase_production_cleanup_result',JSON.stringify({
+      removedPlans,removedBroken,ranAt:new Date().toISOString()
+    }));
+  }
+
+  function showUpdateToast(registration){
+    if(document.getElementById('outbaseUpdateToast'))return;
+    const toast=document.createElement('div');
+    toast.id='outbaseUpdateToast';
+    toast.className='outbaseUpdateToast';
+    toast.innerHTML=`<div>
+      <b>OUTBASEの更新があります</b>
+      <span>新しい正本へ切り替えます。</span>
+    </div>
+    <button type="button">更新</button>`;
+    toast.querySelector('button')?.addEventListener('click',()=>{
+      registration.waiting?.postMessage({type:'SKIP_WAITING'});
+    });
+    document.body.appendChild(toast);
+  }
+
+  function bindServiceWorkerUpdate(){
+    if(!('serviceWorker' in navigator))return;
+    navigator.serviceWorker.ready.then(registration=>{
+      if(registration.waiting)showUpdateToast(registration);
+      registration.addEventListener('updatefound',()=>{
+        const worker=registration.installing;
+        if(!worker)return;
+        worker.addEventListener('statechange',()=>{
+          if(worker.state==='installed'&&navigator.serviceWorker.controller){
+            showUpdateToast(registration);
+          }
+        });
+      });
+    }).catch(()=>{});
+
+    let refreshing=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(refreshing)return;
+      refreshing=true;
+      location.reload();
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    runCleanup();
+    bindServiceWorkerUpdate();
+  });
+})();
