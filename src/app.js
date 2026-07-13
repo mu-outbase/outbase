@@ -2318,3 +2318,120 @@
   async function restore(file){try{const payload=JSON.parse(await file.text());if(!payload||payload.format!=='OUTBASE_BACKUP'||typeof payload.localStorage!=='object')throw new Error();const keys=Object.keys(payload.localStorage).filter(key=>key.startsWith(PREFIX));if(!keys.length)throw new Error();if(!confirm(`${keys.length}件のOUTBASEデータを復元します。\n現在の同名データは上書きされます。`))return;keys.forEach(key=>localStorage.setItem(key,String(payload.localStorage[key])));toast(`${keys.length}件を復元しました`);setTimeout(()=>location.reload(),700);}catch(error){console.error(error);alert('OUTBASEバックアップを読み込めませんでした。');}}
   document.addEventListener('click',event=>{const ex=event.target.closest?.('[data-library-export]');if(ex){event.preventDefault();event.stopImmediatePropagation();exportBackup();return;}const im=event.target.closest?.('[data-library-import-open]');if(im){event.preventDefault();event.stopImmediatePropagation();const el=input();el.value='';el.onchange=()=>{const file=el.files?.[0];if(file)restore(file);};el.click();}},true);
 })();
+
+/* OUTBASE FIELD03 Canonical7: memory detail viewer */
+(function(){
+  'use strict';
+  const RECORD_KEY='outbase_record_saved_records';
+
+  const readRecords=()=>{
+    try{
+      const value=JSON.parse(localStorage.getItem(RECORD_KEY)||'[]');
+      return Array.isArray(value)?value:[];
+    }catch(_e){return [];}
+  };
+
+  const escapeHtml=value=>String(value??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#039;');
+
+  const formatTime=value=>{
+    const date=new Date(Number(value||0));
+    if(Number.isNaN(date.getTime()))return '';
+    return date.toLocaleString('ja-JP',{
+      year:'numeric',month:'numeric',day:'numeric',
+      hour:'2-digit',minute:'2-digit'
+    });
+  };
+
+  const kindLabel=kind=>({
+    photo:'写真',video:'動画',speech:'音声',memo:'メモ',pin:'場所'
+  }[kind]||'記録');
+
+  function matchingRecords(key){
+    return readRecords()
+      .filter(record=>{
+        const date=new Date(Number(record.createdAt||Date.now())).toISOString().slice(0,10);
+        const recordKey=record.sessionId||`${record.target||'未確認'}:${date}`;
+        return recordKey===key;
+      })
+      .sort((a,b)=>Number(a.createdAt||0)-Number(b.createdAt||0));
+  }
+
+  function recordMarkup(record){
+    const title=kindLabel(record.kind);
+    const text=record.text||record.note||record.label||record.category||'';
+    const location=record.location&&record.location.lat!=null
+      ? `${Number(record.location.lat).toFixed(5)}, ${Number(record.location.lng).toFixed(5)}`
+      : '';
+    const media=record.previewUrl
+      ? (record.kind==='video'
+        ? `<video controls playsinline src="${escapeHtml(record.previewUrl)}"></video>`
+        : `<img src="${escapeHtml(record.previewUrl)}" alt="">`)
+      : '';
+
+    return `<article class="memoryDetailItem">
+      <div class="memoryDetailMeta">
+        <b>${escapeHtml(title)}</b>
+        <time>${escapeHtml(formatTime(record.createdAt))}</time>
+      </div>
+      ${media}
+      ${text?`<p>${escapeHtml(text)}</p>`:''}
+      ${location?`<small>位置：${escapeHtml(location)}</small>`:''}
+    </article>`;
+  }
+
+  function closeViewer(){
+    document.getElementById('outbaseMemoryDetail')?.remove();
+    document.body.classList.remove('memoryDetailOpen');
+  }
+
+  function openViewer(key){
+    const records=matchingRecords(key);
+    if(!records.length)return;
+
+    closeViewer();
+
+    const title=records[0].target||'思い出';
+    const overlay=document.createElement('div');
+    overlay.id='outbaseMemoryDetail';
+    overlay.className='memoryDetailBackdrop';
+    overlay.innerHTML=`<section class="memoryDetailSheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <header>
+        <div>
+          <small>MEMORY DETAIL</small>
+          <h2>${escapeHtml(title)}</h2>
+          <p>${records.length}件の記録</p>
+        </div>
+        <button type="button" data-memory-detail-close aria-label="閉じる">×</button>
+      </header>
+      <div class="memoryDetailBody">
+        ${records.map(recordMarkup).join('')}
+      </div>
+    </section>`;
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('memoryDetailOpen');
+
+    overlay.addEventListener('click',event=>{
+      if(event.target===overlay||event.target.closest?.('[data-memory-detail-close]')){
+        closeViewer();
+      }
+    });
+  }
+
+  document.addEventListener('click',event=>{
+    const row=event.target.closest?.('[data-memory-session]');
+    if(!row)return;
+    event.preventDefault();
+    event.stopPropagation();
+    openViewer(row.dataset.memorySession||'');
+  },true);
+
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape')closeViewer();
+  });
+})();
