@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.0.0';
+  const VERSION='1.1.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -10,6 +10,8 @@
     activities:`${PREFIX}_activities`,
     lifecycles:`${PREFIX}_lifecycles`,
     memos:`${PREFIX}_memos`,
+    intents:`${PREFIX}_intents`,
+    parkings:`${PREFIX}_parkings`,
     recoveries:`${PREFIX}_recoveries`,
     relations:`${PREFIX}_relations`,
     migrations:`${PREFIX}_migrations`
@@ -172,6 +174,73 @@
     return clone(memo);
   }
 
+  function setIntent(input={}){
+    const intent={
+      intentId:input.intentId||uid('intent'),
+      intentType:input.intentType||input.type||'unknown',
+      state:input.state||'active',
+      observedAt:normalizeTime(input.observedAt||input.time||now()),
+      source:input.source||'outbase',
+      activityId:input.activityId??null,
+      sessionId:input.sessionId??null,
+      planId:input.planId??null,
+      payload:clone(input.payload??null),
+      legacyRef:input.legacyRef??null
+    };
+    return upsert(KEYS.intents,intent,'intentId');
+  }
+
+  function clearIntent(intentId,extra={}){
+    if(!intentId)return null;
+    const intents=list(KEYS.intents);
+    const index=intents.findIndex(item=>item.intentId===intentId);
+    if(index<0)return null;
+    intents[index]={
+      ...intents[index],
+      state:'completed',
+      completedAt:normalizeTime(extra.completedAt||now()),
+      result:clone(extra.result??null),
+      updatedAt:now()
+    };
+    write(KEYS.intents,intents);
+    return clone(intents[index]);
+  }
+
+  function saveParking(input={}){
+    const parking={
+      parkingId:input.parkingId||uid('parking'),
+      state:input.state||'active',
+      savedAt:normalizeTime(input.savedAt||input.observedAt||input.time||now()),
+      clearedAt:input.clearedAt?normalizeTime(input.clearedAt):null,
+      source:input.source||'outbase',
+      activityId:input.activityId??null,
+      sessionId:input.sessionId??null,
+      planId:input.planId??null,
+      location:clone(input.location??null),
+      label:input.label||'駐車位置',
+      note:input.note||'',
+      evidence:clone(input.evidence??null),
+      legacyRef:input.legacyRef??null
+    };
+    return upsert(KEYS.parkings,parking,'parkingId');
+  }
+
+  function clearParking(parkingId,extra={}){
+    if(!parkingId)return null;
+    const parkings=list(KEYS.parkings);
+    const index=parkings.findIndex(item=>item.parkingId===parkingId);
+    if(index<0)return null;
+    parkings[index]={
+      ...parkings[index],
+      state:'cleared',
+      clearedAt:normalizeTime(extra.clearedAt||now()),
+      clearReason:extra.reason||'user',
+      updatedAt:now()
+    };
+    write(KEYS.parkings,parkings);
+    return clone(parkings[index]);
+  }
+
   function saveRecovery(input={}){
     const recovery={
       recoveryId:input.recoveryId||uid('recovery'),
@@ -208,7 +277,7 @@
     const migrations=read(KEYS.migrations,{});
     if(migrations.legacyPhase1?.completed)return clone(migrations.legacyPhase1);
 
-    const counts={events:0,facts:0,activities:0,lifecycles:0,memos:0,recoveries:0};
+    const counts={events:0,facts:0,activities:0,lifecycles:0,memos:0,intents:0,parkings:0,recoveries:0};
 
     const legacyFacts=read('outbase_quick_facts_v1',[]);
     legacyFacts.forEach(item=>{
@@ -322,6 +391,28 @@
       counts.lifecycles++;
     });
 
+    const legacyPins=read('outbase_record_saved_pins',[]);
+    legacyPins
+      .filter(item=>item&&item.category==='parking')
+      .forEach(item=>{
+        saveParking({
+          parkingId:`legacy_parking_${item.id||uid('legacy')}`,
+          state:item.clearedAt?'cleared':'active',
+          savedAt:item.time||now(),
+          clearedAt:item.clearedAt||null,
+          source:'legacy',
+          sessionId:item.sessionId??null,
+          location:item.lat!=null&&item.lng!=null
+            ?{lat:item.lat,lng:item.lng,accuracy:item.accuracy??null}
+            :null,
+          label:item.label||'駐車位置',
+          note:item.note||'',
+          evidence:item.parking||null,
+          legacyRef:item.id||null
+        });
+        counts.parkings=(counts.parkings||0)+1;
+      });
+
     const legacyRecovery=read('outbase_activity_recovery_v1',null)||
       read('outbase_record_recoverable_session',null);
     if(legacyRecovery){
@@ -349,6 +440,8 @@
       activities:list(KEYS.activities),
       lifecycles:list(KEYS.lifecycles),
       memos:list(KEYS.memos),
+      intents:list(KEYS.intents),
+      parkings:list(KEYS.parkings),
       recoveries:list(KEYS.recoveries),
       relations:list(KEYS.relations),
       migrations:read(KEYS.migrations,{})
@@ -363,6 +456,8 @@
       activities:data.activities.length,
       lifecycles:data.lifecycles.length,
       memos:data.memos.length,
+      intents:data.intents.length,
+      parkings:data.parkings.length,
       recoveries:data.recoveries.length,
       relations:data.relations.length
     };
@@ -387,6 +482,10 @@
     upsertActivity,
     setLifecycle,
     addMemo,
+    setIntent,
+    clearIntent,
+    saveParking,
+    clearParking,
     saveRecovery,
     addRelation,
     snapshot,

@@ -205,6 +205,22 @@
         payload:fact,
         legacyRef:fact.id
       });
+      if(fact.type==='parking_saved'){
+        api.saveParking({
+          parkingId:`entry_parking_${fact.id}`,
+          state:'active',
+          savedAt:fact.time,
+          source:fact.source||'entry-02',
+          activityId,
+          sessionId:currentSessionId(),
+          planId:fact.planId??currentPlanId(),
+          location:locationFrom(fact),
+          label:fact.label||'駐車位置',
+          note:fact.note||'',
+          evidence:fact,
+          legacyRef:fact.id
+        });
+      }
       api.addFact({
         factId:`entry_fact_${fact.id}`,
         factType:fact.type||'quick_fact',
@@ -384,6 +400,22 @@
     const actionButton=event.target.closest?.('[data-instant]');
     if(actionButton){
       const action=actionButton.dataset.instant;
+      const api=core();
+      if(api){
+        const intentId=`entry_intent_${action}_${Date.now()}`;
+        api.setIntent({
+          intentId,
+          intentType:action,
+          state:'active',
+          observedAt:nowIso(),
+          source:'entry-02',
+          activityId:currentActivityId(),
+          sessionId:currentSessionId(),
+          planId:currentPlanId(),
+          payload:{action}
+        });
+        setTimeout(()=>api.clearIntent(intentId,{result:{dispatched:true}}),0);
+      }
       if(action==='walk')goRecord('通常散歩',true);
       else if(action==='drive')goRecord('ドライブ',true);
       else if(action==='parking')saveParking();
