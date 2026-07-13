@@ -1,11 +1,13 @@
-const CACHE_NAME='outbase-field03-integrated-production4';
+const CACHE_NAME='outbase-field03-flow01';
 const CORE_ASSETS=[
   './',
   './index.html',
-  './style.css?v=outbase-field03-integrated-production4',
-  './src/app.js?v=outbase-field03-integrated-production4',
-  './manifest.json?v=outbase-field03-integrated-production4',
-  './outbase_library10a/style.css?v=outbase-field03-integrated-production4'
+  './style.css?v=outbase-field03-flow01',
+  './style-flow.css?v=outbase-field03-flow01',
+  './src/app.js?v=outbase-field03-flow01',
+  './src/outbase-flow.js?v=outbase-field03-flow01',
+  './manifest.json?v=outbase-field03-flow01',
+  './outbase_library10a/style.css?v=outbase-field03-flow01'
 ];
 const OPTIONAL_EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',

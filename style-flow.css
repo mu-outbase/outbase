@@ -1,0 +1,33 @@
+.outbaseFlowLauncher{
+position:fixed;right:14px;bottom:88px;z-index:9000;border:0;border-radius:18px;
+padding:10px 14px;background:#173d2d;color:#fff;box-shadow:0 12px 28px rgba(0,0,0,.22);
+display:flex;flex-direction:column;align-items:flex-start;gap:2px;font:inherit}
+.outbaseFlowLauncher span{font-weight:900;font-size:14px}
+.outbaseFlowLauncher b{font-size:10px;font-weight:600;opacity:.85}
+.flowBackdrop{position:fixed;inset:0;z-index:50000;background:rgba(9,20,15,.56);display:flex;justify-content:center}
+.flowApp{width:min(100%,760px);height:100%;background:#f6f5f1;overflow:auto;color:#183127}
+.flowHeader{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;
+padding:12px 14px;background:rgba(246,245,241,.96);border-bottom:1px solid rgba(23,61,45,.12);backdrop-filter:blur(12px)}
+.flowHeader div{display:flex;flex-direction:column;min-width:0}.flowHeader small{font-size:10px;letter-spacing:.12em;color:#6b7b73}
+.flowHeader b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.flowBack,.flowSave{border:0;border-radius:12px;padding:10px 12px}
+.flowBack{font-size:22px;background:#e7ece8}.flowSave{background:#173d2d;color:#fff;font-weight:800}
+.flowNav{position:sticky;top:69px;z-index:4;display:flex;overflow:auto;gap:6px;padding:8px 12px;background:#f6f5f1;border-bottom:1px solid rgba(23,61,45,.1)}
+.flowNav button{white-space:nowrap;border:0;border-radius:999px;padding:9px 13px;background:#e7ece8;color:#29483a;font-weight:700}
+.flowNav button.active{background:#173d2d;color:#fff}
+.flowMain{padding:16px 14px 110px}.flowHero{padding:12px 4px 18px}.flowHero small{font-size:11px;letter-spacing:.15em;color:#8a6a35}
+.flowHero h1{margin:4px 0 6px;font-size:30px}.flowHero p{margin:0;color:#607169}
+.flowGrid,.flowList,.flowTimeline{display:grid;gap:12px}.flowGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.flowCard,.flowRow,.flowMeal,.flowStep{background:#fff;border:1px solid rgba(23,61,45,.12);border-radius:18px;padding:15px;box-shadow:0 6px 20px rgba(34,58,47,.06)}
+.flowCard{display:grid;grid-template-columns:1fr auto;gap:10px}.flowCard h2{margin:2px 0 6px}.flowCard p,.flowRow p,.flowStep p{margin:0;color:#65756d;font-size:13px}
+.flowCard small,.flowRow small,.flowStep small{color:#8a6a35;font-weight:800}
+.flowCard button,.flowRow button,.flowStep button,.flowWide,.flowInlineForm button{
+border:0;border-radius:12px;padding:10px 12px;background:#173d2d;color:#fff;font-weight:800}
+.flowMini{background:#e7ece8!important;color:#173d2d!important}.danger{background:#8a4a3a!important}.flowRow.warn{border-color:#b86d4d;background:#fff7f2}
+.flowRow.done,.flowStep.done{opacity:.66}.flowStep.active{border-color:#b08a43;box-shadow:0 0 0 2px rgba(176,138,67,.14)}
+.flowRow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}.flowMeal{display:grid;gap:10px}.flowMeal label{display:grid;gap:5px;font-weight:800}
+.flowMeal input,.flowInlineForm input,.flowInlineForm select{width:100%;box-sizing:border-box;border:1px solid #cdd7d1;border-radius:12px;padding:12px;background:#fff;font:inherit}
+.flowInlineForm{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:14px}.flowInlineForm input:last-of-type{grid-column:1/-1}
+.flowStep{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center}.flowStep i{width:32px;height:32px;border-radius:50%;background:#e7ece8;display:grid;place-items:center;font-style:normal;font-weight:900}
+.flowStep .flowMini{grid-column:3}.flowWide{width:100%;margin-top:14px;padding:14px}.flowEmpty{padding:24px;text-align:center;color:#728078;background:#fff;border-radius:18px}
+.flowToast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:60000;background:#173d2d;color:#fff;padding:12px 18px;border-radius:999px;font-weight:800}
+@media(max-width:560px){.flowGrid{grid-template-columns:1fr}.flowRow{grid-template-columns:1fr auto}.flowRow .danger{grid-column:2}.flowStep{grid-template-columns:34px 1fr}.flowStep button{grid-column:2}.flowInlineForm{grid-template-columns:1fr}}
