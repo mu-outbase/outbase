@@ -1,25 +1,24 @@
-const CACHE_NAME='outbase-field03-core01';
+const CACHE_NAME='outbase-field03-core01a';
 const CORE_ASSETS=[
   './',
   './index.html',
-  './style.css?v=outbase-field03-core01',
-  './style-flow.css?v=outbase-field03-core01',
-  './style-entry.css?v=outbase-field03-core01',
-  './style-activity.css?v=outbase-field03-core01',
-  './src/app.js?v=outbase-field03-core01',
-  './src/outbase-core.js?v=outbase-field03-core01',
-  './src/outbase-flow.js?v=outbase-field03-core01',
-  './src/outbase-entry.js?v=outbase-field03-core01',
-  './src/outbase-activity.js?v=outbase-field03-core01',
-  './manifest.json?v=outbase-field03-core01',
-  './outbase_library10a/style.css?v=outbase-field03-core01'
+  './style.css?v=outbase-field03-core01a',
+  './style-flow.css?v=outbase-field03-core01a',
+  './style-entry.css?v=outbase-field03-core01a',
+  './style-activity.css?v=outbase-field03-core01a',
+  './src/app.js?v=outbase-field03-core01a',
+  './src/outbase-core.js?v=outbase-field03-core01a',
+  './src/outbase-flow.js?v=outbase-field03-core01a',
+  './src/outbase-entry.js?v=outbase-field03-core01a',
+  './src/outbase-activity.js?v=outbase-field03-core01a',
+  './manifest.json?v=outbase-field03-core01a',
+  './outbase_library10a/style.css?v=outbase-field03-core01a'
 ];
 const OPTIONAL_EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
   'https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js'
 ];
-
 async function cacheOptionalExternalAssets(cache){
   await Promise.allSettled(OPTIONAL_EXTERNAL_ASSETS.map(async url=>{
     const request=new Request(url,{mode:'no-cors',cache:'reload'});
@@ -27,15 +26,13 @@ async function cacheOptionalExternalAssets(cache){
     if(response)await cache.put(request,response.clone());
   }));
 }
-
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
     await cache.addAll(CORE_ASSETS);
-    await cacheOptionalExternalAssets(cache);
+    cacheOptionalExternalAssets(cache).catch(()=>{});
   })());
 });
-
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     const keys=await caches.keys();
@@ -43,7 +40,6 @@ self.addEventListener('activate',event=>{
     await self.clients.claim();
   })());
 });
-
 async function networkFirst(request,fallback){
   const cache=await caches.open(CACHE_NAME);
   try{
@@ -54,7 +50,6 @@ async function networkFirst(request,fallback){
     return (await cache.match(request))||(fallback?await cache.match(fallback):undefined);
   }
 }
-
 async function cacheFirst(request){
   const cache=await caches.open(CACHE_NAME);
   const cached=await cache.match(request);
@@ -63,7 +58,6 @@ async function cacheFirst(request){
   if(response&&(response.ok||response.type==='opaque'))await cache.put(request,response.clone());
   return response;
 }
-
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
@@ -77,7 +71,6 @@ self.addEventListener('fetch',event=>{
   }
   event.respondWith(cacheFirst(event.request));
 });
-
 self.addEventListener('message',event=>{
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
