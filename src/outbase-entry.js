@@ -4,6 +4,7 @@
   const ENTRY_ID='outbaseInstantEntry';
   const PARKING_KEY='outbase_quick_parking_events_v1';
   const FACT_KEY='outbase_quick_facts_v1';
+  const MEMO_KEY='outbase_quick_memos_v1';
 
   function read(key,fallback){
     try{
@@ -27,24 +28,83 @@
     return ['plan','record','search'].includes(currentTab());
   }
 
+  function activeActivity(){
+    const state=localStorage.getItem('outbase_record_session_state')||'idle';
+    const target=localStorage.getItem('outbase_record_target')||'';
+    return {state,target};
+  }
+
+  function recentMemos(){
+    return read(MEMO_KEY,[]).slice(0,4);
+  }
+
   function entryHtml(){
     const parking=read(PARKING_KEY,[]);
     const latest=parking[0];
+    const activity=activeActivity();
+    const memos=recentMemos();
+    const primary = activity.state==='active'
+      ? [
+          ['record','＋','記録を追加','継続中の活動へ'],
+          ['voice','🎙️','音声メモ','自動文字起こし'],
+          ['parking','🅿️','駐車を保存','現在地を保存'],
+          ['memo','📝','クイックメモ','思いつきを保存'],
+          ['photo','📷','写真・スクショ','読み込んで保存']
+        ]
+      : [
+          ['walk','🐾','散歩開始','すぐGPS記録へ'],
+          ['drive','🚗','ドライブ開始','予定なしで開始'],
+          ['parking','🅿️','駐車を保存','現在地を保存'],
+          ['memo','📝','クイックメモ','思いつきを保存'],
+          ['voice','🎙️','音声メモ','自動文字起こし']
+        ];
+
     return `<section id="${ENTRY_ID}" class="instantEntry">
       <div class="instantEntryHead">
-        <div><small>START ANYWHERE</small><h2>今すぐ使う</h2><p>予定やプランを作らず、そのまま始められます。</p></div>
+        <div>
+          <small>START ANYWHERE</small>
+          <h2>${activity.state==='active'?'活動を続けながら使う':'今すぐ使う'}</h2>
+          <p>${activity.state==='active'
+            ?`${activity.target||'記録'}を継続中。別の機能を使っても記録は止まりません。`
+            :'予定やプランを作らず、そのまま始められます。'}</p>
+        </div>
+        <button class="instantMore" data-instant="more">その他</button>
       </div>
+
       <div class="instantEntryGrid">
-        <button data-instant="walk"><span>🐾</span><b>散歩開始</b><small>すぐGPS記録へ</small></button>
-        <button data-instant="parking"><span>🅿️</span><b>駐車を保存</b><small>現在地を1タップ保存</small></button>
-        <button data-instant="photo"><span>📷</span><b>写真・スクショ</b><small>読み込んで後から理解</small></button>
-        <button data-instant="voice"><span>🎙️</span><b>音声メモ</b><small>話して記録へ</small></button>
-        <button data-instant="record"><span>＋</span><b>今すぐ記録</b><small>活動未選択で開始</small></button>
+        ${primary.map(([action,icon,title,note])=>`
+          <button data-instant="${action}">
+            <span>${icon}</span><b>${title}</b><small>${note}</small>
+          </button>`).join('')}
       </div>
+
+      <div class="instantMorePanel" data-instant-panel hidden>
+        <button data-instant="photo"><span>📷</span><b>写真・スクショ</b></button>
+        <button data-instant="record"><span>＋</span><b>今すぐ記録</b></button>
+        <button data-instant="buy"><span>🛒</span><b>買う物メモ</b></button>
+        <button data-instant="memo-list"><span>📒</span><b>メモ一覧</b></button>
+      </div>
+
       ${latest?`<button class="instantParkingLatest" data-instant="parking-map">
-        <span>最後の駐車</span><b>${new Date(latest.time).toLocaleString('ja-JP')}</b><small>${Number(latest.lat).toFixed(5)}, ${Number(latest.lng).toFixed(5)}</small>
+        <span>最後の駐車</span>
+        <b>${new Date(latest.time).toLocaleString('ja-JP')}</b>
+        <small>${Number(latest.lat).toFixed(5)}, ${Number(latest.lng).toFixed(5)}</small>
       </button>`:''}
+
+      ${memos.length?`<div class="instantMemoPreview">
+        <div class="instantMemoPreviewHead"><b>最近のメモ</b><button data-instant="memo-list">すべて</button></div>
+        ${memos.map(item=>`<button data-instant="memo-list"><span>${item.kind==='buy'?'🛒':'📝'}</span><b>${escapeHtml(item.text)}</b><small>${new Date(item.time).toLocaleString('ja-JP')}</small></button>`).join('')}
+      </div>`:''}
     </section>`;
+  }
+
+  function escapeHtml(value){
+    return String(value??'')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#039;');
   }
 
   function mount(){
@@ -89,7 +149,7 @@
 
   function saveParking(){
     const button=document.querySelector('[data-instant="parking"]');
-    if(button){button.disabled=true;button.querySelector('small').textContent='現在地を取得中…';}
+    if(button){button.disabled=true;button.querySelector('small')?.replaceChildren('現在地を取得中…');}
     if(!navigator.geolocation){
       alert('この端末では現在地を取得できません。');
       queueMount();
@@ -134,7 +194,74 @@
     input.click();
   }
 
-  function voiceMemo(){
+  function saveMemo(text,kind='memo',source='text'){
+    const trimmed=String(text||'').trim();
+    if(!trimmed)return;
+    const item={
+      id:`memo-${Date.now()}`,
+      type:'quick-memo',
+      kind,
+      text:trimmed,
+      time:nowIso(),
+      source,
+      status:'saved',
+      planId:null,
+      completed:false,
+      pinned:false
+    };
+    const memos=read(MEMO_KEY,[]);
+    memos.unshift(item);
+    write(MEMO_KEY,memos.slice(0,1000));
+    saveFact({...item,status:'fact'});
+    queueMount();
+    showToast(kind==='buy'?'買う物メモを保存しました':'メモを保存しました');
+  }
+
+  function openMemoComposer(kind='memo'){
+    document.getElementById('instantMemoSheet')?.remove();
+    const sheet=document.createElement('div');
+    sheet.id='instantMemoSheet';
+    sheet.className='instantMemoSheet';
+    sheet.innerHTML=`<div class="instantMemoCard">
+      <div class="instantMemoCardHead">
+        <div><small>${kind==='buy'?'BUY NOTE':'QUICK MEMO'}</small><h3>${kind==='buy'?'買う物メモ':'クイックメモ'}</h3></div>
+        <button data-memo-close>×</button>
+      </div>
+      <textarea data-memo-input autofocus placeholder="${kind==='buy'?'買いたい物をそのまま書く':'思いついたことをそのまま書く'}"></textarea>
+      <div class="instantMemoActions">
+        <button data-memo-voice="${kind}">🎙️ 話す</button>
+        <button data-memo-save="${kind}">保存</button>
+      </div>
+    </div>`;
+    document.body.appendChild(sheet);
+    setTimeout(()=>sheet.querySelector('[data-memo-input]')?.focus(),50);
+  }
+
+  function openMemoList(){
+    document.getElementById('instantMemoSheet')?.remove();
+    const memos=read(MEMO_KEY,[]);
+    const sheet=document.createElement('div');
+    sheet.id='instantMemoSheet';
+    sheet.className='instantMemoSheet';
+    sheet.innerHTML=`<div class="instantMemoCard instantMemoListCard">
+      <div class="instantMemoCardHead">
+        <div><small>MEMOS</small><h3>メモ</h3></div>
+        <button data-memo-close>×</button>
+      </div>
+      <div class="instantMemoList">
+        ${memos.length?memos.map((item,index)=>`
+          <article class="${item.completed?'done':''}">
+            <button data-memo-complete="${index}">${item.completed?'✓':'○'}</button>
+            <div><small>${item.kind==='buy'?'買う物':'メモ'} / ${new Date(item.time).toLocaleString('ja-JP')}</small><p>${escapeHtml(item.text)}</p></div>
+            <button data-memo-delete="${index}">削除</button>
+          </article>`).join(''):'<div class="instantMemoEmpty">メモはまだありません。</div>'}
+      </div>
+      <button class="instantMemoNew" data-memo-new>新しいメモ</button>
+    </div>`;
+    document.body.appendChild(sheet);
+  }
+
+  function voiceMemo(kind='memo'){
     const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SpeechRecognition){
       goRecord('音声メモ',false);
@@ -147,13 +274,7 @@
     showToast('話してください');
     recognition.onresult=event=>{
       const text=Array.from(event.results).map(result=>result[0]?.transcript||'').join(' ').trim();
-      if(text){
-        const fact={id:`voice-${Date.now()}`,type:'voice-text',time:nowIso(),text,source:'quick-entry',planId:null,status:'fact'};
-        saveFact(fact);
-        localStorage.setItem('outbase_quick_voice_draft',text);
-        localStorage.setItem('outbase_record_target','音声メモ');
-        showToast('音声メモを保存しました');
-      }
+      if(text)saveMemo(text,kind,'voice-transcript');
     };
     recognition.onerror=()=>goRecord('音声メモ',false);
     recognition.start();
@@ -170,15 +291,75 @@
   }
 
   document.addEventListener('click',event=>{
-    const button=event.target.closest?.('[data-instant]');
-    if(!button)return;
-    const action=button.dataset.instant;
-    if(action==='walk')goRecord('通常散歩',true);
-    else if(action==='parking')saveParking();
-    else if(action==='parking-map')openParkingMap();
-    else if(action==='photo')openFileImport();
-    else if(action==='voice')voiceMemo();
-    else if(action==='record')goRecord('',false);
+    const actionButton=event.target.closest?.('[data-instant]');
+    if(actionButton){
+      const action=actionButton.dataset.instant;
+      if(action==='walk')goRecord('通常散歩',true);
+      else if(action==='drive')goRecord('ドライブ',true);
+      else if(action==='parking')saveParking();
+      else if(action==='parking-map')openParkingMap();
+      else if(action==='photo')openFileImport();
+      else if(action==='voice')voiceMemo('memo');
+      else if(action==='record')goRecord('',false);
+      else if(action==='memo')openMemoComposer('memo');
+      else if(action==='buy')openMemoComposer('buy');
+      else if(action==='memo-list')openMemoList();
+      else if(action==='more'){
+        const panel=document.querySelector('[data-instant-panel]');
+        if(panel)panel.hidden=!panel.hidden;
+      }
+      return;
+    }
+
+    if(event.target.closest?.('[data-memo-close]')){
+      document.getElementById('instantMemoSheet')?.remove();
+      return;
+    }
+
+    const save=event.target.closest?.('[data-memo-save]');
+    if(save){
+      const text=document.querySelector('[data-memo-input]')?.value||'';
+      saveMemo(text,save.dataset.memoSave||'memo','text');
+      document.getElementById('instantMemoSheet')?.remove();
+      return;
+    }
+
+    const voice=event.target.closest?.('[data-memo-voice]');
+    if(voice){
+      voiceMemo(voice.dataset.memoVoice||'memo');
+      return;
+    }
+
+    if(event.target.closest?.('[data-memo-new]')){
+      openMemoComposer('memo');
+      return;
+    }
+
+    const complete=event.target.closest?.('[data-memo-complete]');
+    if(complete){
+      const memos=read(MEMO_KEY,[]);
+      const index=Number(complete.dataset.memoComplete);
+      if(memos[index]){
+        memos[index].completed=!memos[index].completed;
+        write(MEMO_KEY,memos);
+        openMemoList();
+        queueMount();
+      }
+      return;
+    }
+
+    const del=event.target.closest?.('[data-memo-delete]');
+    if(del){
+      const memos=read(MEMO_KEY,[]);
+      const index=Number(del.dataset.memoDelete);
+      if(memos[index]){
+        memos[index].status='delete-candidate';
+        memos.splice(index,1);
+        write(MEMO_KEY,memos);
+        openMemoList();
+        queueMount();
+      }
+    }
   });
 
   window.addEventListener('DOMContentLoaded',queueMount);

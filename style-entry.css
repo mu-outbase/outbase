@@ -15,3 +15,26 @@
   .instantEntryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .instantParkingLatest{grid-template-columns:1fr}.instantParkingLatest small{display:none}
 }
+
+.instantEntryHead{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+.instantMore{border:1px solid rgba(23,61,45,.14);border-radius:12px;padding:9px 11px;background:#fff;color:#173d2d;font-weight:800}
+.instantMorePanel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px}
+.instantMorePanel button{border:1px solid rgba(23,61,45,.1);border-radius:12px;padding:9px;background:#fafcfb;color:#173d2d;display:flex;flex-direction:column;gap:3px;align-items:center;font:inherit}
+.instantMemoPreview{margin-top:12px;border-top:1px solid rgba(23,61,45,.09);padding-top:10px}
+.instantMemoPreviewHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.instantMemoPreviewHead button{border:0;background:transparent;color:#173d2d;font-weight:800}
+.instantMemoPreview>button{width:100%;border:0;background:transparent;padding:8px 0;display:grid;grid-template-columns:28px 1fr auto;gap:8px;text-align:left;color:#173d2d}
+.instantMemoPreview>button b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.instantMemoPreview>button small{color:#7a867e;font-size:10px}
+.instantMemoSheet{position:fixed;inset:0;z-index:80000;background:rgba(8,20,14,.48);display:flex;align-items:flex-end;justify-content:center}
+.instantMemoCard{width:min(100%,680px);max-height:88vh;overflow:auto;background:#f6f5f1;border-radius:26px 26px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -16px 40px rgba(0,0,0,.22)}
+.instantMemoCardHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.instantMemoCardHead small{font-size:10px;letter-spacing:.14em;color:#98722e;font-weight:900}.instantMemoCardHead h3{margin:2px 0 0;font-size:24px;color:#173d2d}
+.instantMemoCardHead>button{border:0;border-radius:50%;width:38px;height:38px;background:#e5ebe7;font-size:22px}
+.instantMemoCard textarea{width:100%;min-height:160px;box-sizing:border-box;border:1px solid rgba(23,61,45,.16);border-radius:18px;padding:14px;background:#fff;font:inherit;resize:vertical}
+.instantMemoActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.instantMemoActions button,.instantMemoNew{border:0;border-radius:14px;padding:13px;background:#173d2d;color:#fff;font-weight:900}
+.instantMemoActions button:first-child{background:#e5ebe7;color:#173d2d}
+.instantMemoList{display:grid;gap:8px}.instantMemoList article{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:start;padding:12px;border-radius:16px;background:#fff;border:1px solid rgba(23,61,45,.1)}
+.instantMemoList article.done{opacity:.58}.instantMemoList article p{margin:3px 0 0;white-space:pre-wrap}.instantMemoList article small{color:#7a867e}
+.instantMemoList article>button{border:0;border-radius:10px;padding:8px;background:#e7ece8;color:#173d2d}.instantMemoList article>button:last-child{background:#f3e4df;color:#824735}
+.instantMemoEmpty{padding:24px;text-align:center;color:#748178}.instantMemoNew{width:100%;margin-top:12px}
+@media(max-width:560px){.instantMorePanel{grid-template-columns:repeat(2,minmax(0,1fr))}.instantMemoPreview>button{grid-template-columns:24px 1fr}.instantMemoPreview>button small{display:none}}
