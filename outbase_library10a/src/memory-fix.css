@@ -1,6 +1,4 @@
-/* OUTBASE Memory Fix 1
-   The legacy selector '#page-record + .page' hides the memory page because
-   memory is the next sibling after record. Active memory must win. */
+/* OUTBASE Memory Fix 1 */
 #page-memory.page.active {
   display: block !important;
 }
