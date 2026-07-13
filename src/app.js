@@ -6,8 +6,8 @@
   const params=new URLSearchParams(location.search);
   let recordSessionState=params.get('recordState')||localStorage.getItem('outbase_record_session_state')||'idle';
   if(!['idle','active','paused'].includes(recordSessionState)) recordSessionState='idle';
-  let recordCount=Number(localStorage.getItem('outbase_record_count')||18);
-  let recordTarget=localStorage.getItem('outbase_record_target')||'コタ通常散歩';
+  let recordCount=Number(localStorage.getItem('outbase_record_count')||0);
+  let recordTarget=localStorage.getItem('outbase_record_target')||'未選択';
   let recordSheet=params.get('sheet')||'';
   let mapMode=Number(localStorage.getItem('outbase_record_map_mode')||0)%2;
   let wakeLock=null;
@@ -59,19 +59,11 @@
     {id:'comp-ela',name:'エラ',hidden:false},
     {id:'comp-yuki',name:'ユキ',hidden:false}
   ];
-  const defaultPlans=[
-    {id:'plan-kota-5',title:'コタ散歩',type:'散歩',start:'2026-07-05',end:'2026-07-05',startTime:'07:00',endTime:'08:00',allDay:false,companionNames:['コタ'],location:'近所',prep:'準備不要',note:''},
-    {id:'plan-drive-6',title:'手賀沼ドライブ散歩',type:'ドライブ散歩',start:'2026-07-06',end:'2026-07-06',startTime:'09:00',endTime:'12:00',allDay:false,companionNames:['コタ'],location:'手賀沼',prep:'駐車場確認',note:'駐車位置も記録する。'},
-    {id:'plan-shopping-10',title:'ショッピング',type:'ショッピング',start:'2026-07-10',end:'2026-07-10',startTime:'10:00',endTime:'12:00',allDay:false,companionNames:['リン','コタ'],location:'',prep:'準備不要',note:''},
-    {id:'plan-kota-12',title:'コタ散歩',type:'散歩',start:'2026-07-12',end:'2026-07-12',startTime:'07:00',endTime:'08:00',allDay:false,companionNames:['コタ'],location:'近所',prep:'準備不要',note:''},
-    {id:'plan-drive-13',title:'手賀沼ドライブ散歩',type:'ドライブ散歩',start:'2026-07-13',end:'2026-07-13',startTime:'09:00',endTime:'12:00',allDay:false,companionNames:['コタ'],location:'手賀沼',prep:'準備中',note:'駐車場、水飲み場、日陰を確認する。'},
-    {id:'plan-akagi',title:'スノーピーク赤城山CF',type:'キャンプ',start:'2026-07-18',end:'2026-07-20',allDay:true,companionNames:['リン','コタ'],location:'群馬県前橋市',prep:'準備中',note:'2泊。買い物・料理・ギア・ルートを準備。'},
-    {id:'plan-event-23',title:'地域イベント',type:'イベント',start:'2026-07-23',end:'2026-07-23',startTime:'13:00',endTime:'16:00',allDay:false,companionNames:[],location:'',prep:'未着手',note:''}
-  ];
+  const defaultPlans=[];
   let planTypes=readStored('outbase_plan_types_v2',defaultPlanTypes);
   let companions=readStored('outbase_plan_companions_v2',defaultCompanions);
   let plans=readStored('outbase_plans_v1',defaultPlans);
-  let selectedPlanDate=localStorage.getItem('outbase_selected_plan_date')||'2026-07-13';
+  let selectedPlanDate=localStorage.getItem('outbase_selected_plan_date')||new Date().toISOString().slice(0,10);
   let planMonth=localStorage.getItem('outbase_plan_month')||selectedPlanDate.slice(0,7);
   let planSheet=params.get('planSheet')||'';
   let selectedPlanId=params.get('planId')||'';
@@ -81,7 +73,7 @@
   let planCalendarTouchStart=null;
   let planCalendarSwipeSuppressUntil=0;
   let planReminderTimer=null;
-  let activePlanId=localStorage.getItem('outbase_active_plan_id')||'plan-drive-13';
+  let activePlanId=localStorage.getItem('outbase_active_plan_id')||'';
   function seedGear(id,name,category,quantity=1,brand='Snow Peak',storage='自宅',model='',role='本体'){
     return {id,name,category,quantity,brand,storage,model,role,relations:[],condition:'使用可',purchaseDate:'',purchasePrice:'',tags:[],memo:'',favorite:false,stockAmount:'',stockUnit:'個',reorderPoint:'',stockStep:'1',openedDate:'',expiryDate:'',updatedAt:0};
   }
@@ -3249,4 +3241,74 @@
     runCleanup();
     bindServiceWorkerUpdate();
   });
+})();
+
+
+/* OUTBASE FIELD03 Production2: exact sample-plan migration */
+(function(){
+  'use strict';
+  const VERSION='OUTBASE_SAMPLE_PLAN_MIGRATION_2';
+  const KEY='outbase_sample_plan_migration_version';
+  const SAMPLE_IDS=new Set([
+    'plan-kota-5','plan-drive-6','plan-shopping-10',
+    'plan-kota-12','plan-drive-13','plan-akagi','plan-event-23',
+    'plan-walk-13'
+  ]);
+
+  const read=(key,fallback)=>{
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw==null)return fallback;
+      const value=JSON.parse(raw);
+      return value==null?fallback:value;
+    }catch(_e){return fallback;}
+  };
+
+  const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+
+  function looksUntouched(plan){
+    if(!plan||!SAMPLE_IDS.has(plan.id))return false;
+    return !plan.userEdited &&
+      !plan.completedAt &&
+      !plan.updatedAt &&
+      !(Array.isArray(plan.customItems)&&plan.customItems.length);
+  }
+
+  function migrate(){
+    if(localStorage.getItem(KEY)===VERSION)return;
+    const keys=['outbase_plans_v1','outbase_plan_library_v1','outbase_plan_list_v1'];
+    let removed=0;
+
+    keys.forEach(key=>{
+      const rows=read(key,null);
+      if(!Array.isArray(rows))return;
+      const next=rows.filter(plan=>{
+        const remove=looksUntouched(plan);
+        if(remove)removed++;
+        return !remove;
+      });
+      if(next.length!==rows.length)write(key,next);
+    });
+
+    const activeKeys=['outbase_active_plan_id','outbase_active_plan_id_v1'];
+    activeKeys.forEach(key=>{
+      const id=localStorage.getItem(key);
+      if(id&&SAMPLE_IDS.has(id))localStorage.removeItem(key);
+    });
+
+    const target=localStorage.getItem('outbase_record_target');
+    if(target==='コタ通常散歩')localStorage.removeItem('outbase_record_target');
+
+    if(localStorage.getItem('outbase_record_count')==='18'){
+      localStorage.setItem('outbase_record_count','0');
+    }
+
+    localStorage.setItem(KEY,VERSION);
+    localStorage.setItem('outbase_sample_plan_migration_result',JSON.stringify({
+      removed,
+      ranAt:new Date().toISOString()
+    }));
+  }
+
+  window.addEventListener('DOMContentLoaded',migrate);
 })();
