@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.3.0';
+  const VERSION='1.4.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -17,6 +17,8 @@
     transcripts:`${PREFIX}_transcripts`,
     metadata:`${PREFIX}_metadata`,
     candidates:`${PREFIX}_candidates`,
+    aiRequests:`${PREFIX}_ai_requests`,
+    aiResponses:`${PREFIX}_ai_responses`,
     recoveries:`${PREFIX}_recoveries`,
     relations:`${PREFIX}_relations`,
     migrations:`${PREFIX}_migrations`
@@ -378,6 +380,37 @@
     };
     write(KEYS.candidates,rows);
     return clone(rows[index]);
+  }
+
+  function saveAiRequest(input={}){
+    const request={
+      requestId:input.requestId||uid('ai_request'),
+      purpose:input.purpose||'general',
+      prompt:input.prompt||'',
+      context:clone(input.context??null),
+      schemaVersion:input.schemaVersion||'outbase-chappy-v1',
+      state:input.state||'prepared',
+      createdAt:normalizeTime(input.createdAt||now()),
+      sentAt:input.sentAt?normalizeTime(input.sentAt):null,
+      source:input.source||'outbase'
+    };
+    if(!request.prompt)throw new Error('prompt is required');
+    return upsert(KEYS.aiRequests,request,'requestId');
+  }
+
+  function saveAiResponse(input={}){
+    const response={
+      responseId:input.responseId||uid('ai_response'),
+      requestId:input.requestId??null,
+      state:input.state||'imported',
+      schemaVersion:input.schemaVersion||'outbase-chappy-v1',
+      rawText:input.rawText||'',
+      normalized:clone(input.normalized??null),
+      warnings:Array.isArray(input.warnings)?input.warnings:[],
+      importedAt:normalizeTime(input.importedAt||now()),
+      source:input.source||'chatgpt'
+    };
+    return upsert(KEYS.aiResponses,response,'responseId');
   }
 
   function saveRecovery(input={}){
@@ -787,6 +820,8 @@
       transcripts:list(KEYS.transcripts),
       metadata:list(KEYS.metadata),
       candidates:list(KEYS.candidates),
+      aiRequests:list(KEYS.aiRequests),
+      aiResponses:list(KEYS.aiResponses),
       recoveries:list(KEYS.recoveries),
       relations:list(KEYS.relations),
       migrations:read(KEYS.migrations,{})
@@ -808,6 +843,8 @@
       transcripts:data.transcripts.length,
       metadata:data.metadata.length,
       candidates:data.candidates.length,
+      aiRequests:data.aiRequests.length,
+      aiResponses:data.aiResponses.length,
       recoveries:data.recoveries.length,
       relations:data.relations.length
     };
@@ -843,6 +880,8 @@
     saveMetadata,
     saveCandidate,
     decideCandidate,
+    saveAiRequest,
+    saveAiResponse,
     saveRecovery,
     addRelation,
     snapshot,
