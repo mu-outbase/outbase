@@ -58,3 +58,7 @@
   .instantEntryGridCompact button{min-height:54px}
   .instantEntryGridCompact b{font-size:9px}
 }
+
+/* CORE-03D: ENTRYをFIELD03再描画領域の外に固定 */
+#outbaseInstantEntry{display:none}
+body:has(#page-plan.active) #outbaseInstantEntry{display:block}

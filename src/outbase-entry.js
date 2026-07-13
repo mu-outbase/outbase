@@ -126,7 +126,6 @@
 
   function mount(){
     const old=document.getElementById(ENTRY_ID);
-    if(!visibleOnCurrentTab()){old?.remove();return;}
     const app=document.getElementById('app');
     if(!app)return;
     if(old){
@@ -135,7 +134,7 @@
     }
     const holder=document.createElement('div');
     holder.innerHTML=entryHtml();
-    app.prepend(holder.firstElementChild);
+    app.before(holder.firstElementChild);
   }
 
   let queued=false;
@@ -459,13 +458,4 @@
   globalThis.addEventListener('outbase:core-ready',queueMount);
   globalThis.addEventListener('outbase:entry-refresh',queueMount);
 
-  let lastVisibleTab='';
-  setInterval(()=>{
-    const tab=currentTab();
-    const entryExists=Boolean(document.getElementById(ENTRY_ID));
-    if(tab!==lastVisibleTab||(tab==='plan'&&!entryExists)||(tab!=='plan'&&entryExists)){
-      lastVisibleTab=tab;
-      queueMount();
-    }
-  },500);
 })();
