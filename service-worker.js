@@ -1,13 +1,15 @@
-const CACHE_NAME='outbase-field03-flow015';
+const CACHE_NAME='outbase-field03-entry01';
 const CORE_ASSETS=[
   './',
   './index.html',
-  './style.css?v=outbase-field03-flow015',
-  './style-flow.css?v=outbase-field03-flow015',
-  './src/app.js?v=outbase-field03-flow015',
-  './src/outbase-flow.js?v=outbase-field03-flow015',
-  './manifest.json?v=outbase-field03-flow015',
-  './outbase_library10a/style.css?v=outbase-field03-flow015'
+  './style.css?v=outbase-field03-entry01',
+  './style-flow.css?v=outbase-field03-entry01',
+  './style-entry.css?v=outbase-field03-entry01',
+  './src/app.js?v=outbase-field03-entry01',
+  './src/outbase-flow.js?v=outbase-field03-entry01',
+  './src/outbase-entry.js?v=outbase-field03-entry01',
+  './manifest.json?v=outbase-field03-entry01',
+  './outbase_library10a/style.css?v=outbase-field03-entry01'
 ];
 const OPTIONAL_EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',

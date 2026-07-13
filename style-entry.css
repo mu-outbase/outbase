@@ -1,0 +1,17 @@
+
+.instantEntry{margin:14px 20px 6px;padding:18px;border-radius:24px;background:#fff;border:1px solid rgba(23,61,45,.12);box-shadow:0 12px 28px rgba(28,55,43,.08)}
+.instantEntryHead small{font-size:10px;letter-spacing:.14em;color:#98722e;font-weight:900}
+.instantEntryHead h2{margin:3px 0 4px;font-size:24px;color:#173d2d}
+.instantEntryHead p{margin:0 0 14px;color:#6a776f;font-size:13px}
+.instantEntryGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.instantEntryGrid button{min-height:88px;border:1px solid rgba(23,61,45,.11);border-radius:16px;padding:10px 7px;background:#f5f8f6;color:#173d2d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:inherit}
+.instantEntryGrid button:active{transform:scale(.98)}
+.instantEntryGrid span{font-size:22px}.instantEntryGrid b{font-size:12px}.instantEntryGrid small{font-size:9px;color:#748178;line-height:1.25}
+.instantParkingLatest{width:100%;margin-top:10px;border:0;border-radius:14px;padding:11px 13px;background:#173d2d;color:#fff;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:left}
+.instantParkingLatest span{font-size:11px;opacity:.76}.instantParkingLatest b{font-size:12px}.instantParkingLatest small{font-size:10px;opacity:.78}
+.instantEntryToast{position:fixed;left:50%;bottom:95px;transform:translateX(-50%);z-index:70000;background:#173d2d;color:#fff;padding:12px 18px;border-radius:999px;font-weight:800;box-shadow:0 10px 24px rgba(0,0,0,.2)}
+@media(max-width:560px){
+  .instantEntry{margin:12px 14px 4px;padding:16px}
+  .instantEntryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .instantParkingLatest{grid-template-columns:1fr}.instantParkingLatest small{display:none}
+}
