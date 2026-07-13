@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.2.0';
+  const VERSION='1.3.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -12,6 +12,11 @@
     memos:`${PREFIX}_memos`,
     intents:`${PREFIX}_intents`,
     parkings:`${PREFIX}_parkings`,
+    imports:`${PREFIX}_imports`,
+    media:`${PREFIX}_media`,
+    transcripts:`${PREFIX}_transcripts`,
+    metadata:`${PREFIX}_metadata`,
+    candidates:`${PREFIX}_candidates`,
     recoveries:`${PREFIX}_recoveries`,
     relations:`${PREFIX}_relations`,
     migrations:`${PREFIX}_migrations`
@@ -255,6 +260,124 @@
     };
     write(KEYS.parkings,parkings);
     return clone(parkings[index]);
+  }
+
+  function createImportJob(input={}){
+    const job={
+      importId:input.importId||uid('import'),
+      state:input.state||'queued',
+      sourceType:input.sourceType||'file',
+      fileName:input.fileName||'',
+      mimeType:input.mimeType||'application/octet-stream',
+      size:Number(input.size||0),
+      hash:input.hash||null,
+      createdAt:normalizeTime(input.createdAt||now()),
+      startedAt:input.startedAt?normalizeTime(input.startedAt):null,
+      completedAt:input.completedAt?normalizeTime(input.completedAt):null,
+      failedAt:input.failedAt?normalizeTime(input.failedAt):null,
+      error:input.error||null,
+      retryable:input.retryable!==false,
+      retryCount:Number(input.retryCount||0),
+      planIds:Array.isArray(input.planIds)?[...new Set(input.planIds.filter(Boolean))]:[],
+      activityIds:Array.isArray(input.activityIds)?[...new Set(input.activityIds.filter(Boolean))]:[],
+      legacyRef:input.legacyRef??null
+    };
+    return upsert(KEYS.imports,job,'importId');
+  }
+
+  function updateImportJob(importId,patch={}){
+    const rows=list(KEYS.imports);
+    const index=rows.findIndex(item=>item.importId===importId);
+    if(index<0)throw new Error('import job not found');
+    rows[index]={...rows[index],...clone(patch),updatedAt:now()};
+    ['startedAt','completedAt','failedAt'].forEach(key=>{
+      if(rows[index][key])rows[index][key]=normalizeTime(rows[index][key]);
+    });
+    write(KEYS.imports,rows);
+    return clone(rows[index]);
+  }
+
+  function saveMedia(input={}){
+    const media={
+      mediaId:input.mediaId||uid('media'),
+      importId:input.importId??null,
+      kind:input.kind||'file',
+      fileName:input.fileName||'',
+      mimeType:input.mimeType||'application/octet-stream',
+      size:Number(input.size||0),
+      hash:input.hash||null,
+      originalRef:input.originalRef??null,
+      previewRef:input.previewRef??null,
+      capturedAt:input.capturedAt?normalizeTime(input.capturedAt):null,
+      storedAt:normalizeTime(input.storedAt||now()),
+      location:clone(input.location??null),
+      immutable:true
+    };
+    return upsert(KEYS.media,media,'mediaId');
+  }
+
+  function saveTranscript(input={}){
+    const transcript={
+      transcriptId:input.transcriptId||uid('transcript'),
+      importId:input.importId??null,
+      mediaId:input.mediaId??null,
+      text:String(input.text||''),
+      language:input.language||'ja',
+      source:input.source||'speech-recognition',
+      state:input.state||'raw',
+      confidence:input.confidence??null,
+      createdAt:normalizeTime(input.createdAt||now()),
+      correctedText:input.correctedText??null,
+      correctedAt:input.correctedAt?normalizeTime(input.correctedAt):null
+    };
+    return upsert(KEYS.transcripts,transcript,'transcriptId');
+  }
+
+  function saveMetadata(input={}){
+    const row={
+      metadataId:input.metadataId||uid('metadata'),
+      importId:input.importId??null,
+      mediaId:input.mediaId??null,
+      key:input.key||'unknown',
+      value:clone(input.value??null),
+      source:input.source||'local',
+      confidence:input.confidence??null,
+      observedAt:normalizeTime(input.observedAt||now()),
+      immutable:Boolean(input.immutable)
+    };
+    return upsert(KEYS.metadata,row,'metadataId');
+  }
+
+  function saveCandidate(input={}){
+    const candidate={
+      candidateId:input.candidateId||uid('candidate'),
+      importId:input.importId??null,
+      candidateType:input.candidateType||'unknown',
+      payload:clone(input.payload??null),
+      source:input.source||'extractor',
+      confidence:input.confidence??null,
+      state:input.state||'pending',
+      createdAt:normalizeTime(input.createdAt||now()),
+      decidedAt:input.decidedAt?normalizeTime(input.decidedAt):null,
+      decision:input.decision??null
+    };
+    return upsert(KEYS.candidates,candidate,'candidateId');
+  }
+
+  function decideCandidate(candidateId,decision,extra={}){
+    const rows=list(KEYS.candidates);
+    const index=rows.findIndex(item=>item.candidateId===candidateId);
+    if(index<0)throw new Error('candidate not found');
+    rows[index]={
+      ...rows[index],
+      state:decision==='accept'?'accepted':decision==='reject'?'rejected':'pending',
+      decision,
+      decidedAt:now(),
+      decidedBy:extra.decidedBy||'user',
+      updatedAt:now()
+    };
+    write(KEYS.candidates,rows);
+    return clone(rows[index]);
   }
 
   function saveRecovery(input={}){
@@ -659,6 +782,11 @@
       memos:list(KEYS.memos),
       intents:list(KEYS.intents),
       parkings:list(KEYS.parkings),
+      imports:list(KEYS.imports),
+      media:list(KEYS.media),
+      transcripts:list(KEYS.transcripts),
+      metadata:list(KEYS.metadata),
+      candidates:list(KEYS.candidates),
       recoveries:list(KEYS.recoveries),
       relations:list(KEYS.relations),
       migrations:read(KEYS.migrations,{})
@@ -675,6 +803,11 @@
       memos:data.memos.length,
       intents:data.intents.length,
       parkings:data.parkings.length,
+      imports:data.imports.length,
+      media:data.media.length,
+      transcripts:data.transcripts.length,
+      metadata:data.metadata.length,
+      candidates:data.candidates.length,
       recoveries:data.recoveries.length,
       relations:data.relations.length
     };
@@ -703,6 +836,13 @@
     clearIntent,
     saveParking,
     clearParking,
+    createImportJob,
+    updateImportJob,
+    saveMedia,
+    saveTranscript,
+    saveMetadata,
+    saveCandidate,
+    decideCandidate,
     saveRecovery,
     addRelation,
     snapshot,

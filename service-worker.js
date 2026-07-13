@@ -1,12 +1,12 @@
-const CACHE_NAME='outbase-field03-core05';
+const CACHE_NAME='outbase-field03-core06';
 const CORE_ASSETS=[
   './','./index.html',
-  './style.css?v=outbase-field03-core05','./style-flow.css?v=outbase-field03-core05',
-  './style-entry.css?v=outbase-field03-core05','./style-activity.css?v=outbase-field03-core05',
-  './src/app.js?v=outbase-field03-core05','./src/outbase-core.js?v=outbase-field03-core05',
-  './src/outbase-flow.js?v=outbase-field03-core05','./src/outbase-entry.js?v=outbase-field03-core05',
-  './src/outbase-activity.js?v=outbase-field03-core05','./manifest.json?v=outbase-field03-core05',
-  './outbase_library10a/style.css?v=outbase-field03-core05'
+  './style.css?v=outbase-field03-core06','./style-flow.css?v=outbase-field03-core06',
+  './style-entry.css?v=outbase-field03-core06','./style-activity.css?v=outbase-field03-core06',
+  './src/app.js?v=outbase-field03-core06','./src/outbase-core.js?v=outbase-field03-core06','./src/outbase-import.js?v=outbase-field03-core06',
+  './src/outbase-flow.js?v=outbase-field03-core06','./src/outbase-entry.js?v=outbase-field03-core06',
+  './src/outbase-activity.js?v=outbase-field03-core06','./manifest.json?v=outbase-field03-core06',
+  './outbase_library10a/style.css?v=outbase-field03-core06'
 ];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
