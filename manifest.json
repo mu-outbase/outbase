@@ -2,7 +2,7 @@
   "name": "OUTBASE",
   "short_name": "OUTBASE",
   "description": "予定、準備、当日、記録、思い出、次回改善をつなぐアプリ",
-  "start_url": "./?v=outbase-field03-activity02",
+  "start_url": "./?v=outbase-field03-core01",
   "display": "standalone",
   "background_color": "#f6f5f1",
   "theme_color": "#f6f5f1",
