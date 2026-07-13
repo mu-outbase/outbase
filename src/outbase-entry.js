@@ -30,12 +30,14 @@
   }
 
   function currentTab(){
+    const activePage=document.querySelector('.page.active');
+    if(activePage?.id?.startsWith('page-'))return activePage.id.slice(5);
     const params=new URLSearchParams(location.search);
     return params.get('tab')||location.hash.replace('#','')||'plan';
   }
 
   function visibleOnCurrentTab(){
-    return ['plan','record','search'].includes(currentTab());
+    return currentTab()==='plan';
   }
 
   function activeActivity(){
@@ -380,14 +382,6 @@
   }
 
   document.addEventListener('click',event=>{
-    // FIELD03の下部タブはアプリ内部で画面を差し替える。
-    // クリック処理と本体render完了後の両方でENTRYの有無を再確認する。
-    if(!event.target.closest?.(`#${ENTRY_ID}`)&&!event.target.closest?.('#instantMemoSheet')){
-      setTimeout(queueMount,0);
-      setTimeout(queueMount,80);
-      setTimeout(queueMount,220);
-    }
-
     const actionButton=event.target.closest?.('[data-instant]');
     if(actionButton){
       const action=actionButton.dataset.instant;
@@ -464,4 +458,14 @@
   window.addEventListener('popstate',queueMount);
   globalThis.addEventListener('outbase:core-ready',queueMount);
   globalThis.addEventListener('outbase:entry-refresh',queueMount);
+
+  let lastVisibleTab='';
+  setInterval(()=>{
+    const tab=currentTab();
+    const entryExists=Boolean(document.getElementById(ENTRY_ID));
+    if(tab!==lastVisibleTab||(tab==='plan'&&!entryExists)||(tab!=='plan'&&entryExists)){
+      lastVisibleTab=tab;
+      queueMount();
+    }
+  },500);
 })();
