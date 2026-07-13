@@ -1,2 +1,5 @@
-@import url("./outbase_library10a/style.css?v=outbase-field03-canonical1");
-#page-memory.page.active{display:block!important}
+@import url("./outbase_library10a/style.css?v=outbase-field03-canonical2");
+
+#page-memory.page.active {
+  display: block !important;
+}
