@@ -4,106 +4,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f6f5f1">
 <title>OUTBASE</title>
-<link rel="manifest" href="manifest.json?v=outbase-field03-core01b">
-<link rel="stylesheet" href="style.css?v=outbase-field03-core01b">
-<link rel="stylesheet" href="style-flow.css?v=outbase-field03-core01b">
-<link rel="stylesheet" href="style-entry.css?v=outbase-field03-core01b">
-<link rel="stylesheet" href="style-activity.css?v=outbase-field03-core01b">
-<style>
-#outbaseBootStatus{position:fixed;inset:0;z-index:999999;background:#f6f5f1;color:#2f2d29;
-display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif}
-#outbaseBootCard{width:min(92vw,520px);background:#fff;border:1px solid #ddd6ca;border-radius:18px;
-padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-#outbaseBootTitle{font-size:20px;font-weight:700;margin-bottom:10px}
-#outbaseBootMessage{font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
-</style>
-<script>
-(function(){
-  const show=function(message){
-    const box=document.getElementById('outbaseBootMessage');
-    if(box) box.textContent=message;
-  };
-  window.__OUTBASE_BOOT_SHOW__=show;
-  window.addEventListener('error',function(e){
-    show('起動エラー\n'+(e.message||'不明なエラー')+'\n'+(e.filename||'')+':'+(e.lineno||''));
-  });
-  window.addEventListener('unhandledrejection',function(e){
-    show('起動エラー（Promise）\n'+String(e.reason&&e.reason.stack||e.reason||'不明なエラー'));
-  });
-})();
-</script>
+<link rel="manifest" href="manifest.json?v=outbase-field03-core01c">
+<link rel="stylesheet" href="style.css?v=outbase-field03-core01c">
+<link rel="stylesheet" href="style-flow.css?v=outbase-field03-core01c">
+<link rel="stylesheet" href="style-entry.css?v=outbase-field03-core01c">
+<link rel="stylesheet" href="style-activity.css?v=outbase-field03-core01c">
 </head><body>
-<div id="outbaseBootStatus">
-  <div id="outbaseBootCard">
-    <div id="outbaseBootTitle">OUTBASE 起動確認中</div>
-    <div id="outbaseBootMessage">本体ファイルを読み込んでいます。</div>
-  </div>
-</div>
 <div id="app"></div>
 <input id="fileInput" type="file" accept=".json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*" multiple hidden>
-
+<script src="src/app.js?v=outbase-field03-core01c" defer></script>
+<script src="src/outbase-core.js?v=outbase-field03-core01c" defer></script>
+<script src="src/outbase-flow.js?v=outbase-field03-core01c" defer></script>
+<script src="src/outbase-entry.js?v=outbase-field03-core01c" defer></script>
+<script src="src/outbase-activity.js?v=outbase-field03-core01c" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js" async></script>
 <script>
-(function(){
-  const files=[
-    'src/app.js?v=outbase-field03-core01b',
-    'src/outbase-core.js?v=outbase-field03-core01b',
-    'src/outbase-flow.js?v=outbase-field03-core01b',
-    'src/outbase-entry.js?v=outbase-field03-core01b',
-    'src/outbase-activity.js?v=outbase-field03-core01b'
-  ];
-  let index=0;
-  const show=window.__OUTBASE_BOOT_SHOW__||function(){};
-  function loadNext(){
-    if(index>=files.length){
-      show('画面を準備しています。');
-      setTimeout(function(){
-        const app=document.getElementById('app');
-        if(app && app.childElementCount>0){
-          document.getElementById('outbaseBootStatus')?.remove();
-        }else{
-          show('本体ファイルは読み込めましたが、画面生成が開始されませんでした。\n停止位置: 画面描画処理');
-        }
-      },1200);
-      return;
-    }
-    const src=files[index++];
-    show('読み込み中\n'+src.split('?')[0]);
-    const script=document.createElement('script');
-    script.src=src;
-    script.onload=loadNext;
-    script.onerror=function(){
-      show('ファイル読込エラー\n'+src.split('?')[0]+'\nGitHub上の配置またはキャッシュを確認してください。');
-    };
-    document.body.appendChild(script);
-  }
-  loadNext();
-
-  setTimeout(function(){
-    const app=document.getElementById('app');
-    const boot=document.getElementById('outbaseBootStatus');
-    if(boot && (!app || app.childElementCount===0)){
-      const current=document.getElementById('outbaseBootMessage')?.textContent||'';
-      if(!current.includes('エラー')&&!current.includes('停止位置')){
-        show(current+'\n\n30秒以上停止しています。');
-      }
-    }
-  },30000);
-
-  setTimeout(function(){
-    ['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-     'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
-     'https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js'
-    ].forEach(function(src){
-      const s=document.createElement('script'); s.src=src; s.async=true; document.body.appendChild(s);
-    });
-  },2500);
-
-  if('serviceWorker' in navigator){
-    window.addEventListener('load',function(){
-      navigator.serviceWorker.register('./service-worker.js?v=outbase-field03-core01b')
-        .catch(function(error){console.warn('Service Worker registration failed:',error);});
-    });
-  }
-})();
+if('serviceWorker'in navigator){
+window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-field03-core01c').catch(error=>console.warn('Service Worker registration failed:',error)));
+}
 </script>
 </body></html>

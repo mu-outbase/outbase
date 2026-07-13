@@ -269,5 +269,6 @@
     if(document.visibilityState==='hidden')ensureRecoverable();
     else {repairSession();mount();}
   });
-  new MutationObserver(mount).observe(document.documentElement,{childList:true,subtree:true});
+  // ACTIVITY-02: 自己再描画ループを防ぐため全DOM監視は行わない。
+  // 画面遷移・15秒更新・visibilitychangeで活動バーを同期する。
 })();
