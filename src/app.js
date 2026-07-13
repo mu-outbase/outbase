@@ -2306,3 +2306,15 @@
     }
   },true);
 })();
+
+/* OUTBASE FIELD03 Canonical6: full local backup and restore */
+(function(){
+  'use strict';
+  const PREFIX='outbase_';
+  function toast(message){const old=document.getElementById('outbaseBackupToast');if(old)old.remove();const el=document.createElement('div');el.id='outbaseBackupToast';el.textContent=message;Object.assign(el.style,{position:'fixed',left:'50%',bottom:'92px',transform:'translateX(-50%)',zIndex:'100000',background:'#0b2a20',color:'#fff',padding:'12px 18px',borderRadius:'999px',fontSize:'14px',fontWeight:'700'});document.body.appendChild(el);setTimeout(()=>el.remove(),2600);}
+  function collect(){const data={};for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.startsWith(PREFIX))data[key]=localStorage.getItem(key);}return data;}
+  function exportBackup(){const now=new Date(),stamp=now.toISOString().slice(0,16).replace(/[-:T]/g,'');const payload={format:'OUTBASE_BACKUP',version:'OUTBASE_FIELD03_CANONICAL6',exportedAt:now.toISOString(),localStorage:collect()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`OUTBASE_BACKUP_${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('OUTBASE全体バックアップを書き出しました');}
+  function input(){let el=document.getElementById('outbaseFullBackupImport');if(el)return el;el=document.createElement('input');el.id='outbaseFullBackupImport';el.type='file';el.accept='application/json,.json';el.hidden=true;document.body.appendChild(el);return el;}
+  async function restore(file){try{const payload=JSON.parse(await file.text());if(!payload||payload.format!=='OUTBASE_BACKUP'||typeof payload.localStorage!=='object')throw new Error();const keys=Object.keys(payload.localStorage).filter(key=>key.startsWith(PREFIX));if(!keys.length)throw new Error();if(!confirm(`${keys.length}件のOUTBASEデータを復元します。\n現在の同名データは上書きされます。`))return;keys.forEach(key=>localStorage.setItem(key,String(payload.localStorage[key])));toast(`${keys.length}件を復元しました`);setTimeout(()=>location.reload(),700);}catch(error){console.error(error);alert('OUTBASEバックアップを読み込めませんでした。');}}
+  document.addEventListener('click',event=>{const ex=event.target.closest?.('[data-library-export]');if(ex){event.preventDefault();event.stopImmediatePropagation();exportBackup();return;}const im=event.target.closest?.('[data-library-import-open]');if(im){event.preventDefault();event.stopImmediatePropagation();const el=input();el.value='';el.onchange=()=>{const file=el.files?.[0];if(file)restore(file);};el.click();}},true);
+})();
