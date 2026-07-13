@@ -2065,3 +2065,173 @@
     normalizeKitReferences();
   });
 })();
+
+/* OUTBASE FIELD03 Canonical4: asset import implementation */
+(function(){
+  'use strict';
+  const GEAR_KEY='outbase_gear_library_v1';
+
+  const readJson=(key,fallback)=>{
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw==null)return fallback;
+      const value=JSON.parse(raw);
+      return value==null?fallback:value;
+    }catch(_e){return fallback;}
+  };
+  const writeJson=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+  const makeId=()=>`gear-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+  function notify(message){
+    const old=document.getElementById('outbaseImportToast');
+    if(old)old.remove();
+    const toast=document.createElement('div');
+    toast.id='outbaseImportToast';
+    toast.textContent=message;
+    Object.assign(toast.style,{
+      position:'fixed',left:'50%',bottom:'92px',transform:'translateX(-50%)',
+      zIndex:'100000',background:'#0b2a20',color:'#fff',padding:'12px 18px',
+      borderRadius:'999px',boxShadow:'0 8px 24px rgba(0,0,0,.24)',
+      fontSize:'14px',fontWeight:'700',whiteSpace:'nowrap',maxWidth:'88vw',
+      overflow:'hidden',textOverflow:'ellipsis'
+    });
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(),2600);
+  }
+
+  function normalizeText(value){
+    return String(value??'').replace(/\s+/g,' ').trim();
+  }
+
+  function uniqueNames(names){
+    const seen=new Set();
+    return names.map(normalizeText).filter(name=>{
+      const key=name.toLowerCase();
+      if(!name||seen.has(key))return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function addGearNames(names,category='その他',brand=''){
+    const list=readJson(GEAR_KEY,[]);
+    const rows=Array.isArray(list)?list.slice():[];
+    const existing=new Set(rows.map(x=>normalizeText(x?.name).toLowerCase()).filter(Boolean));
+    let added=0;
+    uniqueNames(names).forEach(name=>{
+      const key=name.toLowerCase();
+      if(existing.has(key))return;
+      rows.push({
+        id:makeId(),name,category,quantity:1,brand,storage:'自宅',model:'',
+        role:'本体',relations:[],condition:'使用可',purchaseDate:'',
+        purchasePrice:'',tags:['取込'],memo:'取込機能から追加',
+        favorite:false,stockAmount:'',stockUnit:'個',reorderPoint:'',
+        stockStep:'1',openedDate:'',expiryDate:'',updatedAt:Date.now()
+      });
+      existing.add(key);added++;
+    });
+    writeJson(GEAR_KEY,rows);
+    return added;
+  }
+
+  function extractNamesFromRows(rows){
+    const preferred=['名称','商品名','品名','ギア名','name','Name','NAME','item','Item'];
+    const names=[];
+    rows.forEach(row=>{
+      if(Array.isArray(row)){
+        const first=row.map(normalizeText).find(Boolean);
+        if(first)names.push(first);
+        return;
+      }
+      if(!row||typeof row!=='object')return;
+      let value='';
+      for(const key of preferred){
+        if(row[key]!=null&&normalizeText(row[key])){value=normalizeText(row[key]);break;}
+      }
+      if(!value){
+        value=Object.values(row).map(normalizeText).find(Boolean)||'';
+      }
+      if(value)names.push(value);
+    });
+    return names;
+  }
+
+  function ensureInput(id,accept){
+    let input=document.getElementById(id);
+    if(input)return input;
+    input=document.createElement('input');
+    input.id=id;input.type='file';input.accept=accept;input.hidden=true;
+    document.body.appendChild(input);
+    return input;
+  }
+
+  async function handleSpreadsheet(file){
+    if(!window.XLSX){
+      notify('Excel読込ライブラリを読み込めませんでした');
+      return;
+    }
+    try{
+      const data=await file.arrayBuffer();
+      const book=window.XLSX.read(data,{type:'array'});
+      const names=[];
+      book.SheetNames.forEach(sheetName=>{
+        const sheet=book.Sheets[sheetName];
+        const rows=window.XLSX.utils.sheet_to_json(sheet,{defval:''});
+        names.push(...extractNamesFromRows(rows));
+      });
+      const added=addGearNames(names);
+      notify(added?`${added}件を共通台帳へ追加しました`:'追加できる新しい品名がありません');
+      if(added)setTimeout(()=>location.reload(),600);
+    }catch(error){
+      console.error(error);
+      notify('Excelを読み込めませんでした');
+    }
+  }
+
+  async function handleImage(file){
+    if(!window.Tesseract){
+      notify('写真文字読取を利用できません');
+      return;
+    }
+    try{
+      notify('写真の文字を読み取っています');
+      const result=await window.Tesseract.recognize(file,'jpn+eng');
+      const text=String(result?.data?.text||'');
+      const candidates=text.split(/\r?\n/)
+        .map(line=>normalizeText(line))
+        .filter(line=>line.length>=2&&line.length<=80)
+        .filter(line=>!(/^[\d\s.,¥￥$-]+$/.test(line)));
+      const added=addGearNames(candidates);
+      notify(added?`${added}件を候補として追加しました`:'品名候補を見つけられませんでした');
+      if(added)setTimeout(()=>location.reload(),700);
+    }catch(error){
+      console.error(error);
+      notify('写真の文字を読み取れませんでした');
+    }
+  }
+
+  document.addEventListener('click',event=>{
+    const button=event.target.closest?.('[data-library-placeholder]');
+    if(!button)return;
+    const label=button.dataset.libraryPlaceholder||'';
+
+    if(label==='Excel取込'){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const input=ensureInput('outbaseSpreadsheetImport','.xlsx,.xls,.csv');
+      input.value='';
+      input.onchange=()=>{const file=input.files?.[0];if(file)handleSpreadsheet(file);};
+      input.click();
+      return;
+    }
+
+    if(label==='PDF・写真取込'){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const input=ensureInput('outbaseImageImport','image/*');
+      input.value='';
+      input.onchange=()=>{const file=input.files?.[0];if(file)handleImage(file);};
+      input.click();
+    }
+  },true);
+})();
