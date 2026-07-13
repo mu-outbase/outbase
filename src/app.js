@@ -189,7 +189,7 @@
   if(previewMode==='prep012-common'){activePlanId='none';prepSheet='common-module';prepModuleId='cooking';}
   if(previewMode==='prep012-none')activePlanId='none';
   if(previewMode==='plan-add'||previewMode==='plan011-add') planSheet='add';
-  if(previewMode==='plan-detail'){planSheet='detail';selectedPlanId='plan-drive-13';}
+  if(previewMode==='plan-detail'){planSheet='detail';selectedPlanId=plans[0]?.id||'';}
   if(previewMode==='plan-list') planSheet='list';
   if(previewMode==='plan011-repeat'||previewMode==='plan012-repeat'){planSheet='add';}
   if(previewMode==='plan012-reminder'){planSheet='add';}
@@ -413,7 +413,13 @@
     localStorage.setItem('outbase_plan_companions_v2',JSON.stringify(companions));
     localStorage.setItem('outbase_selected_plan_date',selectedPlanDate);
     localStorage.setItem('outbase_plan_month',planMonth);
-    localStorage.setItem('outbase_active_plan_id',activePlanId);
+    if(activePlanId){
+      localStorage.setItem('outbase_active_plan_id',activePlanId);
+      localStorage.setItem('outbase_active_plan_id_v1',activePlanId);
+    }else{
+      localStorage.removeItem('outbase_active_plan_id');
+      localStorage.removeItem('outbase_active_plan_id_v1');
+    }
     localStorage.setItem('outbase_plan_schema','3');
   }
   function monthCalendar(monthKey){
@@ -3306,6 +3312,54 @@
     localStorage.setItem(KEY,VERSION);
     localStorage.setItem('outbase_sample_plan_migration_result',JSON.stringify({
       removed,
+      ranAt:new Date().toISOString()
+    }));
+  }
+
+  window.addEventListener('DOMContentLoaded',migrate);
+})();
+
+
+/* OUTBASE FIELD03 Production3: active-plan compatibility */
+(function(){
+  'use strict';
+  const VERSION='OUTBASE_ACTIVE_PLAN_COMPATIBILITY_1';
+  const MIGRATION_KEY='outbase_active_plan_compatibility_version';
+  const PRIMARY_KEY='outbase_active_plan_id';
+  const LEGACY_KEY='outbase_active_plan_id_v1';
+
+  function readPlans(){
+    for(const key of ['outbase_plans_v1','outbase_plan_library_v1','outbase_plan_list_v1']){
+      try{
+        const value=JSON.parse(localStorage.getItem(key)||'null');
+        if(Array.isArray(value))return value;
+      }catch(_e){}
+    }
+    return [];
+  }
+
+  function migrate(){
+    if(localStorage.getItem(MIGRATION_KEY)===VERSION)return;
+
+    const validIds=new Set(readPlans().map(plan=>plan?.id).filter(Boolean));
+    const primary=localStorage.getItem(PRIMARY_KEY)||'';
+    const legacy=localStorage.getItem(LEGACY_KEY)||'';
+    const selected=
+      primary&&validIds.has(primary)?primary:
+      legacy&&validIds.has(legacy)?legacy:
+      '';
+
+    if(selected){
+      localStorage.setItem(PRIMARY_KEY,selected);
+      localStorage.setItem(LEGACY_KEY,selected);
+    }else{
+      localStorage.removeItem(PRIMARY_KEY);
+      localStorage.removeItem(LEGACY_KEY);
+    }
+
+    localStorage.setItem(MIGRATION_KEY,VERSION);
+    localStorage.setItem('outbase_active_plan_compatibility_result',JSON.stringify({
+      selected,
       ranAt:new Date().toISOString()
     }));
   }
