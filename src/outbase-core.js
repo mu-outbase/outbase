@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.1.0';
+  const VERSION='1.2.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -86,6 +86,9 @@
       deviceId:input.deviceId||meta.deviceId,
       sessionId:input.sessionId??null,
       planId:input.planId??null,
+      planIds:Array.isArray(input.planIds)
+        ? [...new Set(input.planIds.filter(Boolean))]
+        : (input.planId?[input.planId]:[]),
       activityId:input.activityId??null,
       location:input.location??null,
       payloadRef:input.payloadRef??null,
@@ -94,6 +97,7 @@
       legacyRef:input.legacyRef??null
     };
     upsert(KEYS.events,event,'eventId');
+    applyContextRelations(event.eventId,'event',event);
     return clone(event);
   }
 
@@ -106,6 +110,9 @@
       eventId:input.eventId??null,
       sessionId:input.sessionId??null,
       planId:input.planId??null,
+      planIds:Array.isArray(input.planIds)
+        ? [...new Set(input.planIds.filter(Boolean))]
+        : (input.planId?[input.planId]:[]),
       activityId:input.activityId??null,
       location:clone(input.location??null),
       value:clone(input.value??input.payload??null),
@@ -113,6 +120,7 @@
       legacyRef:input.legacyRef??null
     };
     upsert(KEYS.facts,fact,'factId');
+    applyContextRelations(fact.factId,'fact',fact);
     return clone(fact);
   }
 
@@ -125,12 +133,17 @@
       currentPhase:input.currentPhase||'記録中',
       startedAt:input.startedAt?normalizeTime(input.startedAt):null,
       becameInactiveAt:input.becameInactiveAt?normalizeTime(input.becameInactiveAt):null,
-      planIds:Array.isArray(input.planIds)?input.planIds:[],
+      planIds:Array.isArray(input.planIds)?[...new Set(input.planIds.filter(Boolean))]:[],
       parentActivityId:input.parentActivityId??null,
       source:input.source||'outbase',
       legacySessionId:input.legacySessionId??null
     };
-    return upsert(KEYS.activities,activity,'activityId');
+    const saved=upsert(KEYS.activities,activity,'activityId');
+    linkEntityToPlans(activity.activityId,'activity',activity.planIds,'rule');
+    if(['active','paused'].includes(activity.state)&&!primaryActivity()){
+      setPrimaryActivity(activity.activityId);
+    }
+    return saved;
   }
 
   function setLifecycle(activityId,phase,source='user',extra={}){
@@ -164,13 +177,14 @@
       source:input.source||'text',
       completed:Boolean(input.completed),
       pinned:Boolean(input.pinned),
-      planIds:Array.isArray(input.planIds)?input.planIds:[],
+      planIds:Array.isArray(input.planIds)?[...new Set(input.planIds.filter(Boolean))]:[],
       activityIds:Array.isArray(input.activityIds)?input.activityIds:[],
       status:input.status||'saved',
       legacyRef:input.legacyRef??null
     };
     if(!memo.text)throw new Error('memo text is required');
     upsert(KEYS.memos,memo,'memoId');
+    applyContextRelations(memo.memoId,'memo',{planIds:memo.planIds});
     return clone(memo);
   }
 
@@ -222,7 +236,9 @@
       evidence:clone(input.evidence??null),
       legacyRef:input.legacyRef??null
     };
-    return upsert(KEYS.parkings,parking,'parkingId');
+    const saved=upsert(KEYS.parkings,parking,'parkingId');
+    applyContextRelations(parking.parkingId,'parking',{planId:parking.planId,location:parking.location});
+    return saved;
   }
 
   function clearParking(parkingId,extra={}){
@@ -254,19 +270,220 @@
   }
 
   function addRelation(input={}){
+    if(!input.fromId||!input.toId)throw new Error('fromId and toId are required');
+    const relations=list(KEYS.relations);
+    const same=relations.find(item=>
+      item.fromId===input.fromId&&
+      item.toId===input.toId&&
+      item.relationType===(input.relationType||'related_to')&&
+      item.state!=='superseded'
+    );
+    if(same&&!input.forceNew)return clone(same);
+
     const relation={
       relationId:input.relationId||uid('rel'),
       fromId:input.fromId,
+      fromType:input.fromType??null,
       toId:input.toId,
+      toType:input.toType??null,
       relationType:input.relationType||'related_to',
       source:input.source||'user',
       confidence:input.confidence??null,
+      state:'active',
       createdAt:normalizeTime(input.createdAt||now()),
-      supersedes:input.supersedes??null
+      supersedes:input.supersedes??null,
+      evidence:clone(input.evidence??[])
     };
-    if(!relation.fromId||!relation.toId)throw new Error('fromId and toId are required');
+    if(relation.supersedes){
+      const oldIndex=relations.findIndex(item=>item.relationId===relation.supersedes);
+      if(oldIndex>=0){
+        relations[oldIndex]={...relations[oldIndex],state:'superseded',supersededAt:now(),updatedAt:now()};
+        write(KEYS.relations,relations);
+      }
+    }
     upsert(KEYS.relations,relation,'relationId');
     return clone(relation);
+  }
+
+  function relationsFor(entityId,options={}){
+    if(!entityId)return [];
+    const direction=options.direction||'both';
+    return list(KEYS.relations).filter(item=>{
+      if(options.includeSuperseded!==true&&item.state==='superseded')return false;
+      if(direction==='from')return item.fromId===entityId;
+      if(direction==='to')return item.toId===entityId;
+      return item.fromId===entityId||item.toId===entityId;
+    });
+  }
+
+  function normalizePlanIds(input={}){
+    const ids=[
+      ...(Array.isArray(input.planIds)?input.planIds:[]),
+      input.planId
+    ].filter(Boolean);
+    return [...new Set(ids)];
+  }
+
+  function linkEntityToPlans(entityId,entityType,planIds,source='rule'){
+    return [...new Set((planIds||[]).filter(Boolean))].map(planId=>addRelation({
+      fromId:entityId,
+      fromType:entityType,
+      toId:planId,
+      toType:'plan',
+      relationType:'belongs_to_plan',
+      source,
+      confidence:source==='user'?1:0.95
+    }));
+  }
+
+  function linkEntityToActivities(entityId,entityType,activityIds,source='rule'){
+    return [...new Set((activityIds||[]).filter(Boolean))].map(activityId=>addRelation({
+      fromId:entityId,
+      fromType:entityType,
+      toId:activityId,
+      toType:'activity',
+      relationType:'belongs_to_activity',
+      source,
+      confidence:source==='user'?1:0.98
+    }));
+  }
+
+  function activeActivities(){
+    return list(KEYS.activities).filter(item=>['active','paused'].includes(item.state));
+  }
+
+  function primaryActivity(){
+    const meta=ensureMeta();
+    const active=activeActivities();
+    return active.find(item=>item.activityId===meta.primaryActivityId)||active[0]||null;
+  }
+
+  function setPrimaryActivity(activityId){
+    const meta=ensureMeta();
+    const exists=list(KEYS.activities).some(item=>item.activityId===activityId);
+    if(activityId&&!exists)throw new Error('activity not found');
+    meta.primaryActivityId=activityId||null;
+    meta.updatedAt=now();
+    write(KEYS.meta,meta);
+    return activityId?clone(list(KEYS.activities).find(item=>item.activityId===activityId)):null;
+  }
+
+  function linkPlan(entityType,entityId,planId,source='user'){
+    if(!entityType||!entityId||!planId)throw new Error('entityType, entityId and planId are required');
+    const keyByType={
+      activity:[KEYS.activities,'activityId','planIds'],
+      memo:[KEYS.memos,'memoId','planIds'],
+      parking:[KEYS.parkings,'parkingId','planIds'],
+      event:[KEYS.events,'eventId','planIds'],
+      fact:[KEYS.facts,'factId','planIds']
+    };
+    const config=keyByType[entityType];
+    if(config){
+      const [key,idField,plansField]=config;
+      const rows=list(key);
+      const index=rows.findIndex(item=>item[idField]===entityId);
+      if(index>=0){
+        rows[index][plansField]=[...new Set([...(rows[index][plansField]||[]),planId])];
+        if(!rows[index].planId)rows[index].planId=planId;
+        rows[index].updatedAt=now();
+        write(key,rows);
+      }
+    }
+    return addRelation({
+      fromId:entityId,fromType:entityType,
+      toId:planId,toType:'plan',
+      relationType:'belongs_to_plan',
+      source,confidence:source==='user'?1:0.95
+    });
+  }
+
+  function unlinkPlan(entityType,entityId,planId,source='user'){
+    const keyByType={
+      activity:[KEYS.activities,'activityId','planIds'],
+      memo:[KEYS.memos,'memoId','planIds'],
+      parking:[KEYS.parkings,'parkingId','planIds'],
+      event:[KEYS.events,'eventId','planIds'],
+      fact:[KEYS.facts,'factId','planIds']
+    };
+    const config=keyByType[entityType];
+    if(config){
+      const [key,idField,plansField]=config;
+      const rows=list(key);
+      const index=rows.findIndex(item=>item[idField]===entityId);
+      if(index>=0){
+        rows[index][plansField]=(rows[index][plansField]||[]).filter(id=>id!==planId);
+        if(rows[index].planId===planId)rows[index].planId=rows[index][plansField][0]||null;
+        rows[index].updatedAt=now();
+        write(key,rows);
+      }
+    }
+    const activeRelation=relationsFor(entityId,{direction:'from'}).find(item=>
+      item.toId===planId&&item.relationType==='belongs_to_plan'
+    );
+    if(activeRelation){
+      addRelation({
+        fromId:entityId,fromType:entityType,
+        toId:planId,toType:'plan',
+        relationType:'plan_link_removed',
+        source,confidence:1,
+        supersedes:activeRelation.relationId,
+        forceNew:true
+      });
+    }
+    return true;
+  }
+
+  function contextSnapshot(input={}){
+    const events=list(KEYS.events);
+    const facts=list(KEYS.facts);
+    const intents=list(KEYS.intents);
+    const parkings=list(KEYS.parkings);
+    const activities=activeActivities();
+    const primary=primaryActivity();
+    const explicitPlanIds=normalizePlanIds(input);
+    const activityPlanIds=activities.flatMap(item=>item.planIds||[]);
+    const storedPlanId=localStorage.getItem('outbase_active_plan_id')||null;
+    const planIds=[...new Set([
+      ...explicitPlanIds,
+      ...activityPlanIds,
+      storedPlanId
+    ].filter(Boolean))];
+    const latestIntent=intents
+      .filter(item=>item.state==='active')
+      .sort((a,b)=>new Date(b.observedAt)-new Date(a.observedAt))[0]||null;
+    const latestParking=parkings
+      .filter(item=>item.state==='active')
+      .sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt))[0]||null;
+    const recentSince=Date.now()-30*60*1000;
+    return {
+      generatedAt:now(),
+      activityIds:activities.map(item=>item.activityId),
+      primaryActivityId:primary?.activityId||null,
+      planIds,
+      currentIntent:clone(latestIntent),
+      activeParking:clone(latestParking),
+      recentEventIds:events.filter(item=>new Date(item.observedAt).getTime()>=recentSince).slice(0,50).map(item=>item.eventId),
+      recentFactIds:facts.filter(item=>new Date(item.observedAt).getTime()>=recentSince).slice(0,50).map(item=>item.factId),
+      location:clone(input.location??latestParking?.location??null),
+      source:'local-rule'
+    };
+  }
+
+  function applyContextRelations(entityId,entityType,input={}){
+    if(!entityId)return [];
+    const context=contextSnapshot(input);
+    const linked=[];
+    linked.push(...linkEntityToPlans(entityId,entityType,context.planIds,'rule'));
+    linked.push(...linkEntityToActivities(entityId,entityType,context.activityIds,'rule'));
+    if(context.activeParking&&entityType!=='parking'){
+      linked.push(addRelation({
+        fromId:entityId,fromType:entityType,
+        toId:context.activeParking.parkingId,toType:'parking',
+        relationType:'near_active_parking',
+        source:'rule',confidence:0.8
+      }));
+    }
+    return linked;
   }
 
   function findActivityByLegacySession(sessionId){
