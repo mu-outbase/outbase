@@ -2435,3 +2435,371 @@
     if(event.key==='Escape')closeViewer();
   });
 })();
+
+/* OUTBASE FIELD03 Integrated Search/Review/Relations */
+(function(){
+  'use strict';
+
+  const KEYS={
+    records:'outbase_record_saved_records',
+    gear:'outbase_gear_library_v1',
+    plans:'outbase_plans_v1',
+    reviews:'outbase_memory_reviews_v1'
+  };
+
+  const readJson=(key,fallback)=>{
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw==null)return fallback;
+      const value=JSON.parse(raw);
+      return value==null?fallback:value;
+    }catch(_e){return fallback;}
+  };
+
+  const writeJson=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+
+  const esc=value=>String(value??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#039;');
+
+  const normalize=value=>String(value??'').toLowerCase().replace(/\s+/g,' ').trim();
+
+  const unique=list=>{
+    const seen=new Set();
+    return list.filter(item=>{
+      const key=normalize(item);
+      if(!key||seen.has(key))return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  function allRecords(){
+    const rows=readJson(KEYS.records,[]);
+    return Array.isArray(rows)?rows:[];
+  }
+
+  function allGear(){
+    const rows=readJson(KEYS.gear,[]);
+    return Array.isArray(rows)?rows:[];
+  }
+
+  function allPlans(){
+    const candidates=[
+      readJson(KEYS.plans,[]),
+      readJson('outbase_plan_library_v1',[]),
+      readJson('outbase_plan_list_v1',[])
+    ];
+    const merged=[];
+    candidates.forEach(rows=>{
+      if(Array.isArray(rows))merged.push(...rows);
+    });
+    return merged;
+  }
+
+  function memoryKey(record){
+    const date=new Date(Number(record.createdAt||Date.now())).toISOString().slice(0,10);
+    return record.sessionId||`${record.target||'未確認'}:${date}`;
+  }
+
+  function groupRecords(){
+    const map=new Map();
+    allRecords().forEach(record=>{
+      const key=memoryKey(record);
+      if(!map.has(key)){
+        map.set(key,{
+          key,
+          title:record.target||'未確認の記録',
+          createdAt:Number(record.createdAt||0),
+          records:[]
+        });
+      }
+      const group=map.get(key);
+      group.records.push(record);
+      group.createdAt=Math.max(group.createdAt,Number(record.createdAt||0));
+    });
+    return [...map.values()].sort((a,b)=>b.createdAt-a.createdAt);
+  }
+
+  function buildIndex(){
+    const index=[];
+
+    groupRecords().forEach(group=>{
+      const body=group.records.map(record=>[
+        record.text,record.note,record.label,record.category,record.kind,
+        record.location?.lat,record.location?.lng
+      ].filter(Boolean).join(' ')).join(' ');
+      index.push({
+        type:'memory',
+        id:group.key,
+        title:group.title,
+        subtitle:`${group.records.length}件の記録`,
+        text:`${group.title} ${body}`,
+        date:group.createdAt
+      });
+    });
+
+    allGear().forEach(item=>{
+      index.push({
+        type:'gear',
+        id:item.id||item.name,
+        title:item.name||'名称未設定',
+        subtitle:[item.category,item.brand,item.model].filter(Boolean).join('・')||'資産',
+        text:[
+          item.name,item.category,item.brand,item.model,item.memo,
+          ...(Array.isArray(item.tags)?item.tags:[])
+        ].filter(Boolean).join(' '),
+        date:Number(item.updatedAt||0)
+      });
+    });
+
+    allPlans().forEach(plan=>{
+      index.push({
+        type:'plan',
+        id:plan.id||plan.name||plan.title,
+        title:plan.name||plan.title||'名称未設定プラン',
+        subtitle:[plan.activityType||plan.type,plan.date||plan.startDate].filter(Boolean).join('・')||'プラン',
+        text:[
+          plan.name,plan.title,plan.activityType,plan.type,plan.location,
+          plan.memo,plan.note,plan.date,plan.startDate,plan.endDate
+        ].filter(Boolean).join(' '),
+        date:Number(plan.updatedAt||plan.createdAt||0)
+      });
+    });
+
+    return index;
+  }
+
+  function openSearch(){
+    document.getElementById('outbaseGlobalSearch')?.remove();
+
+    const overlay=document.createElement('div');
+    overlay.id='outbaseGlobalSearch';
+    overlay.className='outbaseSearchBackdrop';
+    overlay.innerHTML=`<section class="outbaseSearchSheet" role="dialog" aria-modal="true">
+      <header>
+        <div>
+          <small>OUTBASE SEARCH</small>
+          <h2>すべてから探す</h2>
+        </div>
+        <button type="button" data-search-close aria-label="閉じる">×</button>
+      </header>
+      <div class="outbaseSearchControls">
+        <input id="outbaseSearchInput" type="search" placeholder="場所・ギア・メモ・日付で検索">
+        <div class="outbaseSearchFilters">
+          <button class="active" data-search-filter="all">すべて</button>
+          <button data-search-filter="memory">思い出</button>
+          <button data-search-filter="gear">資産</button>
+          <button data-search-filter="plan">プラン</button>
+        </div>
+      </div>
+      <div id="outbaseSearchResults" class="outbaseSearchResults"></div>
+    </section>`;
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('outbaseSearchOpen');
+
+    let filter='all';
+
+    const render=()=>{
+      const q=normalize(document.getElementById('outbaseSearchInput')?.value||'');
+      const rows=buildIndex()
+        .filter(item=>filter==='all'||item.type===filter)
+        .filter(item=>!q||normalize(`${item.title} ${item.subtitle} ${item.text}`).includes(q))
+        .slice(0,100);
+
+      const root=document.getElementById('outbaseSearchResults');
+      if(!root)return;
+
+      root.innerHTML=rows.length?rows.map(item=>{
+        const label={memory:'思い出',gear:'資産',plan:'プラン'}[item.type]||item.type;
+        return `<button class="outbaseSearchResult" data-search-open="${esc(item.type)}" data-search-id="${esc(item.id)}">
+          <span class="outbaseSearchType">${esc(label)}</span>
+          <div>
+            <b>${esc(item.title)}</b>
+            <p>${esc(item.subtitle)}</p>
+          </div>
+          <strong>›</strong>
+        </button>`;
+      }).join(''):`<div class="outbaseSearchEmpty">一致するデータがありません。</div>`;
+    };
+
+    overlay.addEventListener('click',event=>{
+      if(event.target===overlay||event.target.closest?.('[data-search-close]')){
+        overlay.remove();
+        document.body.classList.remove('outbaseSearchOpen');
+        return;
+      }
+
+      const filterButton=event.target.closest?.('[data-search-filter]');
+      if(filterButton){
+        filter=filterButton.dataset.searchFilter||'all';
+        overlay.querySelectorAll('[data-search-filter]').forEach(button=>button.classList.toggle('active',button===filterButton));
+        render();
+        return;
+      }
+
+      const result=event.target.closest?.('[data-search-open]');
+      if(result){
+        const type=result.dataset.searchOpen;
+        const id=result.dataset.searchId||'';
+        overlay.remove();
+        document.body.classList.remove('outbaseSearchOpen');
+
+        if(type==='memory'){
+          const target=document.querySelector(`[data-memory-session="${CSS.escape(id)}"]`);
+          if(target){
+            target.scrollIntoView({behavior:'smooth',block:'center'});
+            target.click();
+          }else{
+            localStorage.setItem('outbase_active_tab_v1','memory');
+            location.hash='memory';
+            setTimeout(()=>document.querySelector(`[data-memory-session="${CSS.escape(id)}"]`)?.click(),250);
+          }
+          return;
+        }
+
+        if(type==='gear'){
+          localStorage.setItem('outbase_library_tab_v1','gear');
+          const tab=document.querySelector('[data-main-tab="library"],[data-tab="library"]');
+          tab?.click();
+          setTimeout(()=>{
+            const item=document.querySelector(`[data-library-id="${CSS.escape(id)}"]`);
+            item?.scrollIntoView({behavior:'smooth',block:'center'});
+            item?.classList.add('outbaseFlash');
+            setTimeout(()=>item?.classList.remove('outbaseFlash'),1800);
+          },250);
+          return;
+        }
+
+        if(type==='plan'){
+          localStorage.setItem('outbase_active_tab_v1','plan');
+          location.hash='plan';
+        }
+      }
+    });
+
+    overlay.querySelector('#outbaseSearchInput')?.addEventListener('input',render);
+    overlay.querySelector('#outbaseSearchInput')?.focus();
+    render();
+  }
+
+  function sessionReview(records){
+    const kinds=records.reduce((acc,record)=>{
+      acc[record.kind]=(acc[record.kind]||0)+1;
+      return acc;
+    },{});
+
+    const texts=records.map(record=>record.text||record.note||record.label||'').filter(Boolean);
+    const joined=normalize(texts.join(' '));
+
+    const good=[];
+    const improve=[];
+    const next=[];
+
+    if(kinds.photo)good.push(`写真を${kinds.photo}件残せています`);
+    if(kinds.speech)good.push(`音声を${kinds.speech}件残せています`);
+    if(kinds.memo)good.push(`メモを${kinds.memo}件残せています`);
+    if(kinds.pin)good.push(`場所を${kinds.pin}件記録できています`);
+    if(!good.length)good.push('現地の記録を残せています');
+
+    if(!kinds.photo)improve.push('次回は写真を1枚以上残す');
+    if(!kinds.memo&&!kinds.speech)improve.push('気づきをメモまたは音声で残す');
+    if(!kinds.pin)improve.push('役立った場所を1か所記録する');
+    if(joined.includes('忘れ'))next.push('忘れ物対策を準備リストへ追加');
+    if(joined.includes('寒'))next.push('防寒装備を見直す');
+    if(joined.includes('雨'))next.push('雨対策用品を確認する');
+    if(joined.includes('暑'))next.push('暑さ対策用品を確認する');
+
+    if(!improve.length)improve.push('今回の流れを次回も再現する');
+    if(!next.length)next.push('今回使ったギアを次回候補にする');
+
+    return {good,improve,next};
+  }
+
+  function relatedGear(records){
+    const haystack=normalize(records.map(record=>[
+      record.target,record.text,record.note,record.label,record.category
+    ].filter(Boolean).join(' ')).join(' '));
+
+    return allGear().filter(item=>{
+      const tokens=unique([
+        item.name,item.brand,item.model,item.category,
+        ...(Array.isArray(item.tags)?item.tags:[])
+      ].map(normalize).filter(token=>token.length>=2));
+      return tokens.some(token=>haystack.includes(token));
+    }).slice(0,8);
+  }
+
+  function injectReviewIntoMemoryDetail(){
+    const sheet=document.querySelector('#outbaseMemoryDetail .memoryDetailSheet');
+    if(!sheet||sheet.dataset.reviewInjected==='1')return;
+
+    const title=sheet.querySelector('h2')?.textContent||'';
+    const groups=groupRecords();
+    const group=groups.find(item=>item.title===title)||groups[0];
+    if(!group)return;
+
+    const review=sessionReview(group.records);
+    const gear=relatedGear(group.records);
+
+    const section=document.createElement('section');
+    section.className='memoryReviewPanel';
+    section.innerHTML=`<div class="memoryReviewHead">
+      <small>OUTBASE REVIEW</small>
+      <h3>今回のまとめ</h3>
+    </div>
+    <div class="memoryReviewGrid">
+      <article>
+        <b>良かった点</b>
+        <ul>${review.good.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
+      </article>
+      <article>
+        <b>改善点</b>
+        <ul>${review.improve.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
+      </article>
+      <article>
+        <b>次回へ</b>
+        <ul>${review.next.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
+      </article>
+    </div>
+    ${gear.length?`<div class="memoryRelatedGear">
+      <b>関連する資産</b>
+      <div>${gear.map(item=>`<span>${esc(item.name||'名称未設定')}</span>`).join('')}</div>
+    </div>`:''}`;
+
+    sheet.querySelector('.memoryDetailBody')?.prepend(section);
+    sheet.dataset.reviewInjected='1';
+
+    const reviews=readJson(KEYS.reviews,{});
+    reviews[group.key]={...review,gearIds:gear.map(item=>item.id),updatedAt:Date.now()};
+    writeJson(KEYS.reviews,reviews);
+  }
+
+  const observer=new MutationObserver(()=>{
+    injectReviewIntoMemoryDetail();
+  });
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    observer.observe(document.body,{childList:true,subtree:true});
+
+    const button=document.createElement('button');
+    button.type='button';
+    button.id='outbaseGlobalSearchButton';
+    button.className='outbaseGlobalSearchButton';
+    button.setAttribute('aria-label','すべてから探す');
+    button.innerHTML='⌕';
+    button.addEventListener('click',openSearch);
+    document.body.appendChild(button);
+  });
+
+  document.addEventListener('keydown',event=>{
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){
+      event.preventDefault();
+      openSearch();
+    }
+  });
+})();
