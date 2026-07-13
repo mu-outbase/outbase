@@ -2259,6 +2259,37 @@
     }
   }
 
+
+  async function handlePdf(file){
+    if(!window.pdfjsLib){
+      notify('PDF読込ライブラリを読み込めませんでした');
+      return;
+    }
+    try{
+      notify('PDFの文字を読み取っています');
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      const pdf=await window.pdfjsLib.getDocument({data:bytes}).promise;
+      const lines=[];
+      const maxPages=Math.min(pdf.numPages,30);
+      for(let pageNo=1;pageNo<=maxPages;pageNo++){
+        const page=await pdf.getPage(pageNo);
+        const content=await page.getTextContent();
+        const pageText=content.items.map(item=>String(item.str||'')).join(' ');
+        lines.push(...pageText.split(/\s{2,}|\r?\n/));
+      }
+      const candidates=lines
+        .map(line=>normalizeText(line))
+        .filter(line=>line.length>=2&&line.length<=100)
+        .filter(line=>!(/^[\d\s.,¥￥$()\-/:]+$/.test(line)));
+      const added=addGearNames(candidates);
+      notify(added?`${added}件をPDFから候補登録しました`:'PDFから新しい品名候補を見つけられませんでした');
+      if(added)setTimeout(()=>location.reload(),700);
+    }catch(error){
+      console.error(error);
+      notify('PDFを読み取れませんでした');
+    }
+  }
+
   async function handleImage(file){
     if(!window.Tesseract){
       notify('写真文字読取を利用できません');
@@ -2299,24 +2330,233 @@
     if(label==='PDF・写真取込'){
       event.preventDefault();
       event.stopImmediatePropagation();
-      const input=ensureInput('outbaseImageImport','image/*');
+      const input=ensureInput('outbaseImageImport','application/pdf,image/*');
       input.value='';
-      input.onchange=()=>{const file=input.files?.[0];if(file)handleImage(file);};
+      input.onchange=()=>{
+        const file=input.files?.[0];
+        if(!file)return;
+        if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf'))handlePdf(file);
+        else handleImage(file);
+      };
       input.click();
     }
   },true);
 })();
 
-/* OUTBASE FIELD03 Canonical6: full local backup and restore */
+/* OUTBASE FIELD03 Integrated Complete Backup */
 (function(){
   'use strict';
   const PREFIX='outbase_';
-  function toast(message){const old=document.getElementById('outbaseBackupToast');if(old)old.remove();const el=document.createElement('div');el.id='outbaseBackupToast';el.textContent=message;Object.assign(el.style,{position:'fixed',left:'50%',bottom:'92px',transform:'translateX(-50%)',zIndex:'100000',background:'#0b2a20',color:'#fff',padding:'12px 18px',borderRadius:'999px',fontSize:'14px',fontWeight:'700'});document.body.appendChild(el);setTimeout(()=>el.remove(),2600);}
-  function collect(){const data={};for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.startsWith(PREFIX))data[key]=localStorage.getItem(key);}return data;}
-  function exportBackup(){const now=new Date(),stamp=now.toISOString().slice(0,16).replace(/[-:T]/g,'');const payload={format:'OUTBASE_BACKUP',version:'OUTBASE_FIELD03_CANONICAL6',exportedAt:now.toISOString(),localStorage:collect()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`OUTBASE_BACKUP_${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('OUTBASE全体バックアップを書き出しました');}
-  function input(){let el=document.getElementById('outbaseFullBackupImport');if(el)return el;el=document.createElement('input');el.id='outbaseFullBackupImport';el.type='file';el.accept='application/json,.json';el.hidden=true;document.body.appendChild(el);return el;}
-  async function restore(file){try{const payload=JSON.parse(await file.text());if(!payload||payload.format!=='OUTBASE_BACKUP'||typeof payload.localStorage!=='object')throw new Error();const keys=Object.keys(payload.localStorage).filter(key=>key.startsWith(PREFIX));if(!keys.length)throw new Error();if(!confirm(`${keys.length}件のOUTBASEデータを復元します。\n現在の同名データは上書きされます。`))return;keys.forEach(key=>localStorage.setItem(key,String(payload.localStorage[key])));toast(`${keys.length}件を復元しました`);setTimeout(()=>location.reload(),700);}catch(error){console.error(error);alert('OUTBASEバックアップを読み込めませんでした。');}}
-  document.addEventListener('click',event=>{const ex=event.target.closest?.('[data-library-export]');if(ex){event.preventDefault();event.stopImmediatePropagation();exportBackup();return;}const im=event.target.closest?.('[data-library-import-open]');if(im){event.preventDefault();event.stopImmediatePropagation();const el=input();el.value='';el.onchange=()=>{const file=el.files?.[0];if(file)restore(file);};el.click();}},true);
+  const DB_NAME='outbase_db';
+
+  function toast(message){
+    const old=document.getElementById('outbaseBackupToast');
+    if(old)old.remove();
+    const el=document.createElement('div');
+    el.id='outbaseBackupToast';
+    el.textContent=message;
+    Object.assign(el.style,{
+      position:'fixed',left:'50%',bottom:'92px',transform:'translateX(-50%)',
+      zIndex:'100000',background:'#0b2a20',color:'#fff',padding:'12px 18px',
+      borderRadius:'999px',fontSize:'14px',fontWeight:'700',maxWidth:'88vw'
+    });
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3000);
+  }
+
+  function collectLocalStorage(){
+    const data={};
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(key&&key.startsWith(PREFIX))data[key]=localStorage.getItem(key);
+    }
+    return data;
+  }
+
+  const blobToDataUrl=blob=>new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(blob);
+  });
+
+  async function serializeValue(value){
+    if(value instanceof Blob){
+      return {
+        __outbaseType:'Blob',
+        type:value.type,
+        dataUrl:await blobToDataUrl(value)
+      };
+    }
+    if(Array.isArray(value)){
+      return Promise.all(value.map(serializeValue));
+    }
+    if(value&&typeof value==='object'){
+      const result={};
+      for(const [key,item] of Object.entries(value)){
+        result[key]=await serializeValue(item);
+      }
+      return result;
+    }
+    return value;
+  }
+
+  async function deserializeValue(value){
+    if(value&&value.__outbaseType==='Blob'&&value.dataUrl){
+      const response=await fetch(value.dataUrl);
+      return response.blob();
+    }
+    if(Array.isArray(value)){
+      return Promise.all(value.map(deserializeValue));
+    }
+    if(value&&typeof value==='object'){
+      const result={};
+      for(const [key,item] of Object.entries(value)){
+        result[key]=await deserializeValue(item);
+      }
+      return result;
+    }
+    return value;
+  }
+
+  const openDb=()=>new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){resolve(null);return;}
+    const req=indexedDB.open(DB_NAME);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+    req.onupgradeneeded=()=>resolve(req.result);
+  });
+
+  async function collectIndexedDb(){
+    const db=await openDb();
+    if(!db)return {};
+    const output={};
+    for(const storeName of Array.from(db.objectStoreNames)){
+      const rows=await new Promise((resolve,reject)=>{
+        const tx=db.transaction(storeName,'readonly');
+        const req=tx.objectStore(storeName).getAll();
+        req.onsuccess=()=>resolve(req.result||[]);
+        req.onerror=()=>reject(req.error);
+      });
+      output[storeName]=await serializeValue(rows);
+    }
+    db.close();
+    return output;
+  }
+
+  async function restoreIndexedDb(stores){
+    if(!stores||typeof stores!=='object')return 0;
+    const db=await openDb();
+    if(!db)return 0;
+    let count=0;
+    for(const [storeName,serializedRows] of Object.entries(stores)){
+      if(!db.objectStoreNames.contains(storeName))continue;
+      const rows=await deserializeValue(serializedRows);
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(storeName,'readwrite');
+        const store=tx.objectStore(storeName);
+        store.clear();
+        (Array.isArray(rows)?rows:[]).forEach(row=>store.put(row));
+        tx.oncomplete=resolve;
+        tx.onerror=()=>reject(tx.error);
+      });
+      count+=(Array.isArray(rows)?rows.length:0);
+    }
+    db.close();
+    return count;
+  }
+
+  async function exportBackup(){
+    try{
+      toast('全データをまとめています');
+      const now=new Date();
+      const stamp=now.toISOString().slice(0,16).replace(/[-:T]/g,'');
+      const payload={
+        format:'OUTBASE_COMPLETE_BACKUP',
+        version:'OUTBASE_FIELD03_INTEGRATED_STABLE1',
+        exportedAt:now.toISOString(),
+        localStorage:collectLocalStorage(),
+        indexedDB:await collectIndexedDb()
+      };
+      const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download=`OUTBASE_COMPLETE_BACKUP_${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      toast('写真・音声を含む全体バックアップを書き出しました');
+    }catch(error){
+      console.error(error);
+      alert('バックアップを作成できませんでした。');
+    }
+  }
+
+  function ensureInput(){
+    let input=document.getElementById('outbaseFullBackupImport');
+    if(input)return input;
+    input=document.createElement('input');
+    input.id='outbaseFullBackupImport';
+    input.type='file';
+    input.accept='application/json,.json';
+    input.hidden=true;
+    document.body.appendChild(input);
+    return input;
+  }
+
+  async function restoreBackup(file){
+    try{
+      toast('バックアップを確認しています');
+      const payload=JSON.parse(await file.text());
+      const valid=payload&&(
+        payload.format==='OUTBASE_COMPLETE_BACKUP'||
+        payload.format==='OUTBASE_BACKUP'
+      )&&typeof payload.localStorage==='object';
+      if(!valid)throw new Error('invalid backup');
+
+      const keys=Object.keys(payload.localStorage).filter(key=>key.startsWith(PREFIX));
+      if(!confirm(`${keys.length}件の設定・記録と保存メディアを復元します。
+現在の同名データは上書きされます。`))return;
+
+      keys.forEach(key=>{
+        const value=payload.localStorage[key];
+        if(value==null)localStorage.removeItem(key);
+        else localStorage.setItem(key,String(value));
+      });
+      const mediaCount=await restoreIndexedDb(payload.indexedDB||{});
+      toast(`${keys.length}件＋メディア${mediaCount}件を復元しました`);
+      setTimeout(()=>location.reload(),900);
+    }catch(error){
+      console.error(error);
+      alert('OUTBASEバックアップを読み込めませんでした。');
+    }
+  }
+
+  document.addEventListener('click',event=>{
+    const exportButton=event.target.closest?.('[data-library-export]');
+    if(exportButton){
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      exportBackup();
+      return;
+    }
+    const importButton=event.target.closest?.('[data-library-import-open]');
+    if(importButton){
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      const input=ensureInput();
+      input.value='';
+      input.onchange=()=>{
+        const file=input.files?.[0];
+        if(file)restoreBackup(file);
+      };
+      input.click();
+    }
+  },true);
 })();
 
 /* OUTBASE FIELD03 Canonical7: memory detail viewer */
@@ -2801,5 +3041,86 @@
       event.preventDefault();
       openSearch();
     }
+  });
+})();
+
+
+/* OUTBASE FIELD03 Integrated Stability */
+(function(){
+  'use strict';
+  const read=(key,fallback)=>{
+    try{
+      const value=JSON.parse(localStorage.getItem(key)||'null');
+      return value==null?fallback:value;
+    }catch(_e){return fallback;}
+  };
+  const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+
+  function repairData(){
+    const gears=read('outbase_gear_library_v1',[]);
+    const gearIds=new Set((Array.isArray(gears)?gears:[]).map(item=>item?.id).filter(Boolean));
+    let changed=false;
+
+    const repairedGears=(Array.isArray(gears)?gears:[]).map(item=>{
+      if(!item||typeof item!=='object')return item;
+      const relations=(Array.isArray(item.relations)?item.relations:[])
+        .filter(relation=>{
+          if(!relation?.targetId)return false;
+          if((relation.targetType||'gear')!=='gear')return true;
+          return gearIds.has(relation.targetId);
+        });
+      if(JSON.stringify(relations)!==JSON.stringify(item.relations||[]))changed=true;
+      return {...item,relations};
+    });
+    if(changed)write('outbase_gear_library_v1',repairedGears);
+
+    const kits=read('outbase_gear_kits_v1',[]);
+    if(Array.isArray(kits)){
+      let kitChanged=false;
+      const repaired=kits.map(kit=>{
+        const ids=(Array.isArray(kit?.gearIds)?kit.gearIds:[]).filter(id=>gearIds.has(id));
+        const required=(Array.isArray(kit?.requiredGearIds)?kit.requiredGearIds:[]).filter(id=>ids.includes(id));
+        if(JSON.stringify(ids)!==JSON.stringify(kit?.gearIds||[])||JSON.stringify(required)!==JSON.stringify(kit?.requiredGearIds||[]))kitChanged=true;
+        return {...kit,gearIds:ids,requiredGearIds:required};
+      });
+      if(kitChanged)write('outbase_gear_kits_v1',repaired);
+    }
+
+    const plans=read('outbase_plans_v1',[]);
+    const activePlanId=localStorage.getItem('outbase_active_plan_id_v1');
+    if(activePlanId&&Array.isArray(plans)&&!plans.some(plan=>plan?.id===activePlanId)){
+      localStorage.removeItem('outbase_active_plan_id_v1');
+    }
+
+    localStorage.setItem('outbase_data_integrity_last',new Date().toISOString());
+  }
+
+  function closeTopOverlay(){
+    const closeSelectors=[
+      '[data-search-close]',
+      '[data-memory-detail-close]',
+      '[data-library-editor-close]',
+      '[data-close-prep-sheet]',
+      '[data-close-plan-sheet]',
+      '[data-close-sheet]'
+    ];
+    for(const selector of closeSelectors){
+      const button=document.querySelector(selector);
+      if(button){button.click();return true;}
+    }
+    return false;
+  }
+
+  window.addEventListener('DOMContentLoaded',repairData);
+
+  window.addEventListener('popstate',event=>{
+    if(closeTopOverlay()){
+      event.preventDefault();
+      history.pushState({outbase:true},'',location.href);
+    }
+  });
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    if(!history.state?.outbase)history.replaceState({outbase:true},'',location.href);
   });
 })();
