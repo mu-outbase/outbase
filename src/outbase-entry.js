@@ -69,22 +69,27 @@
           ['voice','🎙️','音声メモ','自動文字起こし']
         ];
 
-    return `<section id="${ENTRY_ID}" class="instantEntry">
-      <div class="instantEntryHead">
-        <div>
-          <small>START ANYWHERE</small>
-          <h2>${activity.state==='active'?'活動を続けながら使う':'今すぐ使う'}</h2>
-          <p>${activity.state==='active'
-            ?`${activity.target||'記録'}を継続中。別の機能を使っても記録は止まりません。`
-            :'予定やプランを作らず、そのまま始められます。'}</p>
-        </div>
-        <button class="instantMore" data-instant="more">その他</button>
-      </div>
+    const activeCompact=activity.state==='active';
+    return `<section id="${ENTRY_ID}" class="instantEntry ${activeCompact?'instantEntryActive':''}">
+      ${activeCompact
+        ?`<div class="instantEntryCompactHead">
+            <small>QUICK ADD</small>
+            <b>活動へ追加</b>
+            <button class="instantMore" data-instant="more">その他</button>
+          </div>`
+        :`<div class="instantEntryHead">
+            <div>
+              <small>START ANYWHERE</small>
+              <h2>今すぐ使う</h2>
+              <p>予定やプランを作らず、そのまま始められます。</p>
+            </div>
+            <button class="instantMore" data-instant="more">その他</button>
+          </div>`}
 
-      <div class="instantEntryGrid">
+      <div class="instantEntryGrid ${activeCompact?'instantEntryGridCompact':''}">
         ${primary.map(([action,icon,title,note])=>`
           <button data-instant="${action}">
-            <span>${icon}</span><b>${title}</b><small>${note}</small>
+            <span>${icon}</span><b>${title}</b>${activeCompact?'':`<small>${note}</small>`}
           </button>`).join('')}
       </div>
 

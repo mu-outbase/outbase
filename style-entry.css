@@ -1,4 +1,4 @@
-
+ 
 .instantEntry{margin:14px 20px 6px;padding:18px;border-radius:24px;background:#fff;border:1px solid rgba(23,61,45,.12);box-shadow:0 12px 28px rgba(28,55,43,.08)}
 .instantEntryHead small{font-size:10px;letter-spacing:.14em;color:#98722e;font-weight:900}
 .instantEntryHead h2{margin:3px 0 4px;font-size:24px;color:#173d2d}
@@ -38,3 +38,23 @@
 .instantMemoList article>button{border:0;border-radius:10px;padding:8px;background:#e7ece8;color:#173d2d}.instantMemoList article>button:last-child{background:#f3e4df;color:#824735}
 .instantMemoEmpty{padding:24px;text-align:center;color:#748178}.instantMemoNew{width:100%;margin-top:12px}
 @media(max-width:560px){.instantMorePanel{grid-template-columns:repeat(2,minmax(0,1fr))}.instantMemoPreview>button{grid-template-columns:24px 1fr}.instantMemoPreview>button small{display:none}}
+
+
+/* CORE-03: 活動中は状態表示をACTIVITYバーへ一本化し、ENTRYは追加操作だけにする */
+.instantEntryActive{padding:12px 14px;margin-top:8px;border-radius:18px;box-shadow:0 7px 18px rgba(28,55,43,.06)}
+.instantEntryCompactHead{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:8px}
+.instantEntryCompactHead small{font-size:9px;letter-spacing:.14em;color:#98722e;font-weight:900}
+.instantEntryCompactHead b{font-size:14px;color:#173d2d}
+.instantEntryActive .instantMore{padding:6px 9px;font-size:11px}
+.instantEntryGridCompact{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.instantEntryGridCompact button{min-height:58px;padding:7px 4px;border-radius:13px}
+.instantEntryGridCompact span{font-size:18px}
+.instantEntryGridCompact b{font-size:10px;line-height:1.15}
+.instantEntryActive .instantParkingLatest,
+.instantEntryActive .instantMemoPreview{display:none}
+@media(max-width:560px){
+  .instantEntryActive{margin:8px 12px 2px;padding:10px}
+  .instantEntryGridCompact{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .instantEntryGridCompact button{min-height:54px}
+  .instantEntryGridCompact b{font-size:9px}
+}
