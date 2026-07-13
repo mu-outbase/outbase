@@ -1221,20 +1221,91 @@
 
   function memoryFeature(icon,title,sub,body){return `<article class="memoryFeature"><div class="memoryTop"><div>${icon}</div><span><h3>${title}</h3><p>${sub}</p></span><b>›</b></div><p class="memoryBody">${body}</p></article>`;}
 
+
   function memoryPage(){
-    const rows=[
-      ['assets/memory_teganuma.jpg','手賀沼ドライブ散歩','2026.07.13','同伴 コタ','記録 36件'],
-      ['assets/memory_tanigawa.jpg','谷川岳山行','2026.07.05','単独','記録 28件'],
-      ['assets/memory_akagi.jpg','スノーピーク赤城山CF','2026.07.18-20','グループ','記録 52件']
-    ];
+    const rows=[...savedRecords]
+      .filter(record=>record&&record.createdAt)
+      .sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
+
+    const groups=[];
+    const byKey=new Map();
+
+    rows.forEach(record=>{
+      const date=new Date(Number(record.createdAt||Date.now()));
+      const day=date.toISOString().slice(0,10);
+      const sessionKey=record.sessionId||`${record.target||'未確認'}:${day}`;
+      if(!byKey.has(sessionKey)){
+        const group={
+          id:sessionKey,
+          title:record.target||'未確認の記録',
+          date:day,
+          sessionId:record.sessionId||'',
+          records:[],
+          kinds:{photo:0,video:0,speech:0,memo:0,pin:0}
+        };
+        byKey.set(sessionKey,group);
+        groups.push(group);
+      }
+      const group=byKey.get(sessionKey);
+      group.records.push(record);
+      if(Object.prototype.hasOwnProperty.call(group.kinds,record.kind)){
+        group.kinds[record.kind]+=1;
+      }
+    });
+
+    const total=rows.length;
+    const photoCount=rows.filter(x=>x.kind==='photo').length;
+    const speechCount=rows.filter(x=>x.kind==='speech').length;
+    const memoCount=rows.filter(x=>x.kind==='memo').length;
+    const pinCount=rows.filter(x=>x.kind==='pin').length;
+
+    const recent=groups.slice(0,20);
+
     return `<section class="page ${active==='memory'?'active':''}" id="page-memory">
-      <section class="memoryPanel"><img class="memoryArt" src="assets/memory_hero_art.png" alt=""><div class="memoryIntro"><small>MEMORIES</small><h1>思い出</h1><p>帰宅後の整理・レビュー・次回改善。</p></div><div class="memoryGrid">
-        ${memoryFeature(I.photo,'記録一覧','写真・音声・メモ','散歩中に残した記録を<br>まとめて確認できます。')}
-        ${memoryFeature(I.cart,'次回改善','買い足し・反省','持ち物の見直しや反省点を<br>整理して次に活かします。')}
-        ${memoryFeature(I.pin,'場所メモ','駐車場・トイレ・日陰','役立った場所や注意点を<br>メモしておきます。')}
-        ${memoryFeature(I.link,'関連付け','最後の記録をまとめる','最後に残した記録を起点に、<br>思い出をひとつにまとめます。')}
-      </div></section>
-      <section class="memoryList"><div class="memoryListHead"><h2>既存の思い出詳細</h2><span>すべての思い出を見る&nbsp; ›</span></div>${rows.map(r=>`<div class="memoryRow"><img src="${r[0]}" alt=""><i></i><div><b>${r[1]}</b><p>${r[2]} <span>${r[3]}</span></p></div><em>${r[4]}</em><strong>›</strong></div>`).join('')}</section>
+      <section class="memoryPanel">
+        <img class="memoryArt" src="assets/memory_hero_art.png" alt="">
+        <div class="memoryIntro">
+          <small>MEMORIES</small>
+          <h1>思い出</h1>
+          <p>帰宅後の整理・レビュー・次回改善。</p>
+        </div>
+        <div class="memoryGrid">
+          ${memoryFeature(I.photo,'記録一覧',`${total}件を保存`,`写真${photoCount}・音声${speechCount}・メモ${memoCount}をまとめて確認できます。`)}
+          ${memoryFeature(I.cart,'次回改善','買い足し・反省','持ち物の見直しや反省点を整理して次に活かします。')}
+          ${memoryFeature(I.pin,'場所メモ',`${pinCount}件を保存`,'駐車場・トイレ・日陰など、役立った場所を確認できます。')}
+          ${memoryFeature(I.link,'関連付け',`${groups.length}件の思い出`,'同じ散歩や予定の記録をひとつにまとめて表示します。')}
+        </div>
+      </section>
+      <section class="memoryList">
+        <div class="memoryListHead">
+          <h2>保存された思い出</h2>
+          <span>${groups.length}件</span>
+        </div>
+        ${recent.length?recent.map(group=>{
+          const dateLabel=group.date.replaceAll('-','.');
+          const summary=[
+            group.kinds.photo?`写真 ${group.kinds.photo}`:'',
+            group.kinds.video?`動画 ${group.kinds.video}`:'',
+            group.kinds.speech?`音声 ${group.kinds.speech}`:'',
+            group.kinds.memo?`メモ ${group.kinds.memo}`:'',
+            group.kinds.pin?`場所 ${group.kinds.pin}`:''
+          ].filter(Boolean).join('・')||`記録 ${group.records.length}件`;
+          const imageRecord=group.records.find(x=>x.kind==='photo'&&x.previewUrl);
+          return `<article class="memoryRow memoryDataRow" data-memory-session="${escapeHtml(group.id)}">
+            ${imageRecord?`<img src="${escapeHtml(imageRecord.previewUrl)}" alt="">`:`<div class="memoryFallback">${I.photo}</div>`}
+            <i></i>
+            <div>
+              <b>${escapeHtml(group.title)}</b>
+              <p>${escapeHtml(dateLabel)} <span>${escapeHtml(summary)}</span></p>
+            </div>
+            <em>${group.records.length}件</em>
+            <strong>›</strong>
+          </article>`;
+        }).join(''):`<div class="memoryEmpty">
+          <b>まだ思い出はありません</b>
+          <span>記録を保存すると、ここへ自動でまとまります。</span>
+        </div>`}
+      </section>
     </section>`;
   }
 

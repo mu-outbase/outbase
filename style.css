@@ -1,2 +1,8 @@
-@import url("./outbase_library10a/style.css?v=outbase-field03-canonical4");
+@import url("./outbase_library10a/style.css?v=outbase-field03-canonical5");
 #page-memory.page.active{display:block!important}
+.memoryDataRow{width:100%;}
+.memoryFallback{width:84px;height:64px;border-radius:12px;background:#e7e4dc;display:grid;place-items:center;flex:0 0 auto;}
+.memoryFallback .icon{width:26px;height:26px;}
+.memoryEmpty{padding:28px 18px;text-align:center;display:grid;gap:8px;}
+.memoryEmpty b{font-size:16px;}
+.memoryEmpty span{font-size:13px;color:#6f756f;}
