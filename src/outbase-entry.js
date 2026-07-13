@@ -380,6 +380,14 @@
   }
 
   document.addEventListener('click',event=>{
+    // FIELD03の下部タブはアプリ内部で画面を差し替える。
+    // クリック処理と本体render完了後の両方でENTRYの有無を再確認する。
+    if(!event.target.closest?.(`#${ENTRY_ID}`)&&!event.target.closest?.('#instantMemoSheet')){
+      setTimeout(queueMount,0);
+      setTimeout(queueMount,80);
+      setTimeout(queueMount,220);
+    }
+
     const actionButton=event.target.closest?.('[data-instant]');
     if(actionButton){
       const action=actionButton.dataset.instant;
