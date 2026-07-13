@@ -1,0 +1,12 @@
+
+.activityBar{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:45000;width:min(calc(100% - 24px),720px);display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px;background:#123d2d;color:#fff;border-radius:18px;box-shadow:0 14px 34px rgba(0,0,0,.28)}
+.activityBar.paused{background:#5b604e}.activityBar.stale{background:#6d4b2d}
+.activityMain{min-width:0;border:0;background:transparent;color:#fff;display:flex;align-items:center;gap:10px;text-align:left;font:inherit}
+.activityPulse{width:11px;height:11px;flex:0 0 auto;border-radius:50%;background:#87d5a7;box-shadow:0 0 0 0 rgba(135,213,167,.5);animation:activityPulse 1.8s infinite}
+.activityBar.paused .activityPulse{background:#e0d59b;animation:none}.activityBar.stale .activityPulse{background:#f0bd79}
+.activityText{min-width:0;display:flex;flex-direction:column}.activityText small{font-size:9px;letter-spacing:.12em;opacity:.72}.activityText b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.activityText em{font-size:10px;font-style:normal;opacity:.78}
+.activityActions{display:flex;gap:5px;align-items:center}.activityActions button{border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:9px 10px;background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:800}
+.activityActions button:last-child{background:#fff;color:#173d2d}
+.activityToast{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);z-index:80000;background:#173d2d;color:#fff;padding:12px 18px;border-radius:999px;font-weight:800;box-shadow:0 10px 24px rgba(0,0,0,.22)}
+@keyframes activityPulse{70%{box-shadow:0 0 0 8px rgba(135,213,167,0)}100%{box-shadow:0 0 0 0 rgba(135,213,167,0)}}
+@media(max-width:560px){.activityBar{bottom:68px;grid-template-columns:1fr;padding:8px}.activityActions{position:absolute;right:8px;top:8px}.activityText{padding-right:128px}.activityText em{max-width:190px}.activityActions button{padding:7px 8px}}
