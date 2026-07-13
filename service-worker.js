@@ -1,11 +1,11 @@
-const CACHE_NAME = 'outbase-field03-canonical2';
+const CACHE_NAME = 'outbase-field03-canonical3';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css?v=outbase-field03-canonical2',
-  './src/app.js?v=outbase-field03-canonical2',
-  './manifest.json?v=outbase-field03-canonical2',
-  './outbase_library10a/style.css?v=outbase-field03-canonical2'
+  './style.css?v=outbase-field03-canonical3',
+  './src/app.js?v=outbase-field03-canonical3',
+  './manifest.json?v=outbase-field03-canonical3',
+  './outbase_library10a/style.css?v=outbase-field03-canonical3'
 ];
 
 self.addEventListener('install', event => {
@@ -19,23 +19,14 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      ))
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-
-  const requestUrl = new URL(event.request.url);
-  const sameOrigin = requestUrl.origin === self.location.origin;
-
-  if (!sameOrigin) {
-    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
-    return;
-  }
+  const url = new URL(event.request.url);
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -50,18 +41,20 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(cached => {
-      const network = fetch(event.request)
-        .then(response => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
+      const network = fetch(event.request).then(response => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
+        return response;
+      }).catch(() => cached);
       return cached || network;
     })
   );
