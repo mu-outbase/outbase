@@ -66,6 +66,7 @@
   function saveState(){
     state.updatedAt=Date.now();
     localStorage.setItem(storageKey(),JSON.stringify(state));
+    setTimeout(()=>{ if(typeof queueMount==='function')queueMount(); },0);
   }
 
   function esc(value){
@@ -339,16 +340,72 @@
     if(caution!==undefined){state.meals[Number(caution)].caution=event.target.value;saveState();}
   });
 
-  function installLauncher(){
-    if(document.getElementById('outbaseFlowLauncher'))return;
-    const button=document.createElement('button');
-    button.id='outbaseFlowLauncher';
-    button.className='outbaseFlowLauncher';
-    button.dataset.flowLaunch='prep';
-    button.innerHTML='<span>一本線</span><b>準備→当日→改善</b>';
-    document.body.appendChild(button);
+  function completionRate(){
+    const done=new Set(['確認済み','完了']);
+    return Math.round((state.prep.filter(item=>done.has(item.status)).length/state.prep.length)*100);
   }
 
-  window.addEventListener('DOMContentLoaded',installLauncher);
+  function pendingShopping(){
+    return state.shopping.filter(item=>item.state!=='購入済み'&&item.group!=='今回は買わないもの').length;
+  }
+
+  function undecidedMeals(){
+    return state.meals.filter(item=>!String(item.menu||'').trim()).length;
+  }
+
+  function prepDashboardHtml(){
+    const percent=completionRate();
+    return `<section id="outbaseFlowPrepDashboard" class="flowPrepDashboard">
+      <div class="flowPrepDashboardHead">
+        <div><small>PREPARATION FLOW</small><h2>今回の準備</h2><p>${esc(planLabel())}</p></div>
+        <button data-flow-launch="prep">すべて確認</button>
+      </div>
+      <div class="flowPrepProgress"><span style="width:${percent}%"></span></div>
+      <div class="flowPrepMeta"><b>${percent}%</b><span>未購入 ${pendingShopping()}点</span><span>未決定の食事 ${undecidedMeals()}枠</span><span>未確認 ${state.inbox.length}件</span></div>
+      <div class="flowPrepQuick">
+        <button data-flow-launch="shopping"><span>買い物</span><b>${pendingShopping()}点</b></button>
+        <button data-flow-launch="meals"><span>料理</span><b>${undecidedMeals()}枠</b></button>
+        <button data-flow-launch="cockpit"><span>当日</span><b>${state.daySteps.filter(step=>step.state==='完了').length}/${state.daySteps.length}</b></button>
+        <button data-flow-launch="inbox"><span>未確認</span><b>${state.inbox.length}件</b></button>
+        <button data-flow-launch="improvements"><span>改善</span><b>${state.improvements.filter(item=>!item.done).length}件</b></button>
+      </div>
+    </section>`;
+  }
+
+  function isPrepView(){
+    const params=new URLSearchParams(location.search);
+    const tab=params.get('tab')||location.hash.replace('#','');
+    return tab==='prep';
+  }
+
+  function mountPrepDashboard(){
+    const old=document.getElementById('outbaseFlowPrepDashboard');
+    if(!isPrepView()){old?.remove();return;}
+    const app=document.getElementById('app');
+    if(!app)return;
+    state=loadState();
+    if(old){
+      old.outerHTML=prepDashboardHtml();
+      return;
+    }
+    const holder=document.createElement('div');
+    holder.innerHTML=prepDashboardHtml();
+    app.prepend(holder.firstElementChild);
+  }
+
+  let mountQueued=false;
+  function queueMount(){
+    if(mountQueued)return;
+    mountQueued=true;
+    requestAnimationFrame(()=>{
+      mountQueued=false;
+      mountPrepDashboard();
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded',queueMount);
+  window.addEventListener('hashchange',queueMount);
+  window.addEventListener('popstate',queueMount);
+  new MutationObserver(queueMount).observe(document.documentElement,{childList:true,subtree:true});
   window.OUTBASE_FLOW={open:openFlow,close:closeFlow,reload:()=>{state=loadState();render();}};
 })();
