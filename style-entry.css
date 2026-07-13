@@ -62,3 +62,19 @@
 /* CORE-03D: ENTRYをFIELD03再描画領域の外に固定 */
 #outbaseInstantEntry{display:none}
 body:has(#page-plan.active) #outbaseInstantEntry{display:block}
+
+/* CORE-03E: ENTRYとFIELD03本体を縦積みで中央固定 */
+body{
+  display:block !important;
+}
+#outbaseInstantEntry,
+#app{
+  width:100%;
+  max-width:432px;
+  margin-left:auto;
+  margin-right:auto;
+}
+#outbaseInstantEntry{
+  position:relative;
+  z-index:1;
+}
