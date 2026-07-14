@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OUTBASE UI PROTOTYPE</title>
+<style>
+:root{
+  --bg:#f4efe3;--green:#0f4c38;--deep:#082f23;--gold:#dfb85c;
+  --card:#fffdf8;--line:rgba(15,76,56,.16);--muted:#6e766f;
+  --nav-h:74px;--head-h:72px;--act-h:70px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:var(--deep);overflow:hidden}
+button{font:inherit}
+.app{height:100dvh;display:grid;grid-template-rows:var(--head-h) var(--act-h) minmax(0,1fr) var(--nav-h)}
+.header{background:#061f17;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 18px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:44px;height:44px;border-radius:15px;background:var(--gold);display:grid;place-items:center;color:var(--deep);font-weight:900}
+.brand b{font-size:20px;letter-spacing:.08em}.brand small{display:block;opacity:.55;letter-spacing:.25em;font-size:8px}
+.plan{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);color:#fff;border-radius:18px;padding:8px 14px;text-align:left;min-width:180px}
+.plan b{display:block}.plan small{opacity:.7}
+
+.activity-shell{padding:9px 14px;background:var(--bg)}
+.activity-bar{height:52px;background:var(--card);border:1px solid var(--line);border-radius:18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 7px;box-shadow:0 6px 18px rgba(20,40,32,.08)}
+.activity-label{font-size:11px;font-weight:900;color:var(--muted);padding-left:5px}
+.activity-rail{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none}
+.activity-rail::-webkit-scrollbar{display:none}
+.activity-chip{height:40px;flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:13px;padding:0 12px;color:var(--deep);font-weight:900;display:flex;align-items:center;gap:8px}
+.activity-chip small{font-size:9px;color:var(--muted)}
+.activity-chip.active{background:var(--green);border-color:var(--green);color:#fff}
+.activity-chip.active small{color:#f2cf6b}
+.activity-chip.paused{border-style:dashed}
+.add-activity{width:40px;height:40px;border:0;border-radius:13px;background:var(--gold);color:var(--deep);font-size:27px;font-weight:900}
+
+.main{min-height:0;padding:0 14px 10px}
+.screen{height:100%;display:none;overflow:hidden}
+.screen.active{display:grid}
+.panel{height:100%;background:transparent;display:grid;gap:10px;min-height:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 7px 18px rgba(20,40,32,.07)}
+.dark{background:linear-gradient(145deg,#0c3628,#0a281f);color:#fff;border-color:transparent}
+.section-title{display:flex;justify-content:space-between;align-items:end}
+.section-title h2{margin:0;font-size:20px}.section-title small{color:var(--muted)}
+.action{border:0;background:var(--green);color:#fff;border-radius:13px;padding:11px 14px;font-weight:900}
+.link{border:1px solid var(--line);background:#fff;color:var(--deep);border-radius:13px;padding:10px 13px;font-weight:900}
+.state{font-size:11px;color:var(--muted);background:none;border:0;padding:0}
+
+/* plan */
+.plan-grid{grid-template-rows:minmax(0,1fr) 98px}
+.calendar{padding:14px;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:9px}
+.calendar-head{display:flex;justify-content:space-between;align-items:center}.calendar-head b{font-size:24px}
+.month-buttons{display:flex;gap:6px}.month-buttons button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:transparent;color:#fff}
+.week,.days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.week{font-size:12px;opacity:.7}.days{grid-template-rows:repeat(5,1fr)}
+.day{border:0;background:transparent;color:#fff;border-radius:9px;position:relative;font-weight:800}
+.day.today{background:var(--gold);color:var(--deep)}.day.selected{outline:1px solid var(--gold)}
+.event{position:absolute;left:3px;right:3px;bottom:4px;height:13px;border-radius:9px;background:#40534a;font-size:8px;overflow:hidden}
+.selected-card{padding:12px 15px;display:grid;grid-template-columns:1fr auto;align-items:center}
+.selected-card small{color:var(--muted)}.selected-card b{display:block;font-size:17px;margin-top:3px}
+
+/* search */
+.search-grid{grid-template-rows:minmax(0,1fr) 148px}
+.search-actions{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr);gap:9px}
+.tile{border:0;border-radius:17px;background:linear-gradient(145deg,#0f4c38,#0b382a);color:#fff;text-align:left;padding:13px;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:9px}
+.tile i{width:40px;height:40px;border:1px solid rgba(223,184,92,.45);border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:21px;color:var(--gold)}
+.tile b{font-size:16px}.tile small{display:block;opacity:.72}.tile em{font-style:normal;color:var(--gold);font-size:25px}
+.recent{padding:12px 14px;overflow:hidden}.recent-head{display:flex;justify-content:space-between;margin-bottom:7px}
+.recent-row{height:34px;display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:center;border-top:1px solid rgba(255,255,255,.08)}
+.thumb{height:28px;border-radius:7px;background:#8ea79b}.recent-row small{opacity:.65}
+
+/* prep */
+.prep-grid{grid-template-rows:112px minmax(0,1fr)}
+.prep-summary{padding:14px 16px;display:grid;grid-template-columns:1fr 72px;align-items:center}
+.prep-summary small{color:var(--gold);letter-spacing:.12em}.prep-summary h1{margin:2px 0;font-size:28px}.prep-summary p{margin:0;opacity:.72}
+.progress{width:62px;height:62px;border:7px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;display:grid;place-items:center;font-weight:900}
+.prep-actions{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr);gap:9px}
+.prep-button{border:0;border-radius:18px;background:var(--green);color:#fff;padding:13px;text-align:left;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:8px}
+.prep-button i{font-style:normal;font-size:24px;color:var(--gold)}.prep-button b{font-size:18px}.prep-button small{display:block;opacity:.65}.prep-button em{font-style:normal;color:var(--gold)}
+.prep-button.wide{grid-column:1/-1}
+
+/* record */
+.record-grid{grid-template-rows:70px minmax(0,1fr) 86px}
+.record-head{padding:12px 15px;display:flex;justify-content:space-between;align-items:center}.record-head h1{margin:0;font-size:26px}.record-head span{font-size:11px;border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.08)}
+.map{position:relative;overflow:hidden;background:
+linear-gradient(25deg,transparent 48%,#f2c791 49%,#f2c791 53%,transparent 54%),
+linear-gradient(105deg,transparent 45%,#d5dfd9 46%,#d5dfd9 52%,transparent 53%),#e8ece8}
+.map:before,.map:after{content:"";position:absolute;background:#a8c7b0;border-radius:45%}
+.map:before{width:180px;height:130px;right:-30px;top:30px}.map:after{width:130px;height:90px;left:30px;bottom:40px}
+.current-dot{position:absolute;left:50%;top:43%;width:28px;height:28px;border-radius:50%;background:#2877d7;border:6px solid #dbe8f8;box-shadow:0 0 0 7px rgba(40,119,215,.2)}
+.metrics{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(4,26,19,.92);border-radius:16px;padding:9px;display:grid;grid-template-columns:1fr 1fr;gap:7px;color:#fff}
+.metric{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px}.metric small{opacity:.65}.metric b{display:block;font-size:20px;text-align:right}
+.record-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.record-controls button{border:1px solid var(--line);background:var(--card);border-radius:15px;color:var(--deep);font-weight:900}
+.record-controls button.primary{background:var(--gold);border-color:var(--gold)}
+
+/* memory */
+.memory-grid{grid-template-rows:minmax(0,1fr) 150px}
+.memory-menu{padding:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.memory-button{border:1px solid rgba(223,184,92,.2);border-radius:16px;background:rgba(0,0,0,.18);color:#fff;text-align:left;padding:13px;display:grid;grid-template-columns:38px 1fr auto;gap:8px;align-items:center}
+.memory-button i{font-style:normal;color:var(--gold);font-size:24px}.memory-button b{font-size:16px}.memory-button small{display:block;opacity:.68}.memory-button em{font-style:normal;color:var(--gold);font-size:24px}
+
+/* bottom nav */
+.nav{background:#f7f3e9;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.nav button{border:0;background:transparent;color:#6d6b64;display:grid;place-items:center;gap:2px;font-weight:800}
+.nav button i{font-style:normal;font-size:25px}.nav button span{font-size:11px}
+.nav button.active{background:var(--green);color:#fff;border-radius:18px;margin:5px}
+
+/* modal */
+.backdrop{position:fixed;inset:0;background:rgba(4,18,13,.58);display:none;align-items:flex-end;z-index:20}
+.backdrop.show{display:flex}.sheet{width:100%;background:var(--card);border-radius:26px 26px 0 0;padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
+.sheet-head{display:flex;justify-content:space-between;align-items:start}.sheet h2{margin:0}.close{width:40px;height:40px;border:0;border-radius:50%;background:#e9eee9;font-size:24px}
+.start-list{display:grid;gap:9px;margin-top:15px}.start-list button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:15px;text-align:left;font-weight:900}.start-list small{display:block;color:var(--muted);margin-top:3px}
+
+@media(max-height:720px){
+  :root{--head-h:62px;--act-h:62px;--nav-h:66px}
+  .header{padding:7px 14px}.logo{width:38px;height:38px}.plan{padding:6px 10px}
+  .activity-shell{padding:6px 12px}.activity-bar{height:48px}.activity-chip{height:36px}.add-activity{width:36px;height:36px}
+  .main{padding-bottom:6px}.panel{gap:7px}.calendar{padding:10px}.selected-card{padding:9px 12px}
+  .prep-summary{padding:10px 14px}.record-grid{grid-template-rows:58px minmax(0,1fr) 72px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="brand"><div class="logo">OB</div><div><b>OUTBASE</b><small>ROUTE DESIGN</small></div></div>
+    <button class="plan"><b>キャンプ</b><small>7/15–7/16・他1件</small></button>
+  </header>
+
+  <div class="activity-shell">
+    <div class="activity-bar">
+      <span class="activity-label">活動</span>
+      <div class="activity-rail" id="activityRail"></div>
+      <button class="add-activity" id="addActivity">＋</button>
+    </div>
+  </div>
+
+  <main class="main">
+    <section class="screen active" data-screen="plan">
+      <div class="panel plan-grid">
+        <div class="card dark calendar">
+          <div class="calendar-head"><b>2026.07</b><div class="month-buttons"><button>‹</button><button>今日</button><button>›</button></div></div>
+          <div class="week"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+          <div class="days" id="days"></div>
+        </div>
+        <div class="card selected-card">
+          <div><small>選択日　7月15日（水）</small><b>キャンプ　7/15–7/16</b></div><button class="action">予定を見る</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="search">
+      <div class="panel search-grid">
+        <div class="search-actions">
+          <button class="tile"><i>△</i><span><b>キャンプ場</b><small>犬可・温水・距離</small></span><em>›</em></button>
+          <button class="tile"><i>⌁</i><span><b>散歩場所</b><small>駐車場・日陰・水辺</small></span><em>›</em></button>
+          <button class="tile"><i>♧</i><span><b>ペットイベント</b><small>同行条件で探す</small></span><em>›</em></button>
+          <button class="tile"><i>☕</i><span><b>ドッグカフェ</b><small>寄り道候補</small></span><em>›</em></button>
+          <button class="tile"><i>▤</i><span><b>下見メモ</b><small>現地で残す</small></span><em>›</em></button>
+          <button class="tile"><i>♢</i><span><b>保存候補</b><small>あとで比較</small></span><em>›</em></button>
+        </div>
+        <div class="card dark recent">
+          <div class="recent-head"><b>最近保存した候補</b><button class="state">一覧へ ›</button></div>
+          <div class="recent-row"><span class="thumb"></span><span><b>手賀沼親水広場</b><small>散歩場所</small></span><em>›</em></div>
+          <div class="recent-row"><span class="thumb"></span><span><b>印旛沼サンセットヒルズ</b><small>キャンプ場</small></span><em>›</em></div>
+          <div class="recent-row"><span class="thumb"></span><span><b>cafe HYGGE</b><small>ドッグカフェ</small></span><em>›</em></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="prep">
+      <div class="panel prep-grid">
+        <div class="card dark prep-summary">
+          <div><small>今回の準備</small><h1>キャンプ</h1><p>7/15–7/16・未完了15件</p></div><div class="progress">0%</div>
+        </div>
+        <div class="prep-actions">
+          <button class="prep-button"><i>☀</i><span><b>天気</b><small>雨・風・気温</small></span><em>0/3 ›</em></button>
+          <button class="prep-button"><i>▣</i><span><b>ギア</b><small>持出し・共通管理</small></span><em>0/3 ›</em></button>
+          <button class="prep-button"><i>☕</i><span><b>料理</b><small>献立・量・手順</small></span><em>0/3 ›</em></button>
+          <button class="prep-button"><i>🛒</i><span><b>買物</b><small>食材・不足品</small></span><em>0/3 ›</em></button>
+          <button class="prep-button"><i>⌁</i><span><b>ルート</b><small>出発・休憩・到着</small></span><em>0/3 ›</em></button>
+          <button class="prep-button"><i>▤</i><span><b>準備メモ</b><small>買う物・改善・候補</small></span><em>2件 ›</em></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="record">
+      <div class="panel record-grid">
+        <div class="card dark record-head"><h1>記録</h1><span>● 記録中</span><button class="action">終了</button></div>
+        <div class="card map"><span class="current-dot"></span><div class="metrics"><div class="metric"><small>距離</small><b>0.01 km</b></div><div class="metric"><small>経過時間</small><b>0:06:17</b></div></div></div>
+        <div class="record-controls">
+          <button class="primary">一時停止</button><button>現在地</button><button>場所を保存</button><button>メモ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="memory">
+      <div class="panel memory-grid">
+        <div class="card dark memory-menu">
+          <button class="memory-button"><i>▧</i><span><b>記録一覧</b><small>写真・声・メモ</small></span><em>›</em></button>
+          <button class="memory-button"><i>🛒</i><span><b>次回改善</b><small>買い足し・反省</small></span><em>›</em></button>
+          <button class="memory-button"><i>⌖</i><span><b>場所メモ</b><small>駐車場・日陰</small></span><em>›</em></button>
+          <button class="memory-button"><i>↗</i><span><b>関連付け</b><small>同じ活動をまとめる</small></span><em>›</em></button>
+        </div>
+        <div class="card dark recent">
+          <div class="recent-head"><b>最近の思い出</b><button class="state">一覧へ ›</button></div>
+          <div class="recent-row"><span class="thumb"></span><span><b>赤城山キャンプ</b><small>7/14・写真12件</small></span><em>›</em></div>
+          <div class="recent-row"><span class="thumb"></span><span><b>通常散歩</b><small>7/11・場所1件</small></span><em>›</em></div>
+          <div class="recent-row"><span class="thumb"></span><span><b>手賀沼ドライブ</b><small>7/08・メモ2件</small></span><em>›</em></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="nav">
+    <button class="active" data-tab="plan"><i>▦</i><span>予定</span></button>
+    <button data-tab="search"><i>⌕</i><span>探す</span></button>
+    <button data-tab="prep"><i>▥</i><span>準備</span></button>
+    <button data-tab="record"><i>⊕</i><span>記録</span></button>
+    <button data-tab="memory"><i>○</i><span>思い出</span></button>
+  </nav>
+</div>
+
+<div class="backdrop" id="startSheet">
+  <section class="sheet">
+    <div class="sheet-head"><div><small>新しい活動</small><h2>どう始めますか？</h2></div><button class="close" id="closeSheet">×</button></div>
+    <div class="start-list">
+      <button>予定から開始<small>登録済みの予定を選ぶ</small></button>
+      <button>今すぐ開始<small>散歩・ドライブ・その他</small></button>
+      <button>途中から開始<small>開始時刻と段階を指定</small></button>
+    </div>
+  </section>
+</div>
+
+<script>
+const activities=[
+  {id:1,name:'キャンプ',state:'実行中'},
+  {id:2,name:'ドライブ',state:'休止中'},
+  {id:3,name:'通常散歩',state:'休止中'},
+  {id:4,name:'買物',state:'休止中'}
+];
+let activeActivity=1;
+function renderActivities(){
+  const rail=document.getElementById('activityRail');
+  rail.innerHTML=activities.map(a=>`<button class="activity-chip ${a.id===activeActivity?'active':a.state==='休止中'?'paused':''}" data-activity="${a.id}"><span>${a.name}</span><small>${a.id===activeActivity?'使用中':a.state}</small></button>`).join('');
+}
+renderActivities();
+document.addEventListener('click',e=>{
+  const tab=e.target.closest('[data-tab]');
+  if(tab){
+    document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===tab));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===tab.dataset.tab));
+  }
+  const act=e.target.closest('[data-activity]');
+  if(act){
+    activeActivity=Number(act.dataset.activity);
+    renderActivities();
+  }
+});
+document.getElementById('addActivity').onclick=()=>document.getElementById('startSheet').classList.add('show');
+document.getElementById('closeSheet').onclick=()=>document.getElementById('startSheet').classList.remove('show');
+document.getElementById('startSheet').onclick=e=>{if(e.target.id==='startSheet')e.currentTarget.classList.remove('show')};
+
+const days=document.getElementById('days');
+for(let i=1;i<=35;i++){
+  const d=document.createElement('button');d.className='day'+(i===14?' today':'')+(i===15?' selected':'');
+  d.innerHTML=`${i<=31?i:i-31}${i===15?'<span class="event">キャンプ</span>':''}${i===21?'<span class="event">きゃんぷ</span>':''}`;
+  days.appendChild(d);
+}
+</script>
+</body>
+</html>
