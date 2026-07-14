@@ -1,6 +1,7 @@
 (() => {
   'use strict';
 
+  const SHELL_ID='outbaseSharedActivityShell';
   const STRIP_ID='outbaseDirectActivityStrip';
   const RUNTIME_KEY='outbase_activity_runtime_v2';
   const PRIMARY_KEY='outbase_primary_activity_id_v2';
@@ -21,27 +22,25 @@
     .replaceAll('"','&quot;')
     .replaceAll("'",'&#039;');
 
-  function core(){
-    return globalThis.OUTBASE_CORE||null;
-  }
-
-  function activities(){
-    const rows=core()?.snapshot?.().activities||[];
-    return rows
-      .filter(row=>['active','paused'].includes(row.state))
-      .sort((a,b)=>{
-        const current=currentId();
-        if(a.activityId===current)return -1;
-        if(b.activityId===current)return 1;
-        return String(b.startedAt||'').localeCompare(String(a.startedAt||''));
-      });
-  }
+  function core(){return globalThis.OUTBASE_CORE||null;}
 
   function currentId(){
     return localStorage.getItem('outbase_core_activity_id')||
       localStorage.getItem(PRIMARY_KEY)||
       read('outbase_core_v1_meta',{}).primaryActivityId||
       '';
+  }
+
+  function activities(){
+    const rows=core()?.snapshot?.().activities||[];
+    const primary=currentId();
+    return rows
+      .filter(row=>['active','paused'].includes(row.state))
+      .sort((a,b)=>{
+        if(a.activityId===primary)return -1;
+        if(b.activityId===primary)return 1;
+        return String(b.startedAt||'').localeCompare(String(a.startedAt||''));
+      });
   }
 
   function typeLabel(row={}){
@@ -51,20 +50,23 @@
     if(text.includes('walk')||text.includes('散歩'))return '散歩';
     if(text.includes('shop')||text.includes('買'))return '買物';
     if(text.includes('event')||text.includes('イベント'))return 'イベント';
+    if(text.includes('other')||text.includes('その他'))return 'その他';
     return '活動';
   }
 
   function safeTitle(row={}){
-    const raw=String(row.title||'').trim();
-    if(raw && raw.length<=28 && !/(持ち物候補|予定候補|買う物|改善候補|保存先|メモ|追加する)/.test(raw))return raw;
+    let raw=String(row.title||'').trim();
+    raw=raw.replace(/\s*\d{1,2}[/-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/g,'').trim();
+    if(/^(通常)?散歩$/.test(raw))return '散歩';
+    if(/^その他/.test(raw))return 'その他';
+    if(raw && raw.length<=18 && !/(持ち物候補|予定候補|買う物|改善候補|保存先|メモ|追加する)/.test(raw))return raw;
     return typeLabel(row);
   }
 
   function currentTab(){
     const active=document.querySelector('.page.active');
     if(active?.id?.startsWith('page-'))return active.id.slice(5);
-    const query=new URLSearchParams(location.search).get('tab');
-    return query||'plan';
+    return new URLSearchParams(location.search).get('tab')||'plan';
   }
 
   function saveCurrentRuntime(){
@@ -129,45 +131,52 @@
     const chips=rows.length
       ? rows.map(row=>`<button class="obActivityChip ${row.activityId===primary?'isCurrent':''} ${row.state==='paused'?'isPaused':''}" data-ob-activity="${esc(row.activityId)}">
           <span>${esc(safeTitle(row))}</span>
-          <small>${row.activityId===primary?'使用中':row.state==='paused'?'休止':'実行'}</small>
+          <small>${row.activityId===primary?'実行中':row.state==='paused'?'休止中':'実行中'}</small>
         </button>`).join('')
-      : `<div class="obStateLabel">進行中の活動なし</div>`;
+      : `<div class="obStateLabel">進行中の活動はありません</div>`;
 
     return `<section id="${STRIP_ID}" class="obActivityStrip" aria-label="活動切替">
-      <span class="obActivityStripLabel">現在</span>
+      <span class="obActivityStripLabel">活動</span>
       <div class="obActivityChipRail">${chips}</div>
       <button class="obAddActivity" data-ob-add-activity aria-label="新しい活動を始める">＋</button>
     </section>`;
   }
 
-  function mountStrip(){
-    const page=document.querySelector('.page.active');
-    if(!page)return;
+  function activePage(){
+    return document.querySelector('.page.active');
+  }
+
+  function mountSharedShell(){
+    const page=activePage();
+    if(!page||!page.parentNode)return;
 
     document.querySelectorAll(`#${STRIP_ID}`).forEach(node=>{
-      if(node.parentElement!==page)node.remove();
+      if(!node.closest(`#${SHELL_ID}`))node.remove();
     });
 
-    let strip=page.querySelector(`:scope > #${STRIP_ID}`);
-    if(!strip){
-      const holder=document.createElement('div');
-      holder.innerHTML=stripHtml();
-      strip=holder.firstElementChild;
-      page.prepend(strip);
-    }else{
-      strip.outerHTML=stripHtml();
+    let shell=document.getElementById(SHELL_ID);
+    if(!shell){
+      shell=document.createElement('div');
+      shell.id=SHELL_ID;
+      shell.className='obSharedActivityShell';
     }
+
+    if(shell.parentNode!==page.parentNode || shell.nextSibling!==page){
+      page.parentNode.insertBefore(shell,page);
+    }
+
+    shell.innerHTML=stripHtml();
   }
 
   function hideLegacy(){
     document.getElementById('outbaseActivityBar')?.remove();
     document.getElementById('outbaseScenarioEntry')?.remove();
-    document.querySelectorAll('.outbaseGlobalSearchButton,[class*="GlobalSearchButton"],.scenarioMiniButton').forEach(node=>node.remove());
+    document.querySelectorAll('.outbaseGlobalSearchButton,[class*="GlobalSearchButton"],.scenarioMiniButton,.obPageMore').forEach(node=>node.remove());
 
     document.querySelectorAll('body *').forEach(node=>{
       if(node.children.length>5)return;
       const text=(node.textContent||'').trim();
-      if(text.startsWith('保存先：') && text.length<100)node.classList.add('obDestinationLegacy');
+      if(text.startsWith('保存先：')&&text.length<100)node.classList.add('obDestinationLegacy');
     });
   }
 
@@ -176,7 +185,7 @@
     if(!page)return;
     [...page.children].forEach(child=>{
       const text=(child.textContent||'').replace(/\s+/g,' ').trim();
-      if(text.startsWith('探す') && /候補探し|行く前/.test(text))child.classList.add('obDecorativeHero');
+      if(text.startsWith('探す')&&/候補探し|行く前/.test(text))child.classList.add('obDecorativeHero');
     });
   }
 
@@ -198,30 +207,19 @@
     });
   }
 
-  function addMoreButton(pageId){
-    const page=document.getElementById(pageId);
-    if(!page || page.querySelector(':scope > .obPageMore'))return;
-    const button=document.createElement('button');
-    button.type='button';
-    button.className='obPageMore';
-    button.dataset.obExpand='1';
-    button.textContent='すべて見る';
-    page.appendChild(button);
+  function markStaticStates(){
+    document.querySelectorAll('.page.active [class*="Status"],.page.active [class*="Count"]').forEach(node=>{
+      if(node.tagName!=='BUTTON'&&!node.closest('button'))node.classList.add('obStaticState');
+    });
   }
 
-  function fitPages(){
+  function preparePages(){
     document.body.classList.add('obCompactMode');
-    ['page-plan','page-search','page-prep','page-record','page-memory'].forEach(id=>{
-      document.getElementById(id)?.classList.add('obCompactPage');
-    });
-
+    document.querySelectorAll('.page').forEach(page=>page.classList.remove('obExpanded'));
     markSearchHero();
     markMemoryReview();
     markRecordDuplicates();
-
-    addMoreButton('page-search');
-    addMoreButton('page-prep');
-    addMoreButton('page-memory');
+    markStaticStates();
   }
 
   function render(){
@@ -229,8 +227,8 @@
     observerBusy=true;
     try{
       hideLegacy();
-      mountStrip();
-      fitPages();
+      preparePages();
+      mountSharedShell();
     }finally{
       observerBusy=false;
     }
@@ -245,21 +243,12 @@
     const activity=event.target.closest?.('[data-ob-activity]');
     if(activity){
       const row=activities().find(item=>item.activityId===activity.dataset.obActivity);
-      if(row && row.activityId!==currentId())restoreActivity(row);
+      if(row&&row.activityId!==currentId())restoreActivity(row);
       return;
     }
 
     if(event.target.closest?.('[data-ob-add-activity]')){
       globalThis.OUTBASE_SCENARIOS?.open?.('now');
-      return;
-    }
-
-    const expand=event.target.closest?.('[data-ob-expand]');
-    if(expand){
-      const page=expand.closest('.page');
-      if(!page)return;
-      const opened=page.classList.toggle('obExpanded');
-      expand.textContent=opened?'閉じる':'すべて見る';
     }
   },true);
 
@@ -277,5 +266,4 @@
   window.addEventListener('popstate',schedule);
   globalThis.addEventListener('outbase:core-ready',schedule);
   globalThis.addEventListener('outbase:activity-refresh',schedule);
-  setInterval(schedule,5000);
 })();

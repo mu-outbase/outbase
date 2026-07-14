@@ -1,10 +1,10 @@
 {
-  "name": "OUTBASE FIELD03 5画面一画面統合",
-  "version": "1.0",
-  "cacheVersion": "outbase-field03-compact-1",
+  "name": "OUTBASE FIELD03 共通シェル再設計",
+  "version": "2.0",
+  "cacheVersion": "outbase-field03-compact-2",
   "repository": "mu-outbase/outbase",
   "branch": "main",
-  "baseCommit": "d9f745d6c8d7fb110883a1a1ea4df7041b97c34c",
+  "baseCompactVersion": "outbase-field03-compact-1",
   "files": [
     "index.html",
     "service-worker.js",
@@ -12,11 +12,13 @@
     "src/outbase-compact-ui.js",
     "README.md"
   ],
-  "scope": [
-    "5画面一画面化",
-    "Activity直接切替",
-    "ボタンと状態ラベルの視覚分離",
-    "旧Activityバー・虫眼鏡・巨大切替カードの除外"
+  "fixes": [
+    "スクロール禁止撤廃",
+    "ページ高さ制限撤廃",
+    "Activityバー共通位置化",
+    "Activityバー寸法統一",
+    "すべて見るフローティングボタン廃止",
+    "記録地図の占有率調整"
   ],
   "status": "GitHub反映待ち"
 }
