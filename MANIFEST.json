@@ -1,24 +1,22 @@
 {
-  "name": "OUTBASE FIELD03 複数Activity統合",
-  "version": "2.0",
-  "cacheVersion": "outbase-field03-lifecycle-2",
+  "name": "OUTBASE FIELD03 5画面一画面統合",
+  "version": "1.0",
+  "cacheVersion": "outbase-field03-compact-1",
   "repository": "mu-outbase/outbase",
   "branch": "main",
-  "baseCommit": "151af27918124f42e424959c8ad7e63792ed9eb4",
+  "baseCommit": "d9f745d6c8d7fb110883a1a1ea4df7041b97c34c",
   "files": [
     "index.html",
     "service-worker.js",
-    "style-scenarios.css",
-    "src/outbase-scenarios.js",
-    "src/outbase-activity-title-guard.js",
+    "style-compact-ui.css",
+    "src/outbase-compact-ui.js",
     "README.md"
   ],
   "scope": [
-    "複数Activity作成",
-    "主役Activity切替",
-    "Session退避復元",
-    "Activity名補正",
-    "主役プラン同期"
+    "5画面一画面化",
+    "Activity直接切替",
+    "ボタンと状態ラベルの視覚分離",
+    "旧Activityバー・虫眼鏡・巨大切替カードの除外"
   ],
   "status": "GitHub反映待ち"
 }

@@ -1,0 +1,316 @@
+
+:root{
+  --ob-bg:#f5f0e4;
+  --ob-green:#0f4c38;
+  --ob-green-dark:#082f23;
+  --ob-gold:#deb65b;
+  --ob-line:rgba(15,76,56,.16);
+  --ob-white:#fffdf8;
+  --ob-muted:#70766f;
+}
+
+html,body{background:var(--ob-bg)}
+body.obCompactMode{
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+
+/* 常時邪魔になる旧UIは非表示 */
+body.obCompactMode #outbaseActivityBar,
+body.obCompactMode .activityBar,
+body.obCompactMode #outbaseScenarioEntry,
+body.obCompactMode .scenarioEntryCard,
+body.obCompactMode .outbaseGlobalSearchButton,
+body.obCompactMode [class*="GlobalSearchButton"],
+body.obCompactMode #outbaseInstantEntry,
+body.obCompactMode .scenarioMiniButton{
+  display:none!important;
+}
+
+/* 保存先は状態ラベルとして縮小。操作はChappy内へ */
+body.obCompactMode .obDestinationLegacy{
+  display:none!important;
+}
+
+/* 5画面共通 */
+body.obCompactMode .page{
+  box-sizing:border-box;
+  max-height:calc(100dvh - 138px);
+  min-height:calc(100dvh - 138px);
+  overflow:hidden;
+  padding-bottom:10px!important;
+}
+body.obCompactMode .page.obExpanded{
+  overflow:auto;
+  max-height:calc(100dvh - 84px);
+  padding-bottom:96px!important;
+}
+body.obCompactMode .page.active{
+  display:block;
+}
+body.obCompactMode .page>*{
+  margin-top:10px!important;
+  margin-bottom:10px!important;
+}
+body.obCompactMode .page button{
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+body.obCompactMode .page button:not(.obActivityChip):not(.obAddActivity):not(.obPageMore){
+  box-shadow:0 2px 0 rgba(15,76,56,.06);
+}
+body.obCompactMode .page [aria-disabled="true"],
+body.obCompactMode .page button:disabled{
+  opacity:.45;
+  box-shadow:none!important;
+}
+
+/* 直接切替バー */
+.obActivityStrip{
+  position:relative;
+  z-index:6;
+  margin:8px 16px 6px!important;
+  padding:8px 9px;
+  border:1px solid var(--ob-line);
+  border-radius:18px;
+  background:rgba(255,253,248,.96);
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:8px;
+  box-shadow:0 7px 22px rgba(22,43,34,.10);
+}
+.obActivityStripLabel{
+  font-size:11px;
+  font-weight:900;
+  color:var(--ob-muted);
+  white-space:nowrap;
+}
+.obActivityChipRail{
+  min-width:0;
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.obActivityChipRail::-webkit-scrollbar{display:none}
+.obActivityChip{
+  flex:0 0 auto;
+  min-height:38px;
+  max-width:170px;
+  padding:7px 12px;
+  border:1px solid rgba(15,76,56,.22);
+  border-radius:999px;
+  background:#fff;
+  color:var(--ob-green-dark);
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-weight:900;
+}
+.obActivityChip span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.obActivityChip small{
+  flex:0 0 auto;
+  font-size:9px;
+  font-weight:800;
+  color:#7d847f;
+}
+.obActivityChip.isCurrent{
+  background:var(--ob-green);
+  color:white;
+  border-color:var(--ob-green);
+}
+.obActivityChip.isCurrent small{color:#f5d77d}
+.obActivityChip.isPaused{
+  border-style:dashed;
+  background:#fbfaf6;
+}
+.obAddActivity{
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:999px;
+  background:var(--ob-gold);
+  color:var(--ob-green-dark);
+  font-size:26px;
+  font-weight:800;
+  line-height:1;
+}
+
+/* 詳細展開 */
+.obPageMore{
+  position:sticky;
+  z-index:8;
+  bottom:8px;
+  float:right;
+  margin:-54px 18px 8px 0!important;
+  border:0;
+  border-radius:999px;
+  padding:10px 15px;
+  background:var(--ob-green);
+  color:white;
+  font-weight:900;
+  box-shadow:0 8px 22px rgba(0,0,0,.20);
+}
+.page.obExpanded .obPageMore{
+  position:fixed;
+  right:10px;
+  bottom:92px;
+  margin:0!important;
+}
+
+/* 予定 */
+body.obCompactMode #page-plan{
+  padding-top:0!important;
+}
+body.obCompactMode #page-plan [class*="calendar"],
+body.obCompactMode #page-plan [class*="Calendar"]{
+  margin-top:8px!important;
+}
+body.obCompactMode #page-plan [class*="calendar"]{
+  max-height:56vh;
+}
+body.obCompactMode #page-plan [class*="calendar"] *{
+  line-height:1.15;
+}
+body.obCompactMode #page-plan [class*="selected"],
+body.obCompactMode #page-plan [class*="Selected"]{
+  margin-top:8px!important;
+}
+
+/* 探す */
+body.obCompactMode #page-search{
+  padding-top:0!important;
+}
+body.obCompactMode #page-search .obDecorativeHero{
+  display:none!important;
+}
+body.obCompactMode #page-search>div,
+body.obCompactMode #page-search>section{
+  border-radius:18px!important;
+}
+body.obCompactMode #page-search [class*="Grid"],
+body.obCompactMode #page-search [class*="grid"]{
+  gap:10px!important;
+}
+body.obCompactMode #page-search button{
+  min-height:72px!important;
+}
+
+/* 準備 */
+body.obCompactMode #outbaseFlowRoot:not([role="dialog"]){
+  display:none!important;
+}
+body.obCompactMode #page-prep .prepHero{
+  min-height:0!important;
+  padding:12px 16px!important;
+  border-radius:18px!important;
+}
+body.obCompactMode #page-prep .prepHero img{
+  display:none!important;
+}
+body.obCompactMode #page-prep .prepHeroCopy h1{
+  font-size:28px!important;
+  margin:0!important;
+}
+body.obCompactMode #page-prep .prepHeroCopy p,
+body.obCompactMode #page-prep .prepHeroCopy span{
+  display:inline!important;
+  font-size:12px!important;
+}
+body.obCompactMode #page-prep .prepCommandBar{
+  display:none!important;
+}
+body.obCompactMode #page-prep .prepSectionHead{
+  margin:4px 16px!important;
+}
+body.obCompactMode #page-prep .prepModuleGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;
+  padding:0 16px!important;
+}
+body.obCompactMode #page-prep .prepModuleCard{
+  min-height:82px!important;
+  padding:10px!important;
+  border-radius:16px!important;
+}
+body.obCompactMode #page-prep .prepModuleCard small,
+body.obCompactMode #page-prep .prepModuleCard span{
+  font-size:10px!important;
+}
+body.obCompactMode #page-prep .prepModuleCard h3{
+  font-size:16px!important;
+  margin:0!important;
+}
+
+/* 記録 */
+body.obCompactMode #page-record{
+  padding-top:0!important;
+}
+body.obCompactMode #page-record [class*="recordHero"],
+body.obCompactMode #page-record [class*="RecordHero"]{
+  min-height:0!important;
+  padding:9px 16px!important;
+  border-radius:16px!important;
+}
+body.obCompactMode #page-record [class*="recordMap"],
+body.obCompactMode #page-record [class*="RecordMap"],
+body.obCompactMode #page-record #recordLiveMap{
+  max-height:calc(100dvh - 300px)!important;
+}
+body.obCompactMode #page-record .obRecordDuplicate{
+  display:none!important;
+}
+
+/* 思い出 */
+body.obCompactMode #page-memory{
+  padding-top:0!important;
+}
+body.obCompactMode #page-memory .obReviewSection{
+  display:none!important;
+}
+body.obCompactMode #page-memory [class*="memoryHero"],
+body.obCompactMode #page-memory [class*="MemoryHero"]{
+  min-height:0!important;
+  padding:14px!important;
+  border-radius:18px!important;
+}
+body.obCompactMode #page-memory [class*="memoryHero"] h1,
+body.obCompactMode #page-memory [class*="MemoryHero"] h1{
+  font-size:34px!important;
+}
+body.obCompactMode #page-memory [class*="Grid"],
+body.obCompactMode #page-memory [class*="grid"]{
+  gap:10px!important;
+}
+body.obCompactMode #page-memory button{
+  min-height:68px;
+}
+
+/* 押せる／押せないの差 */
+body.obCompactMode .obStateLabel,
+body.obCompactMode [class*="Count"],
+body.obCompactMode [class*="Status"]:not(button){
+  border:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  color:var(--ob-muted)!important;
+  pointer-events:none!important;
+}
+body.obCompactMode button svg,
+body.obCompactMode button .icon{
+  pointer-events:none;
+}
+
+@media(max-width:430px){
+  .obActivityStrip{margin-left:10px!important;margin-right:10px!important}
+  .obActivityStripLabel{display:none}
+  .obActivityStrip{grid-template-columns:minmax(0,1fr) auto}
+  .obActivityChip{max-width:145px}
+  body.obCompactMode #page-prep .prepModuleGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
