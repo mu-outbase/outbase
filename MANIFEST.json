@@ -1,25 +1,24 @@
 {
-  "name": "OUTBASE FIELD03 共通ライフサイクル基盤統合",
-  "version": "1.0",
-  "cacheVersion": "outbase-field03-lifecycle-1",
+  "name": "OUTBASE FIELD03 複数Activity統合",
+  "version": "2.0",
+  "cacheVersion": "outbase-field03-lifecycle-2",
   "repository": "mu-outbase/outbase",
   "branch": "main",
-  "baseCommit": "7670c708c64c76e997b7cbce2469e414b4efc5f3",
+  "baseCommit": "151af27918124f42e424959c8ad7e63792ed9eb4",
   "files": [
     "index.html",
     "service-worker.js",
     "style-scenarios.css",
     "src/outbase-scenarios.js",
+    "src/outbase-activity-title-guard.js",
     "README.md"
   ],
   "scope": [
-    "予定済みキャンプ",
-    "予定なし散歩",
-    "途中から開始",
-    "過去の活動登録",
-    "複数Activity切替",
-    "モーダル中の緑バー・虫眼鏡非表示",
-    "準備画面の戻り先保持"
+    "複数Activity作成",
+    "主役Activity切替",
+    "Session退避復元",
+    "Activity名補正",
+    "主役プラン同期"
   ],
   "status": "GitHub反映待ち"
 }

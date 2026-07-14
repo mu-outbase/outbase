@@ -276,3 +276,12 @@ body.outbaseBlockingLayer .outbaseUpdateToast{
   .scenarioEntryHead{align-items:stretch}
   .scenarioEntryHead>button{align-self:flex-start}
 }
+
+
+.scenarioSwitchStart{display:grid;gap:12px;padding:14px;border-radius:18px;background:#173d2d;color:#fff}
+.scenarioSwitchStart small{font-size:9px;letter-spacing:.14em;color:#d9b964;font-weight:900}
+.scenarioSwitchStart b{display:block;margin:4px 0;font-size:17px}
+.scenarioSwitchStart p{margin:0;font-size:12px;opacity:.76}
+.scenarioSwitchStartActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.scenarioSwitchStartActions button{border:0;border-radius:13px;padding:11px 8px;background:#fff;color:#173d2d;font-weight:900}
+@media(max-width:560px){.scenarioSwitchStartActions{grid-template-columns:1fr}}

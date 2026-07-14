@@ -99,6 +99,107 @@
     return typeById('other');
   }
 
+
+  function planById(id){
+    if(!id)return null;
+    return plans().find(plan=>String(plan.id)===String(id))||null;
+  }
+
+  function typeForActivity(row={}){
+    const raw=String(row.activityType||'').toLowerCase();
+    const direct=TYPES.find(type=>type.id===raw);
+    if(direct)return direct;
+    const text=`${raw} ${row.title||''}`.toLowerCase();
+    if(text.includes('キャンプ')||text.includes('camp'))return typeById('camp');
+    if(text.includes('ドライブ')||text.includes('drive'))return typeById('drive');
+    if(text.includes('散歩')||text.includes('walk'))return typeById('walk');
+    if(text.includes('買')||text.includes('shop'))return typeById('shopping');
+    if(text.includes('イベント')||text.includes('event'))return typeById('event');
+    return typeById('other');
+  }
+
+  function suspiciousActivityTitle(value){
+    const title=String(value||'').trim();
+    if(!title)return true;
+    if(title.length>34)return true;
+    return /(持ち物候補|予定候補|買う物|改善候補|追加する|保存先|メモ|してください|予備の|あとで|未確認箱)/.test(title);
+  }
+
+  function activityDisplayTitle(row={}){
+    const linkedPlan=planById(row.planIds?.[0]);
+    if(linkedPlan)return planTitle(linkedPlan);
+    const raw=String(row.title||'').trim();
+    if(!suspiciousActivityTitle(raw))return raw;
+    const type=typeForActivity(row);
+    const date=row.startedAt?new Date(row.startedAt).toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}):'';
+    return `${type.label}${date?` ${date}`:''}`;
+  }
+
+  function saveActivityRow(row,patch={}){
+    if(!row?.activityId)return null;
+    return core()?.upsertActivity?.({
+      activityId:row.activityId,
+      activityType:row.activityType||typeForActivity(row).id,
+      title:patch.title||activityDisplayTitle(row),
+      state:patch.state||row.state||'paused',
+      currentPhase:patch.currentPhase||row.currentPhase||'記録中',
+      startedAt:row.startedAt||null,
+      becameInactiveAt:patch.becameInactiveAt??row.becameInactiveAt??null,
+      planIds:Array.isArray(row.planIds)?row.planIds:[],
+      parentActivityId:row.parentActivityId??null,
+      source:row.source||'scenario-switch',
+      legacySessionId:row.legacySessionId??null
+    });
+  }
+
+  function pausePrimaryActivity(exceptActivityId=''){
+    const primaryId=currentActivityId();
+    if(!primaryId||primaryId===exceptActivityId)return;
+    const row=activeRows().find(item=>item.activityId===primaryId);
+    saveCurrentRuntime();
+    if(!row)return;
+    const all=read(RUNTIME_KEY,{});
+    const runtime=all[primaryId]||{};
+    const activeStartedAt=Number(runtime.activeStartedAt||localStorage.getItem('outbase_record_active_started_at')||0);
+    const elapsedMs=Number(runtime.elapsedMs||localStorage.getItem('outbase_record_elapsed_ms')||0);
+    runtime.elapsedMs=elapsedMs+(activeStartedAt?Math.max(0,Date.now()-activeStartedAt):0);
+    runtime.activeStartedAt=0;
+    runtime.state='paused';
+    runtime.savedAt=Date.now();
+    all[primaryId]=runtime;
+    write(RUNTIME_KEY,all);
+    saveActivityRow(row,{state:'paused',currentPhase:'休止'});
+  }
+
+  function activateActivity(row){
+    if(!row)return;
+    const all=read(RUNTIME_KEY,{});
+    const type=typeForActivity(row);
+    const runtime=all[row.activityId]||{
+      activityId:row.activityId,
+      target:type.target,
+      sessionId:row.legacySessionId||`session_${row.activityId}`,
+      startedAt:row.startedAt?new Date(row.startedAt).getTime():Date.now(),
+      elapsedMs:0,
+      currentPosition:null,
+      trackPoints:[],
+      savedPins:[],
+      mapZoom:16
+    };
+    runtime.state='active';
+    runtime.target=runtime.target||type.target;
+    runtime.sessionId=runtime.sessionId||row.legacySessionId||`session_${row.activityId}`;
+    runtime.startedAt=runtime.startedAt||Date.now();
+    runtime.activeStartedAt=Date.now();
+    runtime.savedAt=Date.now();
+    all[row.activityId]=runtime;
+    write(RUNTIME_KEY,all);
+    const nextPhase=row.currentPhase==='休止'?typeForActivity(row).phase:(row.currentPhase||typeForActivity(row).phase);
+    const updated={...row,state:'active',currentPhase:nextPhase,title:activityDisplayTitle(row)};
+    saveActivityRow(updated,{state:'active',currentPhase:nextPhase,title:activityDisplayTitle(row)});
+    restoreRuntime(updated);
+  }
+
   function planOptions(selected=''){
     const rows=plans();
     return `<option value="">プランなし</option>${rows.map(plan=>
@@ -148,10 +249,11 @@
 
   function restoreRuntime(activity){
     const all=read(RUNTIME_KEY,{});
+    const fallbackType=typeForActivity(activity);
     const runtime=all[activity.activityId]||{
       activityId:activity.activityId,
       state:activity.state||'paused',
-      target:activity.title||activity.activityType||'記録',
+      target:fallbackType.target,
       sessionId:activity.legacySessionId||`session_${activity.activityId}`,
       startedAt:activity.startedAt?new Date(activity.startedAt).getTime():Date.now(),
       elapsedMs:0,
@@ -176,10 +278,12 @@
 
     const planId=activity.planIds?.[0]||'';
     if(planId)localStorage.setItem('outbase_active_plan_id',planId);
+    else localStorage.removeItem('outbase_active_plan_id');
+    globalThis.dispatchEvent(new CustomEvent('outbase:activity-refresh',{detail:{activityId:activity.activityId,planId:planId||null}}));
   }
 
   function startActiveActivity({typeId,title='',planId='',startedAt=Date.now(),phase='',origin='now'}){
-    saveCurrentRuntime();
+    pausePrimaryActivity();
 
     const type=typeById(typeId);
     const startMs=new Date(startedAt).getTime();
@@ -319,9 +423,9 @@
 
   function switchActivity(activityId){
     const row=activeRows().find(item=>item.activityId===activityId);
-    if(!row)return;
-    saveCurrentRuntime();
-    restoreRuntime(row);
+    if(!row||row.activityId===currentActivityId())return;
+    pausePrimaryActivity(activityId);
+    activateActivity(row);
     closeSheet();
     location.href=`?tab=record&activityId=${encodeURIComponent(activityId)}`;
   }
@@ -386,16 +490,28 @@
   function switchMarkup(){
     const rows=activeRows();
     const primary=currentActivityId();
-    if(!rows.length)return `<div class="scenarioEmpty">実行中・休止中のActivityはありません。</div>`;
-    return `<div class="scenarioIntro"><b>複数同時進行</b><p>現在の記録状態を退避してから、選んだActivityのSessionを復元します。</p></div>
-      <div class="scenarioList">${rows.map(row=>`<article class="scenarioRow ${row.activityId===primary?'primary':''}">
+    const list=rows.length?`<div class="scenarioList">${rows.map(row=>{
+      const linkedPlan=planById(row.planIds?.[0]);
+      const type=typeForActivity(row);
+      return `<article class="scenarioRow ${row.activityId===primary?'primary':''}">
         <div>
           <small>${row.activityId===primary?'現在の主役 / ':''}${esc(row.state==='paused'?'休止中':'実行中')} / ${esc(row.currentPhase||'')}</small>
-          <b>${esc(row.title||row.activityType||'活動')}</b>
-          <p>${row.startedAt?new Date(row.startedAt).toLocaleString('ja-JP'):'開始時刻未設定'}${row.planIds?.length?`・プラン ${row.planIds.length}件`:''}</p>
+          <b>${esc(activityDisplayTitle(row))}</b>
+          <p>${esc(type.label)}${linkedPlan?`・主役プラン ${esc(planTitle(linkedPlan))}`:'・プランなし'}${row.startedAt?`・${new Date(row.startedAt).toLocaleString('ja-JP')}`:''}</p>
         </div>
-        <button data-scenario-switch="${esc(row.activityId)}">${row.activityId===primary?'表示中':'切替'}</button>
-      </article>`).join('')}</div>`;
+        <button data-scenario-switch="${esc(row.activityId)}">${row.activityId===primary?'表示中':'この活動へ切替'}</button>
+      </article>`;
+    }).join('')}</div>`:`<div class="scenarioEmpty">実行中・休止中のActivityはありません。</div>`;
+    return `<div class="scenarioIntro"><b>複数同時進行</b><p>端末で操作する主役Activityは1件。ほかのActivityは休止状態で保持し、いつでも復元できます。</p></div>
+      ${list}
+      <section class="scenarioSwitchStart">
+        <div><small>START ANOTHER ACTIVITY</small><b>${rows.length===1?'切替先を作る':'別の活動を並行して始める'}</b><p>この画面から新しいActivityを追加できます。</p></div>
+        <div class="scenarioSwitchStartActions">
+          <button data-scenario-view="planned">予定から開始</button>
+          <button data-scenario-view="now">予定なしで開始</button>
+          <button data-scenario-view="midway">途中から開始</button>
+        </div>
+      </section>`;
   }
 
   function bodyMarkup(){

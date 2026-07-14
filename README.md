@@ -1,31 +1,34 @@
-# OUTBASE FIELD03 共通ライフサイクル基盤統合 v1
+# OUTBASE FIELD03 複数Activity統合 v2
 
 ## 目的
-細かいボタン修正ではなく、次の4本の実利用シナリオに共通する入口とActivity切替基盤をまとめて追加します。
-
-1. 予定済みキャンプ
-2. 予定なし散歩
-3. 過去の活動登録
-4. 複数プラン・Activity同時進行
+複数Activityの作成・表示・切替を一つの画面で完結させ、Activity名へのメモ混入と主役プラン不一致をまとめて修正します。
 
 ## 実装内容
-- 予定からActivity開始
-- 予定なしで活動種別を選んで開始
-- 実際の開始時刻・段階を指定して途中から開始
-- 過去日時のActivityを現在Sessionにせず登録
-- 実行中・休止中Activityの切替
-- Activityごとの現在Session状態、経過、GPS、ピンの退避と復元
-- 記録画面、思い出画面、ホームの「その他」へ入口追加
-- モーダル・終了確認中は緑Activityバー、虫眼鏡、更新通知を非表示
-- 準備一本線を閉じた際、開いた元タブへ戻す
+- 「切替」画面から、予定／予定なし／途中開始で新しいActivityを追加
+- 端末で操作する主役Activityは1件に固定
+- 切替前ActivityのSession状態・経過・GPS・ピンを退避
+- 切替先ActivityのSessionを復元
+- 切替元は休止、切替先は実行中へ統一
+- Activity表示名は、紐付く主役プラン名を最優先
+- メモ・持ち物候補などがActivity名へ混入した既存データを自動補正
+- プランなしActivityへ切り替えた場合、前の主役プランを残さない
+- 緑Activityバーも補正後のActivity名を表示
 
 ## 更新ファイル
 - index.html
 - service-worker.js
-- style-scenarios.css（新規）
-- src/outbase-scenarios.js（新規）
+- style-scenarios.css
+- src/outbase-scenarios.js
+- src/outbase-activity-title-guard.js（新規）
 
-## 注意
-この版は4シナリオの共通入口・所属・切替基盤です。
-料理、ギア、レビュー、公開、同期などの全機能完成版ではありません。
-GitHub反映後は細かい不具合単位ではなく、4シナリオを最初から最後まで一括確認します。
+## 操作
+1. 記録 → 活動を始める・切り替える → 切替
+2. 「切替先を作る」から、予定／予定なし／途中開始を選ぶ
+3. 新しいActivity開始後、再度「切替」を開く
+4. 保持中のActivityにある「この活動へ切替」を押す
+
+## 完了確認
+- 2件以上のActivityが一覧に残る
+- 表示中Activityだけが実行中、その他は休止中
+- 切替後に主役プラン・Activity名・記録先が一致
+- メモ文がActivity名として表示されない
