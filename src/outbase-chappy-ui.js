@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const ID='outbaseChappySheet', LAST='outbase_chappy_last_request_id', LAST_INSTRUCTION='outbase_chappy_last_instruction';
+const ID='outbaseChappySheet', DESTINATION_ID='outbaseChappyDestinationSheet', LAST='outbase_chappy_last_request_id', LAST_INSTRUCTION='outbase_chappy_last_instruction';
 const core=()=>globalThis.OUTBASE_CORE||null, chappy=()=>globalThis.OUTBASE_CHAPPY||null;
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const activeContext=()=>({
@@ -284,28 +284,76 @@ function openHistory(responseId){
   if(box)box.value=req.context.instruction;
  }
 }
+function findAppliedRecord(candidate){
+ const data=snapshot();
+ const applied=candidate?.appliedTo||{};
+ if(applied.type==='memo'&&applied.id){
+   return (data.memos||[]).find(m=>m.memoId===applied.id)||null;
+ }
+ return null;
+}
+function destinationDetail(candidate){
+ const meta=candidateMeta(candidate);
+ const record=findAppliedRecord(candidate);
+ const isPlan=meta.cls==='plan';
+ const title=isPlan?'予定候補':destinationLabel(meta);
+ const text=record?.text||candidateText(candidate);
+ const savedAt=candidate?.decidedAt||record?.updatedAt||record?.createdAt||candidate?.createdAt;
+ const state=isPlan?'候補として保持':record?.completed?'完了':'保存中';
+ const note=isPlan
+   ?'予定には自動登録していません。必要な時に予定へ反映する候補です。'
+   :meta.cls==='buy'
+     ?'買う物メモとして保存されています。'
+     :meta.cls==='improvement'
+       ?'次回改善に使うメモとして保存されています。'
+       :'OUTBASEの提案メモとして保存されています。';
+ return {meta,record,isPlan,title,text,savedAt,state,note};
+}
 function openDestination(candidateId){
  const candidate=allCandidates().find(c=>c.candidateId===candidateId);
- if(!candidate)return;
- const meta=candidateMeta(candidate);
- const appliedId=candidate.appliedTo?.id||'';
- localStorage.setItem('outbase_highlight_memo_id',appliedId);
- localStorage.setItem('outbase_open_candidate_id',candidateId);
- document.getElementById(ID)?.remove();
+ if(!candidate){status('保存先データを確認できませんでした。','error');return;}
+ const detail=destinationDetail(candidate);
+ document.getElementById(DESTINATION_ID)?.remove();
 
- if(meta.cls==='buy'){
-   location.href='?tab=plan&view=buy-memo';
-   return;
+ const sheet=document.createElement('div');
+ sheet.id=DESTINATION_ID;
+ sheet.className='chappyDestinationSheet';
+ sheet.innerHTML=`<div class="chappyDestinationCard">
+   <div class="chappyDestinationHead">
+     <div><small>SAVED DESTINATION</small><h3>${esc(detail.title)}</h3></div>
+     <button type="button" data-destination-close>×</button>
+   </div>
+   <div class="chappyDestinationSaved">
+     <span>${detail.meta.icon}</span>
+     <div><small>${esc(detail.state)}</small><h4>${esc(detail.text)}</h4></div>
+   </div>
+   ${candidate.reason?`<div class="chappyDestinationBlock"><b>採用理由</b><p>${esc(candidate.reason)}</p></div>`:''}
+   <div class="chappyDestinationBlock"><b>保存状態</b><p>${esc(detail.note)}</p></div>
+   <div class="chappyDestinationMeta">
+     <span>保存日時</span><b>${detail.savedAt?new Date(detail.savedAt).toLocaleString('ja-JP'):'記録なし'}</b>
+   </div>
+   <div class="chappyDestinationActions">
+     ${!detail.isPlan&&detail.record?`<button type="button" class="secondary" data-destination-complete="${esc(candidateId)}">${detail.record.completed?'未完了へ戻す':'完了にする'}</button>`:''}
+     <button type="button" data-destination-back>Chappyへ戻る</button>
+   </div>
+ </div>`;
+ document.body.appendChild(sheet);
+ requestAnimationFrame(()=>sheet.classList.add('show'));
+}
+function closeDestination(reopen=false){
+ document.getElementById(DESTINATION_ID)?.remove();
+ if(reopen){
+   open();
+   requestAnimationFrame(()=>document.querySelector('[data-candidate-filter="accepted"]')?.click());
  }
- if(meta.cls==='improvement'){
-   location.href='?tab=memory&view=improvement-memo';
-   return;
- }
- if(meta.cls==='plan'){
-   location.href='?tab=plan&view=plan-candidate';
-   return;
- }
- location.href='?tab=memory&view=proposal-memo';
+}
+function toggleDestinationComplete(candidateId){
+ const candidate=allCandidates().find(c=>c.candidateId===candidateId);
+ const record=findAppliedRecord(candidate);
+ const api=core();
+ if(!candidate||!record||!api?.addMemo)return;
+ api.addMemo({...record,completed:!record.completed,updatedAt:new Date().toISOString()});
+ openDestination(candidateId);
 }
 function applyTemplate(type){
  const map={
@@ -346,6 +394,21 @@ document.addEventListener('click',e=>{
    openHistory(historyDetail.dataset.historyDetail);
    return;
  }
+ const completeDestination=e.target.closest?.('[data-destination-complete]');if(completeDestination){
+   e.preventDefault();e.stopPropagation();
+   toggleDestinationComplete(completeDestination.dataset.destinationComplete);
+   return;
+ }
+ if(e.target.closest?.('[data-destination-close]')){
+   e.preventDefault();e.stopPropagation();
+   closeDestination(false);
+   return;
+ }
+ if(e.target.closest?.('[data-destination-back]')){
+   e.preventDefault();e.stopPropagation();
+   closeDestination(true);
+   return;
+ }
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
  if(e.target.closest?.('[data-chappy-reconsult]')){
  const button=e.target.closest('[data-chappy-reconsult]');
@@ -365,6 +428,7 @@ document.addEventListener('click',e=>{
  });
  return;
 }
+ if(e.target.id===DESTINATION_ID){closeDestination(false);return;}
  if(e.target.id===ID)document.getElementById(ID)?.remove();
 });
 globalThis.addEventListener('outbase:open-chappy',open);
