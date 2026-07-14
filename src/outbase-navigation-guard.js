@@ -1,101 +1,197 @@
 (() => {
   'use strict';
 
-  const overlayCloseSelectors = [
-    '[data-phase14-close]',
-    '[data-prep-editor-close]',
-    '[data-prep-memo-close]',
-    '[data-destination-close]',
-    '[data-chappy-close]',
-    '[data-search-close]',
-    '[data-memory-detail-close]',
-    '[data-library-editor-close]',
-    '[data-close-prep-sheet]',
-    '[data-close-plan-sheet]',
-    '[data-close-sheet]'
-  ];
+  const STATE_FLAG = 'outbaseNavigation';
+  const STATE_DEPTH = 'overlayDepth';
+  const CONTROL_SELECTOR = 'button,[role="button"]';
+  const ROOT_SELECTOR = [
+    'dialog',
+    '[role="dialog"]',
+    '[aria-modal="true"]',
+    '[id$="Sheet"]',
+    '[id$="Editor"]',
+    '[id$="Modal"]',
+    '[class*="Backdrop"]',
+    '[class*="backdrop"]',
+    '[class*="Modal"]',
+    '[class*="modal"]',
+    '[class*="Sheet"]',
+    '[class*="sheet"]',
+    '[class*="Editor"]',
+    '[class*="editor"]'
+  ].join(',');
 
-  const overlayRoots = [
-    '.phase14ReviewBackdrop',
-    '#outbasePrepMemoEditor',
-    '#outbasePrepMemoSheet',
-    '#outbaseChappyDestinationSheet',
-    '#outbaseChappySheet',
-    '#outbaseGlobalSearch',
-    '#outbaseMemoryDetail'
-  ];
-
-  let trackedDepth = 0;
-  let closingFromHistory = false;
+  let applyingPopState = false;
+  let synchronizingProgrammaticClose = false;
+  let syncTimer = 0;
 
   function visible(element) {
-    if (!element) return false;
+    if (!element || !element.isConnected) return false;
     const style = getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden';
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (Number(style.opacity) === 0) return false;
+    return element.getClientRects().length > 0;
   }
 
-  function openOverlayCount() {
-    return overlayRoots.reduce((count, selector) => {
-      return count + (visible(document.querySelector(selector)) ? 1 : 0);
-    }, 0);
+  function datasetLooksLikeClose(element) {
+    return Object.keys(element.dataset || {}).some(key => {
+      const normalized = key.toLowerCase();
+      return normalized.startsWith('close') || normalized.endsWith('close');
+    });
   }
 
-  function findTopCloseButton() {
-    for (const selector of overlayCloseSelectors) {
-      const button = document.querySelector(selector);
-      if (visible(button)) return button;
+  function isCloseControl(element) {
+    if (!element) return false;
+    const aria = String(element.getAttribute('aria-label') || '').toLowerCase();
+    const title = String(element.getAttribute('title') || '').toLowerCase();
+    const className = typeof element.className === 'string' ? element.className.toLowerCase() : '';
+    return datasetLooksLikeClose(element) ||
+      aria.includes('閉じる') || aria.includes('close') ||
+      title.includes('閉じる') || title.includes('close') ||
+      /(^|\s)(close|modal-close|sheet-close)(\s|$)/.test(className);
+  }
+
+  function layerRoot(button) {
+    return button.closest(ROOT_SELECTOR) || button;
+  }
+
+  function effectiveZIndex(element) {
+    let node = element;
+    let highest = 0;
+    while (node && node !== document.documentElement) {
+      const value = Number.parseInt(getComputedStyle(node).zIndex, 10);
+      if (Number.isFinite(value)) highest = Math.max(highest, value);
+      node = node.parentElement;
     }
-    return null;
+    return highest;
   }
 
-  function syncHistoryDepth() {
-    const nextDepth = openOverlayCount();
-    if (!closingFromHistory && nextDepth > trackedDepth) {
-      for (let depth = trackedDepth + 1; depth <= nextDepth; depth += 1) {
-        history.pushState({ outbase: true, overlayDepth: depth }, '', location.href);
+  function layerOrder(element) {
+    const all = [...document.querySelectorAll('*')];
+    return all.indexOf(element);
+  }
+
+  function openLayers() {
+    const controls = [...document.querySelectorAll(CONTROL_SELECTOR)]
+      .filter(button => visible(button) && isCloseControl(button));
+
+    const byRoot = new Map();
+    controls.forEach(button => {
+      const root = layerRoot(button);
+      if (!visible(root)) return;
+      const current = byRoot.get(root);
+      const candidate = {
+        root,
+        button,
+        zIndex: effectiveZIndex(root),
+        order: layerOrder(root)
+      };
+      if (!current || candidate.order >= current.order) byRoot.set(root, candidate);
+    });
+
+    return [...byRoot.values()].sort((a, b) => {
+      if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
+      return a.order - b.order;
+    });
+  }
+
+  function stateDepth(state = history.state) {
+    if (!state || state[STATE_FLAG] !== true) return 0;
+    const value = Number(state[STATE_DEPTH] || 0);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  function replaceState(depth) {
+    history.replaceState({
+      ...(history.state || {}),
+      [STATE_FLAG]: true,
+      [STATE_DEPTH]: Math.max(0, depth)
+    }, '', location.href);
+  }
+
+  function pushState(depth) {
+    history.pushState({
+      ...(history.state || {}),
+      [STATE_FLAG]: true,
+      [STATE_DEPTH]: Math.max(0, depth)
+    }, '', location.href);
+  }
+
+  function syncHistoryWithDom() {
+    if (applyingPopState || synchronizingProgrammaticClose) return;
+
+    const actualDepth = openLayers().length;
+    const currentDepth = stateDepth();
+
+    if (actualDepth > currentDepth) {
+      for (let depth = currentDepth + 1; depth <= actualDepth; depth += 1) {
+        pushState(depth);
       }
-    }
-    trackedDepth = nextDepth;
-  }
-
-  function isCloseControl(target) {
-    return overlayCloseSelectors.some(selector => target.closest?.(selector));
-  }
-
-  window.addEventListener('click', event => {
-    if (!isCloseControl(event.target)) return;
-    if (!trackedDepth || !history.state?.outbase) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    history.back();
-  }, true);
-
-  window.addEventListener('popstate', () => {
-    if (!trackedDepth) return;
-    const closeButton = findTopCloseButton();
-    if (!closeButton) {
-      trackedDepth = openOverlayCount();
       return;
     }
-    closingFromHistory = true;
-    closeButton.click();
-    requestAnimationFrame(() => {
-      trackedDepth = openOverlayCount();
-      closingFromHistory = false;
-    });
+
+    if (actualDepth < currentDepth) {
+      synchronizingProgrammaticClose = true;
+      history.go(actualDepth - currentDepth);
+    }
+  }
+
+  function scheduleSync() {
+    clearTimeout(syncTimer);
+    syncTimer = window.setTimeout(syncHistoryWithDom, 40);
+  }
+
+  function closeUntilDepth(targetDepth) {
+    const layers = openLayers();
+    if (layers.length <= targetDepth) {
+      applyingPopState = false;
+      scheduleSync();
+      return;
+    }
+
+    const top = layers[layers.length - 1];
+    if (!top?.button) {
+      applyingPopState = false;
+      replaceState(layers.length);
+      return;
+    }
+
+    top.button.click();
+    window.setTimeout(() => closeUntilDepth(targetDepth), 0);
+  }
+
+  window.addEventListener('popstate', event => {
+    if (synchronizingProgrammaticClose) {
+      synchronizingProgrammaticClose = false;
+      scheduleSync();
+      return;
+    }
+
+    const layers = openLayers();
+    if (!layers.length) return;
+
+    const targetDepth = stateDepth(event.state);
+    applyingPopState = true;
+    closeUntilDepth(targetDepth);
   });
 
   window.addEventListener('DOMContentLoaded', () => {
-    history.replaceState({ outbase: true, overlayDepth: 0 }, '', location.href);
-    trackedDepth = openOverlayCount();
-    const observer = new MutationObserver(() => {
-      requestAnimationFrame(syncHistoryDepth);
-    });
+    replaceState(0);
+
+    const observer = new MutationObserver(scheduleSync);
     observer.observe(document.documentElement, {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ['class', 'style', 'hidden']
+      attributeFilter: ['class', 'style', 'hidden', 'aria-hidden', 'open']
     });
+
+    scheduleSync();
   });
+
+  window.addEventListener('pageshow', scheduleSync);
+  window.addEventListener('hashchange', scheduleSync);
+  globalThis.addEventListener('outbase:entry-refresh', scheduleSync);
+  globalThis.addEventListener('outbase:activity-refresh', scheduleSync);
+  globalThis.addEventListener('outbase:core-ready', scheduleSync);
 })();

@@ -1,0 +1,21 @@
+{
+  "name": "OUTBASE FIELD03 E-01 全画面導線統合",
+  "version": "1.0",
+  "cacheVersion": "outbase-field03-e01-3",
+  "roadmapPhase": "E-01",
+  "base": {
+    "repository": "mu-outbase/outbase",
+    "branch": "main",
+    "indexSha": "978220b22fad0dcae44cada60aeb61d6f72dbfeb",
+    "serviceWorkerSha": "b2a70999dc3a2970c93049369eac8cd42fd10863",
+    "navigationGuardSha": "4bbde20618cd29a2512f3a0e82d295b563a44dda"
+  },
+  "files": [
+    "index.html",
+    "service-worker.js",
+    "src/outbase-navigation-guard.js",
+    "OUTBASE_E01_全画面導線統合監査_v1.0.md",
+    "E01_Android一括確認手順.md"
+  ],
+  "status": "実装候補完成・GitHub反映待ち・Android一括確認待ち"
+}
