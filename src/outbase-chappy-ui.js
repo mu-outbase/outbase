@@ -70,6 +70,7 @@ function historyHtml(){
     return`<article class="historyCard" data-history-response="${esc(r.responseId)}">
       <div class="historyMain"><b>${esc(r.normalized?.summary||'Chappy相談')}</b><small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small></div>
       <div class="historyCounts"><span>採用 ${accepted}</span><span>保留 ${held}</span><span>却下 ${rejected}</span><span>判断待ち ${pending}</span></div>
+      <button class="historyReconsult" data-history-reconsult="${esc(r.responseId)}">この内容で再相談</button>
     </article>`;
   }).join('')}</div>`;
 }
@@ -112,22 +113,63 @@ function refreshManaged(){
 }
 function lastConsultInstruction(){
  const data=snapshot();
- const lastResponse=(data.aiResponses||[]).slice().sort((a,b)=>new Date(b.importedAt)-new Date(a.importedAt))[0];
- if(lastResponse){
-   const req=(data.aiRequests||[]).find(r=>r.requestId===lastResponse.requestId);
-   const fromRequest=req?.context?.instruction||req?.instruction||'';
-   if(fromRequest)return fromRequest;
+ const responses=(data.aiResponses||[]).slice().sort((a,b)=>new Date(b.importedAt)-new Date(a.importedAt));
+ for(const response of responses){
+  const req=(data.aiRequests||[]).find(r=>r.requestId===response.requestId);
+  const fromRequest=req?.context?.instruction||req?.instruction||'';
+  if(fromRequest)return fromRequest;
+  const fallback=response?.normalized?.instruction||response?.normalized?.question||'';
+  if(fallback)return fallback;
  }
- return localStorage.getItem(LAST_INSTRUCTION)||'';
+ const saved=localStorage.getItem(LAST_INSTRUCTION)||'';
+ if(saved)return saved;
+ const current=document.querySelector('[data-chappy-instruction]')?.value.trim()||'';
+ return current;
 }
-async function makeRequest(mode){
- const api=chappy();if(!api){status('Chappy基盤を読み込めませんでした。','error');return;}busy(true);
+async function makeRequest(mode,explicitInstruction=''){
+ const api=chappy();if(!api){status('Chappy基盤を読み込めませんでした。','error');return false;}
+ busy(true);
  try{
-  const currentInstruction=instruction();localStorage.setItem(LAST_INSTRUCTION,currentInstruction);const req=api.generatePrompt({purpose:'outbase-consult',instruction:currentInstruction});localStorage.setItem(LAST,req.requestId);
-  if(mode==='share'&&navigator.share){await navigator.share({title:'OUTBASEからChappyへ相談',text:req.prompt});status('共有しました。','success');}
-  else{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(req.prompt);else{const t=document.createElement('textarea');t.value=req.prompt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();}status(mode==='share'?'共有機能がないためコピーしました。':'プロンプトをコピーしました。','success');}
- }catch(e){status(e?.name==='AbortError'?'共有をキャンセルしました。':`${mode==='share'?'共有':'コピー'}できませんでした：${e.message||e}`,e?.name==='AbortError'?'info':'error');}
- finally{busy(false);}
+  const currentInstruction=(explicitInstruction||instruction()).trim();
+  if(!currentInstruction){status('相談内容がありません。','error');return false;}
+  localStorage.setItem(LAST_INSTRUCTION,currentInstruction);
+  const req=api.generatePrompt({purpose:'outbase-consult',instruction:currentInstruction});
+  localStorage.setItem(LAST,req.requestId);
+
+  if(mode==='share'){
+   if(navigator.share){
+    await navigator.share({title:'OUTBASEからChappyへ相談',text:req.prompt});
+    status('前回の内容を共有しました。ChatGPTで回答してください。','success');
+    return true;
+   }
+   if(navigator.clipboard?.writeText){
+    await navigator.clipboard.writeText(req.prompt);
+    status('共有機能が使えないため、プロンプトをコピーしました。','success');
+    return true;
+   }
+   const t=document.createElement('textarea');
+   t.value=req.prompt;t.style.position='fixed';t.style.opacity='0';
+   document.body.appendChild(t);t.select();
+   const copied=document.execCommand('copy');t.remove();
+   status(copied?'プロンプトをコピーしました。':'共有もコピーもできませんでした。',copied?'success':'error');
+   return copied;
+  }
+
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(req.prompt);
+  else{
+   const t=document.createElement('textarea');t.value=req.prompt;t.style.position='fixed';t.style.opacity='0';
+   document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();
+  }
+  status('プロンプトをコピーしました。','success');
+  return true;
+ }catch(e){
+  if(e?.name==='AbortError'){
+   status('共有をキャンセルしました。','info');
+   return false;
+  }
+  status(`共有できませんでした：${e.message||e}`,'error');
+  return false;
+ }finally{busy(false);}
 }
 function render(result){
  const n=result.normalized,node=document.querySelector('[data-chappy-result]');if(!node)return;node.hidden=false;
@@ -164,6 +206,13 @@ function publishCandidateStats(){
  const stats=core()?.candidateStats?.()||{};
  localStorage.setItem('outbase_chappy_candidate_stats',JSON.stringify(stats));
  globalThis.dispatchEvent(new CustomEvent('outbase:chappy-stats',{detail:stats}));
+}
+function historyInstruction(responseId){
+ const data=snapshot();
+ const response=(data.aiResponses||[]).find(r=>r.responseId===responseId);
+ if(!response)return'';
+ const req=(data.aiRequests||[]).find(r=>r.requestId===response.requestId);
+ return req?.context?.instruction||req?.instruction||response?.normalized?.instruction||response?.normalized?.question||'';
 }
 function openHistory(responseId){
  const data=snapshot(),response=(data.aiResponses||[]).find(r=>r.responseId===responseId);
@@ -222,17 +271,31 @@ document.addEventListener('click',e=>{
  const decision=e.target.closest?.('[data-candidate-decision]');if(decision){decide(decision.dataset.candidateId,decision.dataset.candidateDecision);return;}
  const filter=e.target.closest?.('[data-candidate-filter]');if(filter){document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b===filter));const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(filter.dataset.candidateFilter);return;}
  const destination=e.target.closest?.('[data-open-destination]');if(destination){openDestination(destination.dataset.openDestination);return;}
+ const historyReconsult=e.target.closest?.('[data-history-reconsult]');if(historyReconsult){e.stopPropagation();
+   const text=historyInstruction(historyReconsult.dataset.historyReconsult);
+   if(!text){status('この履歴には再相談できる内容がありません。','info');return;}
+   const box=document.querySelector('[data-chappy-instruction]');if(box)box.value=text;
+   makeRequest('share',text);
+   return;
+ }
  const history=e.target.closest?.('[data-history-response]');if(history){openHistory(history.dataset.historyResponse);return;}
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
  if(e.target.closest?.('[data-chappy-reconsult]')){
+ const button=e.target.closest('[data-chappy-reconsult]');
+ if(button.dataset.running==='1')return;
  const last=lastConsultInstruction();
  if(!last){
-   status('再相談できる履歴がありません。','info');
-   return;
+  status('再相談できる履歴がありません。','info');
+  return;
  }
  const box=document.querySelector('[data-chappy-instruction]');
  if(box)box.value=last;
- makeRequest('share');
+ button.dataset.running='1';
+ button.textContent='共有を開いています…';
+ makeRequest('share',last).finally(()=>{
+  button.dataset.running='0';
+  button.textContent='前回の内容で再相談';
+ });
  return;
 }
  if(e.target.id===ID)document.getElementById(ID)?.remove();
