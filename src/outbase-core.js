@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='2.6.0';
+  const VERSION='2.7.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,

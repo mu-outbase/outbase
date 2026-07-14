@@ -56,7 +56,7 @@
 .historyCounts .pending{background:#fff2d8!important;color:#7a5d20!important}
 
 /* CORE-19 direct saved-destination viewer */
-.chappyDestinationSheet{position:fixed;inset:0;z-index:10030;background:rgba(12,27,20,.58);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .18s ease}
+.chappyDestinationSheet{position:fixed;inset:0;z-index:90000;background:rgba(12,27,20,.58);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .18s ease}
 .chappyDestinationSheet.show{opacity:1}
 .chappyDestinationCard{width:min(100%,760px);max-height:88dvh;overflow:auto;background:#f7f6f1;border-radius:30px 30px 0 0;padding:22px 22px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -18px 55px rgba(0,0,0,.2)}
 .chappyDestinationHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
@@ -109,4 +109,9 @@
 }
 .candidateCard.accepted .candidateActions button:disabled{
   pointer-events:none;
+}
+
+/* CORE-21: destination sheet must be above Chappy main sheet (z-index 85000) */
+#outbaseChappyDestinationSheet.chappyDestinationSheet{
+  z-index:90000!important;
 }
