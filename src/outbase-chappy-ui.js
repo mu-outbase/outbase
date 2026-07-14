@@ -49,9 +49,9 @@ function candidateCards(filter='pending'){
   <div class="candidateTop"><div class="candidateType"><span>${m.icon}</span><b>${m.label}</b></div><div class="candidateBadges">${c.confidence!=null?`<small>${Math.round(c.confidence*100)}%</small>`:''}<em>${st.label}</em></div></div>
   <h4>${esc(candidateText(c))}</h4>
   ${c.reason?`<div class="candidateReason"><b>理由</b><p>${esc(c.reason)}</p></div>`:''}
-  <div class="candidateDestination"><b>採用時</b><span>${esc(m.dest)}</span></div>
-  ${c.appliedTo?`<div class="candidateApplied">反映済み：${esc(c.appliedTo.kind||c.appliedTo.type||'OUTBASE')}</div>`:''}
-  <div class="candidateActions"><button data-candidate-decision="accept" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='accepted'?'採用済み':'採用'}</button><button class="hold" data-candidate-decision="hold" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='held'?'保留中':'保留'}</button><button class="reject" data-candidate-decision="reject" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='rejected'?'却下済み':'却下'}</button></div>
+  <div class="candidateDestination"><b>採用すると</b><span>→ ${esc(m.dest)}</span></div>
+  ${c.appliedTo?`<div class="candidateApplied"><span>✓ ${esc(c.appliedTo.kind||c.appliedTo.type||'OUTBASE')}へ追加しました</span><button data-open-destination="${esc(c.candidateId)}">見る</button></div>`:''}
+  <div class="candidateActions"><button class="accept" data-candidate-decision="accept" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='accepted'?'採用済み':'採用'}</button><button class="hold" data-candidate-decision="hold" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='held'?'保留中':'保留'}</button><button class="reject" data-candidate-decision="reject" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='rejected'?'却下済み':'却下'}</button></div>
  </article>`;}).join('')}</div>`;
 }
 function filterBar(){
@@ -59,11 +59,19 @@ function filterBar(){
  return`<div class="candidateFilters"><button class="active" data-candidate-filter="pending">判断待ち ${count.pending||0}</button><button data-candidate-filter="held">保留 ${count.held||0}</button><button data-candidate-filter="accepted">採用済み ${count.accepted||0}</button><button data-candidate-filter="rejected">却下済み ${count.rejected||0}</button><button data-candidate-filter="all">すべて ${allCandidates().length}</button></div>`;
 }
 function historyHtml(){
-  const rows=recentResponses();
-  if(!rows.length)return '<div class="chappyEmpty">相談履歴はまだありません。</div>';
-  return `<div class="chappyHistory">${rows.map(r=>`
-    <article><b>${esc(r.normalized?.summary||'Chappy相談')}</b><small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small>
-    <span>候補 ${r.normalized?.candidates?.length||0}件・関連 ${r.normalized?.relations?.length||0}件</span></article>`).join('')}</div>`;
+  const rows=recentResponses(), candidates=allCandidates();
+  if(!rows.length)return'<div class="chappyEmpty">相談履歴はまだありません。</div>';
+  return`<div class="chappyHistory">${rows.map(r=>{
+    const related=candidates.filter(c=>c.responseId===r.responseId||c.importId===r.responseId);
+    const accepted=related.filter(c=>c.state==='accepted').length;
+    const held=related.filter(c=>c.state==='held').length;
+    const rejected=related.filter(c=>c.state==='rejected').length;
+    const pending=related.filter(c=>c.state==='pending').length;
+    return`<article data-history-response="${esc(r.responseId)}">
+      <div class="historyMain"><b>${esc(r.normalized?.summary||'Chappy相談')}</b><small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small></div>
+      <div class="historyCounts"><span>採用 ${accepted}</span><span>保留 ${held}</span><span>却下 ${rejected}</span><span>判断待ち ${pending}</span></div>
+    </article>`;
+  }).join('')}</div>`;
 }
 function open(){
  document.getElementById(ID)?.remove();
@@ -121,11 +129,40 @@ function decide(id,decision){
  const api=core();if(!api){status('Coreを読み込めませんでした。','error');return;}
  try{
   const result=api.decideCandidate(id,decision,{...activeContext(),decidedBy:'user'});
-  const msg=decision==='accept'
-    ?(result.appliedTo?.type==='plan_candidate'?'予定候補として保持しました。':'採用してOUTBASEへ反映しました。')
-    :decision==='hold'?'保留しました。':'却下しました。';
-  status(msg,'success');refreshManaged();globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));
+  const meta=candidateMeta(result);
+  let msg='';
+  if(decision==='accept'){
+    msg=result.appliedTo?.type==='plan_candidate'
+      ?'予定候補として保持しました。自動登録はしていません。'
+      :`${meta.destination.replace('へ追加','')}へ追加しました。`;
+  }else if(decision==='hold')msg='保留しました。';
+  else msg='却下しました。';
+  status(msg,'success');
+  refreshManaged();
+  const target=decision==='accept'?'accepted':decision==='hold'?'held':'rejected';
+  document.querySelector(`[data-candidate-filter="${target}"]`)?.click();
+  globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));
  }catch(e){status(`候補を更新できませんでした：${e.message||e}`,'error');}
+}
+function openDestination(candidateId){
+ const candidate=allCandidates().find(c=>c.candidateId===candidateId);
+ if(!candidate)return;
+ const meta=candidateMeta(candidate);
+ document.getElementById(ID)?.remove();
+ if(meta.cls==='buy'){
+   location.href='?tab=plan';
+   setTimeout(()=>globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh')),50);
+   return;
+ }
+ if(meta.cls==='improvement'){
+   location.href='?tab=memory';
+   return;
+ }
+ if(meta.cls==='plan'){
+   location.href='?tab=plan';
+   return;
+ }
+ location.href='?tab=memory';
 }
 function applyTemplate(type){
  const map={
@@ -142,6 +179,7 @@ document.addEventListener('click',e=>{
  if(e.target.closest?.('[data-chappy-import]')){importJson();return;}
  const decision=e.target.closest?.('[data-candidate-decision]');if(decision){decide(decision.dataset.candidateId,decision.dataset.candidateDecision);return;}
  const filter=e.target.closest?.('[data-candidate-filter]');if(filter){document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b===filter));const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(filter.dataset.candidateFilter);return;}
+ const destination=e.target.closest?.('[data-open-destination]');if(destination){openDestination(destination.dataset.openDestination);return;}
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
  if(e.target.closest?.('[data-chappy-reconsult]')){makeRequest('share');return;}
  if(e.target.id===ID)document.getElementById(ID)?.remove();
