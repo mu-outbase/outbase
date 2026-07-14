@@ -28,3 +28,13 @@
 
 .historyReconsult{width:100%;margin-top:8px;border:0;border-radius:10px;padding:8px;background:#173d2d;color:#fff;font-size:10px;font-weight:900}
 .chappyReconsult[data-running="1"]{opacity:.65;pointer-events:none}
+
+/* CORE-15 history interaction separation */
+.historyCard{cursor:default!important;transform:none!important}
+.historyCard:active{transform:none!important}
+.historyCard:after{content:none!important}
+.historyActions{display:grid;grid-template-columns:.8fr 1.2fr;gap:8px;margin-top:10px}
+.historyActions button{min-height:42px;border-radius:12px;font-weight:900}
+.historyDetail{border:1px solid rgba(23,61,45,.18);background:#fff;color:#173d2d}
+.historyReconsult{margin:0;border:0;background:#173d2d;color:#fff}
+.historyActions button:active{transform:scale(.985)}

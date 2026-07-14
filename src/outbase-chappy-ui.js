@@ -67,10 +67,18 @@ function historyHtml(){
     const held=related.filter(c=>c.state==='held').length;
     const rejected=related.filter(c=>c.state==='rejected').length;
     const pending=related.filter(c=>c.state==='pending').length;
-    return`<article class="historyCard" data-history-response="${esc(r.responseId)}">
-      <div class="historyMain"><b>${esc(r.normalized?.summary||'Chappy相談')}</b><small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small></div>
-      <div class="historyCounts"><span>採用 ${accepted}</span><span>保留 ${held}</span><span>却下 ${rejected}</span><span>判断待ち ${pending}</span></div>
-      <button class="historyReconsult" data-history-reconsult="${esc(r.responseId)}">この内容で再相談</button>
+    return`<article class="historyCard">
+      <div class="historyMain">
+        <b>${esc(r.normalized?.summary||'Chappy相談')}</b>
+        <small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small>
+      </div>
+      <div class="historyCounts">
+        <span>採用 ${accepted}</span><span>保留 ${held}</span><span>却下 ${rejected}</span><span>判断待ち ${pending}</span>
+      </div>
+      <div class="historyActions">
+        <button class="historyDetail" type="button" data-history-detail="${esc(r.responseId)}">詳細を見る</button>
+        <button class="historyReconsult" type="button" data-history-reconsult="${esc(r.responseId)}">この内容で再相談</button>
+      </div>
     </article>`;
   }).join('')}</div>`;
 }
@@ -263,6 +271,16 @@ function applyTemplate(type){
  };
  const n=document.querySelector('[data-chappy-instruction]');if(n)n.value=map[type]||n.value;
 }
+
+document.addEventListener('pointerdown',e=>{
+ const button=e.target.closest?.('[data-history-detail],[data-history-reconsult]');
+ if(button)e.stopPropagation();
+},{capture:true});
+document.addEventListener('touchstart',e=>{
+ const button=e.target.closest?.('[data-history-detail],[data-history-reconsult]');
+ if(button)e.stopPropagation();
+},{capture:true,passive:true});
+
 document.addEventListener('click',e=>{
  if(e.target.closest?.('[data-chappy-close]')){document.getElementById(ID)?.remove();return;}
  if(e.target.closest?.('[data-chappy-copy]')){makeRequest('copy');return;}
@@ -271,14 +289,18 @@ document.addEventListener('click',e=>{
  const decision=e.target.closest?.('[data-candidate-decision]');if(decision){decide(decision.dataset.candidateId,decision.dataset.candidateDecision);return;}
  const filter=e.target.closest?.('[data-candidate-filter]');if(filter){document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b===filter));const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(filter.dataset.candidateFilter);return;}
  const destination=e.target.closest?.('[data-open-destination]');if(destination){openDestination(destination.dataset.openDestination);return;}
- const historyReconsult=e.target.closest?.('[data-history-reconsult]');if(historyReconsult){e.stopPropagation();
+ const historyReconsult=e.target.closest?.('[data-history-reconsult]');if(historyReconsult){e.preventDefault();e.stopPropagation();
    const text=historyInstruction(historyReconsult.dataset.historyReconsult);
    if(!text){status('この履歴には再相談できる内容がありません。','info');return;}
    const box=document.querySelector('[data-chappy-instruction]');if(box)box.value=text;
    makeRequest('share',text);
    return;
  }
- const history=e.target.closest?.('[data-history-response]');if(history){openHistory(history.dataset.historyResponse);return;}
+ const historyDetail=e.target.closest?.('[data-history-detail]');if(historyDetail){
+   e.preventDefault();e.stopPropagation();
+   openHistory(historyDetail.dataset.historyDetail);
+   return;
+ }
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
  if(e.target.closest?.('[data-chappy-reconsult]')){
  const button=e.target.closest('[data-chappy-reconsult]');
