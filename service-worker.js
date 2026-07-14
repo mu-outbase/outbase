@@ -1,13 +1,14 @@
-const CACHE_NAME='outbase-field03-e01-3';
+const CACHE_NAME='outbase-field03-lifecycle-1';
 const CORE_ASSETS=[
   './','./index.html',
-  './style.css?v=outbase-field03-e01-3','./style-flow.css?v=outbase-field03-e01-3','./style-memo.css?v=outbase-field03-e01-3',
-  './style-review.css?v=outbase-field03-e01-3','./style-entry.css?v=outbase-field03-e01-3','./style-activity.css?v=outbase-field03-e01-3','./style-chappy.css?v=outbase-field03-e01-3',
-  './src/app.js?v=outbase-field03-e01-3','./src/outbase-core.js?v=outbase-field03-e01-3',
-  './src/outbase-chappy.js?v=outbase-field03-e01-3','./src/outbase-chappy-ui.js?v=outbase-field03-e01-3','./src/outbase-import.js?v=outbase-field03-e01-3','./src/outbase-memo-ui.js?v=outbase-field03-e01-3',
-  './src/outbase-review-ui.js?v=outbase-field03-e01-3','./src/outbase-flow.js?v=outbase-field03-e01-3','./src/outbase-entry.js?v=outbase-field03-e01-3',
-  './src/outbase-activity.js?v=outbase-field03-e01-3','./src/outbase-navigation-guard.js?v=outbase-field03-e01-3','./manifest.json?v=outbase-field03-e01-3',
-  './outbase_library10a/style.css?v=outbase-field03-e01-3'
+  './style.css?v=outbase-field03-lifecycle-1','./style-flow.css?v=outbase-field03-lifecycle-1','./style-memo.css?v=outbase-field03-lifecycle-1',
+  './style-review.css?v=outbase-field03-lifecycle-1','./style-entry.css?v=outbase-field03-lifecycle-1','./style-activity.css?v=outbase-field03-lifecycle-1','./style-chappy.css?v=outbase-field03-lifecycle-1',
+  './style-scenarios.css?v=outbase-field03-lifecycle-1',
+  './src/app.js?v=outbase-field03-lifecycle-1','./src/outbase-core.js?v=outbase-field03-lifecycle-1',
+  './src/outbase-chappy.js?v=outbase-field03-lifecycle-1','./src/outbase-chappy-ui.js?v=outbase-field03-lifecycle-1','./src/outbase-import.js?v=outbase-field03-lifecycle-1','./src/outbase-memo-ui.js?v=outbase-field03-lifecycle-1',
+  './src/outbase-review-ui.js?v=outbase-field03-lifecycle-1','./src/outbase-flow.js?v=outbase-field03-lifecycle-1','./src/outbase-entry.js?v=outbase-field03-lifecycle-1',
+  './src/outbase-activity.js?v=outbase-field03-lifecycle-1','./src/outbase-navigation-guard.js?v=outbase-field03-lifecycle-1','./src/outbase-scenarios.js?v=outbase-field03-lifecycle-1',
+  './manifest.json?v=outbase-field03-lifecycle-1','./outbase_library10a/style.css?v=outbase-field03-lifecycle-1'
 ];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});

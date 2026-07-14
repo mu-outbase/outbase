@@ -1,21 +1,25 @@
 {
-  "name": "OUTBASE FIELD03 E-01 全画面導線統合",
+  "name": "OUTBASE FIELD03 共通ライフサイクル基盤統合",
   "version": "1.0",
-  "cacheVersion": "outbase-field03-e01-3",
-  "roadmapPhase": "E-01",
-  "base": {
-    "repository": "mu-outbase/outbase",
-    "branch": "main",
-    "indexSha": "978220b22fad0dcae44cada60aeb61d6f72dbfeb",
-    "serviceWorkerSha": "b2a70999dc3a2970c93049369eac8cd42fd10863",
-    "navigationGuardSha": "4bbde20618cd29a2512f3a0e82d295b563a44dda"
-  },
+  "cacheVersion": "outbase-field03-lifecycle-1",
+  "repository": "mu-outbase/outbase",
+  "branch": "main",
+  "baseCommit": "7670c708c64c76e997b7cbce2469e414b4efc5f3",
   "files": [
     "index.html",
     "service-worker.js",
-    "src/outbase-navigation-guard.js",
-    "OUTBASE_E01_全画面導線統合監査_v1.0.md",
-    "E01_Android一括確認手順.md"
+    "style-scenarios.css",
+    "src/outbase-scenarios.js",
+    "README.md"
   ],
-  "status": "実装候補完成・GitHub反映待ち・Android一括確認待ち"
+  "scope": [
+    "予定済みキャンプ",
+    "予定なし散歩",
+    "途中から開始",
+    "過去の活動登録",
+    "複数Activity切替",
+    "モーダル中の緑バー・虫眼鏡非表示",
+    "準備画面の戻り先保持"
+  ],
+  "status": "GitHub反映待ち"
 }
