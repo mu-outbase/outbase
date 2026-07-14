@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.7.0';
+  const VERSION='1.8.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -379,8 +379,29 @@
       :(value?.text||value?.title||candidate.reason||JSON.stringify(value));
     if(!text)return null;
 
+    const existingMemos=list(KEYS.memos);
+    const duplicate=existingMemos.find(item=>
+      item.legacyRef===candidate.candidateId ||
+      (item.text===text && item.source==='chappy-accepted')
+    );
+    if(duplicate){
+      return {type:'memo',id:duplicate.memoId,kind:duplicate.kind,status:'already_applied',duplicatePrevented:true};
+    }
+
     if(type.includes('plan')||type.includes('schedule')||type.includes('予定')){
-      return {type:'plan_candidate',status:'retained',reason:'予定構造へは自動書込みしない'};
+      const existing=list(KEYS.candidates).find(item=>
+        item.candidateId!==candidate.candidateId &&
+        item.state==='accepted' &&
+        item.candidateType===candidate.candidateType &&
+        JSON.stringify(item.payload)===JSON.stringify(candidate.payload)
+      );
+      return {
+        type:'plan_candidate',
+        status:existing?'already_retained':'retained',
+        duplicatePrevented:Boolean(existing),
+        destination:'plan-candidate',
+        reason:'予定構造へは自動書込みしない'
+      };
     }
 
     const kind=type.includes('buy')||type.includes('shopping')||type.includes('買')
@@ -398,8 +419,11 @@
       planIds:Array.isArray(extra.planIds)?extra.planIds:[],
       activityIds:Array.isArray(extra.activityIds)?extra.activityIds:[],
       status:'accepted-ai-proposal',
+      pinned:false,
+      completed:false,
       legacyRef:candidate.candidateId
     });
+
     addRelation({
       fromId:candidate.candidateId,
       fromType:'candidate',
@@ -407,12 +431,30 @@
       toType:'memo',
       relationType:'accepted_as',
       source:'user',
-      confidence:1
+      confidence:1,
+      evidence:[{candidateId:candidate.candidateId,responseId:candidate.responseId||null}]
     });
-    return {type:'memo',id:memo.memoId,kind};
+
+    return {
+      type:'memo',
+      id:memo.memoId,
+      kind,
+      status:'applied',
+      duplicatePrevented:false,
+      destination:kind==='buy'?'buy-memo':kind==='improvement'?'improvement-memo':'proposal-memo'
+    };
   }
 
-  function decideCandidate(candidateId,decision,extra={}){
+  function candidateStats(){
+    const rows=list(KEYS.candidates);
+    return rows.reduce((acc,item)=>{
+      acc.total+=1;
+      acc[item.state]=(acc[item.state]||0)+1;
+      return acc;
+    },{total:0,pending:0,held:0,accepted:0,rejected:0});
+  }
+
+  function decideCandidate  function decideCandidate(candidateId,decision,extra={}){
     const rows=list(KEYS.candidates);
     const index=rows.findIndex(item=>item.candidateId===candidateId);
     if(index<0)throw new Error('candidate not found');
@@ -930,6 +972,7 @@
     saveMetadata,
     saveCandidate,
     decideCandidate,
+    candidateStats,
     saveAiRequest,
     saveAiResponse,
     saveRecovery,

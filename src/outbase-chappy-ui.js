@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const ID='outbaseChappySheet', LAST='outbase_chappy_last_request_id';
+const ID='outbaseChappySheet', LAST='outbase_chappy_last_request_id', LAST_INSTRUCTION='outbase_chappy_last_instruction';
 const core=()=>globalThis.OUTBASE_CORE||null, chappy=()=>globalThis.OUTBASE_CHAPPY||null;
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const activeContext=()=>({
@@ -67,7 +67,7 @@ function historyHtml(){
     const held=related.filter(c=>c.state==='held').length;
     const rejected=related.filter(c=>c.state==='rejected').length;
     const pending=related.filter(c=>c.state==='pending').length;
-    return`<article data-history-response="${esc(r.responseId)}">
+    return`<article class="historyCard" data-history-response="${esc(r.responseId)}">
       <div class="historyMain"><b>${esc(r.normalized?.summary||'Chappy相談')}</b><small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small></div>
       <div class="historyCounts"><span>採用 ${accepted}</span><span>保留 ${held}</span><span>却下 ${rejected}</span><span>判断待ち ${pending}</span></div>
     </article>`;
@@ -97,6 +97,7 @@ function open(){
   <div class="chappySafety"><b>AIは提案のみ</b><span>採用した時だけユーザー判断として反映します。予定候補は自動登録しません。</span></div>
  </div>`;
  document.body.appendChild(el);
+ publishCandidateStats();
 }
 function refreshManaged(){
  const f=currentFilter(),old=document.querySelector('.candidateFilters');
@@ -107,7 +108,7 @@ function refreshManaged(){
 async function makeRequest(mode){
  const api=chappy();if(!api){status('Chappy基盤を読み込めませんでした。','error');return;}busy(true);
  try{
-  const req=api.generatePrompt({purpose:'outbase-consult',instruction:instruction()});localStorage.setItem(LAST,req.requestId);
+  const currentInstruction=instruction();localStorage.setItem(LAST_INSTRUCTION,currentInstruction);const req=api.generatePrompt({purpose:'outbase-consult',instruction:currentInstruction});localStorage.setItem(LAST,req.requestId);
   if(mode==='share'&&navigator.share){await navigator.share({title:'OUTBASEからChappyへ相談',text:req.prompt});status('共有しました。','success');}
   else{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(req.prompt);else{const t=document.createElement('textarea');t.value=req.prompt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();}status(mode==='share'?'共有機能がないためコピーしました。':'プロンプトをコピーしました。','success');}
  }catch(e){status(e?.name==='AbortError'?'共有をキャンセルしました。':`${mode==='share'?'共有':'コピー'}できませんでした：${e.message||e}`,e?.name==='AbortError'?'info':'error');}
@@ -122,7 +123,7 @@ function render(result){
 function importJson(){
  const api=chappy();if(!api){status('Chappy基盤を読み込めませんでした。','error');return;}
  const raw=document.querySelector('[data-chappy-response]')?.value.trim()||'';if(!raw){status('ChatGPTのJSON回答を貼り付けてください。','error');return;}busy(true);
- try{const result=api.importResponse(raw,{requestId:localStorage.getItem(LAST)||null});render(result);status('回答を取り込みました。','success');document.querySelector('[data-chappy-response]').value='';refreshManaged();globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));}
+ try{const result=api.importResponse(raw,{requestId:localStorage.getItem(LAST)||null});render(result);status('回答を取り込みました。','success');document.querySelector('[data-chappy-response]').value='';refreshManaged();publishCandidateStats();globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));}
  catch(e){status(`取り込めませんでした：${e.message||e}`,'error');}finally{busy(false);}
 }
 function decide(id,decision){
@@ -144,17 +145,43 @@ function decide(id,decision){
   globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));
  }catch(e){status(`候補を更新できませんでした：${e.message||e}`,'error');}
 }
+function publishCandidateStats(){
+ const stats=core()?.candidateStats?.()||{};
+ localStorage.setItem('outbase_chappy_candidate_stats',JSON.stringify(stats));
+ globalThis.dispatchEvent(new CustomEvent('outbase:chappy-stats',{detail:stats}));
+}
+function openHistory(responseId){
+ const data=snapshot(),response=(data.aiResponses||[]).find(r=>r.responseId===responseId);
+ if(!response)return;
+ const candidates=(data.candidates||[]).filter(c=>c.responseId===responseId||c.importId===responseId);
+ const result=document.querySelector('[data-chappy-result]');
+ if(result){
+  result.hidden=false;
+  result.innerHTML=`<div class="chappyResultHead"><small>HISTORY DETAIL</small><h4>${esc(response.normalized?.summary||'Chappy相談')}</h4></div>
+   ${response.normalized?.message?`<p>${esc(response.normalized.message)}</p>`:''}
+   <div class="chappyCounts"><div><b>${candidates.length}</b><span>候補</span></div><div><b>${candidates.filter(c=>c.state==='accepted').length}</b><span>採用</span></div><div><b>${candidates.filter(c=>c.state==='held').length}</b><span>保留</span></div></div>
+   <p class="chappySaved">${new Date(response.importedAt).toLocaleString('ja-JP')}</p>`;
+  result.scrollIntoView({behavior:'smooth',block:'center'});
+ }
+ const req=(data.aiRequests||[]).find(r=>r.requestId===response.requestId);
+ if(req?.context?.instruction){
+  const box=document.querySelector('[data-chappy-instruction]');
+  if(box)box.value=req.context.instruction;
+ }
+}
 function openDestination(candidateId){
  const candidate=allCandidates().find(c=>c.candidateId===candidateId);
  if(!candidate)return;
  const meta=candidateMeta(candidate);
  document.getElementById(ID)?.remove();
  if(meta.cls==='buy'){
+   localStorage.setItem('outbase_highlight_memo_id',candidate.appliedTo?.id||'');
    location.href='?tab=plan';
    setTimeout(()=>globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh')),50);
    return;
  }
  if(meta.cls==='improvement'){
+   localStorage.setItem('outbase_highlight_memo_id',candidate.appliedTo?.id||'');
    location.href='?tab=memory';
    return;
  }
@@ -180,8 +207,16 @@ document.addEventListener('click',e=>{
  const decision=e.target.closest?.('[data-candidate-decision]');if(decision){decide(decision.dataset.candidateId,decision.dataset.candidateDecision);return;}
  const filter=e.target.closest?.('[data-candidate-filter]');if(filter){document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b===filter));const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(filter.dataset.candidateFilter);return;}
  const destination=e.target.closest?.('[data-open-destination]');if(destination){openDestination(destination.dataset.openDestination);return;}
+ const history=e.target.closest?.('[data-history-response]');if(history){openHistory(history.dataset.historyResponse);return;}
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
- if(e.target.closest?.('[data-chappy-reconsult]')){makeRequest('share');return;}
+ if(e.target.closest?.('[data-chappy-reconsult]')){
+ const last=localStorage.getItem(LAST_INSTRUCTION);
+ const box=document.querySelector('[data-chappy-instruction]');
+ if(box&&last)box.value=last;
+ box?.scrollIntoView({behavior:'smooth',block:'center'});
+ status(last?'前回の相談内容を復元しました。':'前回の相談内容はありません。',last?'success':'info');
+ return;
+}
  if(e.target.id===ID)document.getElementById(ID)?.remove();
 });
 globalThis.addEventListener('outbase:open-chappy',open);

@@ -50,11 +50,16 @@
     return read(MEMO_KEY,[]).slice(0,4);
   }
 
+  function chappyStats(){
+    return read('outbase_chappy_candidate_stats',{total:0,pending:0,held:0,accepted:0,rejected:0});
+  }
+
   function entryHtml(){
     const parking=read(PARKING_KEY,[]);
     const latest=parking[0];
     const activity=activeActivity();
     const memos=recentMemos();
+    const aiStats=chappyStats();
     const primary = activity.state==='active'
       ? [
           ['record','＋','記録を追加','継続中の活動へ'],
@@ -100,7 +105,7 @@
         <button data-instant="record"><span>＋</span><b>今すぐ記録</b></button>
         <button data-instant="buy"><span>🛒</span><b>買う物メモ</b></button>
         <button data-instant="memo-list"><span>📒</span><b>メモ一覧</b></button>
-        <button data-instant="chappy"><span>✨</span><b>Chappyへ相談</b></button>
+        <button data-instant="chappy"><span>✨</span><b>Chappyへ相談</b>${aiStats.pending||aiStats.held?`<small>${aiStats.pending||0}件判断待ち・${aiStats.held||0}件保留</small>`:""}</button>
       </div>
 
       ${latest?`<button class="instantParkingLatest" data-instant="parking-map">

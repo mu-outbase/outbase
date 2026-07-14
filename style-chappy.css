@@ -21,3 +21,5 @@
 .historyCounts{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
 .historyCounts span{grid-column:auto!important;background:#edf1ee;border-radius:999px;padding:4px 7px;font-size:9px!important;color:#536158!important}
 .chappyHistory article{display:block}
+
+.historyCard{cursor:pointer;transition:transform .16s ease}.historyCard:active{transform:scale(.985)}.historyCard:after{content:"詳細を見る";display:block;margin-top:7px;color:#98722e;font-size:9px;font-weight:900}
