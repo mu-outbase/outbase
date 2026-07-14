@@ -21,25 +21,42 @@ function recentResponses(){
   return (snapshot().aiResponses||[]).slice().sort((a,b)=>new Date(b.importedAt)-new Date(a.importedAt)).slice(0,5);
 }
 function candidateText(c){
-  const p=c.payload;
-  if(typeof p==='string')return p;
-  return p?.text||p?.title||c.reason||JSON.stringify(p??'');
+ const p=c.payload;if(typeof p==='string')return p;
+ return p?.text||p?.title||c.reason||JSON.stringify(p??'');
 }
-
-function candidateCards(){
-  const items=pendingCandidates();
-  if(!items.length)return '<div class="chappyEmpty">判断待ちの提案はありません。</div>';
-  return `<div class="chappyCandidateManage">${items.map(c=>`
-    <article data-candidate-card="${esc(c.candidateId)}">
-      <div class="candidateTop"><b>${esc(c.candidateType)}</b>${c.confidence!=null?`<small>${Math.round(c.confidence*100)}%</small>`:''}</div>
-      <p>${esc(candidateText(c))}</p>
-      ${c.reason?`<span>${esc(c.reason)}</span>`:''}
-      <div class="candidateActions">
-        <button data-candidate-decision="accept" data-candidate-id="${esc(c.candidateId)}">採用</button>
-        <button class="hold" data-candidate-decision="hold" data-candidate-id="${esc(c.candidateId)}">保留</button>
-        <button class="reject" data-candidate-decision="reject" data-candidate-id="${esc(c.candidateId)}">却下</button>
-      </div>
-    </article>`).join('')}</div>`;
+function candidateMeta(c){
+ const t=String(c.candidateType||'').toLowerCase();
+ if(t.includes('plan')||t.includes('schedule')||t.includes('予定'))return{label:'予定候補',icon:'📅',cls:'plan',dest:'予定候補として保持（自動登録しません）'};
+ if(t.includes('buy')||t.includes('shopping')||t.includes('買'))return{label:'買い物候補',icon:'🛒',cls:'buy',dest:'買う物メモへ追加'};
+ if(t.includes('improvement')||t.includes('改善'))return{label:'改善提案',icon:'💡',cls:'improvement',dest:'改善メモへ追加'};
+ return{label:'提案',icon:'✨',cls:'proposal',dest:'提案メモへ追加'};
+}
+function stateMeta(s){
+ if(s==='accepted')return{label:'採用済み',cls:'accepted'};
+ if(s==='held')return{label:'保留中',cls:'held'};
+ if(s==='rejected')return{label:'却下済み',cls:'rejected'};
+ return{label:'判断待ち',cls:'pending'};
+}
+function allCandidates(){return(snapshot().candidates||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));}
+function currentFilter(){return document.querySelector('[data-candidate-filter].active')?.dataset.candidateFilter||'pending';}
+function filteredCandidates(filter=currentFilter()){
+ const rows=allCandidates();if(filter==='all')return rows;if(filter==='pending')return rows.filter(c=>c.state==='pending');return rows.filter(c=>c.state===filter);
+}
+function candidateCards(filter='pending'){
+ const items=filteredCandidates(filter);if(!items.length)return'<div class="chappyEmpty">該当する提案はありません。</div>';
+ return`<div class="chappyCandidateManage">${items.map(c=>{const m=candidateMeta(c),st=stateMeta(c.state),disabled=!['pending','held'].includes(c.state);return`
+ <article class="candidateCard ${m.cls} ${st.cls}" data-candidate-card="${esc(c.candidateId)}">
+  <div class="candidateTop"><div class="candidateType"><span>${m.icon}</span><b>${m.label}</b></div><div class="candidateBadges">${c.confidence!=null?`<small>${Math.round(c.confidence*100)}%</small>`:''}<em>${st.label}</em></div></div>
+  <h4>${esc(candidateText(c))}</h4>
+  ${c.reason?`<div class="candidateReason"><b>理由</b><p>${esc(c.reason)}</p></div>`:''}
+  <div class="candidateDestination"><b>採用時</b><span>${esc(m.dest)}</span></div>
+  ${c.appliedTo?`<div class="candidateApplied">反映済み：${esc(c.appliedTo.kind||c.appliedTo.type||'OUTBASE')}</div>`:''}
+  <div class="candidateActions"><button data-candidate-decision="accept" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='accepted'?'採用済み':'採用'}</button><button class="hold" data-candidate-decision="hold" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='held'?'保留中':'保留'}</button><button class="reject" data-candidate-decision="reject" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='rejected'?'却下済み':'却下'}</button></div>
+ </article>`;}).join('')}</div>`;
+}
+function filterBar(){
+ const count=allCandidates().reduce((a,c)=>(a[c.state]=(a[c.state]||0)+1,a),{});
+ return`<div class="candidateFilters"><button class="active" data-candidate-filter="pending">判断待ち ${count.pending||0}</button><button data-candidate-filter="held">保留 ${count.held||0}</button><button data-candidate-filter="accepted">採用済み ${count.accepted||0}</button><button data-candidate-filter="rejected">却下済み ${count.rejected||0}</button><button data-candidate-filter="all">すべて ${allCandidates().length}</button></div>`;
 }
 function historyHtml(){
   const rows=recentResponses();
@@ -67,14 +84,16 @@ function open(){
    <button class="chappyImport" data-chappy-import>OUTBASEへ取り込む</button>
   </section>
   <div class="chappyStatus" data-chappy-status hidden></div><section class="chappyResult" data-chappy-result hidden></section>
-  <section class="chappyStep"><div class="chappyStepTitle"><span>3</span><b>提案を整理</b></div><div data-candidate-list>${candidateCards()}</div></section>
+  <section class="chappyStep"><div class="chappyStepTitle"><span>3</span><b>提案を整理</b></div>${filterBar()}<div data-candidate-list>${candidateCards("pending")}</div></section>
   <section class="chappyStep"><div class="chappyStepTitle"><span>4</span><b>相談履歴</b></div><div data-chappy-history>${historyHtml()}</div><button class="chappyReconsult" data-chappy-reconsult>同じ内容でもう一度相談</button></section>
   <div class="chappySafety"><b>AIは提案のみ</b><span>採用した時だけユーザー判断として反映します。予定候補は自動登録しません。</span></div>
  </div>`;
  document.body.appendChild(el);
 }
 function refreshManaged(){
- const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards();
+ const f=currentFilter(),old=document.querySelector('.candidateFilters');
+ if(old){const w=document.createElement('div');w.innerHTML=filterBar();old.replaceWith(w.firstElementChild);document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b.dataset.candidateFilter===f));}
+ const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(f);
  const hist=document.querySelector('[data-chappy-history]');if(hist)hist.innerHTML=historyHtml();
 }
 async function makeRequest(mode){
@@ -122,6 +141,7 @@ document.addEventListener('click',e=>{
  if(e.target.closest?.('[data-chappy-share]')){makeRequest('share');return;}
  if(e.target.closest?.('[data-chappy-import]')){importJson();return;}
  const decision=e.target.closest?.('[data-candidate-decision]');if(decision){decide(decision.dataset.candidateId,decision.dataset.candidateDecision);return;}
+ const filter=e.target.closest?.('[data-candidate-filter]');if(filter){document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b===filter));const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(filter.dataset.candidateFilter);return;}
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
  if(e.target.closest?.('[data-chappy-reconsult]')){makeRequest('share');return;}
  if(e.target.id===ID)document.getElementById(ID)?.remove();
