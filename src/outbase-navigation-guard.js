@@ -25,10 +25,19 @@
     '#outbaseMemoryDetail'
   ];
 
+  let trackedDepth = 0;
+  let closingFromHistory = false;
+
   function visible(element) {
     if (!element) return false;
     const style = getComputedStyle(element);
     return style.display !== 'none' && style.visibility !== 'hidden';
+  }
+
+  function openOverlayCount() {
+    return overlayRoots.reduce((count, selector) => {
+      return count + (visible(document.querySelector(selector)) ? 1 : 0);
+    }, 0);
   }
 
   function findTopCloseButton() {
@@ -39,26 +48,54 @@
     return null;
   }
 
-  function hasOpenOverlay() {
-    return overlayRoots.some(selector => visible(document.querySelector(selector)));
+  function syncHistoryDepth() {
+    const nextDepth = openOverlayCount();
+    if (!closingFromHistory && nextDepth > trackedDepth) {
+      for (let depth = trackedDepth + 1; depth <= nextDepth; depth += 1) {
+        history.pushState({ outbase: true, overlayDepth: depth }, '', location.href);
+      }
+    }
+    trackedDepth = nextDepth;
   }
 
-  window.addEventListener('popstate', event => {
-    if (!hasOpenOverlay()) return;
+  function isCloseControl(target) {
+    return overlayCloseSelectors.some(selector => target.closest?.(selector));
+  }
 
-    const closeButton = findTopCloseButton();
-    if (!closeButton) return;
-
+  window.addEventListener('click', event => {
+    if (!isCloseControl(event.target)) return;
+    if (!trackedDepth || !history.state?.outbase) return;
     event.preventDefault();
-    closeButton.click();
+    event.stopImmediatePropagation();
+    history.back();
+  }, true);
 
-    // Androidの戻るでページ遷移せず、閉じた画面に留める。
-    history.pushState({ outbase: true, overlayClosed: true }, '', location.href);
+  window.addEventListener('popstate', () => {
+    if (!trackedDepth) return;
+    const closeButton = findTopCloseButton();
+    if (!closeButton) {
+      trackedDepth = openOverlayCount();
+      return;
+    }
+    closingFromHistory = true;
+    closeButton.click();
+    requestAnimationFrame(() => {
+      trackedDepth = openOverlayCount();
+      closingFromHistory = false;
+    });
   });
 
   window.addEventListener('DOMContentLoaded', () => {
-    if (!history.state?.outbase) {
-      history.replaceState({ outbase: true }, '', location.href);
-    }
+    history.replaceState({ outbase: true, overlayDepth: 0 }, '', location.href);
+    trackedDepth = openOverlayCount();
+    const observer = new MutationObserver(() => {
+      requestAnimationFrame(syncHistoryDepth);
+    });
+    observer.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden']
+    });
   });
 })();
