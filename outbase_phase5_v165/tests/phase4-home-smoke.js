@@ -1,0 +1,24 @@
+const fs=require('fs');const path=require('path');const vm=require('vm');const assert=require('assert');
+const root=path.resolve(__dirname,'..');const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
+(async()=>{
+  const now=new Date('2026-07-15T03:00:00.000Z');
+  const nowActivity={id:'act-now',type:'walk',title:'朝の散歩',state:'active',startAt:'2026-07-15T00:00:00.000Z',endAt:null,visibility:'private',legacyPlanId:'p-now',participants:[{id:'m1',type:'member',role:'creator'},{id:'pet1',type:'pet',role:'participant'}],metadata:{legacy_plan:{location:'柏の葉公園'}}};
+  const nextActivity={id:'act-next',type:'camp',title:'次のキャンプ',state:'planned',startAt:'2026-07-18T00:00:00.000Z',endAt:'2026-07-19T00:00:00.000Z',visibility:'private',legacyPlanId:'p-next',participants:[{id:'m1',type:'member',role:'creator'},{id:'m2',type:'member',role:'participant'},{id:'m2',type:'member',role:'participant'},{id:'pet1',type:'pet',role:'participant'}],metadata:{legacy_plan:{location:'赤城山'}}};
+  const recentActivity={id:'act-recent',type:'camp',title:'前回キャンプ',state:'completed',startAt:'2026-06-01T00:00:00.000Z',endAt:'2026-06-02T00:00:00.000Z',visibility:'private',legacyPlanId:'p-old',participants:[{id:'m1',type:'member',role:'creator'},{id:'m2',type:'member',role:'participant'}],recordCount:2,mediaCount:1,metadata:{}};
+  const rows={members:[{id:'m1',name:'むー',role:'owner'},{id:'m2',name:'リン',role:'participant'}],pets:[{id:'pet1',name:'コタ',species:'犬'}],households:[{id:'h1',name:'わが家'}],records:[{id:'r1',activity_id:'act-recent'},{id:'r2',activity_id:'act-recent'}],media:[{id:'x1',activity_id:'act-recent',legacy_blob_ref:'fieldRecords:r1'}]};
+  const repo=name=>({all:async()=>rows[name]||[]});
+  const context={console,Date,Intl,Object,Array,Map,Set,Math,JSON,navigator:{onLine:true},globalThis:null,OUTBASE_REPOSITORIES_V160:{members:repo('members'),pets:repo('pets'),households:repo('households'),records:repo('records'),media:repo('media')},OUTBASE_PLAN_SCREEN_MODEL_V162:{async build(){return {now:[nowActivity],next:[nextActivity],calendarUrl:'/outbase/?tab=plan'};}},OUTBASE_VAULT_SCREEN_MODEL_V162:{async build(){return {activities:[recentActivity],summary:{activityCount:1,recordCount:2,assetCount:5},assets:[]};}},OUTBASE_PREPARATION_SCREEN_MODEL_V162:{async build(id){assert.equal(id,'act-next');return {total:6,completed:2,pending:4,progress:33,persisted:false};}},OUTBASE_DOMAIN_UTILS_V162:{asDate:value=>value?new Date(value):null},OUTBASE_PLAN_DOMAIN_V162:{legacyUrl:(activity,surface)=>`/outbase/?tab=${surface==='preparation'?'prep':'plan'}&activityId=${activity.id}&planId=${activity.legacyPlanId}`},OUTBASE_ROUTER:{current:()=>({name:'home'}),legacyUrl:(_route,v)=>`/outbase/?tab=record&activityId=${v.activityId}&planId=${v.planId}`,shellUrl:(name,v={})=>`/outbase/?shell=1&view=${name}${v.activityId?`&activityId=${v.activityId}`:''}`}};
+  context.globalThis=context;vm.createContext(context);
+  vm.runInContext(read('src/domain/home/home-domain.js'),context);vm.runInContext(read('src/screens/home/home-screen-model.js'),context);
+  const home=await context.OUTBASE_HOME_SCREEN_MODEL_V164.build({now});
+  assert.deepEqual(Array.from(home.next[0].participants.names),['むー','リン','コタ']);
+  assert.equal(home.next[0].preparation.progress,33);assert.equal(home.recent[0].recordCount,2);assert.equal(home.recent[0].mediaCount,1);
+  assert(home.next[0].detailUrl.includes(`activityId=${home.next[0].id}`));assert.equal(home.blobReads,0);assert.equal(home.family.memberCount,2);assert.equal(home.family.petCount,1);
+  context.OUTBASE_LEGACY_UI_V164={session:()=>({state:'idle'})};context.OUTBASE_LEGACY_UI_V165=context.OUTBASE_LEGACY_UI_V164;context.OUTBASE_HOME_SCREEN_MODEL_V164={build:async()=>home};context.OUTBASE_VAULT_SCREEN_MODEL_V162={build:async()=>({summary:home.vaultSummary,assets:[],activities:home.recent})};
+  vm.runInContext(read('src/shell/shell-model.js'),context);const shell=await context.OUTBASE_SHELL_MODEL_V164.build();
+  vm.runInContext(read('src/shell/shell-renderer.js'),context);const html=context.OUTBASE_SHELL_RENDERER_V164.homeHtml(shell);
+  for(const label of ['今','次','すぐ使う','最近'])assert(html.includes(`>${label}<`));
+  assert(html.includes('data-activity-id="act-now"'));assert(html.includes('data-activity-id="act-next"'));assert(html.includes('むー'));assert(html.includes('リン'));assert(html.includes('コタ'));assert(!html.toLowerCase().includes('blob'));
+  const css=read('style-shell.css');assert(!/(body|#outbaseShellRoot|\.ob3-shell)[^{]*\{[^}]*overflow\s*:\s*hidden/i.test(css));assert.equal((css.match(/MutationObserver/g)||[]).length,0);
+  console.log(JSON.stringify({status:'pass',sections:['now','next','quick','recent'],activityIdLinks:'matched',participants:['むー','リン','コタ'],preparationProgress:33,blobReads:0,mutationObserverAdded:0,wholeScreenOverflowHiddenAdded:0},null,2));
+})().catch(error=>{console.error(error);process.exit(1);});

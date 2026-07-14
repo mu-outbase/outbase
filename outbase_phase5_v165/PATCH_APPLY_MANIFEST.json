@@ -1,0 +1,39 @@
+{
+  "version": "v165-integrated",
+  "base": "v164-phase4",
+  "github_main_head": "70efdf99247ab639e55eb21f1f8644f9e0b47291",
+  "cutover": false,
+  "preview_only": true,
+  "legacy_db_untouched": true,
+  "android_verified": false,
+  "github_applied": false,
+  "added_files": [
+    "src/domain/filters/family-filter-domain.js",
+    "src/domain/calendar/calendar-domain.js",
+    "src/screens/calendar/calendar-screen-model.js",
+    "src/domain/activity/activity-detail-domain.js",
+    "src/screens/activity/activity-detail-screen-model.js",
+    "manifest.json",
+    "icons/outbase-192.png",
+    "icons/outbase-512.png"
+  ],
+  "protected_files": [
+    "src/app.js",
+    "src/data/database.js",
+    "src/data/repositories.js",
+    "src/data/migrations.js"
+  ],
+  "entry_url": "?shell=1&view=home",
+  "verification": [
+    "javascript_syntax",
+    "phase2a_regression",
+    "phase2b_regression",
+    "phase3_regression",
+    "phase4_regression",
+    "phase5_integrated_smoke",
+    "pwa_manifest",
+    "icon_dimensions",
+    "no_blob_reads",
+    "no_new_mutation_observer"
+  ]
+}
