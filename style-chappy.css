@@ -76,3 +76,37 @@
 .chappyDestinationActions:has(.secondary){grid-template-columns:.85fr 1.15fr}
 .chappyDestinationActions button{min-height:52px;border:0;border-radius:15px;background:#173d2d;color:#fff;font-size:15px;font-weight:900}
 .chappyDestinationActions .secondary{background:#e3ebe6;color:#173d2d}
+
+/* CORE-20: force candidate open button to remain interactive */
+.candidateApplied{position:relative;z-index:4;pointer-events:auto!important}
+.candidateApplied .candidateOpenButton{
+  position:relative;
+  z-index:20;
+  pointer-events:auto!important;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+  opacity:1!important;
+  cursor:pointer!important;
+  min-width:72px;
+  min-height:42px;
+  border:0;
+  border-radius:999px;
+  background:#173d2d;
+  color:#fff;
+  font-weight:900;
+  box-shadow:0 4px 12px rgba(23,61,45,.18);
+  transition:transform .12s ease,filter .12s ease;
+}
+.candidateApplied .candidateOpenButton:active,
+.candidateApplied .candidateOpenButton.pressed{
+  transform:scale(.94);
+  filter:brightness(1.18);
+}
+.candidateCard.accepted .candidateApplied,
+.candidateCard.accepted .candidateOpenButton{
+  pointer-events:auto!important;
+}
+.candidateCard.accepted .candidateActions button:disabled{
+  pointer-events:none;
+}

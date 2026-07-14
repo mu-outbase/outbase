@@ -67,7 +67,7 @@ function candidateCards(filter='pending'){
   <div class="candidateDestination"><b>採用後の保存先</b><span>${esc(destinationLabel(m))}</span></div>
   ${c.appliedTo?`<div class="candidateApplied">
   <div><span>✓ ${esc(appliedLabel(c.appliedTo))}</span>${c.decidedAt?`<small>${new Date(c.decidedAt).toLocaleString('ja-JP')}</small>`:''}</div>
-  <button data-open-destination="${esc(c.candidateId)}">開く</button>
+  <button type="button" class="candidateOpenButton" data-open-destination="${esc(c.candidateId)}" aria-label="保存先を開く">開く</button>
 </div>`:''}
   <div class="candidateActions"><button class="accept" data-candidate-decision="accept" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='accepted'?'採用済み':'採用'}</button><button class="hold" data-candidate-decision="hold" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='held'?'保留中':'保留'}</button><button class="reject" data-candidate-decision="reject" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='rejected'?'却下済み':'却下'}</button></div>
  </article>`;}).join('')}</div>`;
@@ -373,6 +373,26 @@ document.addEventListener('touchstart',e=>{
  if(button)e.stopPropagation();
 },{capture:true,passive:true});
 
+
+let lastDestinationPointerAt=0;
+document.addEventListener('pointerup',event=>{
+ const button=event.target.closest?.('[data-open-destination]');
+ if(!button)return;
+ event.preventDefault();
+ event.stopPropagation();
+ const now=Date.now();
+ if(now-lastDestinationPointerAt<500)return;
+ lastDestinationPointerAt=now;
+ button.classList.add('pressed');
+ setTimeout(()=>button.classList.remove('pressed'),180);
+ try{
+   openDestination(button.dataset.openDestination);
+ }catch(error){
+   console.error('[OUTBASE Chappy] open destination failed',error);
+   status(`保存先を開けませんでした：${error?.message||String(error)}`,'error');
+ }
+},{capture:true});
+
 document.addEventListener('click',e=>{
  if(e.target.closest?.('[data-chappy-close]')){document.getElementById(ID)?.remove();return;}
  if(e.target.closest?.('[data-chappy-copy]')){makeRequest('copy');return;}
@@ -380,7 +400,10 @@ document.addEventListener('click',e=>{
  if(e.target.closest?.('[data-chappy-import]')){importJson();return;}
  const decision=e.target.closest?.('[data-candidate-decision]');if(decision){decide(decision.dataset.candidateId,decision.dataset.candidateDecision);return;}
  const filter=e.target.closest?.('[data-candidate-filter]');if(filter){document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b===filter));const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(filter.dataset.candidateFilter);return;}
- const destination=e.target.closest?.('[data-open-destination]');if(destination){openDestination(destination.dataset.openDestination);return;}
+ const destination=e.target.closest?.('[data-open-destination]');if(destination){
+   e.preventDefault();e.stopPropagation();
+   return;
+ }
  const historyReconsult=e.target.closest?.('[data-history-reconsult]');if(historyReconsult){e.preventDefault();e.stopPropagation();
    const text=historyInstruction(historyReconsult.dataset.historyReconsult);
    if(!text){status('この履歴には再相談できる内容がありません。','info');return;}
@@ -431,5 +454,20 @@ document.addEventListener('click',e=>{
  if(e.target.id===DESTINATION_ID){closeDestination(false);return;}
  if(e.target.id===ID)document.getElementById(ID)?.remove();
 });
+
+document.addEventListener('click',event=>{
+ const button=event.target.closest?.('[data-open-destination]');
+ if(!button)return;
+ if('PointerEvent' in globalThis)return;
+ event.preventDefault();
+ event.stopPropagation();
+ try{
+   openDestination(button.dataset.openDestination);
+ }catch(error){
+   console.error('[OUTBASE Chappy] open destination fallback failed',error);
+   status(`保存先を開けませんでした：${error?.message||String(error)}`,'error');
+ }
+},{capture:true});
+
 globalThis.addEventListener('outbase:open-chappy',open);
 })();
