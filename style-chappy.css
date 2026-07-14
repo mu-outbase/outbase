@@ -38,3 +38,5 @@
 .historyDetail{border:1px solid rgba(23,61,45,.18);background:#fff;color:#173d2d}
 .historyReconsult{margin:0;border:0;background:#173d2d;color:#fff}
 .historyActions button:active{transform:scale(.985)}
+
+.historyReconsult:disabled{opacity:.4;pointer-events:none}

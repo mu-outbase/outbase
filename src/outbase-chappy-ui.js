@@ -12,7 +12,7 @@ function status(msg,type='info'){const n=document.querySelector('[data-chappy-st
 function busy(flag){document.querySelectorAll(`#${ID} button`).forEach(b=>{if(!b.hasAttribute('data-chappy-close'))b.disabled=flag;});}
 
 function snapshot(){
-  try{core()?.migrateLegacyChappyData?.();return core()?.snapshot()||{};}catch(_e){return {};}
+  try{core()?.migrateLegacyChappyData?.();core()?.backfillChappyInstructions?.();return core()?.snapshot()||{};}catch(_e){return {};}
 }
 function pendingCandidates(){
   return (snapshot().candidates||[]).filter(c=>['pending','held'].includes(c.state)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -77,7 +77,7 @@ function historyHtml(){
       </div>
       <div class="historyActions">
         <button class="historyDetail" type="button" data-history-detail="${esc(r.responseId)}">詳細を見る</button>
-        <button class="historyReconsult" type="button" data-history-reconsult="${esc(r.responseId)}">この内容で再相談</button>
+        <button class="historyReconsult" type="button" data-history-reconsult="${esc(r.responseId)}" ${historyInstruction(r.responseId)?"":"disabled"}>この内容で再相談</button>
       </div>
     </article>`;
   }).join('')}</div>`;
@@ -188,7 +188,15 @@ function render(result){
 function importJson(){
  const api=chappy();if(!api){status('Chappy基盤を読み込めませんでした。','error');return;}
  const raw=document.querySelector('[data-chappy-response]')?.value.trim()||'';if(!raw){status('ChatGPTのJSON回答を貼り付けてください。','error');return;}busy(true);
- try{const result=api.importResponse(raw,{requestId:localStorage.getItem(LAST)||null});render(result);status('回答を取り込みました。','success');document.querySelector('[data-chappy-response]').value='';refreshManaged();publishCandidateStats();globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));}
+ try{const requestId=localStorage.getItem(LAST)||null;const result=api.importResponse(raw,{requestId});try{
+       const responseId=result?.saved?.responseId||result?.responseId||null;
+       const instructionText=localStorage.getItem(LAST_INSTRUCTION)||instruction();
+       if(responseId&&core()?.saveAiResponse){
+         const existing=(snapshot().aiResponses||[]).find(r=>r.responseId===responseId);
+         if(existing)core().saveAiResponse({...existing,originalInstruction:instructionText});
+       }
+      }catch(_e){}
+      render(result);status('回答を取り込みました。','success');document.querySelector('[data-chappy-response]').value='';refreshManaged();publishCandidateStats();globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));}
  catch(e){status(`取り込めませんでした：${e.message||e}`,'error');}finally{busy(false);}
 }
 function decide(id,decision){
@@ -219,8 +227,13 @@ function historyInstruction(responseId){
  const data=snapshot();
  const response=(data.aiResponses||[]).find(r=>r.responseId===responseId);
  if(!response)return'';
+ if(response.originalInstruction)return response.originalInstruction;
  const req=(data.aiRequests||[]).find(r=>r.requestId===response.requestId);
- return req?.context?.instruction||req?.instruction||response?.normalized?.instruction||response?.normalized?.question||'';
+ const requestText=req?.context?.instruction||req?.instruction||'';
+ if(requestText)return requestText;
+ const normalized=response?.normalized?.instruction||response?.normalized?.question||'';
+ if(normalized)return normalized;
+ return localStorage.getItem(LAST_INSTRUCTION)||'';
 }
 function openHistory(responseId){
  const data=snapshot(),response=(data.aiResponses||[]).find(r=>r.responseId===responseId);
@@ -292,6 +305,7 @@ document.addEventListener('click',e=>{
  const historyReconsult=e.target.closest?.('[data-history-reconsult]');if(historyReconsult){e.preventDefault();e.stopPropagation();
    const text=historyInstruction(historyReconsult.dataset.historyReconsult);
    if(!text){status('この履歴には再相談できる内容がありません。','info');return;}
+   status('この履歴の相談内容を準備しました。共有を開きます。','info');
    const box=document.querySelector('[data-chappy-instruction]');if(box)box.value=text;
    makeRequest('share',text);
    return;

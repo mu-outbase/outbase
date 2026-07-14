@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='2.1.0';
+  const VERSION='2.2.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -898,6 +898,24 @@
   }
 
 
+
+  function backfillChappyInstructions(){
+    const responses=list(KEYS.aiResponses);
+    const requests=list(KEYS.aiRequests);
+    let changed=0;
+    const fallback=localStorage.getItem('outbase_chappy_last_instruction')||'';
+    const updated=responses.map(response=>{
+      if(response.originalInstruction)return response;
+      const req=requests.find(item=>item.requestId===response.requestId);
+      const instruction=req?.context?.instruction||req?.instruction||fallback||'';
+      if(!instruction)return response;
+      changed+=1;
+      return {...response,originalInstruction:instruction,updatedAt:now()};
+    });
+    if(changed)write(KEYS.aiResponses,updated);
+    return {changed};
+  }
+
   function migrateLegacyChappyData(){
     const markerKey=`${PREFIX}_chappy_migration_v1`;
     if(read(markerKey,false))return {migrated:false,reason:'already_migrated'};
@@ -1066,6 +1084,7 @@
     decideCandidate,
     candidateStats,
     migrateLegacyChappyData,
+    backfillChappyInstructions,
     saveAiRequest,
     saveAiResponse,
     saveRecovery,
