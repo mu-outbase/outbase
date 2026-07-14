@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='2.2.0';
+  const VERSION='2.3.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -176,23 +176,33 @@
   }
 
   function addMemo(input={}){
+    const safeText=value=>{
+      if(value===null||value===undefined)return '';
+      if(typeof value==='string')return value;
+      if(typeof value==='number'||typeof value==='boolean')return String(value);
+      if(typeof value==='object'){
+        if(typeof value.text==='string')return value.text;
+        if(typeof value.title==='string')return value.title;
+        try{return JSON.stringify(value);}catch(_e){return '';}
+      }
+      return String(value);
+    };
     const memo={
       memoId:input.memoId||uid('memo'),
-      kind:input.kind||'memo',
-      text:String(input.text||'').trim(),
-      observedAt:normalizeTime(input.observedAt||input.time),
-      source:input.source||'text',
-      completed:Boolean(input.completed),
+      kind:safeText(input.kind)||'memo',
+      text:safeText(input.text),
+      observedAt:normalizeTime(input.observedAt||now()),
+      source:safeText(input.source)||'manual',
+      planIds:Array.isArray(input.planIds)?input.planIds.filter(Boolean).map(String):[],
+      activityIds:Array.isArray(input.activityIds)?input.activityIds.filter(Boolean).map(String):[],
+      status:safeText(input.status)||'active',
       pinned:Boolean(input.pinned),
-      planIds:Array.isArray(input.planIds)?[...new Set(input.planIds.filter(Boolean))]:[],
-      activityIds:Array.isArray(input.activityIds)?input.activityIds:[],
-      status:input.status||'saved',
-      legacyRef:input.legacyRef??null
+      completed:Boolean(input.completed),
+      legacyRef:input.legacyRef??null,
+      createdAt:normalizeTime(input.createdAt||now()),
+      updatedAt:normalizeTime(input.updatedAt||now())
     };
-    if(!memo.text)throw new Error('memo text is required');
-    upsert(KEYS.memos,memo,'memoId');
-    applyContextRelations(memo.memoId,'memo',{planIds:memo.planIds});
-    return clone(memo);
+    return upsert(KEYS.memos,memo,'memoId');
   }
 
   function setIntent(input={}){
@@ -374,10 +384,15 @@
   function applyAcceptedCandidate(candidate,extra={}){
     const type=String(candidate.candidateType||'').toLowerCase();
     const value=candidate.payload;
-    const text=typeof value==='string'
-      ?value
-      :(value?.text||value?.title||candidate.reason||JSON.stringify(value));
-    if(!text)return null;
+    const text=(()=>{
+      if(typeof value==='string')return value;
+      if(value&&typeof value.text==='string')return value.text;
+      if(value&&typeof value.title==='string')return value.title;
+      if(typeof candidate.reason==='string'&&candidate.reason)return candidate.reason;
+      if(value===null||value===undefined)return '';
+      try{return JSON.stringify(value);}catch(_e){return String(value??'');}
+    })();
+    if(!text||typeof text!=='string')return null;
 
     const existingMemos=list(KEYS.memos);
     const duplicate=existingMemos.find(item=>

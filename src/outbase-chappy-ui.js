@@ -24,8 +24,8 @@ function candidateText(c){
  const p=c.payload;if(typeof p==='string')return p;
  return p?.text||p?.title||c.reason||JSON.stringify(p??'');
 }
-function candidateMeta(c){
- const t=String(c.candidateType||'').toLowerCase();
+function candidateMeta(c={}){
+ const t=String(c?.candidateType??'').toLowerCase();
  if(t.includes('plan')||t.includes('schedule')||t.includes('予定'))return{label:'予定候補',icon:'📅',cls:'plan',dest:'予定候補として保持（自動登録しません）'};
  if(t.includes('buy')||t.includes('shopping')||t.includes('買'))return{label:'買い物候補',icon:'🛒',cls:'buy',dest:'買う物メモへ追加'};
  if(t.includes('improvement')||t.includes('改善'))return{label:'改善提案',icon:'💡',cls:'improvement',dest:'改善メモへ追加'};
@@ -203,12 +203,18 @@ function decide(id,decision){
  const api=core();if(!api){status('Coreを読み込めませんでした。','error');return;}
  try{
   const result=api.decideCandidate(id,decision,{...activeContext(),decidedBy:'user'});
+  if(!result||typeof result!=='object')throw new Error('採用結果を取得できませんでした');
   const meta=candidateMeta(result);
   let msg='';
   if(decision==='accept'){
-    msg=result.appliedTo?.type==='plan_candidate'
-      ?'予定候補として保持しました。自動登録はしていません。'
-      :`${meta.destination.replace('へ追加','')}へ追加しました。`;
+    if(result.appliedTo?.type==='plan_candidate'){
+      msg='予定候補として保持しました。自動登録はしていません。';
+    }else{
+      const destination=typeof meta?.destination==='string'&&meta.destination
+        ?meta.destination
+        :'OUTBASEメモへ追加';
+      msg=`${destination.replace('へ追加','')}へ追加しました。`;
+    }
   }else if(decision==='hold')msg='保留しました。';
   else msg='却下しました。';
   status(msg,'success');
@@ -216,7 +222,10 @@ function decide(id,decision){
   const target=decision==='accept'?'accepted':decision==='hold'?'held':'rejected';
   document.querySelector(`[data-candidate-filter="${target}"]`)?.click();
   globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh'));
- }catch(e){status(`候補を更新できませんでした：${e.message||e}`,'error');}
+ }catch(e){
+  console.error('[OUTBASE Chappy] candidate decision failed',e);
+  status(`候補を更新できませんでした：${e?.message||String(e)}`,'error');
+ }
 }
 function publishCandidateStats(){
  const stats=core()?.candidateStats?.()||{};
