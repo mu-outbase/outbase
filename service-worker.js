@@ -1,13 +1,13 @@
-const CACHE_NAME='outbase-field03-core21';
+const CACHE_NAME='outbase-field03-core22';
 const CORE_ASSETS=[
   './','./index.html',
-  './style.css?v=outbase-field03-core21','./style-flow.css?v=outbase-field03-core21',
-  './style-entry.css?v=outbase-field03-core21','./style-activity.css?v=outbase-field03-core21','./style-chappy.css?v=outbase-field03-core21',
-  './src/app.js?v=outbase-field03-core21','./src/outbase-core.js?v=outbase-field03-core21',
-  './src/outbase-chappy.js?v=outbase-field03-core21','./src/outbase-chappy-ui.js?v=outbase-field03-core21','./src/outbase-import.js?v=outbase-field03-core21',
-  './src/outbase-flow.js?v=outbase-field03-core21','./src/outbase-entry.js?v=outbase-field03-core21',
-  './src/outbase-activity.js?v=outbase-field03-core21','./manifest.json?v=outbase-field03-core21',
-  './outbase_library10a/style.css?v=outbase-field03-core21'
+  './style.css?v=outbase-field03-core22','./style-flow.css?v=outbase-field03-core22','./style-memo.css?v=outbase-field03-core22',
+  './style-entry.css?v=outbase-field03-core22','./style-activity.css?v=outbase-field03-core22','./style-chappy.css?v=outbase-field03-core22',
+  './src/app.js?v=outbase-field03-core22','./src/outbase-core.js?v=outbase-field03-core22',
+  './src/outbase-chappy.js?v=outbase-field03-core22','./src/outbase-chappy-ui.js?v=outbase-field03-core22','./src/outbase-import.js?v=outbase-field03-core22','./src/outbase-memo-ui.js?v=outbase-field03-core22',
+  './src/outbase-flow.js?v=outbase-field03-core22','./src/outbase-entry.js?v=outbase-field03-core22',
+  './src/outbase-activity.js?v=outbase-field03-core22','./manifest.json?v=outbase-field03-core22',
+  './outbase_library10a/style.css?v=outbase-field03-core22'
 ];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
