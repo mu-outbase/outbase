@@ -23,3 +23,5 @@
 .chappyHistory article{display:block}
 
 .historyCard{cursor:pointer;transition:transform .16s ease}.historyCard:active{transform:scale(.985)}.historyCard:after{content:"詳細を見る";display:block;margin-top:7px;color:#98722e;font-size:9px;font-weight:900}
+
+.chappyReconsult:disabled{opacity:.45;cursor:default}

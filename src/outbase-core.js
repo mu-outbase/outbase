@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.8.0';
+  const VERSION='1.9.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -454,7 +454,7 @@
     },{total:0,pending:0,held:0,accepted:0,rejected:0});
   }
 
-  function decideCandidate  function decideCandidate(candidateId,decision,extra={}){
+  function decideCandidate(candidateId,decision,extra={}){
     const rows=list(KEYS.candidates);
     const index=rows.findIndex(item=>item.candidateId===candidateId);
     if(index<0)throw new Error('candidate not found');
@@ -897,6 +897,98 @@
     return clone(result);
   }
 
+
+  function migrateLegacyChappyData(){
+    const markerKey=`${PREFIX}_chappy_migration_v1`;
+    if(read(markerKey,false))return {migrated:false,reason:'already_migrated'};
+
+    const legacyResponseKeys=[
+      'outbase_chappy_responses',
+      'outbase_ai_responses',
+      'outbase_core_ai_responses',
+      `${PREFIX}_responses`
+    ];
+    const legacyRequestKeys=[
+      'outbase_chappy_requests',
+      'outbase_ai_requests',
+      'outbase_core_ai_requests',
+      `${PREFIX}_requests`
+    ];
+    const legacyCandidateKeys=[
+      'outbase_chappy_candidates',
+      'outbase_ai_candidates',
+      'outbase_core_candidates'
+    ];
+
+    let migratedResponses=0,migratedRequests=0,migratedCandidates=0;
+
+    legacyResponseKeys.forEach(key=>{
+      const rows=read(key,[]);
+      if(!Array.isArray(rows))return;
+      rows.forEach(item=>{
+        if(!item)return;
+        const response={
+          responseId:item.responseId||item.id||uid('ai_response'),
+          requestId:item.requestId??null,
+          state:item.state||'imported',
+          schemaVersion:item.schemaVersion||'outbase-chappy-v1',
+          rawText:item.rawText||item.raw||'',
+          normalized:clone(item.normalized||item.result||item),
+          warnings:Array.isArray(item.warnings)?item.warnings:[],
+          importedAt:normalizeTime(item.importedAt||item.createdAt||now()),
+          source:item.source||'legacy'
+        };
+        upsert(KEYS.aiResponses,response,'responseId');
+        migratedResponses+=1;
+      });
+    });
+
+    legacyRequestKeys.forEach(key=>{
+      const rows=read(key,[]);
+      if(!Array.isArray(rows))return;
+      rows.forEach(item=>{
+        if(!item)return;
+        const request={
+          requestId:item.requestId||item.id||uid('ai_request'),
+          purpose:item.purpose||'legacy',
+          prompt:item.prompt||'',
+          context:clone(item.context??null),
+          schemaVersion:item.schemaVersion||'outbase-chappy-v1',
+          state:item.state||'prepared',
+          createdAt:normalizeTime(item.createdAt||now()),
+          sentAt:item.sentAt?normalizeTime(item.sentAt):null,
+          source:item.source||'legacy'
+        };
+        if(request.prompt){
+          upsert(KEYS.aiRequests,request,'requestId');
+          migratedRequests+=1;
+        }
+      });
+    });
+
+    legacyCandidateKeys.forEach(key=>{
+      const rows=read(key,[]);
+      if(!Array.isArray(rows))return;
+      rows.forEach(item=>{
+        if(!item)return;
+        saveCandidate({
+          ...item,
+          candidateId:item.candidateId||item.id||uid('candidate'),
+          source:item.source||'legacy'
+        });
+        migratedCandidates+=1;
+      });
+    });
+
+    write(markerKey,{
+      migratedAt:now(),
+      migratedResponses,
+      migratedRequests,
+      migratedCandidates
+    });
+    return {migrated:true,migratedResponses,migratedRequests,migratedCandidates};
+  }
+
   function snapshot(){
     return {
       meta:read(KEYS.meta,{}),
@@ -973,6 +1065,7 @@
     saveCandidate,
     decideCandidate,
     candidateStats,
+    migrateLegacyChappyData,
     saveAiRequest,
     saveAiResponse,
     saveRecovery,

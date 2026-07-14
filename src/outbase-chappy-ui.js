@@ -12,7 +12,7 @@ function status(msg,type='info'){const n=document.querySelector('[data-chappy-st
 function busy(flag){document.querySelectorAll(`#${ID} button`).forEach(b=>{if(!b.hasAttribute('data-chappy-close'))b.disabled=flag;});}
 
 function snapshot(){
-  try{return core()?.snapshot()||{};}catch(_e){return {};}
+  try{core()?.migrateLegacyChappyData?.();return core()?.snapshot()||{};}catch(_e){return {};}
 }
 function pendingCandidates(){
   return (snapshot().candidates||[]).filter(c=>['pending','held'].includes(c.state)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -60,7 +60,7 @@ function filterBar(){
 }
 function historyHtml(){
   const rows=recentResponses(), candidates=allCandidates();
-  if(!rows.length)return'<div class="chappyEmpty">相談履歴はまだありません。</div>';
+  if(!rows.length)return'<div class="chappyEmpty">再相談できる履歴がありません。</div>';
   return`<div class="chappyHistory">${rows.map(r=>{
     const related=candidates.filter(c=>c.responseId===r.responseId||c.importId===r.responseId);
     const accepted=related.filter(c=>c.state==='accepted').length;
@@ -93,10 +93,15 @@ function open(){
   </section>
   <div class="chappyStatus" data-chappy-status hidden></div><section class="chappyResult" data-chappy-result hidden></section>
   <section class="chappyStep"><div class="chappyStepTitle"><span>3</span><b>提案を整理</b></div>${filterBar()}<div data-candidate-list>${candidateCards("pending")}</div></section>
-  <section class="chappyStep"><div class="chappyStepTitle"><span>4</span><b>相談履歴</b></div><div data-chappy-history>${historyHtml()}</div><button class="chappyReconsult" data-chappy-reconsult>同じ内容でもう一度相談</button></section>
+  <section class="chappyStep"><div class="chappyStepTitle"><span>4</span><b>相談履歴</b></div><div data-chappy-history>${historyHtml()}</div><button class="chappyReconsult" data-chappy-reconsult ${recentResponses().length?"":"disabled"}>前回の内容で再相談</button></section>
   <div class="chappySafety"><b>AIは提案のみ</b><span>採用した時だけユーザー判断として反映します。予定候補は自動登録しません。</span></div>
  </div>`;
  document.body.appendChild(el);
+ const migration=core()?.migrateLegacyChappyData?.();
+ if(migration?.migrated&&(migration.migratedResponses||migration.migratedCandidates)){
+   status(`過去の相談履歴を復元しました（履歴${migration.migratedResponses||0}件・候補${migration.migratedCandidates||0}件）。`,'success');
+   refreshManaged();
+ }
  publishCandidateStats();
 }
 function refreshManaged(){
@@ -104,6 +109,16 @@ function refreshManaged(){
  if(old){const w=document.createElement('div');w.innerHTML=filterBar();old.replaceWith(w.firstElementChild);document.querySelectorAll('[data-candidate-filter]').forEach(b=>b.classList.toggle('active',b.dataset.candidateFilter===f));}
  const list=document.querySelector('[data-candidate-list]');if(list)list.innerHTML=candidateCards(f);
  const hist=document.querySelector('[data-chappy-history]');if(hist)hist.innerHTML=historyHtml();
+}
+function lastConsultInstruction(){
+ const data=snapshot();
+ const lastResponse=(data.aiResponses||[]).slice().sort((a,b)=>new Date(b.importedAt)-new Date(a.importedAt))[0];
+ if(lastResponse){
+   const req=(data.aiRequests||[]).find(r=>r.requestId===lastResponse.requestId);
+   const fromRequest=req?.context?.instruction||req?.instruction||'';
+   if(fromRequest)return fromRequest;
+ }
+ return localStorage.getItem(LAST_INSTRUCTION)||'';
 }
 async function makeRequest(mode){
  const api=chappy();if(!api){status('Chappy基盤を読み込めませんでした。','error');return;}busy(true);
@@ -210,11 +225,14 @@ document.addEventListener('click',e=>{
  const history=e.target.closest?.('[data-history-response]');if(history){openHistory(history.dataset.historyResponse);return;}
  const template=e.target.closest?.('[data-chappy-template]');if(template){applyTemplate(template.dataset.chappyTemplate);return;}
  if(e.target.closest?.('[data-chappy-reconsult]')){
- const last=localStorage.getItem(LAST_INSTRUCTION);
+ const last=lastConsultInstruction();
+ if(!last){
+   status('再相談できる履歴がありません。','info');
+   return;
+ }
  const box=document.querySelector('[data-chappy-instruction]');
- if(box&&last)box.value=last;
- box?.scrollIntoView({behavior:'smooth',block:'center'});
- status(last?'前回の相談内容を復元しました。':'前回の相談内容はありません。',last?'success':'info');
+ if(box)box.value=last;
+ makeRequest('share');
  return;
 }
  if(e.target.id===ID)document.getElementById(ID)?.remove();
