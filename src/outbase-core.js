@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='1.4.0';
+  const VERSION='1.5.0';
   const PREFIX='outbase_core_v1';
   const KEYS={
     meta:`${PREFIX}_meta`,
@@ -354,28 +354,78 @@
     const candidate={
       candidateId:input.candidateId||uid('candidate'),
       importId:input.importId??null,
+      responseId:input.responseId??input.importId??null,
+      requestId:input.requestId??null,
       candidateType:input.candidateType||'unknown',
-      payload:clone(input.payload??null),
+      payload:clone(input.payload??input.value??null),
+      reason:input.reason||'',
+      sourceRefs:Array.isArray(input.sourceRefs)?input.sourceRefs.filter(Boolean):[],
       source:input.source||'extractor',
       confidence:input.confidence??null,
-      state:input.state||'pending',
+      state:input.state||input.status||'pending',
       createdAt:normalizeTime(input.createdAt||now()),
       decidedAt:input.decidedAt?normalizeTime(input.decidedAt):null,
-      decision:input.decision??null
+      decision:input.decision??null,
+      appliedTo:clone(input.appliedTo??null)
     };
     return upsert(KEYS.candidates,candidate,'candidateId');
+  }
+
+  function applyAcceptedCandidate(candidate,extra={}){
+    const type=String(candidate.candidateType||'').toLowerCase();
+    const value=candidate.payload;
+    const text=typeof value==='string'
+      ?value
+      :(value?.text||value?.title||candidate.reason||JSON.stringify(value));
+    if(!text)return null;
+
+    if(type.includes('plan')||type.includes('schedule')||type.includes('予定')){
+      return {type:'plan_candidate',status:'retained',reason:'予定構造へは自動書込みしない'};
+    }
+
+    const kind=type.includes('buy')||type.includes('shopping')||type.includes('買')
+      ?'buy'
+      :type.includes('improvement')||type.includes('改善')
+        ?'improvement'
+        :'ai-proposal';
+
+    const memo=addMemo({
+      memoId:`accepted_${candidate.candidateId}`,
+      kind,
+      text,
+      observedAt:now(),
+      source:'chappy-accepted',
+      planIds:Array.isArray(extra.planIds)?extra.planIds:[],
+      activityIds:Array.isArray(extra.activityIds)?extra.activityIds:[],
+      status:'accepted-ai-proposal',
+      legacyRef:candidate.candidateId
+    });
+    addRelation({
+      fromId:candidate.candidateId,
+      fromType:'candidate',
+      toId:memo.memoId,
+      toType:'memo',
+      relationType:'accepted_as',
+      source:'user',
+      confidence:1
+    });
+    return {type:'memo',id:memo.memoId,kind};
   }
 
   function decideCandidate(candidateId,decision,extra={}){
     const rows=list(KEYS.candidates);
     const index=rows.findIndex(item=>item.candidateId===candidateId);
     if(index<0)throw new Error('candidate not found');
+    const normalized=decision==='accept'?'accept':decision==='reject'?'reject':'hold';
+    const appliedTo=normalized==='accept'?applyAcceptedCandidate(rows[index],extra):null;
     rows[index]={
       ...rows[index],
-      state:decision==='accept'?'accepted':decision==='reject'?'rejected':'pending',
-      decision,
+      state:normalized==='accept'?'accepted':normalized==='reject'?'rejected':'held',
+      decision:normalized,
       decidedAt:now(),
       decidedBy:extra.decidedBy||'user',
+      note:extra.note||'',
+      appliedTo:clone(appliedTo),
       updatedAt:now()
     };
     write(KEYS.candidates,rows);

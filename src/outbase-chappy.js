@@ -164,12 +164,14 @@
       api.saveCandidate({
         candidateId:`chappy_${saved.responseId}_${item.order}`,
         candidateType:item.candidateType,
-        value:item.value,
+        payload:item.value,
         confidence:item.confidence,
         reason:item.reason,
         source:'chappy',
-        status:'pending',
+        state:'pending',
         sourceRefs:item.sourceRefs,
+        responseId:saved.responseId,
+        requestId:options.requestId||null,
         importId:saved.responseId
       });
     });
