@@ -1,4 +1,12 @@
-export const VERSION = 'MVPB_CORE06_12_SCROLL_RESTORE';
-export const ALPHA1_STATUS = 'FROZEN_REFERENCE_ONLY';
-export const STORAGE_KEY = 'outbase_core02_state';
-export const CORE_LABEL = 'MVPβ Core 06.12 / Bottom scroll restore';
+(() => {
+  'use strict';
+  const VERSION=Object.freeze({
+    app:'v165-integrated',
+    legacy:'outbase-field03-compact-2',
+    data:'outbase-v160-phase1',
+    domain:'outbase-v165-integrated',
+    shell:'outbase-v165-integrated',
+    cache:'outbase-field03-v165-integrated'
+  });
+  globalThis.OUTBASE_VERSION=VERSION;
+})();

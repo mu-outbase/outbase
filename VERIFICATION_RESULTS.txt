@@ -1,0 +1,127 @@
+OUTBASE v165 VERIFICATION RESULTS
+Generated: 2026-07-15
+
+--- tests/phase2a-loader-main-smoke.js
+{
+  "status": "pass",
+  "loader": "sequential-and-idempotent",
+  "main": "legacy-before-data-before-domain-before-shell"
+}
+--- tests/phase2a-smoke.js
+{
+  "status": "pass",
+  "legacy_order": 14,
+  "data_order": 7,
+  "domain_order": 15,
+  "shell_order": 5,
+  "route": {
+    "name": "record",
+    "legacyTab": "record",
+    "shell": false,
+    "activityId": "act-1",
+    "planId": null,
+    "sheet": null,
+    "month": null,
+    "people": "",
+    "query": {
+      "tab": "record",
+      "activityId": "act-1"
+    }
+  }
+}
+--- tests/phase2b-domain-smoke.js
+{
+  "status": "pass",
+  "plans": 1,
+  "baseline": 6,
+  "vault": {
+    "activityCount": 1,
+    "recordCount": 1,
+    "assetCount": 1,
+    "reviewCount": 1,
+    "openImprovementCount": 1,
+    "latestActivity": {
+      "id": "act-memory",
+      "type": "camp",
+      "title": "前回キャンプ",
+      "state": "completed",
+      "startAt": "2026-06-01T00:00:00.000Z",
+      "endAt": "2026-06-02T00:00:00.000Z",
+      "timezone": "Asia/Tokyo",
+      "visibility": "private",
+      "legacyPlanId": "old-1",
+      "updatedAt": "2026-06-03T00:00:00.000Z",
+      "metadata": null,
+      "calendar": [],
+      "participants": [],
+      "recordCount": 1,
+      "mediaCount": 1,
+      "reviewCount": 1,
+      "openImprovementCount": 1,
+      "legacyUrl": "/outbase/?tab=plan&activityId=act-memory&planId=old-1"
+    },
+    "latestRecord": {
+      "id": "rec-1",
+      "activityId": "act-memory",
+      "type": "photo",
+      "occurredAt": "2026-06-02T01:00:00.000Z",
+      "visibility": "private",
+      "payload": {
+        "name": "photo.jpg"
+      },
+      "legacyRef": null
+    }
+  }
+}
+--- tests/phase3-shell-smoke.js
+{
+  "status": "pass",
+  "history": "pushState",
+  "modalBack": true,
+  "activeSessionGuard": true,
+  "overflowHiddenAdded": 0,
+  "mutationObserverAdded": 0
+}
+--- tests/phase4-home-smoke.js
+{
+  "status": "pass",
+  "sections": [
+    "now",
+    "next",
+    "quick",
+    "recent"
+  ],
+  "activityIdLinks": "matched",
+  "participants": [
+    "むー",
+    "リン",
+    "コタ"
+  ],
+  "preparationProgress": 33,
+  "blobReads": 0,
+  "mutationObserverAdded": 0,
+  "wholeScreenOverflowHiddenAdded": 0
+}
+--- tests/phase5-integrated-smoke.js
+{
+  "status": "pass",
+  "activityId": "act-camp",
+  "calendarDays": 2,
+  "selectedFilters": 2,
+  "recordCount": 1,
+  "photoCount": 1,
+  "blobReads": 0,
+  "pwa": "standalone",
+  "mutationObserverAdded": 0,
+  "wholeScreenOverflowHiddenAdded": 0
+}
+--- protected hashes
+7fc86e06f361ae5441ac8ab48f25d89dbf3fe6c1ce6c7d8ff36e4535a83b8903  src/data/database.js
+0d03d87b8e6ff0489c85e88aa1fc51c9959761a2a2083abf038dc904c32b7337  src/data/repositories.js
+645abbba805b11a4a9b0d459144193cb3296436b10ee87488ff683560409b18e  src/data/migrations.js
+--- pwa icons
+icons/outbase-192.png: PNG image data, 192 x 192, 8-bit/color RGBA, non-interlaced
+icons/outbase-512.png: PNG image data, 512 x 512, 8-bit/color RGBA, non-interlaced
+--- forbidden patterns
+new module MutationObserver count: 0
+whole-screen overflow hidden count: 0
