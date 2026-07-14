@@ -40,3 +40,17 @@
 .historyActions button:active{transform:scale(.985)}
 
 .historyReconsult:disabled{opacity:.4;pointer-events:none}
+
+/* CORE-18 user-facing polish */
+.candidateApplied{padding:9px 10px}
+.candidateApplied>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.candidateApplied span{font-size:11px;font-weight:900}
+.candidateApplied small{font-size:9px;color:#5f7669}
+.candidateApplied button{min-width:64px}
+.candidateDestination{align-items:center}
+.candidateDestination b{font-size:9px}
+.candidateDestination span{font-weight:900}
+.historyCounts .accepted{background:#dcebe3!important;color:#195838!important}
+.historyCounts .held{background:#e8edeb!important;color:#52645a!important}
+.historyCounts .rejected{background:#f3e4df!important;color:#873c31!important}
+.historyCounts .pending{background:#fff2d8!important;color:#7a5d20!important}

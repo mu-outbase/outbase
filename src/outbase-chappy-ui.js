@@ -31,6 +31,21 @@ function candidateMeta(c={}){
  if(t.includes('improvement')||t.includes('改善'))return{label:'改善提案',icon:'💡',cls:'improvement',dest:'改善メモへ追加'};
  return{label:'提案',icon:'✨',cls:'proposal',dest:'提案メモへ追加'};
 }
+function appliedLabel(appliedTo){
+ const type=String(appliedTo?.type||'');
+ const kind=String(appliedTo?.kind||'');
+ if(type==='plan_candidate')return'予定候補として保存しました';
+ if(kind==='buy')return'買う物メモへ追加しました';
+ if(kind==='improvement')return'改善メモへ追加しました';
+ if(kind==='ai-proposal')return'提案メモへ追加しました';
+ return'OUTBASEへ保存しました';
+}
+function destinationLabel(meta){
+ if(meta?.cls==='plan')return'予定候補';
+ if(meta?.cls==='buy')return'買う物メモ';
+ if(meta?.cls==='improvement')return'改善メモ';
+ return'提案メモ';
+}
 function stateMeta(s){
  if(s==='accepted')return{label:'採用済み',cls:'accepted'};
  if(s==='held')return{label:'保留中',cls:'held'};
@@ -49,8 +64,11 @@ function candidateCards(filter='pending'){
   <div class="candidateTop"><div class="candidateType"><span>${m.icon}</span><b>${m.label}</b></div><div class="candidateBadges">${c.confidence!=null?`<small>${Math.round(c.confidence*100)}%</small>`:''}<em>${st.label}</em></div></div>
   <h4>${esc(candidateText(c))}</h4>
   ${c.reason?`<div class="candidateReason"><b>理由</b><p>${esc(c.reason)}</p></div>`:''}
-  <div class="candidateDestination"><b>採用すると</b><span>→ ${esc(m.dest)}</span></div>
-  ${c.appliedTo?`<div class="candidateApplied"><span>✓ ${esc(c.appliedTo.kind||c.appliedTo.type||'OUTBASE')}へ追加しました</span><button data-open-destination="${esc(c.candidateId)}">見る</button></div>`:''}
+  <div class="candidateDestination"><b>採用後の保存先</b><span>${esc(destinationLabel(m))}</span></div>
+  ${c.appliedTo?`<div class="candidateApplied">
+  <div><span>✓ ${esc(appliedLabel(c.appliedTo))}</span>${c.decidedAt?`<small>${new Date(c.decidedAt).toLocaleString('ja-JP')}</small>`:''}</div>
+  <button data-open-destination="${esc(c.candidateId)}">開く</button>
+</div>`:''}
   <div class="candidateActions"><button class="accept" data-candidate-decision="accept" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='accepted'?'採用済み':'採用'}</button><button class="hold" data-candidate-decision="hold" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='held'?'保留中':'保留'}</button><button class="reject" data-candidate-decision="reject" data-candidate-id="${esc(c.candidateId)}" ${disabled?'disabled':''}>${c.state==='rejected'?'却下済み':'却下'}</button></div>
  </article>`;}).join('')}</div>`;
 }
@@ -73,7 +91,10 @@ function historyHtml(){
         <small>${new Date(r.importedAt).toLocaleString('ja-JP')}</small>
       </div>
       <div class="historyCounts">
-        <span>採用 ${accepted}</span><span>保留 ${held}</span><span>却下 ${rejected}</span><span>判断待ち ${pending}</span>
+        <span class="accepted">採用 ${accepted}</span>
+        <span class="held">保留 ${held}</span>
+        <span class="rejected">却下 ${rejected}</span>
+        <span class="pending">判断待ち ${pending}</span>
       </div>
       <div class="historyActions">
         <button class="historyDetail" type="button" data-history-detail="${esc(r.responseId)}">詳細を見る</button>
@@ -213,7 +234,7 @@ function decide(id,decision){
       const destination=typeof meta?.destination==='string'&&meta.destination
         ?meta.destination
         :'OUTBASEメモへ追加';
-      msg=`${destination.replace('へ追加','')}へ追加しました。`;
+      msg=appliedLabel(result.appliedTo);
     }
   }else if(decision==='hold')msg='保留しました。';
   else msg='却下しました。';
@@ -267,23 +288,24 @@ function openDestination(candidateId){
  const candidate=allCandidates().find(c=>c.candidateId===candidateId);
  if(!candidate)return;
  const meta=candidateMeta(candidate);
+ const appliedId=candidate.appliedTo?.id||'';
+ localStorage.setItem('outbase_highlight_memo_id',appliedId);
+ localStorage.setItem('outbase_open_candidate_id',candidateId);
  document.getElementById(ID)?.remove();
+
  if(meta.cls==='buy'){
-   localStorage.setItem('outbase_highlight_memo_id',candidate.appliedTo?.id||'');
-   location.href='?tab=plan';
-   setTimeout(()=>globalThis.dispatchEvent(new CustomEvent('outbase:entry-refresh')),50);
+   location.href='?tab=plan&view=buy-memo';
    return;
  }
  if(meta.cls==='improvement'){
-   localStorage.setItem('outbase_highlight_memo_id',candidate.appliedTo?.id||'');
-   location.href='?tab=memory';
+   location.href='?tab=memory&view=improvement-memo';
    return;
  }
  if(meta.cls==='plan'){
-   location.href='?tab=plan';
+   location.href='?tab=plan&view=plan-candidate';
    return;
  }
- location.href='?tab=memory';
+ location.href='?tab=memory&view=proposal-memo';
 }
 function applyTemplate(type){
  const map={
