@@ -1,0 +1,25 @@
+{
+  "version": "v165.1-android-hotfix",
+  "base": "v165-integrated",
+  "target": "repository root",
+  "purpose": "Android evidence reconciliation for Home Now cards",
+  "changed_files": [
+    "index.html",
+    "manifest.json",
+    "service-worker.js",
+    "src/config/version.js",
+    "src/domain/home/home-domain.js",
+    "src/screens/home/home-screen-model.js",
+    "src/screens/calendar/calendar-screen-model.js",
+    "src/screens/activity/activity-detail-screen-model.js",
+    "src/shell/bootstrap.js",
+    "src/shell/shell-model.js",
+    "tests/v1651-android-evidence-hotfix-smoke.js",
+    "OUTBASE_v1651_ANDROID_EVIDENCE_HOTFIX_REPORT.md",
+    "VERIFICATION_RESULTS_v1651.txt"
+  ],
+  "data_mutation": false,
+  "database_schema_change": false,
+  "field03_change": false,
+  "cutover": false
+}

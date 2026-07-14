@@ -1,0 +1,19 @@
+OUTBASE v165.1 Android evidence hotfix verification
+Date: 2026-07-15 Asia/Tokyo
+
+PASS phase2a-loader-main-smoke.js
+PASS phase2a-smoke.js
+PASS phase2b-domain-smoke.js
+PASS phase3-shell-smoke.js
+PASS phase4-home-smoke.js
+PASS phase5-integrated-smoke.js
+PASS v1651-android-evidence-hotfix-smoke.js
+PASS all JavaScript syntax checks
+PASS idle hides stale legacy session activities
+PASS duplicate legacySessionId collapses to one card
+PASS current live session activity wins deduplication
+PASS generic orphan paused activity is hidden while FIELD03 is idle
+PASS non-session event/camp activities remain visible
+PASS no old DB mutation
+PASS no Shadow DB schema change
+PASS no MutationObserver added

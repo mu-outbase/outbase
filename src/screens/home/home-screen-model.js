@@ -12,7 +12,7 @@
 
   async function build({now=new Date()}={}){
     const value=await globalThis.OUTBASE_HOME_DOMAIN_V164.build({now,nowLimit:3,nextLimit:5,recentLimit:5});
-    return Object.freeze({...value,quick:QUICK,todayLabel:todayLabel(now),version:'v165-integrated'});
+    return Object.freeze({...value,quick:QUICK,todayLabel:todayLabel(now),version:'v165.1-android-hotfix'});
   }
 
   globalThis.OUTBASE_HOME_SCREEN_MODEL_V164=Object.freeze({build,QUICK});

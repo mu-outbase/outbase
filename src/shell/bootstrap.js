@@ -3,7 +3,7 @@
   const router=globalThis.OUTBASE_ROUTER,legacy=globalThis.OUTBASE_LEGACY_UI_V165,renderer=globalThis.OUTBASE_SHELL_RENDERER_V165,modals=globalThis.OUTBASE_MODAL_STACK_V164;
   let root=null,mounted=false,rendering=false,bound=false;
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v165-integrated',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v165.1-android-hotfix',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function fallback(reason){document.body.classList.remove('outbaseShellPreview');root?.remove();root=null;mounted=false;globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-fallback',{detail:{reason,snapshot:snapshot()}}));return {status:'fallback',reason};}
   async function render(){if(!mounted||rendering||!root)return;rendering=true;try{await renderer.mount(root);}catch(error){console.error('[OUTBASE v165] shell render failed',error);fallback('render_failed');}finally{rendering=false;}}
   function action(name){if(name==='plan-add')return legacy.openPlanAdd();if(name==='memo')return legacy.openMemo();if(name==='start')return legacy.openStart();if(name==='calendar')return router.navigate('calendar');}
@@ -29,7 +29,7 @@
     if(!legacy.shellSafe())return fallback('active_session_protected');
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');mounted=true;bind();await render();
-    const detail={status:'ready',version:'v165-integrated',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v165.1-android-hotfix',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
