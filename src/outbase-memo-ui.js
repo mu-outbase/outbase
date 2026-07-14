@@ -1,245 +1,53 @@
 (() => {
   'use strict';
-
   const SHEET_ID='outbasePrepMemoSheet';
   const EDITOR_ID='outbasePrepMemoEditor';
-  const PLAN_STATE_KEY='outbase_memo_ui_plan_states_v1';
+  const META_KEY='outbase_memo_ui_meta_v2';
+  const PLAN_STATE_KEY='outbase_memo_ui_plan_states_v2';
   const LAST_DESTINATION_KEY='outbase_memo_ui_last_destination';
-  const TABS={
-    buy:{label:'買う物',icon:'🛒',kind:'buy'},
-    improvement:{label:'改善',icon:'💡',kind:'improvement'},
-    plan:{label:'予定候補',icon:'📅',kind:'plan-candidate'}
-  };
-
-  let currentTab='buy';
-  let currentFocusId='';
-  let lastDestinationCandidateId='';
-
+  const TABS={buy:{label:'買う物',icon:'🛒',kind:'buy'},improvement:{label:'改善',icon:'💡',kind:'improvement'},plan:{label:'予定候補',icon:'📅',kind:'plan-candidate'}};
+  const PRIORITIES={high:'高',normal:'中',low:'低'};
+  const CATEGORIES={buy:['キャンプ用品','食材','消耗品','ペット','その他'],improvement:['設営','撤収','料理','移動','記録','その他'],plan:['キャンプ','散歩','ドライブ','買い物','イベント','その他']};
+  let currentTab='buy', currentFocusId='', currentFilter='open', currentSort='priority', currentQuery='', lastDestinationCandidateId='';
   const core=()=>globalThis.OUTBASE_CORE||null;
-  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-  const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback;}catch(_e){return fallback;}};
-  const writeJson=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+  const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  const readJson=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v??f;}catch(_e){return f;}};
+  const writeJson=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const snapshot=()=>{try{return core()?.snapshot?.()||{};}catch(_e){return {};}};
   const activePlanId=()=>{const id=localStorage.getItem('outbase_active_plan_id')||'';return id&&id!=='none'?id:'';};
   const now=()=>new Date().toISOString();
-  const uid=prefix=>`${prefix}_${globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2,9)}`}`;
-
-  function candidateType(candidate={}){
-    const type=String(candidate.candidateType||candidate.type||'').toLowerCase();
-    if(type.includes('plan')||type.includes('schedule')||type.includes('予定'))return'plan';
-    if(type.includes('buy')||type.includes('shopping')||type.includes('買'))return'buy';
-    if(type.includes('improvement')||type.includes('改善'))return'improvement';
-    return'proposal';
-  }
-
-  function candidateText(candidate={}){
-    const payload=candidate.payload;
-    if(typeof payload==='string')return payload;
-    return payload?.text||payload?.title||candidate.reason||'';
-  }
-
-  function planStates(){return readJson(PLAN_STATE_KEY,{});}
-  function setPlanState(id,patch){const states=planStates();states[id]={...(states[id]||{}),...patch,updatedAt:now()};writeJson(PLAN_STATE_KEY,states);}
-
-  function memoRows(kind){
-    return (snapshot().memos||[])
-      .filter(m=>m.kind===kind&&m.status!=='deleted')
-      .map(m=>({
-        id:m.memoId,source:'memo',kind,text:m.text||'',completed:Boolean(m.completed),
-        planIds:Array.isArray(m.planIds)?m.planIds:[],createdAt:m.createdAt||m.observedAt||'',updatedAt:m.updatedAt||'',origin:m.source||'manual',raw:m
-      }));
-  }
-
-  function planRows(){
-    const states=planStates();
-    const ai=(snapshot().candidates||[])
-      .filter(c=>c.state==='accepted'&&candidateType(c)==='plan')
-      .map(c=>({
-        id:c.candidateId,source:'candidate',kind:'plan-candidate',text:candidateText(c),completed:Boolean(states[c.candidateId]?.completed),
-        planIds:Array.isArray(c.planIds)?c.planIds:[],createdAt:c.decidedAt||c.createdAt||'',updatedAt:states[c.candidateId]?.updatedAt||c.decidedAt||'',origin:'chappy',raw:c
-      }));
-    return [...memoRows('plan-candidate'),...ai];
-  }
-
-  function rowsFor(tab=currentTab){
-    const rows=tab==='plan'?planRows():memoRows(TABS[tab].kind);
-    return rows.sort((a,b)=>Number(a.completed)-Number(b.completed)||new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt));
-  }
-
-  function counts(){
-    return Object.fromEntries(Object.keys(TABS).map(tab=>[tab,rowsFor(tab).filter(row=>!row.completed).length]));
-  }
-
-  function entryMarkup(){
-    const c=counts();
-    return `<button type="button" class="prepMemoEntry" data-prep-memo-open="buy">
-      <div class="prepMemoEntryHead"><div><small>PREPARATION MEMO</small><b>準備メモ</b></div><strong>›</strong></div>
-      <div class="prepMemoEntryCounts"><span>🛒 買う物 <b>${c.buy}</b></span><span>💡 改善 <b>${c.improvement}</b></span><span>📅 予定候補 <b>${c.plan}</b></span></div>
-    </button>`;
-  }
-
-  function injectPrepEntry(){
-    const page=document.getElementById('page-prep');
-    if(!page||page.querySelector('[data-prep-memo-open]'))return;
-    const anchor=page.querySelector('.prepSectionHead');
-    const wrap=document.createElement('div');
-    wrap.className='prepMemoEntryWrap';
-    wrap.innerHTML=entryMarkup();
-    if(anchor)anchor.before(wrap);else page.appendChild(wrap);
-  }
-
-  function refreshEntry(){
-    document.querySelector('.prepMemoEntryWrap')?.remove();
-    injectPrepEntry();
-  }
-
-  function rowMarkup(row){
-    const tabMeta=TABS[currentTab];
-    const source=row.origin==='chappy'?'Chappy採用':'手動';
-    const planLabel=row.planIds?.length?`プラン ${row.planIds.length}件`:'プラン未指定';
-    return `<article class="prepMemoRow ${row.completed?'completed':''}" data-prep-memo-row="${esc(row.id)}">
-      <button type="button" class="prepMemoCheck" data-prep-memo-toggle="${esc(row.id)}" aria-label="${row.completed?'未完了へ戻す':'完了にする'}">${row.completed?'✓':''}</button>
-      <div class="prepMemoRowBody">
-        <div class="prepMemoRowMeta"><span>${esc(source)}</span><span>${esc(planLabel)}</span></div>
-        <h4>${esc(row.text||'内容未入力')}</h4>
-        <small>${row.createdAt?new Date(row.createdAt).toLocaleString('ja-JP'):tabMeta.label}</small>
-      </div>
-      <button type="button" class="prepMemoMore" data-prep-memo-edit="${esc(row.id)}" aria-label="編集">⋯</button>
-    </article>`;
-  }
-
-  function renderSheet(){
-    const sheet=document.getElementById(SHEET_ID);
-    if(!sheet)return;
-    const rows=rowsFor();
-    const c=counts();
-    sheet.innerHTML=`<section class="prepMemoSheet" role="dialog" aria-modal="true" aria-label="準備メモ">
-      <header class="prepMemoHead"><div><small>PREPARATION MEMO</small><h2>準備メモ</h2><p>買う物・改善・予定候補をまとめて管理</p></div><button type="button" data-prep-memo-close>×</button></header>
-      <nav class="prepMemoTabs">${Object.entries(TABS).map(([key,meta])=>`<button type="button" class="${currentTab===key?'active':''}" data-prep-memo-tab="${key}"><span>${meta.icon}</span>${meta.label}<b>${c[key]}</b></button>`).join('')}</nav>
-      <div class="prepMemoToolbar"><button type="button" data-prep-memo-add>＋ ${esc(TABS[currentTab].label)}を追加</button><span>未完了 ${rows.filter(r=>!r.completed).length}件</span></div>
-      <div class="prepMemoList">${rows.length?rows.map(rowMarkup).join(''):`<div class="prepMemoEmpty"><span>${TABS[currentTab].icon}</span><b>${TABS[currentTab].label}はありません</b><p>手動追加またはChappyの提案採用でここに表示されます。</p></div>`}</div>
-      ${currentTab==='plan'?'<p class="prepMemoSafety"><b>予定は自動登録しません。</b>「予定へ進む」で内容を保持したまま予定画面へ移動します。</p>':''}
-    </section>`;
-    requestAnimationFrame(()=>{
-      const target=currentFocusId&&sheet.querySelector(`[data-prep-memo-row="${CSS.escape(currentFocusId)}"]`);
-      target?.scrollIntoView({block:'center'});target?.classList.add('focused');currentFocusId='';
-    });
-  }
-
-  function open(tab='buy',focusId=''){
-    currentTab=TABS[tab]?tab:'buy';currentFocusId=focusId||'';
-    document.getElementById(SHEET_ID)?.remove();
-    const backdrop=document.createElement('div');backdrop.id=SHEET_ID;backdrop.className='prepMemoBackdrop';
-    document.body.appendChild(backdrop);document.body.classList.add('prepMemoOpen');renderSheet();
-  }
-
+  const uid=p=>`${p}_${globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2,9)}`}`;
+  const metaAll=()=>readJson(META_KEY,{});
+  const getMeta=id=>metaAll()[id]||{};
+  function setMeta(id,patch){const all=metaAll();all[id]={...(all[id]||{}),...patch,updatedAt:now()};writeJson(META_KEY,all);return all[id];}
+  function candidateType(c={}){const t=String(c.candidateType||c.type||'').toLowerCase();if(t.includes('plan')||t.includes('schedule')||t.includes('予定'))return'plan';if(t.includes('buy')||t.includes('shopping')||t.includes('買'))return'buy';if(t.includes('improvement')||t.includes('改善'))return'improvement';return'proposal';}
+  function candidateText(c={}){const p=c.payload;if(typeof p==='string')return p;return p?.text||p?.title||c.reason||'';}
+  function planStates(){return readJson(PLAN_STATE_KEY,{});} function setPlanState(id,patch){const s=planStates();s[id]={...(s[id]||{}),...patch,updatedAt:now()};writeJson(PLAN_STATE_KEY,s);}
+  function enrich(row){const m=getMeta(row.id);return{...row,priority:m.priority||'normal',category:m.category||'',dueDate:m.dueDate||'',carried:Boolean(m.carried),status:m.status||'',order:Number(m.order||0)};}
+  function memoRows(kind){return(snapshot().memos||[]).filter(m=>m.kind===kind&&m.status!=='deleted').map(m=>enrich({id:m.memoId,source:'memo',kind,text:m.text||'',completed:Boolean(m.completed),planIds:Array.isArray(m.planIds)?m.planIds:[],createdAt:m.createdAt||m.observedAt||'',updatedAt:m.updatedAt||'',origin:m.source||'manual',raw:m}));}
+  function planRows(){const states=planStates();const ai=(snapshot().candidates||[]).filter(c=>c.state==='accepted'&&candidateType(c)==='plan').map(c=>enrich({id:c.candidateId,source:'candidate',kind:'plan-candidate',text:candidateText(c),completed:Boolean(states[c.candidateId]?.completed),planIds:Array.isArray(c.planIds)?c.planIds:[],createdAt:c.decidedAt||c.createdAt||'',updatedAt:states[c.candidateId]?.updatedAt||c.decidedAt||'',origin:'chappy',raw:c}));return[...memoRows('plan-candidate'),...ai];}
+  function rawRows(tab=currentTab){return tab==='plan'?planRows():memoRows(TABS[tab].kind);}
+  function scorePriority(p){return p==='high'?0:p==='normal'?1:2;}
+  function rowsFor(tab=currentTab){let rows=rawRows(tab);if(currentFilter==='open')rows=rows.filter(r=>!r.completed);if(currentFilter==='done')rows=rows.filter(r=>r.completed);if(currentQuery){const q=currentQuery.toLowerCase();rows=rows.filter(r=>`${r.text} ${r.category} ${r.priority}`.toLowerCase().includes(q));}rows.sort((a,b)=>{if(currentSort==='priority')return scorePriority(a.priority)-scorePriority(b.priority)||Number(a.completed)-Number(b.completed)||new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt);if(currentSort==='due')return String(a.dueDate||'9999').localeCompare(String(b.dueDate||'9999'))||scorePriority(a.priority)-scorePriority(b.priority);return new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt);});return rows;}
+  function counts(){return Object.fromEntries(Object.keys(TABS).map(t=>[t,rawRows(t).filter(r=>!r.completed).length]));}
+  function entryMarkup(){const c=counts();return`<button type="button" class="prepMemoEntry" data-prep-memo-open="buy"><div class="prepMemoEntryHead"><div><small>PREPARATION SYSTEM</small><b>準備メモ</b></div><strong>›</strong></div><div class="prepMemoEntryCounts"><span>🛒 買う物 <b>${c.buy}</b></span><span>💡 改善 <b>${c.improvement}</b></span><span>📅 予定候補 <b>${c.plan}</b></span></div></button>`;}
+  function injectPrepEntry(){const page=document.getElementById('page-prep');if(!page||page.querySelector('[data-prep-memo-open]'))return;const anchor=page.querySelector('.prepSectionHead');const wrap=document.createElement('div');wrap.className='prepMemoEntryWrap';wrap.innerHTML=entryMarkup();anchor?anchor.before(wrap):page.appendChild(wrap);}
+  function refreshEntry(){document.querySelector('.prepMemoEntryWrap')?.remove();injectPrepEntry();}
+  function rowMarkup(r){const source=r.origin==='chappy'?'Chappy採用':'手動';const planLabel=r.planIds?.length?`プラン ${r.planIds.length}件`:'共通';const pClass=`priority-${r.priority}`;return`<article class="prepMemoRow ${r.completed?'completed':''} ${pClass}" data-prep-memo-row="${esc(r.id)}"><button type="button" class="prepMemoCheck" data-prep-memo-toggle="${esc(r.id)}">${r.completed?'✓':''}</button><div class="prepMemoRowBody"><div class="prepMemoRowMeta"><span class="priorityBadge">優先 ${PRIORITIES[r.priority]}</span>${r.category?`<span>${esc(r.category)}</span>`:''}<span>${esc(source)}</span><span>${esc(planLabel)}</span>${r.carried?'<span>持ち越し</span>':''}</div><h4>${esc(r.text||'内容未入力')}</h4><small>${r.dueDate?`期限 ${esc(r.dueDate)} ・ `:''}${r.createdAt?new Date(r.createdAt).toLocaleString('ja-JP'):TABS[currentTab].label}</small></div><button type="button" class="prepMemoMore" data-prep-memo-edit="${esc(r.id)}">⋯</button></article>`;}
+  function renderSheet(){const sheet=document.getElementById(SHEET_ID);if(!sheet)return;const rows=rowsFor(),c=counts();sheet.innerHTML=`<section class="prepMemoSheet" role="dialog" aria-modal="true"><header class="prepMemoHead"><div><small>PHASE11 PREPARATION</small><h2>準備メモ</h2><p>優先度・分類・予定化まで一括管理</p></div><button type="button" data-prep-memo-close>×</button></header><nav class="prepMemoTabs">${Object.entries(TABS).map(([k,m])=>`<button type="button" class="${currentTab===k?'active':''}" data-prep-memo-tab="${k}"><span>${m.icon}</span>${m.label}<b>${c[k]}</b></button>`).join('')}</nav><div class="prepMemoControls"><input type="search" data-prep-memo-search placeholder="内容・分類で検索" value="${esc(currentQuery)}"><select data-prep-memo-filter><option value="open" ${currentFilter==='open'?'selected':''}>未完了</option><option value="all" ${currentFilter==='all'?'selected':''}>すべて</option><option value="done" ${currentFilter==='done'?'selected':''}>完了済み</option></select><select data-prep-memo-sort><option value="priority" ${currentSort==='priority'?'selected':''}>優先度順</option><option value="due" ${currentSort==='due'?'selected':''}>期限順</option><option value="recent" ${currentSort==='recent'?'selected':''}>更新順</option></select></div><div class="prepMemoToolbar"><button type="button" data-prep-memo-add>＋ ${esc(TABS[currentTab].label)}を追加</button><span>${rows.length}件表示</span></div><div class="prepMemoList">${rows.length?rows.map(rowMarkup).join(''):`<div class="prepMemoEmpty"><span>${TABS[currentTab].icon}</span><b>該当する${TABS[currentTab].label}はありません</b><p>検索条件を変えるか、新しく追加してください。</p></div>`}</div>${currentTab==='plan'?'<p class="prepMemoSafety"><b>予定は自動登録しません。</b>内容確認後に予定画面へ渡します。</p>':''}</section>`;requestAnimationFrame(()=>{const t=currentFocusId&&sheet.querySelector(`[data-prep-memo-row="${CSS.escape(currentFocusId)}"]`);t?.scrollIntoView({block:'center'});t?.classList.add('focused');currentFocusId='';});}
+  function open(tab='buy',focus=''){currentTab=TABS[tab]?tab:'buy';currentFocusId=focus||'';document.getElementById(SHEET_ID)?.remove();const b=document.createElement('div');b.id=SHEET_ID;b.className='prepMemoBackdrop';document.body.appendChild(b);document.body.classList.add('prepMemoOpen');renderSheet();}
   function close(){document.getElementById(SHEET_ID)?.remove();document.getElementById(EDITOR_ID)?.remove();document.body.classList.remove('prepMemoOpen');refreshEntry();}
-
-  function findRow(id){return rowsFor().find(row=>row.id===id)||Object.keys(TABS).flatMap(tab=>rowsFor(tab)).find(row=>row.id===id);}
-
-  function saveMemo(existing,text,planLinked){
-    const api=core();if(!api?.addMemo)throw new Error('Coreメモ基盤を読み込めませんでした');
-    const planId=activePlanId();
-    return api.addMemo({
-      ...(existing?.raw||{}),memoId:existing?.id||uid('memo'),kind:TABS[currentTab].kind,text:text.trim(),source:existing?.origin==='chappy'?'chappy':'manual',
-      planIds:planLinked&&planId?[planId]:[],activityIds:existing?.raw?.activityIds||[],status:'active',completed:Boolean(existing?.completed),createdAt:existing?.raw?.createdAt||now(),updatedAt:now()
-    });
-  }
-
-  function openEditor(id=''){
-    const row=id?findRow(id):null;
-    if(row?.source==='candidate'){
-      const actions=currentTab==='plan'?`<button type="button" data-prep-plan-go="${esc(row.id)}">予定へ進む</button>`:'';
-      showReadOnly(row,actions);return;
-    }
-    document.getElementById(EDITOR_ID)?.remove();
-    const editor=document.createElement('div');editor.id=EDITOR_ID;editor.className='prepMemoEditorBackdrop';
-    const linked=Boolean(row?.planIds?.length);
-    editor.innerHTML=`<section class="prepMemoEditor"><header><div><small>${row?'EDIT':'NEW'} ${esc(TABS[currentTab].label)}</small><h3>${row?'内容を編集':'新しく追加'}</h3></div><button type="button" data-prep-editor-close>×</button></header>
-      <textarea data-prep-editor-text placeholder="内容を入力">${esc(row?.text||'')}</textarea>
-      <label class="prepMemoPlanLink"><input type="checkbox" data-prep-editor-plan ${linked?'checked':''} ${activePlanId()?'':'disabled'}><span>現在のプランに紐付ける</span></label>
-      ${activePlanId()?'':'<p class="prepMemoEditorHint">現在のプランが未選択のため、共通メモとして保存します。</p>'}
-      <div class="prepMemoEditorActions">${row?'<button type="button" class="danger" data-prep-memo-delete>削除</button>':''}<button type="button" data-prep-editor-save>保存</button></div>
-    </section>`;
-    editor.dataset.editId=id;document.body.appendChild(editor);
-  }
-
-  function showReadOnly(row,actions=''){
-    document.getElementById(EDITOR_ID)?.remove();
-    const editor=document.createElement('div');editor.id=EDITOR_ID;editor.className='prepMemoEditorBackdrop';
-    editor.innerHTML=`<section class="prepMemoEditor"><header><div><small>CHAPPY ACCEPTED</small><h3>${esc(TABS[currentTab].label)}</h3></div><button type="button" data-prep-editor-close>×</button></header>
-      <div class="prepMemoReadonly"><p>${esc(row.text)}</p><small>Chappyで採用した内容です。元の提案履歴を保つため本文は変更しません。</small></div>
-      <div class="prepMemoEditorActions">${actions}<button type="button" class="secondary" data-prep-editor-close>閉じる</button></div>
-    </section>`;
-    document.body.appendChild(editor);
-  }
-
-  function toggle(id){
-    const row=findRow(id);if(!row)return;
-    if(row.source==='candidate')setPlanState(row.id,{completed:!row.completed});
-    else core()?.addMemo?.({...row.raw,completed:!row.completed,updatedAt:now()});
-    renderSheet();refreshEntry();
-  }
-
-  function removeMemo(id){
-    const row=findRow(id);if(!row||row.source!=='memo')return;
-    if(!confirm('このメモを削除しますか？'))return;
-    core()?.addMemo?.({...row.raw,status:'deleted',updatedAt:now()});
-    document.getElementById(EDITOR_ID)?.remove();renderSheet();refreshEntry();
-  }
-
-  function goToPlan(id){
-    const row=findRow(id);if(!row)return;
-    localStorage.setItem('outbase_plan_candidate_draft',JSON.stringify({sourceId:row.id,text:row.text,createdAt:now()}));
-    if(!confirm('候補内容を保持して予定画面へ移動します。予定は自動作成されません。'))return;
-    close();location.hash='plan';location.search='?tab=plan';
-  }
-
-  function injectDestinationAction(){
-    const card=document.querySelector('.chappyDestinationCard');
-    if(!card||card.querySelector('[data-open-normal-memo]'))return;
-    const actions=card.querySelector('.chappyDestinationActions');if(!actions)return;
-    const candidateId=lastDestinationCandidateId||localStorage.getItem(LAST_DESTINATION_KEY)||'';
-    if(!candidateId)return;
-    const candidate=(snapshot().candidates||[]).find(c=>c.candidateId===candidateId);
-    const tab=candidateType(candidate);
-    if(!TABS[tab])return;
-    const button=document.createElement('button');button.type='button';button.className='secondary';button.dataset.openNormalMemo=candidateId;button.dataset.memoTab=tab;button.textContent='通常画面で管理';
-    actions.prepend(button);
-  }
-
-  document.addEventListener('pointerdown',event=>{
-    const button=event.target.closest?.('[data-open-destination]');if(!button)return;
-    lastDestinationCandidateId=button.dataset.openDestination||'';localStorage.setItem(LAST_DESTINATION_KEY,lastDestinationCandidateId);
-  },true);
-
-  document.addEventListener('click',event=>{
-    const openButton=event.target.closest?.('[data-prep-memo-open]');if(openButton){open(openButton.dataset.prepMemoOpen||'buy');return;}
-    if(event.target===document.getElementById(SHEET_ID)||event.target.closest?.('[data-prep-memo-close]')){close();return;}
-    const tab=event.target.closest?.('[data-prep-memo-tab]');if(tab){currentTab=tab.dataset.prepMemoTab;renderSheet();return;}
-    if(event.target.closest?.('[data-prep-memo-add]')){openEditor();return;}
-    const edit=event.target.closest?.('[data-prep-memo-edit]');if(edit){openEditor(edit.dataset.prepMemoEdit);return;}
-    const toggleButton=event.target.closest?.('[data-prep-memo-toggle]');if(toggleButton){toggle(toggleButton.dataset.prepMemoToggle);return;}
-    if(event.target.closest?.('[data-prep-editor-close]')){document.getElementById(EDITOR_ID)?.remove();return;}
-    const save=event.target.closest?.('[data-prep-editor-save]');if(save){
-      const editor=document.getElementById(EDITOR_ID),text=editor?.querySelector('[data-prep-editor-text]')?.value||'';
-      if(!text.trim()){alert('内容を入力してください。');return;}
-      const existing=editor?.dataset.editId?findRow(editor.dataset.editId):null;
-      try{saveMemo(existing,text,Boolean(editor?.querySelector('[data-prep-editor-plan]')?.checked));editor.remove();renderSheet();refreshEntry();}catch(error){alert(error.message||String(error));}
-      return;
-    }
-    if(event.target.closest?.('[data-prep-memo-delete]')){removeMemo(document.getElementById(EDITOR_ID)?.dataset.editId||'');return;}
-    const planGo=event.target.closest?.('[data-prep-plan-go]');if(planGo){goToPlan(planGo.dataset.prepPlanGo);return;}
-    const normal=event.target.closest?.('[data-open-normal-memo]');if(normal){
-      document.getElementById('outbaseChappyDestinationSheet')?.remove();document.getElementById('outbaseChappySheet')?.remove();
-      open(normal.dataset.memoTab||'buy',normal.dataset.openNormalMemo||'');return;
-    }
-  },true);
-
-  const observer=new MutationObserver(()=>{injectPrepEntry();injectDestinationAction();});
-  observer.observe(document.documentElement,{subtree:true,childList:true});
-  globalThis.addEventListener('outbase:entry-refresh',()=>{refreshEntry();if(document.getElementById(SHEET_ID))renderSheet();});
-  globalThis.addEventListener('outbase:chappy-stats',refreshEntry);
-  globalThis.OUTBASE_MEMO_UI={open,close,refresh:()=>{refreshEntry();if(document.getElementById(SHEET_ID))renderSheet();}};
-  injectPrepEntry();
+  function findRow(id){return Object.keys(TABS).flatMap(t=>rawRows(t)).find(r=>r.id===id);}
+  function saveMemo(existing,data){const api=core();if(!api?.addMemo)throw new Error('Coreメモ基盤を読み込めませんでした');const planId=activePlanId();const saved=api.addMemo({...(existing?.raw||{}),memoId:existing?.id||uid('memo'),kind:TABS[currentTab].kind,text:data.text.trim(),source:existing?.origin==='chappy'?'chappy':'manual',planIds:data.planLinked&&planId?[planId]:[],activityIds:existing?.raw?.activityIds||[],status:'active',completed:Boolean(existing?.completed),createdAt:existing?.raw?.createdAt||now(),updatedAt:now()});setMeta(saved.memoId||existing?.id,{priority:data.priority,category:data.category,dueDate:data.dueDate,carried:data.carried});return saved;}
+  function openEditor(id=''){const row=id?findRow(id):null;if(row?.source==='candidate'){showReadOnly(row);return;}document.getElementById(EDITOR_ID)?.remove();const e=document.createElement('div');e.id=EDITOR_ID;e.className='prepMemoEditorBackdrop';const cats=CATEGORIES[currentTab]||[];e.innerHTML=`<section class="prepMemoEditor"><header><div><small>${row?'EDIT':'NEW'} ${esc(TABS[currentTab].label)}</small><h3>${row?'内容を編集':'新しく追加'}</h3></div><button type="button" data-prep-editor-close>×</button></header><textarea data-prep-editor-text placeholder="内容を入力">${esc(row?.text||'')}</textarea><div class="prepMemoFields"><label>優先度<select data-prep-editor-priority>${Object.entries(PRIORITIES).map(([k,v])=>`<option value="${k}" ${(row?.priority||'normal')===k?'selected':''}>${v}</option>`).join('')}</select></label><label>分類<select data-prep-editor-category><option value="">未分類</option>${cats.map(v=>`<option ${row?.category===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label><label>期限<input type="date" data-prep-editor-due value="${esc(row?.dueDate||'')}"></label></div><label class="prepMemoPlanLink"><input type="checkbox" data-prep-editor-plan ${row?.planIds?.length?'checked':''} ${activePlanId()?'':'disabled'}><span>現在のプランに紐付ける</span></label><label class="prepMemoPlanLink"><input type="checkbox" data-prep-editor-carried ${row?.carried?'checked':''}><span>次回へ持ち越す</span></label><div class="prepMemoEditorActions">${row?'<button type="button" class="danger" data-prep-memo-delete>削除</button>':''}<button type="button" data-prep-editor-save>保存</button></div></section>`;e.dataset.editId=id;document.body.appendChild(e);}
+  function showReadOnly(row){document.getElementById(EDITOR_ID)?.remove();const e=document.createElement('div');e.id=EDITOR_ID;e.className='prepMemoEditorBackdrop';e.innerHTML=`<section class="prepMemoEditor"><header><div><small>CHAPPY ACCEPTED</small><h3>${esc(TABS[currentTab].label)}</h3></div><button type="button" data-prep-editor-close>×</button></header><div class="prepMemoReadonly"><p>${esc(row.text)}</p><small>元の提案履歴は保持されます。優先度・分類・期限は通常管理側で設定できます。</small></div><div class="prepMemoFields"><label>優先度<select data-readonly-priority>${Object.entries(PRIORITIES).map(([k,v])=>`<option value="${k}" ${row.priority===k?'selected':''}>${v}</option>`).join('')}</select></label><label>分類<select data-readonly-category><option value="">未分類</option>${(CATEGORIES[currentTab]||[]).map(v=>`<option ${row.category===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label><label>期限<input type="date" data-readonly-due value="${esc(row.dueDate||'')}"></label></div><div class="prepMemoEditorActions">${currentTab==='plan'?`<button type="button" data-prep-plan-go="${esc(row.id)}">予定へ進む</button>`:''}<button type="button" data-readonly-save="${esc(row.id)}">管理情報を保存</button></div></section>`;document.body.appendChild(e);}
+  function toggle(id){const r=findRow(id);if(!r)return;if(r.source==='candidate')setPlanState(r.id,{completed:!r.completed});else core()?.addMemo?.({...r.raw,completed:!r.completed,updatedAt:now()});renderSheet();refreshEntry();}
+  function removeMemo(id){const r=findRow(id);if(!r||r.source!=='memo'||!confirm('このメモを削除しますか？'))return;core()?.addMemo?.({...r.raw,status:'deleted',updatedAt:now()});document.getElementById(EDITOR_ID)?.remove();renderSheet();refreshEntry();}
+  function goToPlan(id){const r=findRow(id);if(!r)return;const draft={sourceId:r.id,title:r.text,category:r.category||'',priority:r.priority||'normal',dueDate:r.dueDate||'',source:'phase11-plan-candidate',createdAt:now()};if(!confirm('この候補を予定作成画面へ渡します。予定はまだ作成されません。'))return;localStorage.setItem('outbase_plan_candidate_draft',JSON.stringify(draft));close();location.href='?tab=plan&planSheet=editor';}
+  function injectDestinationAction(){const card=document.querySelector('.chappyDestinationCard');if(!card||card.querySelector('[data-open-normal-memo]'))return;const actions=card.querySelector('.chappyDestinationActions');if(!actions)return;const id=lastDestinationCandidateId||localStorage.getItem(LAST_DESTINATION_KEY)||'';const c=(snapshot().candidates||[]).find(x=>x.candidateId===id);const tab=candidateType(c);if(!id||!TABS[tab])return;const b=document.createElement('button');b.type='button';b.className='secondary';b.dataset.openNormalMemo=id;b.dataset.memoTab=tab;b.textContent='通常画面で管理';actions.prepend(b);}
+  document.addEventListener('pointerdown',e=>{const b=e.target.closest?.('[data-open-destination]');if(b){lastDestinationCandidateId=b.dataset.openDestination||'';localStorage.setItem(LAST_DESTINATION_KEY,lastDestinationCandidateId);}},true);
+  document.addEventListener('input',e=>{if(e.target.matches?.('[data-prep-memo-search]')){currentQuery=e.target.value;renderSheet();}},true);
+  document.addEventListener('change',e=>{if(e.target.matches?.('[data-prep-memo-filter]')){currentFilter=e.target.value;renderSheet();}if(e.target.matches?.('[data-prep-memo-sort]')){currentSort=e.target.value;renderSheet();}},true);
+  document.addEventListener('click',e=>{const o=e.target.closest?.('[data-prep-memo-open]');if(o){open(o.dataset.prepMemoOpen||'buy');return;}if(e.target===document.getElementById(SHEET_ID)||e.target.closest?.('[data-prep-memo-close]')){close();return;}const tab=e.target.closest?.('[data-prep-memo-tab]');if(tab){currentTab=tab.dataset.prepMemoTab;currentQuery='';currentFilter='open';renderSheet();return;}if(e.target.closest?.('[data-prep-memo-add]')){openEditor();return;}const edit=e.target.closest?.('[data-prep-memo-edit]');if(edit){openEditor(edit.dataset.prepMemoEdit);return;}const tog=e.target.closest?.('[data-prep-memo-toggle]');if(tog){toggle(tog.dataset.prepMemoToggle);return;}if(e.target.closest?.('[data-prep-editor-close]')){document.getElementById(EDITOR_ID)?.remove();return;}const save=e.target.closest?.('[data-prep-editor-save]');if(save){const ed=document.getElementById(EDITOR_ID);const text=ed?.querySelector('[data-prep-editor-text]')?.value||'';if(!text.trim()){alert('内容を入力してください。');return;}const existing=ed.dataset.editId?findRow(ed.dataset.editId):null;saveMemo(existing,{text,priority:ed.querySelector('[data-prep-editor-priority]').value,category:ed.querySelector('[data-prep-editor-category]').value,dueDate:ed.querySelector('[data-prep-editor-due]').value,planLinked:Boolean(ed.querySelector('[data-prep-editor-plan]')?.checked),carried:Boolean(ed.querySelector('[data-prep-editor-carried]')?.checked)});ed.remove();renderSheet();refreshEntry();return;}if(e.target.closest?.('[data-prep-memo-delete]')){removeMemo(document.getElementById(EDITOR_ID)?.dataset.editId||'');return;}const rs=e.target.closest?.('[data-readonly-save]');if(rs){setMeta(rs.dataset.readonlySave,{priority:document.querySelector('[data-readonly-priority]').value,category:document.querySelector('[data-readonly-category]').value,dueDate:document.querySelector('[data-readonly-due]').value});document.getElementById(EDITOR_ID)?.remove();renderSheet();return;}const pg=e.target.closest?.('[data-prep-plan-go]');if(pg){goToPlan(pg.dataset.prepPlanGo);return;}const n=e.target.closest?.('[data-open-normal-memo]');if(n){document.getElementById('outbaseChappyDestinationSheet')?.remove();document.getElementById('outbaseChappySheet')?.remove();open(n.dataset.memoTab||'buy',n.dataset.openNormalMemo||'');return;}},true);
+  const observer=new MutationObserver(()=>{injectPrepEntry();injectDestinationAction();});observer.observe(document.documentElement,{subtree:true,childList:true});globalThis.addEventListener('outbase:entry-refresh',()=>{refreshEntry();if(document.getElementById(SHEET_ID))renderSheet();});globalThis.addEventListener('outbase:chappy-stats',refreshEntry);globalThis.OUTBASE_MEMO_UI={open,close,refresh:()=>{refreshEntry();if(document.getElementById(SHEET_ID))renderSheet();}};injectPrepEntry();
 })();
