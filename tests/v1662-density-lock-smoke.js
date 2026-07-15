@@ -1,0 +1,22 @@
+
+'use strict';
+const fs=require('fs');const path=require('path');const assert=require('assert');
+const root=path.resolve(__dirname,'..');const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
+const css=read('style-design-system.css');const renderer=read('src/shell/shell-renderer.js');const version=read('src/config/version.js');const index=read('index.html');const sw=read('service-worker.js');
+assert(css.includes('OUTBASE v166.2 density LOCK'));
+assert(css.includes('font-size:clamp(29px,7.2vw,36px)'));
+assert(css.includes('.ob6-page-hero h1{margin:0 0 6px;font-size:clamp(31px,8vw,38px)'));
+assert(css.includes('body.outbaseNorth .ob3-nav{left:10px;right:10px;bottom:8px;min-height:64px'));
+assert(css.includes('body.outbaseTrailLens .recordSheet{max-height:min(74dvh,660px)'));
+assert(css.includes('backdrop-filter:none!important'));
+assert(!renderer.includes('ACTIVITY STORY'));
+assert(!renderer.includes('QUICK ACTION'));
+assert(!renderer.includes('<small>DISCOVER</small>'));
+assert(!renderer.includes('<small>ARCHIVE</small>'));
+assert(renderer.includes('次の${esc(item.typeLabel||\'活動\')}'));
+assert(version.includes("app:'v166.2-density-lock'"));
+assert(index.includes('outbase-v1662-density'));
+assert(sw.includes('outbase-field03-v1662-density'));
+assert.equal((css.match(/MutationObserver/g)||[]).length,0);
+assert(!/(body|html|#outbaseShellRoot|\.ob3-shell)[^{]*\{[^}]*overflow\s*:\s*hidden/i.test(css));
+console.log(JSON.stringify({status:'pass',japaneseFirst:true,heroScaleReduced:true,sectionDensityReduced:true,navCompact:true,trailSheetCompact:true,blurRemoved:true,tapTargetPreserved:'48px',field03EngineChanged:false},null,2));

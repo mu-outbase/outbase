@@ -1,0 +1,139 @@
+{
+  "version": "v166.2-density-lock",
+  "base_git_head": "8d996795c35fb094a74440af2e43a960d4e37cc6",
+  "target": "repository root",
+  "problem": [
+    "oversized headings",
+    "excess whitespace",
+    "low information density",
+    "oversized record detail sheet"
+  ],
+  "formal_design": {
+    "idle": "NORTH",
+    "active": "TRAIL LENS",
+    "paused": "TRAIL LENS"
+  },
+  "density_lock": {
+    "home_title_max_px": 36,
+    "page_title_max_px": 38,
+    "section_title_px": 21,
+    "list_row_px": "62-70",
+    "bottom_nav_px": 64,
+    "record_sheet_max": "74dvh",
+    "primary_tap_target_px": 48,
+    "decorative_english_eyebrows": false
+  },
+  "field03_app_js_sha": "13a44b35562d5fd325368acd94ca49b0005502a8",
+  "field03_engine_changed": false,
+  "data_mutation": false,
+  "database_schema_change": false,
+  "cutover": false,
+  "android_verified": false,
+  "files": [
+    {
+      "path": "OUTBASE_BOOT_v7.2_密度再設計LOCK.md",
+      "sha256": "32cd7ac088666e5fa4c7b3c611d8844b228b498309f8a2d8c168b8f795bc56cd",
+      "size_bytes": 930
+    },
+    {
+      "path": "OUTBASE_GITHUB_MAIN_STATUS_v1662.md",
+      "sha256": "1df21c4b7c4cd9209af447af60b81d8f68119a5ae1aa02a45798d36024c80c52",
+      "size_bytes": 363
+    },
+    {
+      "path": "OUTBASE_NEXT_ROADMAP_v1662.md",
+      "sha256": "9912b7d1ef13cd4dc9593c662ca862cd2d10aa7f45af609db25ab4f8a681ffbd",
+      "size_bytes": 520
+    },
+    {
+      "path": "OUTBASE_STATUSLOCK_v1662.md",
+      "sha256": "f567c3a68185dbb211d33bb0ffb494db1f8a42d17be189bbc07673c1be33729d",
+      "size_bytes": 489
+    },
+    {
+      "path": "OUTBASE_v1662_DENSITY_REDESIGN_AUDIT.md",
+      "sha256": "328d291bbe811274416381485fc06706513cbd342c30925af836934179164e11",
+      "size_bytes": 4095
+    },
+    {
+      "path": "README_OUTBASE_HANDOFF_v1662.md",
+      "sha256": "a33fe56cbd4861ecd0e3b5af179d504e1e68b8d32d37ea0a2481d24418e548e2",
+      "size_bytes": 540
+    },
+    {
+      "path": "VERIFICATION_RESULTS_v1662.txt",
+      "sha256": "af2e3415d6d35a5c62e74fcf06403f9e86e915c3673ca3a7af15c39b488d0874",
+      "size_bytes": 4133
+    },
+    {
+      "path": "docs/V1662_DENSITY_LOCK.md",
+      "sha256": "002cf85f051b69f2043a3ce5842eb3700af74ba55a95fb3810edac396a171bff",
+      "size_bytes": 2435
+    },
+    {
+      "path": "index.html",
+      "sha256": "2f6a35f69d015076e5fadf2013b9e9d23e7e376e66ca7e6d80990b7315d91636",
+      "size_bytes": 4919
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "7b3aa4a45c15c0ba7a4b53b5e3c5b94e3bc45bc38e82094b57a07d729d96f20b",
+      "size_bytes": 1447
+    },
+    {
+      "path": "service-worker.js",
+      "sha256": "f7eab44c103315e5fea792f9d484f6873f30d7ad78a7d29a3bdafaa046486723",
+      "size_bytes": 5051
+    },
+    {
+      "path": "src/config/version.js",
+      "sha256": "1d3a9d7bdb6e9a953980ac6a289066c5889204b2e73e1143ce728fb7c3b19e67",
+      "size_bytes": 359
+    },
+    {
+      "path": "src/design/theme-controller.js",
+      "sha256": "870e7c8a7153ae4603fabcccef0a7b0830c3cb80fe3bbed387daec1e1580c627",
+      "size_bytes": 2652
+    },
+    {
+      "path": "src/shell/bootstrap.js",
+      "sha256": "72a8be42e0076c81909a51f29df4724c9585bf576316af064caf4ca836e5c46d",
+      "size_bytes": 7059
+    },
+    {
+      "path": "src/shell/shell-model.js",
+      "sha256": "3175fbe0df89516294562d9759185996da5fee743af21cd84579608336669f36",
+      "size_bytes": 2892
+    },
+    {
+      "path": "src/shell/shell-renderer.js",
+      "sha256": "7474d6672cce820b94489a8ba0c14cc3634fd538b63cbe3cfd35ed8675446d84",
+      "size_bytes": 21675
+    },
+    {
+      "path": "style-design-system.css",
+      "sha256": "7edd68232baa7270471dfe74714290004616328d756349c200c28ccb9ed1ab67",
+      "size_bytes": 36914
+    },
+    {
+      "path": "tests/phase2a-loader-main-smoke.js",
+      "sha256": "6bfe989501dfd9cd17234e9ab560f1ff38fdd2b06495fa7470dd869f039e8c75",
+      "size_bytes": 3954
+    },
+    {
+      "path": "tests/phase2a-smoke.js",
+      "sha256": "a0bc20c4b8e44d7dae102f384a03f77bc4659c475118d98513b879aa602143be",
+      "size_bytes": 4594
+    },
+    {
+      "path": "tests/v166-formal-design-lock-smoke.js",
+      "sha256": "07e177f96b80265e3f17dc14fecf01f978710fd7061e8e9c531c7df8226b1a04",
+      "size_bytes": 3775
+    },
+    {
+      "path": "tests/v1662-density-lock-smoke.js",
+      "sha256": "9ff5e51482562c96a8f13887eb4697e05fffae935a5e5b9509c58ced15cc6499",
+      "size_bytes": 1663
+    }
+  ]
+}

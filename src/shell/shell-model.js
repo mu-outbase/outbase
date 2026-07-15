@@ -37,7 +37,7 @@
     const home=payload.home||null;
     const vault=payload.vault||null;
     return Object.freeze({
-      version:'v166.1-performance-lock',route,legacy,online:navigator.onLine,nav:NAV,
+      version:'v166.2-density-lock',route,legacy,online:navigator.onLine,nav:NAV,
       home,detail:payload.detail||null,calendar:payload.calendar||null,
       now:home?.current||[],next:home?.next||[],quick:home?.quick||[],recent:home?.recent||[],family:home?.family||null,
       calendarUrl:globalThis.OUTBASE_ROUTER.shellUrl('calendar'),

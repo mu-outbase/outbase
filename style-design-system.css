@@ -202,3 +202,123 @@ body.outbaseTrailLens .mapModeBadge,body.outbaseTrailLens .mapControl{backdrop-f
 #outbaseShellRoot .ob3-main{contain:layout style}
 .ob6-story-row,.ob6-agenda-row,.ob6-timeline{content-visibility:auto;contain-intrinsic-size:76px}
 #outbaseShellRoot.is-route-loading .ob3-main{pointer-events:none}
+
+/* OUTBASE v166.2 density LOCK — quiet precision, not oversized whitespace */
+:root{
+  --ob-radius-m:15px;
+  --ob-radius-l:20px;
+  --ob-shadow:0 12px 30px rgba(10,36,29,.11);
+  --ob-shadow-soft:0 6px 18px rgba(10,36,29,.07);
+  --ob-content:680px;
+}
+
+/* NORTH: compact global frame */
+body.outbaseNorth .ob3-shell{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+body.outbaseNorth .ob3-header{min-height:58px;padding:7px 18px}
+body.outbaseNorth .ob3-brand{font-size:16px;letter-spacing:.13em;gap:9px}
+body.outbaseNorth .ob3-mark{width:32px;height:32px;border-radius:10px;padding:6px}
+body.outbaseNorth .ob3-network{font-size:10px;letter-spacing:.04em;text-transform:none}
+body.outbaseNorth .ob3-main{max-width:var(--ob-content);padding:14px 18px 26px}
+
+/* NORTH: information rhythm */
+.ob6-section{margin-bottom:24px}
+.ob6-section-title{min-height:40px;margin-bottom:7px;gap:10px}
+.ob6-section-title h2{font-size:21px;letter-spacing:-.035em}
+.ob6-section-title button,.ob6-section-title a,.ob6-section-title>span{min-height:40px;font-size:12px;gap:5px}
+.ob6-section-title svg{width:18px;height:18px}
+.ob6-home-hero{min-height:auto;padding:16px 0 14px;align-items:center}
+.ob6-home-hero h1{margin:0;font-size:clamp(29px,7.2vw,36px);letter-spacing:-.055em;line-height:1.08}
+.ob6-home-hero>button,.ob6-icon{width:48px;height:48px;border-radius:13px;box-shadow:none}
+.ob6-home-hero svg,.ob6-icon svg{width:21px;height:21px}
+.ob6-family-line{min-height:62px;margin-bottom:20px;padding:11px 0;gap:12px}
+.ob6-family-line>div small{font-size:10px}.ob6-family-line>div b{margin-top:2px;font-size:14px}
+.ob6-family-line>button{min-height:44px;gap:8px;font-size:10px}
+.ob6-avatar{width:27px;height:27px;margin-left:-6px;font-size:9px}
+.ob6-now-line{min-height:72px;padding:12px 0 17px;gap:12px}
+.ob6-now-line b{font-size:16px}.ob6-now-line p{margin-top:3px;font-size:12px;line-height:1.4}
+.ob6-current-line{padding:14px 0 18px;gap:12px}
+.ob6-current-line h3{margin:5px 0 8px;font-size:21px}
+.ob6-primary,.ob6-secondary{min-height:46px;padding:0 15px;border-radius:13px;font-size:13px}
+.ob6-next-band{margin-top:0;padding:17px 18px 16px;border-radius:20px;box-shadow:0 10px 26px rgba(10,36,29,.14)}
+.ob6-next-band:after{right:-72px;bottom:-105px;opacity:.55}
+.ob6-next-top span{font-size:10px;letter-spacing:.08em}.ob6-next-top b{font-size:11px}
+.ob6-next-band h3{margin:14px 0 8px;font-size:clamp(25px,6.5vw,30px);letter-spacing:-.045em}
+.ob6-prep{margin-top:14px;gap:9px}.ob6-next-actions{margin-top:13px;gap:7px}
+.ob6-command-strip button{min-height:74px;padding:9px 5px;gap:4px}
+.ob6-command-strip svg{width:20px;height:20px}.ob6-command-strip b{font-size:11px}.ob6-command-strip small{font-size:8.5px;line-height:1.25}
+.ob6-story-row,.ob6-agenda-row{min-height:62px;padding:9px 0;grid-template-columns:54px minmax(0,1fr) auto;gap:10px}
+.ob6-story-row time,.ob6-agenda-row time{font-size:10px}.ob6-story-row b,.ob6-agenda-row b{font-size:14px}.ob6-story-row small,.ob6-agenda-row small{margin-top:3px;font-size:10px}
+
+/* NORTH: compact generic pages */
+.ob6-page-hero{padding:19px 0 18px}.ob6-page-hero>small{display:none}
+.ob6-page-hero h1{margin:0 0 6px;font-size:clamp(31px,8vw,38px);letter-spacing:-.05em;line-height:1.08}
+.ob6-page-hero p{font-size:13px;line-height:1.5}
+.ob6-menu-row{min-height:70px;padding:12px 0;gap:12px}.ob6-menu-row b{font-size:16px}.ob6-menu-row small{margin-top:3px;font-size:11px}.ob6-menu-row svg{width:20px;height:20px}
+.ob6-metric-strip{margin:18px 0 24px}.ob6-metric-strip div{padding:13px 8px}.ob6-metric-strip b{margin-top:5px;font-size:25px}.ob6-metric-strip small{font-size:9px}
+
+/* NORTH: detail and calendar density */
+.ob6-detail-head{padding:15px 0 19px}.ob6-detail-tools{margin-bottom:15px}.ob6-detail-head h1{margin:7px 0 12px;font-size:clamp(30px,8vw,38px);letter-spacing:-.055em;line-height:1.08}
+.ob6-detail-head>small{font-size:9px;letter-spacing:.1em}
+.ob6-story-rail{padding:15px 16px;border-radius:18px;box-shadow:none}.ob6-rail{margin-top:13px}.ob6-rail i{width:15px;height:15px;margin-bottom:6px}.ob6-rail:before{top:7px}.ob6-rail span{font-size:8px}
+.ob6-facts{margin-top:18px}.ob6-facts>div{min-height:68px;padding:11px 12px}.ob6-facts b{margin-top:5px;font-size:14px}.ob6-facts small{font-size:9px}
+.ob6-detail-list{margin-top:18px}.ob6-detail-line{min-height:76px;padding:13px 0;grid-template-columns:88px minmax(0,1fr) auto;gap:11px}.ob6-detail-line h2{font-size:13px}.ob6-detail-line p{font-size:12px;line-height:1.45}.ob6-detail-line>span{font-size:12px}.ob6-detail-line>span a{min-height:44px}
+.ob6-timeline{padding:7px 0;grid-template-columns:80px minmax(0,1fr)}
+.ob6-detail-actions{bottom:76px;margin-top:20px;padding:7px;border-radius:15px;gap:6px;box-shadow:0 7px 18px rgba(10,36,29,.09)}.ob6-detail-actions a{min-height:46px;border-radius:11px;font-size:12px}
+.ob6-calendar-head{padding:15px 0 11px}.ob6-calendar-head h1{margin-top:5px;font-size:clamp(30px,8vw,38px);letter-spacing:-.05em}
+.ob6-filter-strip{margin-bottom:12px}.ob6-filter-strip>div:first-child{margin-bottom:6px}.ob6-filter-strip button{min-height:42px;padding:0 12px}
+.ob6-calendar-sheet{margin:0 -4px 22px;padding:9px;border-radius:19px;box-shadow:none}.ob6-calendar-nav{min-height:46px}.ob5-weekday{padding:6px 0}.ob5-day{min-height:70px;padding:4px 3px}.ob5-day>time{width:22px;height:22px;font-size:10px}.ob5-day a{margin-top:3px;padding:2px 3px}
+
+/* NORTH: compact persistent navigation and action sheet */
+body.outbaseNorth .ob3-nav{left:10px;right:10px;bottom:8px;min-height:64px;padding:5px;border-radius:18px;box-shadow:0 10px 28px rgba(10,36,29,.14)}
+body.outbaseNorth .ob3-nav button{min-height:52px;border-radius:13px;font-size:9.5px;gap:2px}
+body.outbaseNorth .ob3-nav svg{width:21px;height:21px}
+body.outbaseNorth .ob3-nav .ob3-central{min-height:52px;border-radius:13px;box-shadow:none}
+body.outbaseNorth .ob3-sheet{padding:7px 18px calc(14px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0}
+body.outbaseNorth .ob3-sheet-handle{margin-bottom:8px}
+body.outbaseNorth .ob3-sheet-head h2{margin:0;font-size:23px;letter-spacing:-.03em}
+body.outbaseNorth .ob3-sheet-head small{display:none}
+body.outbaseNorth .ob3-sheet-head button{width:48px;height:48px;font-size:22px}
+body.outbaseNorth .ob3-sheet-actions{margin-top:8px}
+body.outbaseNorth .ob3-sheet-actions button{min-height:64px;padding:9px 0;grid-template-columns:42px minmax(0,1fr) 20px;gap:10px}
+body.outbaseNorth .ob3-sheet-actions button>span{width:42px;height:42px;border-radius:12px}
+body.outbaseNorth .ob3-sheet-actions button>span svg{width:20px;height:20px}.ob3-sheet-actions b{font-size:15px}.ob3-sheet-actions small{font-size:10px;margin-top:2px}
+
+/* TRAIL LENS: compact field hierarchy without shrinking touch safety */
+body.outbaseTrailLens #page-record{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+body.outbaseTrailLens .recordHero{margin:9px 12px 10px;padding:12px 14px;border-radius:17px;box-shadow:0 10px 28px rgba(0,0,0,.24)}
+body.outbaseTrailLens .recordHero small{font-size:9px;letter-spacing:.1em}
+body.outbaseTrailLens .recordHero h1{font-size:24px;line-height:1.08;margin-block:4px}
+body.outbaseTrailLens .recordMapCard{margin:0 9px 12px;border-radius:20px;box-shadow:0 14px 34px rgba(0,0,0,.28)}
+body.outbaseTrailLens .mapHead{padding:11px 13px}.outbaseTrailLens .mapHead h2{font-size:18px}.outbaseTrailLens .mapHead p{font-size:10px;margin-top:2px}
+body.outbaseTrailLens .mapHead button{min-height:48px;border-radius:12px;font-size:11px}
+body.outbaseTrailLens .recordLiveMap{min-height:min(43dvh,350px)}
+body.outbaseTrailLens .mapModeBadge{top:10px;left:10px;padding:7px 9px;font-size:9px}
+body.outbaseTrailLens .mapControl{margin:0 9px 9px;padding:9px;border-radius:16px;box-shadow:0 10px 24px rgba(0,0,0,.28)}
+body.outbaseTrailLens .stats>div{min-height:52px;padding:8px}.outbaseTrailLens .stats span{font-size:9px}.outbaseTrailLens .stats b{font-size:19px}
+body.outbaseTrailLens .mapButtons{gap:6px}.outbaseTrailLens .mapButtons button{min-height:48px;border-radius:12px;font-size:11px}
+body.outbaseTrailLens .quickArea{padding-block:12px}.outbaseTrailLens .quickArea h3{font-size:17px}
+body.outbaseTrailLens .quickArea button{min-height:58px;border-radius:13px}
+body.outbaseTrailLens .bottomNav,body.outbaseTrailLens nav.bottomNav,body.outbaseTrailLens .appBottomNav{min-height:68px;box-shadow:0 -8px 22px rgba(0,0,0,.28)}
+
+/* TRAIL LENS: record/detail sheets — compact, readable, no giant close action */
+body.outbaseTrailLens .recordSheetBackdrop{background:rgba(0,0,0,.50);backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.outbaseTrailLens .recordSheet{max-height:min(74dvh,660px);padding:8px 18px calc(14px + env(safe-area-inset-bottom))!important;border-radius:22px 22px 0 0!important;box-shadow:0 -14px 40px rgba(0,0,0,.34);overflow-y:auto;overscroll-behavior:contain}
+body.outbaseTrailLens .recordSheet h1,body.outbaseTrailLens .recordSheet h2,body.outbaseTrailLens .recordSheet h3{font-size:clamp(20px,5.8vw,25px)!important;line-height:1.18!important;letter-spacing:-.035em!important;margin:4px 0 10px!important}
+body.outbaseTrailLens .recordSheet>small:first-child,body.outbaseTrailLens .recordSheet [class*="eyebrow"]{font-size:9px!important;letter-spacing:.1em!important}
+body.outbaseTrailLens .recordSheet p{font-size:11px!important;line-height:1.4!important;margin-block:3px!important}
+body.outbaseTrailLens .recordSheet small{font-size:9.5px!important;line-height:1.35!important}
+body.outbaseTrailLens .recordSheet button,body.outbaseTrailLens .recordSheet a{min-height:48px!important;border-radius:11px!important;font-size:12px!important}
+body.outbaseTrailLens .recordSheet [class*="Card"],body.outbaseTrailLens .recordSheet [class*="card"]{padding:11px 12px!important;border-radius:14px!important}
+body.outbaseTrailLens .recordSheet [class*="Row"],body.outbaseTrailLens .recordSheet [class*="row"]{min-height:48px!important;padding-block:7px!important}
+body.outbaseTrailLens .recordSheet .sheetPrimary{min-height:48px!important;font-size:13px!important}
+body.outbaseTrailLens .recordSheet button:last-child{min-height:46px!important;margin-top:8px!important}
+
+@media(max-width:420px){
+  body.outbaseNorth .ob3-main{padding-left:16px;padding-right:16px}
+  .ob6-command-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ob6-command-strip button:nth-child(n){border-bottom:0}
+  .ob6-command-strip button:nth-child(2){border-right:1px solid var(--ob-line)}
+  .ob6-command-strip small{display:none}
+  .ob6-detail-line{grid-template-columns:78px minmax(0,1fr) auto}
+  .ob6-story-row,.ob6-agenda-row{grid-template-columns:48px minmax(0,1fr) auto}
+}
