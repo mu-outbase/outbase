@@ -1,0 +1,148 @@
+{
+  "version": "v166.1-performance-lock",
+  "base_git_head": "832420680b707a4ad1b30236cbce455b00ae27eb",
+  "target": "repository root",
+  "problem": [
+    "old FIELD03 visible before NORTH on refresh",
+    "shell route transitions feel heavy"
+  ],
+  "fixes": [
+    "first-paint boot guard",
+    "fast shell skips legacy UI",
+    "route-specific read models",
+    "30s route cache",
+    "persistent shell",
+    "routine view transitions disabled",
+    "single-rAF scroll restore",
+    "fixed blur removal",
+    "long-list content visibility"
+  ],
+  "field03_app_js_sha": "13a44b35562d5fd325368acd94ca49b0005502a8",
+  "field03_engine_changed": false,
+  "data_mutation": false,
+  "database_schema_change": false,
+  "cutover": false,
+  "android_verified": false,
+  "files": [
+    {
+      "path": "index.html",
+      "sha256": "5e089e2e7ebc5d2413454a640db6d5cbeb2062fd17a3fe0a4d90bf39ceb8fe12",
+      "size_bytes": 4971
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "7733d68e906273f8bb434eba8ed2b7a4ac98b4e37a8dd267743623da5a5ffcd5",
+      "size_bytes": 1447
+    },
+    {
+      "path": "service-worker.js",
+      "sha256": "0003ad02576ea26758681723ba7ac22fc95fb86072a81a5f58260cab24c7b475",
+      "size_bytes": 5179
+    },
+    {
+      "path": "style-design-system.css",
+      "sha256": "634f6058703ff175367d7f231ba5b1de55b2f429079d8f029c474ae6afb76afc",
+      "size_bytes": 26268
+    },
+    {
+      "path": "src/config/version.js",
+      "sha256": "5ea9bd45491ae6661943df804ca1823aa3bf44004703bb7a261b67a9d3ca8aeb",
+      "size_bytes": 379
+    },
+    {
+      "path": "src/design/theme-controller.js",
+      "sha256": "4c240b1f3e5786ed5afd71572253099fe24f4ea18f807748c8d3eb476ec40583",
+      "size_bytes": 2656
+    },
+    {
+      "path": "src/main.js",
+      "sha256": "4bffbf391b4931e450d7a7e9dab50083d87032ade00002a7c60158eef15efc48",
+      "size_bytes": 4003
+    },
+    {
+      "path": "src/router.js",
+      "sha256": "4113b56f03e2135acd9dc4dc28fb5614a45ef0339cb16eb233eb4c22e705831c",
+      "size_bytes": 4944
+    },
+    {
+      "path": "src/shell/bootstrap.js",
+      "sha256": "10b46f30f88f45230dcb4d95e7df606e67b02a238a59cb657c31878da220f999",
+      "size_bytes": 7067
+    },
+    {
+      "path": "src/shell/shell-model.js",
+      "sha256": "b1d41627a6651dc05ad8b4c1e4d7e93c5870e48a8c0dd0d4f093beeac49d5399",
+      "size_bytes": 2896
+    },
+    {
+      "path": "src/shell/shell-renderer.js",
+      "sha256": "26c3df7d26ab9874dd625d4babf27360b485bac9666022e3adfbd8c1f57425e6",
+      "size_bytes": 21897
+    },
+    {
+      "path": "tests/phase2a-loader-main-smoke.js",
+      "sha256": "294e5985df9dcf81117d46a2170a68457a68677267a4e749ebc4b904c3220c28",
+      "size_bytes": 3958
+    },
+    {
+      "path": "tests/phase2a-smoke.js",
+      "sha256": "79a7d9a0e7496160dd3afbc3e81b5add8e410fcd96c75e4281710d0be2a06a50",
+      "size_bytes": 4614
+    },
+    {
+      "path": "tests/phase3-shell-smoke.js",
+      "sha256": "12f1134853b0cc93187c1c6908e01f1cd67acbac11e00ba5ea80d18b50ba00ba",
+      "size_bytes": 3259
+    },
+    {
+      "path": "tests/v166-formal-design-lock-smoke.js",
+      "sha256": "72e86917f1cea5fb32d9d93239d7ee10ec9d8059cc7baf7b00e83c660bc6243f",
+      "size_bytes": 3791
+    },
+    {
+      "path": "tests/v1661-performance-smoke.js",
+      "sha256": "1e44ec2a01574eb83226afd20f6f345c3b37bea45e44be93e5e66d5e4d1db8a7",
+      "size_bytes": 3090
+    },
+    {
+      "path": "docs/V1661_PERFORMANCE_LOCK.md",
+      "sha256": "3becdbc6f9179197c916b08bcd57c4822c526d44913ada7e971e23888b39ab8d",
+      "size_bytes": 705
+    },
+    {
+      "path": "OUTBASE_v1661_PERFORMANCE_HOTFIX_AUDIT.md",
+      "sha256": "910d799facabd6682e1351f211851b0d7506ddb688b901de3232b369e60e726d",
+      "size_bytes": 4438
+    },
+    {
+      "path": "OUTBASE_BOOT_v7.1_性能補正LOCK.md",
+      "sha256": "5356f725e41853f3af4508310b2b7db7b68f4e3d8c8a1cac282daf0be7384af9",
+      "size_bytes": 832
+    },
+    {
+      "path": "OUTBASE_STATUSLOCK_v1661.md",
+      "sha256": "4faed21e5a7b329952b864d63833256eb1683ab2e4bb830b9d274d39eab6b876",
+      "size_bytes": 477
+    },
+    {
+      "path": "OUTBASE_NEXT_ROADMAP_v1661.md",
+      "sha256": "4dd890963cf2df8ff282ce788e1ee35855a79755ddfbafa0f8d7e925d52da978",
+      "size_bytes": 435
+    },
+    {
+      "path": "OUTBASE_GITHUB_MAIN_STATUS_v1661.md",
+      "sha256": "c7b2176b60e1bba6fd6b71f4492fc8e029ee4ce89bed9ec419e7fc424b057143",
+      "size_bytes": 445
+    },
+    {
+      "path": "README_OUTBASE_HANDOFF_v1661.md",
+      "sha256": "e2cf7afca306cc9d61e2c077599e1297a880edde1eae2ff1b4d7e93e508a63e3",
+      "size_bytes": 594
+    },
+    {
+      "path": "VERIFICATION_RESULTS_v1661.txt",
+      "sha256": "bc4f0a7285fbc4f2e31693d1b5345a60fb8802db1d17b7c6c5c95033c375ef09",
+      "size_bytes": 1376
+    }
+  ]
+}

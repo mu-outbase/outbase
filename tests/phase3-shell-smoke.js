@@ -12,7 +12,7 @@ function eventTarget(target){const rows={};target.addEventListener=(type,fn)=>(r
   vm.runInContext(read('src/shell/modal-stack.js'),context);context.OUTBASE_MODAL_STACK_V164.open('central');assert.equal(context.OUTBASE_MODAL_STACK_V164.top().id,'central');context.OUTBASE_MODAL_STACK_V164.close();assert(events.includes('back'));
   context.OUTBASE_HOME_SCREEN_MODEL_V164={async build(){return {current:[],next:[{id:'a',title:'次のキャンプ'}],recent:[],family:{names:[],memberCount:0,petCount:0,household:{name:'わが家'}},quick:[],calendarUrl:'?tab=plan'};}};
   context.OUTBASE_VAULT_SCREEN_MODEL_V162={async build(){return {summary:{activityCount:2,recordCount:5,assetCount:8},activities:[],assets:[]};}};
-  vm.runInContext(read('src/shell/shell-model.js'),context);const model=await context.OUTBASE_SHELL_MODEL_V164.build();assert.equal(model.route.name,'search');assert.equal(model.next.length,1);assert.equal(model.vaultSummary.recordCount,5);
+  vm.runInContext(read('src/shell/shell-model.js'),context);const model=await context.OUTBASE_SHELL_MODEL_V164.build();assert.equal(model.route.name,'search');assert.equal(model.next.length,0);assert.equal(model.vaultSummary.recordCount,0);
   const css=read('style-shell.css');assert(!/(body|#outbaseShellRoot|\.ob3-shell)[^{]*\{[^}]*overflow\s*:\s*hidden/i.test(css));assert.equal((css.match(/MutationObserver/g)||[]).length,0);
   console.log(JSON.stringify({status:'pass',history:'pushState',modalBack:true,activeSessionGuard:true,overflowHiddenAdded:0,mutationObserverAdded:0},null,2));
 })().catch(error=>{console.error(error);process.exit(1);});

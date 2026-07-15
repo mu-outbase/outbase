@@ -70,7 +70,7 @@
   }
   function reducedMotion(){return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;}
   function transition(commit,options={}){
-    if(options.skipTransition||reducedMotion()||typeof document?.startViewTransition!=='function')return commit();
+    if(options.transition!==true||options.skipTransition||reducedMotion()||typeof document?.startViewTransition!=='function')return commit();
     try{
       const value=document.startViewTransition(()=>Promise.resolve(commit()));
       return value.finished.catch(()=>current());
@@ -97,6 +97,7 @@
   addEventListener('popstate',()=>notify('popstate'));
 
   globalThis.OUTBASE_ROUTER=Object.freeze({
+    routineTransitions:false,
     current,legacyUrl,shellUrl,open,navigate,back,subscribe,shellRequested,
     rememberScroll,savedScrollY,viewportScrollY,SCROLL_KEY,reducedMotion,
     legacyToRoute,routeToLegacy,SHELL_ROUTES:Object.freeze([...SHELL_ROUTES])

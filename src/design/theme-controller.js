@@ -37,7 +37,7 @@
     document.body.dataset.outbaseSurface=currentRoute.shell?`shell-${currentRoute.view||'home'}`:`legacy-${currentRoute.tab}`;
     document.documentElement.style.colorScheme=value===TRAIL?'dark':'light';
     applyThemeColor(value);
-    const detail=Object.freeze({version:'v166-formal-design',mode:value,state,route:currentRoute,reason});
+    const detail=Object.freeze({version:'v166.1-performance-lock',mode:value,state,route:currentRoute,reason});
     globalThis.dispatchEvent?.(new CustomEvent('outbase:theme-change',{detail}));
     return detail;
   }

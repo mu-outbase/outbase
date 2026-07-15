@@ -193,3 +193,12 @@ body.outbaseTrailLens .outbaseUpdateToast button{background:var(--ob-trail-lime)
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+
+/* OUTBASE v166.1 performance LOCK — stable compositing and lazy long lists */
+body.outbaseNorth .ob3-header{background:var(--ob-bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+body.outbaseNorth .ob3-nav{background:#FBFAF5;backdrop-filter:none;-webkit-backdrop-filter:none}
+.ob6-detail-actions{background:#FCFBF6;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.outbaseTrailLens .mapModeBadge,body.outbaseTrailLens .mapControl{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#0B1B16}
+#outbaseShellRoot .ob3-main{contain:layout style}
+.ob6-story-row,.ob6-agenda-row,.ob6-timeline{content-visibility:auto;contain-intrinsic-size:76px}
+#outbaseShellRoot.is-route-loading .ob3-main{pointer-events:none}

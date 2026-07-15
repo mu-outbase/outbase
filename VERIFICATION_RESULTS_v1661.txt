@@ -1,0 +1,39 @@
+OUTBASE v166.1 PERFORMANCE VERIFICATION
+Date: 2026-07-15 Asia/Tokyo
+Base Git HEAD: 832420680b707a4ad1b30236cbce455b00ae27eb
+
+[JavaScript syntax]
+PASS: 35 JavaScript files
+
+[Smoke tests]
+PASS: tests/phase2a-loader-main-smoke.js
+PASS: tests/phase2a-smoke.js
+PASS: tests/phase2b-domain-smoke.js
+PASS: tests/phase3-shell-smoke.js
+PASS: tests/phase4-home-smoke.js
+PASS: tests/phase5-integrated-smoke.js
+PASS: tests/v1651-android-evidence-hotfix-smoke.js
+PASS: tests/v1652-scroll-restore-smoke.js
+PASS: tests/v166-formal-design-lock-smoke.js
+PASS: tests/v1661-performance-smoke.js
+
+[Performance architecture]
+PASS: first-paint legacy UI guard present
+PASS: shell-fast path skips 14 legacy JS modules
+PASS: shell-fast path skips XLSX/PDF.js/Tesseract
+PASS: route-specific read model generation
+PASS: 30-second route cache
+PASS: persistent header/nav/modal; main-only replacement
+PASS: routine Document View Transition disabled
+PASS: single-rAF scroll restore
+PASS: online/offline updates do not rebuild page
+PASS: fixed NORTH surfaces use no backdrop blur
+PASS: long rows use content-visibility:auto
+
+[Safety]
+PASS: src/app.js not included in patch and GitHub SHA remains 13a44b35562d5fd325368acd94ca49b0005502a8
+PASS: database schema change 0
+PASS: data mutation 0
+PASS: new MutationObserver 0
+PASS: whole-screen overflow:hidden 0
+PENDING: GitHub upload and Android re-verification

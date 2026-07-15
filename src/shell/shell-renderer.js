@@ -113,15 +113,38 @@
   function nav(model){const homeActive=['home','activity','calendar'].includes(model.route.name);return `<nav class="ob3-nav" aria-label="メインメニュー"><button data-ob3-route="home" class="${homeActive?'active':''}">${icons.home}<span>ホーム</span></button><button data-ob3-route="search" class="${model.route.name==='search'?'active':''}">${icons.search}<span>探す</span></button><button class="ob3-central" data-ob3-central>${icons.plus}<span>追加</span></button><button data-ob3-route="vault" class="${model.route.name==='vault'?'active':''}">${icons.vault}<span>保管庫</span></button></nav>`;}
   function centralSheet(){return `<div class="ob3-backdrop" data-ob3-backdrop><section class="ob3-sheet" role="dialog" aria-modal="true" aria-label="追加する"><div class="ob3-sheet-handle"></div><div class="ob3-sheet-head"><div><small>QUICK ACTION</small><h2>何をする？</h2></div><button data-ob3-close aria-label="閉じる">×</button></div><div class="ob3-sheet-actions"><button data-ob3-action="start"><span>${icons.play}</span><div><b>活動を始める</b><small>散歩、キャンプ、ドライブ</small></div>${icons.arrow}</button><button data-ob3-action="memo"><span>${icons.memo}</span><div><b>メモを残す</b><small>気づきをすぐ記録</small></div>${icons.arrow}</button><button data-ob3-action="plan-add"><span>${icons.calendar}</span><div><b>予定を追加</b><small>カレンダーにつながる予定</small></div>${icons.arrow}</button></div></section></div>`;}
   function body(model){if(model.route.name==='search')return search(model);if(model.route.name==='vault')return vault(model);if(model.route.name==='activity')return activityDetail(model);if(model.route.name==='calendar')return calendar(model);return home(model);}
-  async function mount(root){
-    const model=await (globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164).build();
-    root.innerHTML=`<div class="ob3-shell ob6-north" data-ob6-route="${esc(model.route.name)}"><header class="ob3-header"><a href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('home'))}" data-ob3-route="home" class="ob3-brand"><span class="ob3-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>OUTBASE</b></a><span class="ob3-network ${model.online?'':'offline'}">${model.online?'接続中':'オフライン'}</span></header><main class="ob3-main">${body(model)}</main>${nav(model)}<div id="outbaseShellModal"></div></div>`;
+  function ensureShell(root,model){
+    let shell=root.querySelector?.(':scope > .ob3-shell')||root.querySelector?.('.ob3-shell');
+    if(shell)return shell;
+    root.innerHTML=`<div class="ob3-shell ob6-north" data-ob6-route="${esc(model.route.name)}"><header class="ob3-header"><a href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('home'))}" data-ob3-route="home" class="ob3-brand"><span class="ob3-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>OUTBASE</b></a><span class="ob3-network"></span></header><main class="ob3-main"></main>${nav(model)}<div id="outbaseShellModal"></div></div>`;
+    return root.querySelector?.(':scope > .ob3-shell')||root.querySelector?.('.ob3-shell');
+  }
+  function updateNetwork(root,online=navigator.onLine){
+    const target=root?.querySelector?.('.ob3-network');if(!target)return;
+    target.classList.toggle('offline',!online);target.textContent=online?'接続中':'オフライン';
+  }
+  function updateNav(root,model){
+    const activeHome=['home','activity','calendar'].includes(model.route.name);
+    root.querySelectorAll?.('[data-ob3-route]').forEach(button=>{
+      const route=button.dataset.ob3Route;
+      const active=route==='home'?activeHome:route===model.route.name;
+      button.classList.toggle('active',active);
+      if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+    });
+  }
+  async function mount(root,options={}){
+    const model=await (globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164).build(options);
+    const shell=ensureShell(root,model);
+    shell.dataset.ob6Route=model.route.name;
+    const main=shell.querySelector('.ob3-main');
+    main.innerHTML=body(model);
+    updateNetwork(shell,model.online);updateNav(shell,model);
     globalThis.OUTBASE_THEME_V166?.sync?.('shell-render');
     return model;
   }
   function showCentral(){const host=document.getElementById('outbaseShellModal');if(host)host.innerHTML=centralSheet();}
   function hideCentral(){const host=document.getElementById('outbaseShellModal');if(host)host.innerHTML='';}
-  const api=Object.freeze({mount,showCentral,hideCentral,homeHtml:home,activityHtml:activityDetail,calendarHtml:calendar,storyRow,nextBand});
+  const api=Object.freeze({mount,showCentral,hideCentral,updateNetwork,updateNav,homeHtml:home,activityHtml:activityDetail,calendarHtml:calendar,storyRow,nextBand});
   globalThis.OUTBASE_SHELL_RENDERER_V166=api;
   globalThis.OUTBASE_SHELL_RENDERER_V165=api;
   globalThis.OUTBASE_SHELL_RENDERER_V164=api;
