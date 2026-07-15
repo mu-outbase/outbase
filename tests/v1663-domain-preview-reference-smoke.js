@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('fs');const path=require('path');const vm=require('vm');const assert=require('assert');
+const root=path.resolve(__dirname,'..');const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
+const context={console,globalThis:null};context.globalThis=context;vm.createContext(context);
+vm.runInContext(read('src/domain/vault/vault-domain.js'),context,{filename:'vault-domain.js'});
+vm.runInContext(read('src/domain/home/home-domain.js'),context,{filename:'home-domain.js'});
+const media=[{activity_id:'a1',media_type:'video',local_ref:{key:'video-1'}},{activity_id:'a1',media_type:'photo',local_ref:{key:'photo-1'},mime_type:'image/jpeg',size:1234,deleted_at:null},{activity_id:'a1',media_type:'photo',local_ref:{key:'photo-2'}}];
+const vault=context.OUTBASE_VAULT_DOMAIN_V162.previewMedia(media);assert.equal(vault.key,'photo-1');assert.equal(vault.type,'photo');
+const map=context.OUTBASE_HOME_DOMAIN_V164.mediaPreviewMap(media);assert.equal(map.size,1);assert.equal(map.get('a1').key,'photo-1');
+assert(!('blob' in vault));
+console.log(JSON.stringify({status:'pass',firstPhotoReference:'photo-1',blobRead:false},null,2));

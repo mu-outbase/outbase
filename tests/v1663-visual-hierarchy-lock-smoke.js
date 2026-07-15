@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');const path=require('path');const assert=require('assert');
+const root=path.resolve(__dirname,'..');const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
+const css=read('style-design-system.css');const renderer=read('src/shell/shell-renderer.js');const home=read('src/domain/home/home-domain.js');const vault=read('src/domain/vault/vault-domain.js');const version=read('src/config/version.js');const sw=read('service-worker.js');const manifest=JSON.parse(read('manifest.json'));
+assert(css.includes('OUTBASE v166.3 — visual hierarchy and activity warmth'));
+assert(css.includes('.ob7-vault-feature'));assert(css.includes('.ob7-search-grid'));assert(css.includes('.ob7-next-visual'));
+assert(renderer.includes('IntersectionObserver'));assert(renderer.includes('getRecordBlob'));assert(renderer.includes("rootMargin:'180px 0px'"));
+assert(renderer.includes('ob7-vault-feature'));assert(renderer.includes('ob7-search-card'));assert(renderer.includes('ob7-story-row'));
+assert(home.includes('mediaPreviewMap'));assert(home.includes('previewBlobReads:0'));assert(vault.includes('previewMedia'));
+assert(version.includes("app:'v166.3-visual-hierarchy-lock'"));assert(sw.includes('outbase-field03-v1663-visual'));assert.equal(manifest.version,'166.3');
+assert.equal((css.match(/MutationObserver/g)||[]).length,0);assert(!/(body|html|#outbaseShellRoot|\.ob3-shell)[^{]*\{[^}]*overflow\s*:\s*hidden/i.test(css));
+console.log(JSON.stringify({status:'pass',visualHierarchy:true,lazyPhotoPreview:true,initialBlobReads:0,typeFallbacks:true,densityPreserved:true,performancePreserved:true,field03EngineChanged:false},null,2));

@@ -16,6 +16,15 @@
     play:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>',
     memo:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>',
     grid:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>',
+    camp:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 19 8-14 8 14M7 19h10M9.2 14.5h5.6"/></svg>',
+    walk:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m10 8 3-1 2.5 3.5M12 7l-2 5-3 3M12 12l3 3 1 5M9 13l1 7"/></svg>',
+    drive:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16l-2-6H6zM4 14v4h2m14-4v4h-2M8 18h8"/><circle cx="7" cy="15" r="1"/><circle cx="17" cy="15" r="1"/></svg>',
+    event:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM8 4v6M16 4v6M4 11h16"/></svg>',
+    other:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8"/></svg>',
+    photo:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m5 18 5-5 3 3 2-2 4 4"/></svg>',
+    memory:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h7"/></svg>',
+    gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
+    paw:'<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="8" cy="8" rx="2" ry="3"/><ellipse cx="16" cy="8" rx="2" ry="3"/><ellipse cx="5" cy="13" rx="2" ry="2.5"/><ellipse cx="19" cy="13" rx="2" ry="2.5"/><path d="M8 18c0-3 2-5 4-5s4 2 4 5c0 2-2 3-4 3s-4-1-4-3Z"/></svg>',
     check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
   };
 
@@ -23,15 +32,38 @@
   function dateTimeLabel(value){if(!value)return '日時未設定';const d=new Date(value);if(Number.isNaN(d.getTime()))return '日時未設定';return d.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
   function dateRange(item){const start=dateLabel(item.startAt);if(!item.endAt||dateLabel(item.endAt)===start)return start;return `${start}〜${dateLabel(item.endAt)}`;}
   function initials(name){const text=String(name||'・').trim();return esc(text.slice(0,1)||'・');}
+  const previewUrls=new Map();
+  const previewPromises=new Map();
+  let previewObserver=null;
+  function typeKey(item){const value=String(item?.type||'other');return ['camp','walk','drive','event','shopping'].includes(value)?value:'other';}
+  function previewKey(item){return String(item?.previewMedia?.key||'').trim();}
+  function activityVisual(item,{className='ob7-thumb',label=true}={}){
+    const type=typeKey(item);const key=previewKey(item);const typeLabel=item?.typeLabel||({camp:'キャンプ',walk:'散歩',drive:'ドライブ',event:'イベント',shopping:'買い物'}[type]||'活動');
+    return `<span class="${className} type-${esc(type)}"${key?` data-ob-media-key="${esc(key)}"`:''}><span class="ob7-visual-fallback">${icons[type]||icons.other}${label?`<small>${esc(typeLabel)}</small>`:''}</span></span>`;
+  }
+  async function previewUrl(key){
+    if(!key)return null;if(previewUrls.has(key))return previewUrls.get(key);if(previewPromises.has(key))return previewPromises.get(key);
+    const task=(async()=>{try{const blob=await globalThis.OUTBASE_LEGACY_ADAPTER_V160?.getRecordBlob?.(key);if(!(blob instanceof Blob)||!String(blob.type||'').startsWith('image/'))return null;const url=URL.createObjectURL(blob);previewUrls.set(key,url);return url;}catch(_error){return null;}finally{previewPromises.delete(key);}})();
+    previewPromises.set(key,task);return task;
+  }
+  async function loadPreview(element){
+    if(!element||element.dataset.obMediaLoaded==='1')return;element.dataset.obMediaLoaded='1';const key=element.dataset.obMediaKey;const url=await previewUrl(key);if(!url)return;element.style.setProperty('--ob-preview-image',`url("${url}")`);element.classList.add('has-photo');
+  }
+  function hydrateMedia(root){
+    const rows=[...(root?.querySelectorAll?.('[data-ob-media-key]')||[])].filter(row=>row.dataset.obMediaLoaded!=='1');if(!rows.length)return;
+    if(!('IntersectionObserver' in globalThis)){rows.forEach(loadPreview);return;}
+    if(!previewObserver)previewObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)return;previewObserver.unobserve(entry.target);loadPreview(entry.target);}),{rootMargin:'180px 0px'});
+    rows.forEach(row=>previewObserver.observe(row));
+  }
   function participantRows(item){return item?.participants?.rows||[];}
   function people(item){
     const rows=participantRows(item);
     if(!rows.length)return '<span class="ob4-participant-empty">参加者未設定</span>';
     return rows.slice(0,6).map(row=>`<span class="ob4-person ${row.type==='pet'?'pet':'member'}">${esc(row.name)}</span>`).join('')+(rows.length>6?`<span class="ob4-person more">＋${rows.length-6}</span>`:'');
   }
-  function avatarStack(names=[]){
-    const rows=names.slice(0,5).map((name,index)=>`<span class="ob6-avatar a${index}" aria-label="${esc(name)}">${initials(name)}</span>`).join('');
-    return `<span class="ob6-avatars">${rows}${names.length>5?`<span class="ob6-avatar more">+${names.length-5}</span>`:''}</span>`;
+  function avatarStack(rows=[]){
+    const visible=rows.slice(0,5).map((row,index)=>`<span class="ob6-avatar a${index} ${row.type==='pet'?'pet':'member'}" aria-label="${esc(row.name)}">${row.type==='pet'?icons.paw:initials(row.name)}</span>`).join('');
+    return `<span class="ob6-avatars">${visible}${rows.length>5?`<span class="ob6-avatar more">+${rows.length-5}</span>`:''}</span>`;
   }
   function meta(item){
     const location=item.place?`<span>${icons.pin}${esc(item.place)}</span>`:'';
@@ -46,22 +78,22 @@
     return `<a class="${className}" href="${esc(href)}" data-ob5-nav data-ob5-route="${esc(route)}"${values.activityId?` data-ob5-activity-id="${esc(values.activityId)}"`:''}${values.month?` data-ob5-month="${esc(values.month)}"`:''}>${label}</a>`;
   }
   function storyRow(item){
-    return `<a class="ob6-story-row" href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:item.id}))}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(item.id)}"><time>${esc(dateLabel(item.startAt,{weekday:false}))}</time><span><b>${esc(item.title)}</b><small>${Number(item.recordCount||0)}件の記録${item.mediaCount?`・${Number(item.mediaCount)}件の写真/動画`:''}</small></span>${icons.arrow}</a>`;
+    return `<a class="ob6-story-row ob7-story-row" href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:item.id}))}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(item.id)}">${activityVisual(item,{className:'ob7-thumb',label:false})}<span><time>${esc(dateLabel(item.startAt,{weekday:false}))}</time><b>${esc(item.title)}</b><small>${Number(item.recordCount||0)}件の記録${item.mediaCount?`・写真/動画 ${Number(item.mediaCount)}件`:''}</small></span>${icons.arrow}</a>`;
   }
-  function emptyNow(){return `<div class="ob6-now-line"><div><b>今は活動していません</b><p>必要な時だけ記録を開始します。</p></div><button class="ob6-primary" data-ob3-action="start">活動を始める</button></div>`;}
+  function emptyNow(){return `<div class="ob6-now-line ob7-now-line"><span class="ob7-now-mark">${icons.play}</span><div><b>今は活動していません</b><p>出かける時に、ここから記録を始めます。</p></div><button class="ob6-primary" data-ob3-action="start">始める</button></div>`;}
   function currentLine(item){
     return `<article class="ob6-current-line" data-activity-id="${esc(item.id)}" style="view-transition-name:ob-activity-${token(item.id)}"><div><small>${esc(item.typeLabel)}・${esc(item.stateLabel)}</small><h3>${esc(item.title)}</h3>${meta(item)}</div><div class="ob6-current-actions">${shellLink('activity',{activityId:item.id},'活動を見る','ob6-secondary')}<a class="ob6-primary" href="${esc(item.recordUrl)}">記録を開く</a></div></article>`;
   }
   function nextBand(item){
     const prep=item.preparation||{completed:0,total:0,progress:0};
-    return `<article class="ob6-next-band" data-activity-id="${esc(item.id)}" style="view-transition-name:ob-activity-${token(item.id)}"><div class="ob6-next-top"><span>次の${esc(item.typeLabel||'活動')}</span><b>${esc(item.relativeDay)}</b></div><h3>${esc(item.title)}</h3>${meta(item)}<div class="ob6-prep"><b>準備 ${prep.completed}/${prep.total}</b><div class="ob4-progress-track"><i style="width:${Math.max(0,Math.min(100,Number(prep.progress)||0))}%"></i></div><span>${Number(prep.progress)||0}%</span></div><div class="ob6-next-actions">${shellLink('activity',{activityId:item.id},'活動を見る','ob6-secondary light')}<a class="ob6-primary brass" href="${esc(item.preparationUrl)}">準備する</a></div></article>`;
+    return `<article class="ob6-next-band ob7-next-band type-${esc(typeKey(item))}" data-activity-id="${esc(item.id)}" style="view-transition-name:ob-activity-${token(item.id)}">${activityVisual(item,{className:'ob7-next-visual',label:false})}<div class="ob7-next-content"><div class="ob6-next-top"><span>次の${esc(item.typeLabel||'活動')}</span><b>${esc(item.relativeDay)}</b></div><h3>${esc(item.title)}</h3>${meta(item)}<div class="ob6-prep"><b>準備 ${prep.completed}/${prep.total}</b><div class="ob4-progress-track"><i style="width:${Math.max(0,Math.min(100,Number(prep.progress)||0))}%"></i></div><span>${Number(prep.progress)||0}%</span></div><div class="ob6-next-actions">${shellLink('activity',{activityId:item.id},'活動を見る','ob6-secondary light')}<a class="ob6-primary brass" href="${esc(item.preparationUrl)}">準備する</a></div></div></article>`;
   }
   function family(model){
-    const value=model.home.family;const names=value.names||[];
-    return `<section class="ob6-family-line"><div><small>${esc(value.household.name)}</small><b>家族${value.memberCount}人・ペット${value.petCount}匹</b></div><button data-ob5-nav data-ob5-route="calendar" aria-label="家族とペットで絞り込む">${avatarStack(names)}<span>絞り込む</span></button></section>`;
+    const value=model.home.family;const rows=value.rows||[];
+    return `<section class="ob6-family-line ob7-family-line"><div><small>${esc(value.household.name)}</small><b>家族${value.memberCount}人・ペット${value.petCount}匹</b></div><button data-ob5-nav data-ob5-route="calendar" aria-label="家族とペットで絞り込む">${avatarStack(rows)}<span>絞り込む</span></button></section>`;
   }
   function quick(model){
-    return `<div class="ob6-command-strip">${model.home.quick.map(item=>`<button data-ob3-action="${esc(item.action)}"><span>${icons[item.icon]||icons.arrow}</span><b>${esc(item.label)}</b><small>${esc(item.hint)}</small></button>`).join('')}</div>`;
+    return `<div class="ob6-command-strip ob7-command-strip">${model.home.quick.map((item,index)=>`<button class="tone-${index}" data-ob3-action="${esc(item.action)}"><span>${icons[item.icon]||icons.arrow}</span><b>${esc(item.label)}</b><small>${esc(item.hint)}</small></button>`).join('')}</div>`;
   }
   function home(model){
     const current=model.home.current||[],next=model.home.next||[],recent=model.home.recent||[];
@@ -69,17 +101,21 @@
     const nextHtml=next.length?nextBand(next[0]):'<p class="ob3-empty">近い予定はまだありません。</p>';
     const following=next.slice(1,3).length?`<div class="ob6-following">${next.slice(1,3).map(storyRow).join('')}</div>`:'';
     const recentHtml=recent.length?recent.slice(0,4).map(storyRow).join(''):'<p class="ob3-empty">最近の思い出はまだありません。</p>';
-    return `<section class="ob6-home-hero"><div><h1>${esc(model.home.todayLabel)}</h1></div><button data-ob5-nav data-ob5-route="calendar" aria-label="カレンダーを開く">${icons.calendar}</button></section>${family(model)}<section class="ob6-section"><div class="ob6-section-title"><h2>今</h2></div>${nowHtml}</section><section class="ob6-section"><div class="ob6-section-title"><h2>次</h2><button data-ob5-nav data-ob5-route="calendar">${icons.calendar}<span>カレンダー</span></button></div>${nextHtml}${following}</section><section class="ob6-section"><div class="ob6-section-title"><h2>すぐ使う</h2></div>${quick(model)}</section><section class="ob6-section"><div class="ob6-section-title"><h2>最近</h2><button data-ob3-route="vault">すべて見る</button></div><div class="ob6-story-list">${recentHtml}</div></section>`;
+    return `<section class="ob6-home-hero ob7-home-hero"><div><h1>${esc(model.home.todayLabel)}</h1></div><button data-ob5-nav data-ob5-route="calendar" aria-label="カレンダーを開く">${icons.calendar}</button></section>${family(model)}<section class="ob6-section"><div class="ob6-section-title"><h2>今</h2></div>${nowHtml}</section><section class="ob6-section"><div class="ob6-section-title"><h2>次</h2><button data-ob5-nav data-ob5-route="calendar">${icons.calendar}<span>カレンダー</span></button></div>${nextHtml}${following}</section><section class="ob6-section"><div class="ob6-section-title"><h2>すぐ使う</h2></div>${quick(model)}</section><section class="ob6-section"><div class="ob6-section-title"><h2>最近</h2><button data-ob3-route="vault">すべて見る</button></div><div class="ob6-story-list ob7-story-list">${recentHtml}</div></section>`;
   }
-  function menuRow(title,sub,action,kind='route'){
+  function searchCard({title,sub,action,kind='route',tone='camp',icon='pin'}){
     const data=kind==='legacy'?`data-ob3-legacy="${esc(action)}"`:`data-ob3-route="${esc(action)}"`;
-    return `<button class="ob6-menu-row" ${data}><span><b>${esc(title)}</b><small>${esc(sub)}</small></span>${icons.arrow}</button>`;
+    return `<button class="ob7-search-card tone-${esc(tone)}" ${data}><span class="ob7-search-icon">${icons[icon]||icons.arrow}</span><span><b>${esc(title)}</b><small>${esc(sub)}</small></span>${icons.arrow}</button>`;
   }
-  function search(){return `<section class="ob6-page-hero"><h1>探す</h1><p>場所・予定・過去の記録をまとめて探します。</p></section><section class="ob6-line-menu">${menuRow('キャンプ場や候補を探す','場所・天気・過去の候補','search','legacy')}${menuRow('過去の記録から探す','思い出・写真・メモ','vault')}${menuRow('予定から探す','カレンダーと家族フィルタ','calendar')}</section>`;}
+  function search(){return `<section class="ob6-page-hero ob7-page-hero"><h1>探す</h1><p>次の場所も、残した記録も、ここから見つけます。</p></section><section class="ob7-search-grid">${searchCard({title:'キャンプ場や候補',sub:'場所・天気・過去の候補',action:'search',kind:'legacy',tone:'camp',icon:'camp'})}${searchCard({title:'過去の記録',sub:'思い出・写真・メモ',action:'vault',tone:'memory',icon:'photo'})}${searchCard({title:'これからの予定',sub:'カレンダーと家族フィルタ',action:'calendar',tone:'calendar',icon:'calendar'})}</section>`;}
+
   function vault(model){
-    const rows=model.vaultActivities.length?model.vaultActivities.map(storyRow).join(''):'<p class="ob3-empty">保存された思い出はまだありません。</p>';
-    return `<section class="ob6-page-hero"><h1>保管庫</h1><p>思い出・記録・持ち物をまとめて確認します。</p></section><section class="ob6-metric-strip"><div><small>思い出</small><b>${model.vaultSummary.activityCount}</b></div><div><small>記録</small><b>${model.vaultSummary.recordCount}</b></div><div><small>持ち物</small><b>${model.vaultSummary.assetCount}</b></div></section><section class="ob6-section"><div class="ob6-section-title"><h2>活動ストーリー</h2><button data-ob3-legacy="vault">旧保管庫</button></div><div class="ob6-story-list">${rows}</div></section>`;
+    const activities=model.vaultActivities||[];const rows=activities.length?activities.map(storyRow).join(''):'<p class="ob3-empty">保存された思い出はまだありません。</p>';
+    const latest=activities[0]||null;
+    const feature=latest?`<a class="ob7-vault-feature" href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:latest.id}))}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(latest.id)}">${activityVisual(latest,{className:'ob7-vault-visual',label:false})}<span><small>最近の活動</small><b>${esc(latest.title)}</b><em>${esc(dateLabel(latest.startAt))}・記録 ${Number(latest.recordCount||0)}件</em></span>${icons.arrow}</a>`:'';
+    return `<section class="ob6-page-hero ob7-page-hero"><h1>保管庫</h1><p>写真、記録、持ち物を、活動ごとの思い出として残します。</p></section>${feature}<section class="ob6-metric-strip ob7-metric-strip"><div><small>思い出</small><b>${model.vaultSummary.activityCount}</b></div><div><small>記録</small><b>${model.vaultSummary.recordCount}</b></div><div><small>持ち物</small><b>${model.vaultSummary.assetCount}</b></div></section><section class="ob6-section"><div class="ob6-section-title"><h2>活動ストーリー</h2><button data-ob3-legacy="vault">旧保管庫</button></div><div class="ob6-story-list ob7-story-list">${rows}</div></section>`;
   }
+
 
   function recordLabel(record){const payload=record.payload||{};return String(payload.title||payload.memo||payload.text||payload.note||payload.transcript||record.type||'記録').trim().slice(0,90);}
   function stateIndex(state){if(['candidate','planned'].includes(state))return 0;if(state==='preparing')return 1;if(['active','paused'].includes(state))return 2;if(state==='organizing')return 3;return 4;}
@@ -95,7 +131,7 @@
     const records=item.records.length?item.records.slice(0,4).map(row=>`<article class="ob6-timeline"><time>${esc(dateTimeLabel(row.occurredAt))}</time><span><b>${esc(recordLabel(row))}</b><small>${esc(row.type)}・${esc(row.visibility)}</small></span></article>`).join(''):'<p>記録はまだありません。</p>';
     const improvements=item.organization.improvements.length?item.organization.improvements.slice(0,4).map(row=>`<div class="ob6-improvement"><i class="${row.status==='completed'?'done':''}">${row.status==='completed'?icons.check:'・'}</i><span><b>${esc(row.title||row.summary||row.payload?.text||'改善項目')}</b><small>${esc(row.status||'open')}</small></span></div>`).join(''):'<p>次回改善はまだありません。</p>';
     const assetText=item.assets.length?item.assets.slice(0,6).map(row=>esc(row.name)).join('・'):'活動に紐づくギアはまだありません。';
-    return `<section class="ob6-detail-head" style="view-transition-name:ob-activity-${token(item.id)}"><div class="ob6-detail-tools">${shellLink('home',{},icons.back,'ob6-icon')}${shellLink('calendar',{month:(item.startAt||'').slice(0,7)},icons.calendar,'ob6-icon')}</div><small>${esc(item.typeLabel)} / ${esc(item.stateLabel)}</small><h1>${esc(item.title)}</h1>${meta(item)}</section>${storyRail(item)}<section class="ob6-facts"><div><small>期間</small><b>${esc(dateRange(item))}</b></div><div><small>場所</small><b>${esc(item.place||'未設定')}</b></div><div><small>公開</small><b>${esc(item.visibilityLabel)}</b></div><div><small>参加者</small><b>${item.participants?.count||0}人/匹</b></div></section><section class="ob6-detail-list">${detailLine('参加者',`<div class="ob4-people large">${people(item)}</div>`,icons.arrow)}${detailLine('準備',prepText,`<a href="${esc(item.preparationUrl)}">開く</a>`)}${detailLine('記録',records,`<a href="${esc(item.recordUrl)}">開く</a>`)}${detailLine('整理・改善',`<div class="ob6-summary-line"><span>レビュー ${item.organization.reviewCount}件</span><span>未完了 ${item.organization.openImprovementCount}件</span></div>${improvements}`,icons.arrow)}${detailLine('思い出',`<div class="ob6-summary-line"><span>記録 ${item.recordCount}</span><span>写真 ${item.media.types.photo}</span><span>動画 ${item.media.types.video}</span></div><p>${assetText}</p><small>献立 ${item.mealCount}・買い物リスト ${item.shoppingListCount}</small>`,icons.arrow)}</section><div class="ob6-detail-actions"><a href="${esc(item.legacyDetailUrl)}">FIELD03で確認</a><a class="primary" href="${esc(item.recordUrl)}">記録を開く</a></div>`;
+    return `<section class="ob6-detail-head ob7-detail-head type-${esc(typeKey(item))}" style="view-transition-name:ob-activity-${token(item.id)}">${activityVisual(item,{className:'ob7-detail-visual',label:false})}<div class="ob7-detail-content"><div class="ob6-detail-tools">${shellLink('home',{},icons.back,'ob6-icon')}${shellLink('calendar',{month:(item.startAt||'').slice(0,7)},icons.calendar,'ob6-icon')}</div><small>${esc(item.typeLabel)} / ${esc(item.stateLabel)}</small><h1>${esc(item.title)}</h1>${meta(item)}</div></section>${storyRail(item)}<section class="ob6-facts"><div><small>期間</small><b>${esc(dateRange(item))}</b></div><div><small>場所</small><b>${esc(item.place||'未設定')}</b></div><div><small>公開</small><b>${esc(item.visibilityLabel)}</b></div><div><small>参加者</small><b>${item.participants?.count||0}人/匹</b></div></section><section class="ob6-detail-list">${detailLine('参加者',`<div class="ob4-people large">${people(item)}</div>`,icons.arrow)}${detailLine('準備',prepText,`<a href="${esc(item.preparationUrl)}">開く</a>`)}${detailLine('記録',records,`<a href="${esc(item.recordUrl)}">開く</a>`)}${detailLine('整理・改善',`<div class="ob6-summary-line"><span>レビュー ${item.organization.reviewCount}件</span><span>未完了 ${item.organization.openImprovementCount}件</span></div>${improvements}`,icons.arrow)}${detailLine('思い出',`<div class="ob6-summary-line"><span>記録 ${item.recordCount}</span><span>写真 ${item.media.types.photo}</span><span>動画 ${item.media.types.video}</span></div><p>${assetText}</p><small>献立 ${item.mealCount}・買い物リスト ${item.shoppingListCount}</small>`,icons.arrow)}</section><div class="ob6-detail-actions"><a href="${esc(item.legacyDetailUrl)}">FIELD03で確認</a><a class="primary" href="${esc(item.recordUrl)}">記録を開く</a></div>`;
   }
 
   function filterChips(calendar){
@@ -111,7 +147,7 @@
   }
 
   function nav(model){const homeActive=['home','activity','calendar'].includes(model.route.name);return `<nav class="ob3-nav" aria-label="メインメニュー"><button data-ob3-route="home" class="${homeActive?'active':''}">${icons.home}<span>ホーム</span></button><button data-ob3-route="search" class="${model.route.name==='search'?'active':''}">${icons.search}<span>探す</span></button><button class="ob3-central" data-ob3-central>${icons.plus}<span>追加</span></button><button data-ob3-route="vault" class="${model.route.name==='vault'?'active':''}">${icons.vault}<span>保管庫</span></button></nav>`;}
-  function centralSheet(){return `<div class="ob3-backdrop" data-ob3-backdrop><section class="ob3-sheet" role="dialog" aria-modal="true" aria-label="追加する"><div class="ob3-sheet-handle"></div><div class="ob3-sheet-head"><div><h2>何をする？</h2></div><button data-ob3-close aria-label="閉じる">×</button></div><div class="ob3-sheet-actions"><button data-ob3-action="start"><span>${icons.play}</span><div><b>活動を始める</b><small>散歩、キャンプ、ドライブ</small></div>${icons.arrow}</button><button data-ob3-action="memo"><span>${icons.memo}</span><div><b>メモを残す</b><small>気づきをすぐ記録</small></div>${icons.arrow}</button><button data-ob3-action="plan-add"><span>${icons.calendar}</span><div><b>予定を追加</b><small>カレンダーにつながる予定</small></div>${icons.arrow}</button></div></section></div>`;}
+  function centralSheet(){return `<div class="ob3-backdrop" data-ob3-backdrop><section class="ob3-sheet ob7-sheet" role="dialog" aria-modal="true" aria-label="追加する"><div class="ob3-sheet-handle"></div><div class="ob3-sheet-head"><div><h2>何をする？</h2></div><button data-ob3-close aria-label="閉じる">×</button></div><div class="ob3-sheet-actions"><button class="tone-field" data-ob3-action="start"><span>${icons.play}</span><div><b>活動を始める</b><small>散歩、キャンプ、ドライブ</small></div>${icons.arrow}</button><button class="tone-memory" data-ob3-action="memo"><span>${icons.memo}</span><div><b>メモを残す</b><small>気づきをすぐ記録</small></div>${icons.arrow}</button><button class="tone-calendar" data-ob3-action="plan-add"><span>${icons.calendar}</span><div><b>予定を追加</b><small>カレンダーにつながる予定</small></div>${icons.arrow}</button></div></section></div>`;}
   function body(model){if(model.route.name==='search')return search(model);if(model.route.name==='vault')return vault(model);if(model.route.name==='activity')return activityDetail(model);if(model.route.name==='calendar')return calendar(model);return home(model);}
   function ensureShell(root,model){
     let shell=root.querySelector?.(':scope > .ob3-shell')||root.querySelector?.('.ob3-shell');
@@ -138,13 +174,13 @@
     shell.dataset.ob6Route=model.route.name;
     const main=shell.querySelector('.ob3-main');
     main.innerHTML=body(model);
-    updateNetwork(shell,model.online);updateNav(shell,model);
+    updateNetwork(shell,model.online);updateNav(shell,model);hydrateMedia(main);
     globalThis.OUTBASE_THEME_V166?.sync?.('shell-render');
     return model;
   }
   function showCentral(){const host=document.getElementById('outbaseShellModal');if(host)host.innerHTML=centralSheet();}
   function hideCentral(){const host=document.getElementById('outbaseShellModal');if(host)host.innerHTML='';}
-  const api=Object.freeze({mount,showCentral,hideCentral,updateNetwork,updateNav,homeHtml:home,activityHtml:activityDetail,calendarHtml:calendar,storyRow,nextBand});
+  const api=Object.freeze({mount,showCentral,hideCentral,updateNetwork,updateNav,hydrateMedia,activityVisual,homeHtml:home,activityHtml:activityDetail,calendarHtml:calendar,storyRow,nextBand});
   globalThis.OUTBASE_SHELL_RENDERER_V166=api;
   globalThis.OUTBASE_SHELL_RENDERER_V165=api;
   globalThis.OUTBASE_SHELL_RENDERER_V164=api;

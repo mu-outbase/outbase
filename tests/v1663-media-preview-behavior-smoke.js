@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('fs');const path=require('path');const vm=require('vm');const assert=require('assert');
+const rootPath=path.resolve(__dirname,'..');const source=fs.readFileSync(path.join(rootPath,'src/shell/shell-renderer.js'),'utf8');
+let blobReads=0,observerCallback=null;
+const classes=new Set();const props={};
+const element={dataset:{obMediaKey:'legacy-photo-1'},style:{setProperty:(k,v)=>props[k]=v},classList:{add:v=>classes.add(v)}};
+const context={console,Blob,URL:{createObjectURL:()=> 'blob:preview-1'},navigator:{onLine:true},document:{getElementById:()=>null},IntersectionObserver:class{constructor(cb){observerCallback=cb;}observe(){}unobserve(){}},OUTBASE_ROUTER:{shellUrl:()=>'/shell',legacyUrl:()=>'/legacy'},OUTBASE_LEGACY_ADAPTER_V160:{getRecordBlob:async()=>{blobReads++;return new Blob(['x'],{type:'image/jpeg'});}},globalThis:null};
+context.globalThis=context;vm.createContext(context);vm.runInContext(source,context,{filename:'shell-renderer.js'});
+const renderer=context.OUTBASE_SHELL_RENDERER_V166;
+const item={id:'a1',type:'camp',typeLabel:'キャンプ',title:'赤城山',previewMedia:{key:'legacy-photo-1'},startAt:'2026-07-20',recordCount:2,mediaCount:1};
+const html=renderer.storyRow(item);assert(html.includes('data-ob-media-key="legacy-photo-1"'));assert(html.includes('ob7-thumb'));assert.equal(blobReads,0);
+renderer.hydrateMedia({querySelectorAll:()=>[element]});assert.equal(blobReads,0);assert(observerCallback);
+observerCallback([{isIntersecting:true,target:element}]);
+setTimeout(()=>{assert.equal(blobReads,1);assert.equal(props['--ob-preview-image'],'url("blob:preview-1")');assert(classes.has('has-photo'));console.log(JSON.stringify({status:'pass',initialBlobReads:0,lazyBlobReads:1,photoApplied:true},null,2));},0);

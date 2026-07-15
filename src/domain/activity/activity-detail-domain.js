@@ -22,6 +22,12 @@
     });
   }
 
+  function previewMedia(rows){
+    const row=clean(rows).find(item=>item?.media_type==='photo'&&item?.local_ref?.key);
+    if(!row)return null;
+    return Object.freeze({key:String(row.local_ref.key),type:'photo',mimeType:String(row.mime_type||''),size:Number(row.size||0)});
+  }
+
   function mediaSummary(rows){
     const types={photo:0,video:0,audio:0,other:0};
     for(const row of clean(rows)){const type=['photo','video','audio'].includes(row.media_type)?row.media_type:'other';types[type]+=1;}
@@ -59,7 +65,7 @@
       calendar:Object.freeze(activity.calendar||[]),
       preparation,
       records:Object.freeze(recordRows),recordCount:clean(records).length,
-      media:mediaInfo,
+      media:mediaInfo,previewMedia:previewMedia(media),
       organization:Object.freeze({
         reviewCount:reviewRows.length,reviews:Object.freeze(reviewRows.slice(0,5)),
         improvementCount:improvementRows.length,openImprovementCount:improvementRows.filter(row=>row.status!=='completed').length,
@@ -76,5 +82,5 @@
     return Object.freeze({status:'ready',activity:view,blobReads:0,generatedAt:new Date().toISOString()});
   }
 
-  globalThis.OUTBASE_ACTIVITY_DETAIL_DOMAIN_V165=Object.freeze({build,mediaSummary});
+  globalThis.OUTBASE_ACTIVITY_DETAIL_DOMAIN_V165=Object.freeze({build,mediaSummary,previewMedia});
 })();

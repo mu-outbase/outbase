@@ -74,6 +74,19 @@
     return map;
   }
 
+  function mediaPreviewMap(rows){
+    const map=new Map();
+    for(const row of cleanRows(rows)){
+      const activityId=row?.activity_id;
+      const key=row?.local_ref?.key;
+      if(!activityId||!key||row?.media_type!=='photo'||map.has(activityId))continue;
+      map.set(activityId,Object.freeze({
+        key:String(key),type:'photo',mimeType:String(row?.mime_type||''),size:Number(row?.size||0)
+      }));
+    }
+    return map;
+  }
+
   function legacyRuntime(){
     const adapter=globalThis.OUTBASE_LEGACY_ADAPTER_V160;
     if(adapter?.currentRuntime)return adapter.currentRuntime();
@@ -131,7 +144,7 @@
     });
   }
 
-  function enrich(activity,book,recordCounts,mediaCounts,{preparation=null,base=new Date()}={}){
+  function enrich(activity,book,recordCounts,mediaCounts,{preparation=null,base=new Date(),mediaPreview=null}={}){
     if(!activity)return null;
     const people=participants(activity,book);
     const start=dateStart(activity),end=dateEnd(activity);
@@ -145,6 +158,7 @@
       relativeDay:relativeDay(activity,base),daysUntil:dayDistance(activity,base),
       recordCount:recordCounts.get(activity.id)||Number(activity.recordCount||0),
       mediaCount:mediaCounts.get(activity.id)||Number(activity.mediaCount||0),
+      previewMedia:mediaPreview||activity.previewMedia||null,
       preparation:preparation?Object.freeze({total:preparation.total,completed:preparation.completed,pending:preparation.pending,progress:preparation.progress,persisted:preparation.persisted}):null,
       detailUrl:globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:activity.id}),
       preparationUrl:plans().legacyUrl(activity,'preparation'),
@@ -160,12 +174,13 @@
     ]);
     const recordCounts=groupCount(records,'activity_id');
     const mediaCounts=groupCount(media,'activity_id');
+    const mediaPreviews=mediaPreviewMap(media);
     const nextSource=(planModel.next||[]).slice(0,nextLimit);
     const preparationRows=await Promise.all(nextSource.map(activity=>prep().build(activity.id).catch(()=>null)));
     const reconciledCurrent=reconcileCurrent(planModel.now||[]);
-    const current=reconciledCurrent.slice(0,nowLimit).map(activity=>enrich(activity,book,recordCounts,mediaCounts,{base:now}));
-    const next=nextSource.map((activity,index)=>enrich(activity,book,recordCounts,mediaCounts,{preparation:preparationRows[index],base:now}));
-    const recent=(vaultModel.activities||[]).slice(0,recentLimit).map(activity=>enrich(activity,book,recordCounts,mediaCounts,{base:now}));
+    const current=reconciledCurrent.slice(0,nowLimit).map(activity=>enrich(activity,book,recordCounts,mediaCounts,{base:now,mediaPreview:mediaPreviews.get(activity.id)||null}));
+    const next=nextSource.map((activity,index)=>enrich(activity,book,recordCounts,mediaCounts,{preparation:preparationRows[index],base:now,mediaPreview:mediaPreviews.get(activity.id)||null}));
+    const recent=(vaultModel.activities||[]).slice(0,recentLimit).map(activity=>enrich(activity,book,recordCounts,mediaCounts,{base:now,mediaPreview:activity.previewMedia||mediaPreviews.get(activity.id)||null}));
     const familyRows=[...book.members,...book.pets];
     return Object.freeze({
       current:Object.freeze(current),next:Object.freeze(next),recent:Object.freeze(recent),
@@ -177,9 +192,9 @@
       vaultSummary:vaultModel.summary,
       generatedAt:new Date().toISOString(),
       diagnostics:Object.freeze({rawCurrentCount:(planModel.now||[]).length,reconciledCurrentCount:reconciledCurrent.length}),
-      blobReads:0
+      blobReads:0,previewBlobReads:0
     });
   }
 
-  globalThis.OUTBASE_HOME_DOMAIN_V164=Object.freeze({build,directory,participants,reconcileCurrent,currentKey,isGenericOrphan,TYPE_LABELS,STATE_LABELS,VISIBILITY_LABELS});
+  globalThis.OUTBASE_HOME_DOMAIN_V164=Object.freeze({build,directory,participants,reconcileCurrent,currentKey,isGenericOrphan,mediaPreviewMap,TYPE_LABELS,STATE_LABELS,VISIBILITY_LABELS});
 })();

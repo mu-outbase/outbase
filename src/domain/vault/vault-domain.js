@@ -5,6 +5,12 @@
   const utils=()=>globalThis.OUTBASE_DOMAIN_UTILS_V162;
   const plans=()=>globalThis.OUTBASE_PLAN_DOMAIN_V162;
 
+  function previewMedia(rows=[]){
+    const row=(rows||[]).find(item=>item?.media_type==='photo'&&item?.local_ref?.key);
+    if(!row)return null;
+    return Object.freeze({key:String(row.local_ref.key),type:'photo',mimeType:String(row.mime_type||''),size:Number(row.size||0)});
+  }
+
   async function activityRows(options={}){
     const states=options.states||utils().MEMORY_STATES;
     const [activities,records,media,reviews,improvements]=await Promise.all([
@@ -19,6 +25,7 @@
       ...activity,
       recordCount:(recordGroups.get(activity.id)||[]).length,
       mediaCount:(mediaGroups.get(activity.id)||[]).length,
+      previewMedia:previewMedia(mediaGroups.get(activity.id)||[]),
       reviewCount:(reviewGroups.get(activity.id)||[]).length,
       openImprovementCount:(improvementGroups.get(activity.id)||[]).filter(row=>row.status!=='completed').length,
       legacyUrl:plans().legacyUrl(activity,'detail')
@@ -56,5 +63,5 @@
     });
   }
 
-  globalThis.OUTBASE_VAULT_DOMAIN_V162=Object.freeze({activityRows,recentRecords,assets,summary});
+  globalThis.OUTBASE_VAULT_DOMAIN_V162=Object.freeze({activityRows,recentRecords,assets,summary,previewMedia});
 })();
