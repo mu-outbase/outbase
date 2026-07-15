@@ -33,7 +33,7 @@ context.globalThis=context;
 vm.createContext(context);
 for(const file of ['src/config/version.js','src/config/module-manifest.js','src/runtime/lifecycle.js','src/state/app-state.js','src/router.js'])vm.runInContext(read(file),context,{filename:file});
 
-assert.equal(context.OUTBASE_VERSION.app,'v165-integrated');
+assert.equal(context.OUTBASE_VERSION.app,'v165.2-scroll-restore');
 assert.deepEqual(Array.from(context.OUTBASE_MODULE_MANIFEST.legacy).map(x=>x.split('?')[0]),expectedLegacy);
 assert.deepEqual(Array.from(context.OUTBASE_MODULE_MANIFEST.data).map(x=>x.split('?')[0]),expectedData);
 assert.deepEqual(Array.from(context.OUTBASE_MODULE_MANIFEST.domain).map(x=>x.split('?')[0]),expectedDomain);
@@ -43,8 +43,8 @@ assert.equal(context.OUTBASE_ROUTER.legacyUrl('vault'),'/outbase/?tab=memory');a
 
 const index=read('index.html');
 assert(!index.includes('<script src="src/app.js'));
-assert(index.includes('src/main.js?v=outbase-v165-integrated'));
-assert(index.includes('style-shell.css?v=outbase-v165-integrated'));
+assert(index.includes('src/main.js?v=outbase-v165.2-scroll-restore'));
+assert(index.includes('style-shell.css?v=outbase-v165.2-scroll-restore'));
 const sw=read('service-worker.js');
 for(const file of [...expectedLegacy,...expectedData,...expectedDomain,...expectedShell,'src/main.js','src/router.js'])assert(sw.includes(`./${file}`),`${file} must be cached`);
 for(const file of ['src/config/version.js','src/config/module-manifest.js','src/runtime/script-loader.js','src/runtime/lifecycle.js','src/state/app-state.js','src/router.js','src/main.js',...expectedDomain,...expectedShell]){

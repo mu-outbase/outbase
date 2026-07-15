@@ -1,0 +1,21 @@
+OUTBASE v165.2 scroll restore verification
+Date: 2026-07-15 Asia/Tokyo
+
+PASS phase2a-loader-main-smoke.js
+PASS phase2a-smoke.js
+PASS phase2b-domain-smoke.js
+PASS phase3-shell-smoke.js
+PASS phase4-home-smoke.js
+PASS phase5-integrated-smoke.js
+PASS v1651-android-evidence-hotfix-smoke.js
+PASS v1652-scroll-restore-smoke.js
+PASS all JavaScript syntax checks
+PASS initial shell route opens at scrollY 0
+PASS forward shell navigation opens at scrollY 0
+PASS Android/browser back restores prior scrollY
+PASS same-screen family filter preserves scrollY
+PASS history.scrollRestoration is manual only while shell is mounted
+PASS no old DB mutation
+PASS no Shadow DB schema change
+PASS no FIELD03 change
+PASS no MutationObserver added

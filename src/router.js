@@ -5,6 +5,7 @@
   const routeToLegacy=Object.freeze({home:'plan',search:'search',activity:'prep',record:'record',calendar:'plan',vault:'memory'});
   const SHELL_ROUTES=new Set(['home','search','vault','activity','calendar']);
   const RESERVED=new Set(['shell','view']);
+  const SCROLL_KEY='outbaseScrollY';
 
   function params(){return new URLSearchParams(location.search);}
   function shellRequested(){return params().get('shell')==='1';}
@@ -47,6 +48,16 @@
     return `${location.pathname}?${query.toString()}`;
   }
 
+  function normalizeScroll(value){const number=Number(value);return Number.isFinite(number)&&number>0?Math.round(number):0;}
+  function viewportScrollY(){return normalizeScroll(globalThis.scrollY??document.scrollingElement?.scrollTop??document.documentElement?.scrollTop??0);}
+  function savedScrollY(){return normalizeScroll(history.state?.[SCROLL_KEY]);}
+  function rememberScroll(){
+    const route=current();
+    const state={...(history.state||{}),outbaseShell:true,route:route.name,[SCROLL_KEY]:viewportScrollY()};
+    history.replaceState(state,'',location.href);
+    return state[SCROLL_KEY];
+  }
+
   function notify(reason='navigation'){
     const route=current();
     listeners.forEach(listener=>{try{listener(route,reason);}catch(error){console.error('[OUTBASE router]',error);}});
@@ -56,9 +67,14 @@
 
   function navigate(name,values={},options={}){
     const url=shellUrl(name,values);
-    const state={...(history.state||{}),outbaseShell:true,route:name};
-    if(options.replace)history.replaceState(state,'',url);else history.pushState(state,'',url);
-    return notify(options.replace?'replace':'push');
+    if(options.replace){
+      const state={...(history.state||{}),outbaseShell:true,route:name,[SCROLL_KEY]:options.preserveScroll?savedScrollY()||viewportScrollY():0};
+      history.replaceState(state,'',url);
+      return notify(options.preserveScroll?'replace-preserve':'replace');
+    }
+    rememberScroll();
+    history.pushState({outbaseShell:true,route:name,[SCROLL_KEY]:0},'',url);
+    return notify('push');
   }
 
   function open(route,values={}){location.assign(legacyUrl(route,values));}
@@ -68,6 +84,7 @@
 
   globalThis.OUTBASE_ROUTER=Object.freeze({
     current,legacyUrl,shellUrl,open,navigate,back,subscribe,shellRequested,
+    rememberScroll,savedScrollY,viewportScrollY,SCROLL_KEY,
     legacyToRoute,routeToLegacy,SHELL_ROUTES:Object.freeze([...SHELL_ROUTES])
   });
 })();
