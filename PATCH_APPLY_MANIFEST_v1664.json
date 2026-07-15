@@ -1,0 +1,148 @@
+{
+  "version": "v166.4-completion-polish-lock",
+  "base_git_head": "939b6acbff61a4967ebef42647521ddf3e8073f1",
+  "target": "repository root",
+  "scope": "display-layer completion polish",
+  "problems": [
+    "blank and ambiguous right side of Next card",
+    "cramped four-column quick actions",
+    "temporary no-photo icons",
+    "weak Search content previews",
+    "Vault not photo/activity first",
+    "unclear hierarchy in Add sheet"
+  ],
+  "fixes": [
+    "formal activity scene/date/place in Next card",
+    "2x2 smartphone quick actions",
+    "typed inline SVG scenes",
+    "static map/photo/calendar Search previews",
+    "latest activity hero and 2-column Vault gallery",
+    "Start Activity as primary Add action"
+  ],
+  "performance_locks": [
+    "fast shell",
+    "route-specific read models",
+    "30s cache",
+    "persistent shell",
+    "initial blob reads 0",
+    "search blob reads 0",
+    "IntersectionObserver lazy photos",
+    "Object URL reuse"
+  ],
+  "field03_app_js_changed": false,
+  "domain_repository_migration_changed": false,
+  "database_schema_change": false,
+  "data_mutation": false,
+  "cutover": false,
+  "android_verified": false,
+  "git_applied": false,
+  "rollback_git_head": "939b6acbff61a4967ebef42647521ddf3e8073f1",
+  "verification": {
+    "javascript_syntax_files_passed": 14,
+    "focused_smoke_tests_passed": 5,
+    "css_parse_errors": 0,
+    "mutation_observer_added": 0
+  },
+  "files": [
+    {
+      "path": "OUTBASE_BOOT_v7.5_v166.4完成度仕上げLOCK.md",
+      "sha256": "fd646e18ce7a0bf4d4993fe98557c9f933fb4ee128425d07047ed4d4ad335220",
+      "size_bytes": 1896
+    },
+    {
+      "path": "OUTBASE_GITHUB_MAIN_STATUS_v1664.md",
+      "sha256": "d0f6316cb6eec5a362d056579b52c1e2cc796e8e6ab03749161a4748d7477987",
+      "size_bytes": 408
+    },
+    {
+      "path": "OUTBASE_NEXT_ROADMAP_v1664.md",
+      "sha256": "2339d3563fa878befaa46cc187ce06c57d2e1c33d876696af5e2dffe4de279c9",
+      "size_bytes": 992
+    },
+    {
+      "path": "OUTBASE_STATUSLOCK_v1664.md",
+      "sha256": "e08a94daa8480b8edc7ceccf05566171afbeb9a0ea2da2bf1a856acc9b002312",
+      "size_bytes": 681
+    },
+    {
+      "path": "OUTBASE_v1664_COMPLETION_POLISH_AUDIT.md",
+      "sha256": "130a1393ba441ab60be2d8f220c838cb19b375ce58f02ec43c94838a1477049c",
+      "size_bytes": 4074
+    },
+    {
+      "path": "README_OUTBASE_HANDOFF_v1664.md",
+      "sha256": "f3cdead5af6885ba7e7b361031f57da4d9a8fd56447c083922a084dc5d742143",
+      "size_bytes": 596
+    },
+    {
+      "path": "VERIFICATION_RESULTS_v1664.txt",
+      "sha256": "dc47d6f89d143a2267ef1b32e2f169061cdf6ef02ab914e4c5dd83861f545c57",
+      "size_bytes": 4737
+    },
+    {
+      "path": "docs/V1664_COMPLETION_POLISH_LOCK.md",
+      "sha256": "0b413e1830e5d9b6aa744e5ae7a5b87c2508da3d3c3706725123e29821b6d939",
+      "size_bytes": 654
+    },
+    {
+      "path": "index.html",
+      "sha256": "78e7e32b98ede03239f99e931df2b56b606084f8554d4b966490dda3fe8acfd6",
+      "size_bytes": 4906
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "57bd927855c75de787074938602552320888feca2077472e00da5e32b00755af",
+      "size_bytes": 1447
+    },
+    {
+      "path": "service-worker.js",
+      "sha256": "4b41cddab485e532808c0b1f8594a11c2ea4586a140894daf70983ce7147eedf",
+      "size_bytes": 5019
+    },
+    {
+      "path": "src/config/version.js",
+      "sha256": "b5eb54efd17f384e7c351854c638d5475059e86e10c72a3c4a45e4aab9354ec6",
+      "size_bytes": 365
+    },
+    {
+      "path": "src/shell/shell-renderer.js",
+      "sha256": "271950662435a37fdd5672dc5c57c0a5b63aebb9b1f9bd06eaafb9cc0639be59",
+      "size_bytes": 32518
+    },
+    {
+      "path": "style-design-system.css",
+      "sha256": "e28ce7626329965f93a80923c5b8c86d24c104e8b66fe4ff2541280c45a06f81",
+      "size_bytes": 57440
+    },
+    {
+      "path": "tests/phase2a-loader-main-smoke.js",
+      "sha256": "a7e9366732d7f47c110fafbd14cb32e9b31c48db2623c9b71f29dc6dc0587d44",
+      "size_bytes": 3964
+    },
+    {
+      "path": "tests/phase2a-smoke.js",
+      "sha256": "45ceb56c7abbf082cd2cf8cfa9b5116641e8c3001ced60804c193e332460c242",
+      "size_bytes": 4600
+    },
+    {
+      "path": "tests/v166-formal-design-lock-smoke.js",
+      "sha256": "72393d0f19426b3eaa92efb8316a73bdb7721784c1f676925aea180a5c1372eb",
+      "size_bytes": 3771
+    },
+    {
+      "path": "tests/v1662-density-lock-smoke.js",
+      "sha256": "56ac32d58f9736c100e9d8b5bb0eec7016945116b5cf6e8c6e58325bfccfd36e",
+      "size_bytes": 1671
+    },
+    {
+      "path": "tests/v1663-visual-hierarchy-lock-smoke.js",
+      "sha256": "799cbe5cbcd8ce5db652aae0769aced838b212b0eb2100a18500231baffa9348",
+      "size_bytes": 1659
+    },
+    {
+      "path": "tests/v1664-completion-polish-smoke.js",
+      "sha256": "ba34416d99788b0ba64fc5ac4ec0dadb69b340756b13a3f0225ef9ab98fa702b",
+      "size_bytes": 3424
+    }
+  ]
+}

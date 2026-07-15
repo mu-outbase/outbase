@@ -1,0 +1,87 @@
+OUTBASE v166.4 verification raw log
+date: 2026-07-15
+base: 939b6acbff61a4967ebef42647521ddf3e8073f1
+
+[JavaScript syntax]
+PASS: 14 JavaScript files in working patch package
+
+[Focused smoke tests]
+--- tests/v1662-density-lock-smoke.js
+{
+  "status": "pass",
+  "japaneseFirst": true,
+  "heroScaleReduced": true,
+  "sectionDensityReduced": true,
+  "navCompact": true,
+  "trailSheetCompact": true,
+  "blurRemoved": true,
+  "tapTargetPreserved": "48px",
+  "field03EngineChanged": false
+}
+--- tests/v1663-domain-preview-reference-smoke.js
+{
+  "status": "pass",
+  "firstPhotoReference": "photo-1",
+  "blobRead": false
+}
+--- tests/v1663-media-preview-behavior-smoke.js
+{
+  "status": "pass",
+  "initialBlobReads": 0,
+  "lazyBlobReads": 1,
+  "photoApplied": true
+}
+--- tests/v1663-visual-hierarchy-lock-smoke.js
+{
+  "status": "pass",
+  "visualHierarchy": true,
+  "lazyPhotoPreview": true,
+  "initialBlobReads": 0,
+  "typeFallbacks": true,
+  "densityPreserved": true,
+  "performancePreserved": true,
+  "field03EngineChanged": false
+}
+--- tests/v1664-completion-polish-smoke.js
+{
+  "status": "pass",
+  "nextBlankRemoved": true,
+  "ambiguousPlusRemoved": true,
+  "quick2x2": true,
+  "formalScenes": true,
+  "searchContentPreviews": true,
+  "vaultPhotoActivityFirst": true,
+  "startPrimary": true,
+  "field03Changed": false,
+  "databaseSchemaChanged": false
+}
+
+[CSS parse]
+{'top_level_rules': 572, 'parse_errors': 0, 'size_bytes': 57440}
+
+[Protection scans]
+MutationObserver count in changed runtime/CSS: 0
+PASS: no shell-wide overflow:hidden
+PASS: src/app.js not modified or present in changed code list
+PASS: no domain/repository/migration code modified in v166.4
+
+[Version/cache]
+/mnt/data/outbase_v1664_work/src/config/version.js:4:    app:'v166.4-completion-polish-lock',
+/mnt/data/outbase_v1664_work/src/config/version.js:8:    shell:'outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/src/config/version.js:9:    design:'outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/src/config/version.js:10:    cache:'outbase-field03-v1664-polish'
+/mnt/data/outbase_v1664_work/service-worker.js:1:const CACHE_NAME='outbase-field03-v1664-polish';
+/mnt/data/outbase_v1664_work/service-worker.js:3:  './','./index.html','./manifest.json?v=outbase-v1664-polish','./icons/outbase-192.png','./icons/outbase-512.png',
+/mnt/data/outbase_v1664_work/service-worker.js:7:  './style-shell.css?v=outbase-v1664-polish','./style-design-system.css?v=outbase-v1664-polish','./src/config/version.js?v=outbase-v1664-polish','./src/config/module-manifest.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:8:  './src/runtime/script-loader.js?v=outbase-v1664-polish','./src/runtime/lifecycle.js?v=outbase-v1664-polish','./src/state/app-state.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:9:  './src/router.js?v=outbase-v1664-polish','./src/design/theme-controller.js?v=outbase-v1664-polish','./src/main.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:17:  './src/domain/shared/read-utils.js?v=outbase-v1664-polish','./src/domain/plans/plan-domain.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:18:  './src/domain/preparation/preparation-domain.js?v=outbase-v1664-polish','./src/domain/vault/vault-domain.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:19:  './src/screens/plan/plan-screen-model.js?v=outbase-v1664-polish','./src/screens/preparation/preparation-screen-model.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:20:  './src/screens/vault/vault-screen-model.js?v=outbase-v1664-polish','./src/domain/bootstrap.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:21:  './src/domain/home/home-domain.js?v=outbase-v1664-polish','./src/screens/home/home-screen-model.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:22:  './src/domain/filters/family-filter-domain.js?v=outbase-v1664-polish','./src/domain/calendar/calendar-domain.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:23:  './src/screens/calendar/calendar-screen-model.js?v=outbase-v1664-polish','./src/domain/activity/activity-detail-domain.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:24:  './src/screens/activity/activity-detail-screen-model.js?v=outbase-v1664-polish','./src/shell/legacy-adapter.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:25:  './src/shell/modal-stack.js?v=outbase-v1664-polish','./src/shell/shell-model.js?v=outbase-v1664-polish',
+/mnt/data/outbase_v1664_work/service-worker.js:26:  './src/shell/shell-renderer.js?v=outbase-v1664-polish','./src/shell/bootstrap.js?v=outbase-v1664-polish',

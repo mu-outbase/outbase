@@ -413,3 +413,72 @@ body.outbaseTrailLens .recordSheet{background:linear-gradient(180deg,#0D211B,#07
 @media(prefers-reduced-data:reduce){[data-ob-media-key]{background-image:none!important}}
 .ob7-next-content{grid-column:1;grid-row:1}
 .ob7-detail-content{grid-column:1;grid-row:1}
+
+
+/* ========================================================================
+   OUTBASE v166.4 — completion polish LOCK
+   v166.1 performance + v166.2 density + v166.3 lazy media remain protected.
+   ======================================================================== */
+.ob8-scene{overflow:hidden;background:transparent!important}
+.ob8-scene-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ob7-thumb .ob8-scene-svg,.ob7-next-visual .ob8-scene-svg,.ob7-vault-visual .ob8-scene-svg,.ob7-detail-visual .ob8-scene-svg,.ob8-vault-tile-visual .ob8-scene-svg{width:100%;height:100%;fill:initial;stroke:none}
+.ob8-scene-svg .sky{fill:#DCE6DF}.ob8-scene-svg .night{fill:#17342C}.ob8-scene-svg .sun{fill:#E2BE62}
+.ob8-scene-svg .ridge.back{fill:#9EB09E}.ob8-scene-svg .ridge.front,.ob8-scene-svg .ground{fill:#6F8E7B}
+.ob8-scene-svg .trail{fill:none;stroke:#E7D7AB;stroke-width:9;stroke-linecap:round}.ob8-scene-svg .tree{fill:none;stroke:#214E3E;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ob8-scene-svg .step{fill:#E5C16B}.ob8-scene-svg .road{fill:#526A64}.ob8-scene-svg .road-line{fill:none;stroke:#F0D98E;stroke-width:3;stroke-linecap:round}
+.ob8-scene-svg .tent{fill:#E4C16D;stroke:#173B2E;stroke-width:2}.ob8-scene-svg .tent-line,.ob8-scene-svg .spark{fill:none;stroke:#173B2E;stroke-width:2;stroke-linecap:round}
+.ob8-scene-svg .ember{fill:#C66F45}.ob8-scene-svg .car{fill:#E1C36F;stroke:#173B2E;stroke-width:2;stroke-linejoin:round}.ob8-scene-svg .wheel{fill:#173B2E}
+.ob8-scene-svg .lights,.ob8-scene-svg .stage-roof{fill:none;stroke:#E8C870;stroke-width:2}.ob8-scene-svg .bulb{fill:#E9CC76}.ob8-scene-svg .stage{fill:#526F63}.ob8-scene-svg .crowd{fill:#0B211A}
+.ob8-scene-svg .shop{fill:#E6D7B3}.ob8-scene-svg .awning{fill:#A85F47}.ob8-scene-svg .awning-line{fill:none;stroke:#F3E6C7;stroke-width:4}.ob8-scene-svg .window{fill:#8FB0AD}.ob8-scene-svg .door{fill:#365E50}.ob8-scene-svg .bag{fill:#D0A94F;stroke:#173B2E;stroke-width:2}
+.ob8-scene-svg .waypoint{fill:#E1BD62;stroke:#173B2E;stroke-width:2}.ob8-scene-svg .waypoint-line{stroke:#173B2E;stroke-width:2}
+.type-event .ob8-scene-svg .sky{fill:#17342C}.type-drive .ob8-scene-svg .sky{fill:#C9DEDD}.type-shopping .ob8-scene-svg .sky{fill:#E9E0C8}
+
+/* Next: a filled activity scene replaces the blank edge and unclear plus. */
+.ob8-next-band{grid-template-columns:minmax(0,1fr) min(42%,210px);min-height:224px}
+.ob8-next-visual{background-image:var(--ob-preview-image);background-color:#789081;background-size:cover;background-position:center}
+.ob8-next-visual:before{z-index:2;background:linear-gradient(90deg,var(--ob-forest) 0,rgba(10,51,40,.62) 25%,rgba(10,51,40,.06) 72%,rgba(10,51,40,.12) 100%)}
+.ob8-next-visual .ob8-scene{position:absolute;inset:0;width:auto;height:auto;border-radius:0;color:inherit}
+.ob8-next-visual.has-photo .ob8-scene{opacity:0}
+.ob8-next-visual-meta{position:absolute;right:12px;bottom:12px;z-index:3;max-width:36%;padding:7px 9px;border:1px solid rgba(255,255,255,.2);border-radius:11px;background:rgba(7,27,22,.68);color:white;text-align:right;line-height:1.1}
+.ob8-next-visual-meta b,.ob8-next-visual-meta small{display:block}.ob8-next-visual-meta b{font-size:12px}.ob8-next-visual-meta small{margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#DDE6E1;font-size:8.5px}
+
+/* Quick: smartphone 2 x 2, compact but readable. */
+@media(max-width:560px){
+  .ob7-command-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .ob7-command-strip button:nth-child(n){min-height:72px;padding:9px 10px;border-right:1px solid rgba(12,45,37,.08)!important;border-bottom:1px solid rgba(12,45,37,.08)!important;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;align-content:center;align-items:center;column-gap:9px;row-gap:1px;text-align:left}
+  .ob7-command-strip button>span{grid-column:1;grid-row:1/3;width:34px;height:34px}
+  .ob7-command-strip button>b{grid-column:2;grid-row:1;font-size:12px;line-height:1.2}
+  .ob7-command-strip button>small{grid-column:2;grid-row:2;display:block!important;max-width:none;font-size:9px;line-height:1.25}
+}
+
+/* Search: every entrance shows the kind of content behind it. */
+.ob8-search-card{min-height:112px;grid-template-columns:42px minmax(0,1fr) 112px 18px;padding:11px;gap:10px;overflow:hidden}
+.ob8-search-card .ob7-search-icon{width:42px;height:42px;border-radius:13px}.ob8-search-card .ob7-search-icon svg{width:21px;height:21px}
+.ob8-search-copy{min-width:0}.ob8-search-copy b{font-size:15px}.ob8-search-copy small{line-height:1.35}
+.ob8-search-arrow{display:grid;place-items:center}.ob8-search-arrow svg{width:18px;height:18px;fill:none;stroke:var(--ob-muted);stroke-width:1.8}
+.ob8-search-preview{width:112px;height:74px;border:1px solid rgba(12,45,37,.09);border-radius:13px;display:block;position:relative;overflow:hidden;background:rgba(255,255,255,.52)}
+.ob8-search-preview.map svg{width:100%;height:100%}.ob8-search-preview.map .grid{fill:none;stroke:#C7D2CC;stroke-width:1}.ob8-search-preview.map .route{fill:none;stroke:#315F4D;stroke-width:4;stroke-linecap:round}.ob8-search-preview.map .pin{fill:#D3A94B;stroke:#173B2E;stroke-width:2}.ob8-search-preview.map .tent{fill:#8FA68D;stroke:#173B2E;stroke-width:2}
+.ob8-search-preview.memory{background:linear-gradient(145deg,#BFD0C5,#E7D8B4)}.ob8-search-preview.memory i{position:absolute;width:48px;height:52px;border:4px solid #F8F5EB;border-bottom-width:12px;border-radius:3px;box-shadow:0 4px 10px rgba(10,36,29,.18)}.ob8-search-preview.memory .photo-one{left:8px;top:13px;transform:rotate(-8deg);background:linear-gradient(150deg,#98B7B4 0 45%,#52745F 46%)}.ob8-search-preview.memory .photo-two{left:34px;top:8px;transform:rotate(5deg);background:linear-gradient(150deg,#E3C36E 0 37%,#315F4D 38%)}.ob8-search-preview.memory .photo-three{right:7px;top:18px;transform:rotate(9deg);background:linear-gradient(150deg,#B97A58 0 42%,#6F8E7B 43%)}
+.ob8-search-preview.calendar{padding:8px;background:#FCFBF6}.ob8-search-preview.calendar .calendar-head{display:block;height:8px;margin-bottom:6px;border-radius:4px;background:#D3A94B}.ob8-search-preview.calendar>span{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.ob8-search-preview.calendar>span i{height:8px;border-radius:2px;background:#DCE2DD}.ob8-search-preview.calendar>span i.marked{background:#315F4D;box-shadow:inset 0 -2px 0 #D3A94B}
+@media(max-width:390px){.ob8-search-card{grid-template-columns:40px minmax(0,1fr) 92px 16px}.ob8-search-preview{width:92px}.ob8-search-card{gap:8px}}
+
+/* Vault: photos and activities become the primary visual structure. */
+.ob8-vault-feature{height:158px;min-height:158px;padding:0;display:block;position:relative;overflow:hidden;background:#173B2E}
+.ob8-vault-feature-visual{position:absolute;inset:0;width:auto;height:auto;border-radius:0;background-image:var(--ob-preview-image);background-color:#789081;background-size:cover;background-position:center}
+.ob8-vault-feature-visual .ob8-scene{position:absolute;inset:0}.ob8-vault-feature-visual.has-photo .ob8-scene{opacity:0}
+.ob8-vault-feature:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,27,22,.9) 0,rgba(7,27,22,.62) 55%,rgba(7,27,22,.15) 100%)}
+.ob8-vault-feature-copy{position:absolute;left:16px;right:58px;bottom:17px;z-index:3}.ob8-vault-feature-copy small,.ob8-vault-feature-copy em{color:#D8E1DD}.ob8-vault-feature-copy b{max-width:86%;font-size:21px}
+.ob8-vault-feature-arrow{position:absolute;right:16px;top:50%;z-index:3;transform:translateY(-50%);display:grid;place-items:center}.ob8-vault-feature-arrow svg{width:21px;height:21px;fill:none;stroke:#F4F1E8;stroke-width:1.8}
+.ob8-vault-gallery-section{margin-top:0}.ob8-vault-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.ob8-vault-tile{min-height:132px;border-radius:16px;position:relative;overflow:hidden;color:white;text-decoration:none;background:#789081;box-shadow:0 5px 15px rgba(10,36,29,.08)}
+.ob8-vault-tile:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,27,22,.02) 25%,rgba(7,27,22,.82) 100%)}
+.ob8-vault-tile-visual{position:absolute;inset:0;display:block;background-image:var(--ob-preview-image);background-color:#789081;background-size:cover;background-position:center}.ob8-vault-tile-visual .ob8-scene{position:absolute;inset:0}.ob8-vault-tile-visual.has-photo .ob8-scene{opacity:0}
+.ob8-vault-tile>span:last-child{position:absolute;left:10px;right:10px;bottom:9px;z-index:2}.ob8-vault-tile small,.ob8-vault-tile b{display:block}.ob8-vault-tile small{font-size:9px;color:#DCE6E1}.ob8-vault-tile b{margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+
+/* Action sheet: starting an activity is the unmistakable primary operation. */
+.ob8-sheet-actions{gap:9px!important}.ob8-sheet-primary{min-height:104px!important;padding:12px!important;border:0!important;border-radius:17px!important;grid-template-columns:48px minmax(0,1fr) auto!important;background:linear-gradient(120deg,#0A3328,#174F3D)!important;color:white!important;box-shadow:0 8px 22px rgba(10,36,29,.18)}
+.ob8-sheet-primary>span{width:48px!important;height:48px!important;border-radius:15px!important;background:rgba(255,255,255,.12)!important;color:#F4D986!important}.ob8-sheet-primary>span svg{width:24px!important;height:24px!important}
+.ob8-sheet-primary div small{display:block!important;color:#C7D6D0!important;font-size:9px!important;font-weight:800;letter-spacing:.04em}.ob8-sheet-primary div b{display:block;margin-top:3px;font-size:19px!important;color:white}.ob8-sheet-primary div em{display:block;margin-top:5px;color:#DCE6E1;font-size:9.5px;font-style:normal;line-height:1.3}
+.ob8-sheet-primary strong{min-height:42px;padding:0 13px;border-radius:12px;background:var(--ob-brass);color:#14271F;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.ob8-sheet-secondary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ob8-sheet-secondary button{min-height:74px!important;padding:8px!important;grid-template-columns:36px minmax(0,1fr) 16px!important;gap:7px!important}.ob8-sheet-secondary button>span{width:36px!important;height:36px!important}.ob8-sheet-secondary button b{font-size:13px!important}.ob8-sheet-secondary button small{font-size:8.5px!important;line-height:1.25}
+@media(max-width:370px){.ob8-sheet-secondary{grid-template-columns:1fr}.ob8-sheet-secondary button{min-height:62px!important}}
