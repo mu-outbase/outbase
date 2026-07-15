@@ -1,11 +1,11 @@
 (() => {
   'use strict';
-  const router=globalThis.OUTBASE_ROUTER,legacy=globalThis.OUTBASE_LEGACY_UI_V165,renderer=globalThis.OUTBASE_SHELL_RENDERER_V165,modals=globalThis.OUTBASE_MODAL_STACK_V164;
+  const router=globalThis.OUTBASE_ROUTER,legacy=globalThis.OUTBASE_LEGACY_UI_V165,renderer=globalThis.OUTBASE_SHELL_RENDERER_V166||globalThis.OUTBASE_SHELL_RENDERER_V165,modals=globalThis.OUTBASE_MODAL_STACK_V164;
   let root=null,mounted=false,rendering=false,bound=false,previousScrollRestoration=null;
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v165.2-scroll-restore',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166-formal-design-lock',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
-  function fallback(reason){restoreBrowserScrollMode();document.body.classList.remove('outbaseShellPreview');root?.remove();root=null;mounted=false;globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-fallback',{detail:{reason,snapshot:snapshot()}}));return {status:'fallback',reason};}
+  function fallback(reason){restoreBrowserScrollMode();document.body.classList.remove('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-fallback');root?.remove();root=null;mounted=false;globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-fallback',{detail:{reason,snapshot:snapshot()}}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-fallback',{detail:{reason,snapshot:snapshot()}}));return {status:'fallback',reason};}
   function currentScrollY(){const number=Number(globalThis.scrollY??document.scrollingElement?.scrollTop??0);return Number.isFinite(number)&&number>0?Math.round(number):0;}
   function routeScrollTarget(reason,before){if(reason==='popstate'||reason==='replace-preserve')return router.savedScrollY?.()||0;if(['initial','push','replace'].includes(reason))return 0;return before;}
   function applyScroll(top){
@@ -25,7 +25,7 @@
     const before=currentScrollY();
     rendering=true;
     try{await renderer.mount(root);await applyScroll(routeScrollTarget(reason,before));}
-    catch(error){console.error('[OUTBASE v165.2] shell render failed',error);fallback('render_failed');}
+    catch(error){console.error('[OUTBASE v166] shell render failed',error);fallback('render_failed');}
     finally{rendering=false;}
   }
   function action(name){if(name==='plan-add')return legacy.openPlanAdd();if(name==='memo')return legacy.openMemo();if(name==='start')return legacy.openStart();if(name==='calendar')return router.navigate('calendar');}
@@ -51,12 +51,13 @@
     if(!legacy.shellSafe())return fallback('active_session_protected');
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';document.body.insertBefore(root,document.body.firstChild);}
-    document.body.classList.add('outbaseShellPreview');mounted=true;bind();await render('initial');
-    const detail={status:'ready',version:'v165.2-scroll-restore',previewOnly:true,cutover:false,route:router.current()};
-    globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
+    document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');
+    const detail={status:'ready',version:'v166-formal-design-lock',previewOnly:true,cutover:false,route:router.current()};
+    globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
   const api=Object.freeze({ready,start,render,snapshot,fallback,applyScroll,routeScrollTarget});
+  globalThis.OUTBASE_SHELL_V166=api;
   globalThis.OUTBASE_SHELL_V165=api;
   globalThis.OUTBASE_SHELL_V164=api;
 })();

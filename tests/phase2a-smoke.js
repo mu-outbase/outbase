@@ -31,9 +31,9 @@ const context={
 };
 context.globalThis=context;
 vm.createContext(context);
-for(const file of ['src/config/version.js','src/config/module-manifest.js','src/runtime/lifecycle.js','src/state/app-state.js','src/router.js'])vm.runInContext(read(file),context,{filename:file});
+for(const file of ['src/design/theme-controller.js','src/config/version.js','src/config/module-manifest.js','src/runtime/lifecycle.js','src/state/app-state.js','src/router.js'])vm.runInContext(read(file),context,{filename:file});
 
-assert.equal(context.OUTBASE_VERSION.app,'v165.2-scroll-restore');
+assert.equal(context.OUTBASE_VERSION.app,'v166-formal-design-lock');
 assert.deepEqual(Array.from(context.OUTBASE_MODULE_MANIFEST.legacy).map(x=>x.split('?')[0]),expectedLegacy);
 assert.deepEqual(Array.from(context.OUTBASE_MODULE_MANIFEST.data).map(x=>x.split('?')[0]),expectedData);
 assert.deepEqual(Array.from(context.OUTBASE_MODULE_MANIFEST.domain).map(x=>x.split('?')[0]),expectedDomain);
@@ -43,11 +43,13 @@ assert.equal(context.OUTBASE_ROUTER.legacyUrl('vault'),'/outbase/?tab=memory');a
 
 const index=read('index.html');
 assert(!index.includes('<script src="src/app.js'));
-assert(index.includes('src/main.js?v=outbase-v165.2-scroll-restore'));
-assert(index.includes('style-shell.css?v=outbase-v165.2-scroll-restore'));
+assert(index.includes('src/main.js?v=outbase-v166-formal-design'));
+assert(index.includes('style-shell.css?v=outbase-v166-formal-design'));
+assert(index.includes('style-design-system.css?v=outbase-v166-formal-design'));
+assert(index.includes('src/design/theme-controller.js?v=outbase-v166-formal-design'));
 const sw=read('service-worker.js');
 for(const file of [...expectedLegacy,...expectedData,...expectedDomain,...expectedShell,'src/main.js','src/router.js'])assert(sw.includes(`./${file}`),`${file} must be cached`);
-for(const file of ['src/config/version.js','src/config/module-manifest.js','src/runtime/script-loader.js','src/runtime/lifecycle.js','src/state/app-state.js','src/router.js','src/main.js',...expectedDomain,...expectedShell]){
+for(const file of ['src/design/theme-controller.js','src/config/version.js','src/config/module-manifest.js','src/runtime/script-loader.js','src/runtime/lifecycle.js','src/state/app-state.js','src/router.js','src/main.js',...expectedDomain,...expectedShell]){
   assert(!read(file).includes('MutationObserver'),`${file} must not introduce MutationObserver`);
 }
 console.log(JSON.stringify({status:'pass',legacy_order:expectedLegacy.length,data_order:expectedData.length,domain_order:expectedDomain.length,shell_order:expectedShell.length,route:context.OUTBASE_ROUTER.current()},null,2));

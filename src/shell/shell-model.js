@@ -13,7 +13,7 @@
       route.name==='calendar'?globalThis.OUTBASE_CALENDAR_SCREEN_MODEL_V165.build({month:route.month,selected:route.people}):Promise.resolve(null)
     ]);
     return Object.freeze({
-      version:'v165.2-scroll-restore',route,legacy,online:navigator.onLine,nav:NAV,home,detail,calendar,
+      version:'v166-formal-design-lock',route,legacy,online:navigator.onLine,nav:NAV,home,detail,calendar,
       now:home.current,next:home.next,quick:home.quick,recent:home.recent,family:home.family,
       calendarUrl:globalThis.OUTBASE_ROUTER.shellUrl('calendar'),vaultSummary:vault.summary,
       vaultActivities:vault.activities.slice(0,12),assets:vault.assets.slice(0,5),generatedAt:new Date().toISOString()

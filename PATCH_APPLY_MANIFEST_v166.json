@@ -1,0 +1,118 @@
+{
+  "version": "v166-formal-design-lock",
+  "base_git_head": "aee51d0219be3608f9427e3ef83cf09b0922906f",
+  "target": "repository root",
+  "formal_design": {
+    "idle": "NORTH",
+    "active": "TRAIL LENS",
+    "paused": "TRAIL LENS"
+  },
+  "field03_app_js_sha": "13a44b35562d5fd325368acd94ca49b0005502a8",
+  "field03_engine_changed": false,
+  "data_mutation": false,
+  "database_schema_change": false,
+  "cutover": false,
+  "android_verified": false,
+  "files": [
+    {
+      "path": "index.html",
+      "sha256": "2a058d226f60497a959ba9bd505a9d44b968b18f33d7de6d5aa0217ee1d0d22a",
+      "size_bytes": 2747
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "8d7727bd2bfa46d258ec5b0ab02a64a9dd9ccee4e8060a3e78786f30548e7940",
+      "size_bytes": 1447
+    },
+    {
+      "path": "service-worker.js",
+      "sha256": "ae57c1aaab1da857a795ba7ff7e04277bfa48403a2544cc46e9136dd18ca62b8",
+      "size_bytes": 5211
+    },
+    {
+      "path": "style-design-system.css",
+      "sha256": "8e0f791cc7aa50eb1b654dcfca7820013d9575bbd18195b7668b2f3d499ad32a",
+      "size_bytes": 25520
+    },
+    {
+      "path": "src/config/version.js",
+      "sha256": "cb438031085afbd34263e564aa4d7ddedd3227c2e33c7916a34fe4489006d2c4",
+      "size_bytes": 383
+    },
+    {
+      "path": "src/router.js",
+      "sha256": "8e61c0052983107da06f4dd28fe211480328d3dfa617ddd4e4710833b67b06d2",
+      "size_bytes": 4887
+    },
+    {
+      "path": "src/design/theme-controller.js",
+      "sha256": "55505ce946012607b90ba9f7586d1981e7dad8c726abd376ccb227b73fb4ccea",
+      "size_bytes": 2651
+    },
+    {
+      "path": "src/shell/shell-model.js",
+      "sha256": "8acb48bf38c2e8c81cd7a1d2510c4ace3debcb6bbb101e0e4d779e1a7e97467e",
+      "size_bytes": 1449
+    },
+    {
+      "path": "src/shell/shell-renderer.js",
+      "sha256": "ddcf14c0fa7a4c40677beff3d7f4b573d445ebf98691479906b9c8d8be50850e",
+      "size_bytes": 20727
+    },
+    {
+      "path": "src/shell/bootstrap.js",
+      "sha256": "bb9efb8233f525c3d21dc986e3c17805e679023b7ee1d59fb1bf84c0c673fb23",
+      "size_bytes": 5795
+    },
+    {
+      "path": "tests/phase2a-smoke.js",
+      "sha256": "ae5b9ac834bd677bfbcb8d2313bf01d9def18b6e6f0cc439d56a5ccc5e247ae5",
+      "size_bytes": 4618
+    },
+    {
+      "path": "tests/v166-formal-design-lock-smoke.js",
+      "sha256": "ef471bed801a4bff1fa60e4817a17677c18b8b18d19a0506f3579f986ecbac8b",
+      "size_bytes": 3688
+    },
+    {
+      "path": "docs/V166_FORMAL_DESIGN_LOCK.md",
+      "sha256": "5c0f12c793cb3f9859b8ef402748232a3218da27ebb9843e78c184375731b254",
+      "size_bytes": 2611
+    },
+    {
+      "path": "OUTBASE_v166_FORMAL_DESIGN_IMPLEMENTATION_AUDIT.md",
+      "sha256": "98717cfee5f020dbccfe7ea140665224c00d38c3d41a0b2f023192130acba557",
+      "size_bytes": 2401
+    },
+    {
+      "path": "OUTBASE_BOOT_v7.0_正式デザイン統合LOCK.md",
+      "sha256": "8a9a04ab84aec3431934cd2af82aba6f340a8b2574636ad38b0f915c0c7a3794",
+      "size_bytes": 929
+    },
+    {
+      "path": "OUTBASE_STATUSLOCK_v166.md",
+      "sha256": "83807ca6a3f6adbe7b1d7f7980ff3c3aa7978d2241a7d2a2d022537c62c411aa",
+      "size_bytes": 382
+    },
+    {
+      "path": "OUTBASE_NEXT_ROADMAP_v166.md",
+      "sha256": "0e95d626d12bb9bbfeaa3ac2bf9a372a7bdce559b71d5eb722d41f5e52156295",
+      "size_bytes": 480
+    },
+    {
+      "path": "OUTBASE_GITHUB_MAIN_STATUS_v166.md",
+      "sha256": "b06a4d70b7ba52978986b419a81bb76fe2b57daca2e3cbdcc59ee5255bafcfdf",
+      "size_bytes": 329
+    },
+    {
+      "path": "README_OUTBASE_HANDOFF_v166.md",
+      "sha256": "f03a9a87a0347a608eab61b932fe66cc46ca631363cb34b6a09aa7b490a235a8",
+      "size_bytes": 481
+    },
+    {
+      "path": "VERIFICATION_RESULTS_v166.txt",
+      "sha256": "6e3cd2ffd2ffe901d819362a68ecf806f9cd284b35ba04b52d7e95f06c75a6a2",
+      "size_bytes": 1075
+    }
+  ]
+}

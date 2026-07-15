@@ -2,7 +2,7 @@
   "id": "./?app=outbase",
   "name": "OUTBASE",
   "short_name": "OUTBASE",
-  "version": "165.2",
+  "version": "166.0",
   "description": "予定、準備、実行、記録、整理、思い出、次回改善を一つの活動ストーリーとしてつなぐアプリ",
   "lang": "ja",
   "dir": "ltr",
@@ -14,8 +14,8 @@
     "standalone"
   ],
   "orientation": "any",
-  "background_color": "#F3EFE5",
-  "theme_color": "#0B2E22",
+  "background_color": "#F2F0E8",
+  "theme_color": "#0A3328",
   "categories": [
     "lifestyle",
     "travel",

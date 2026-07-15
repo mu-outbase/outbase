@@ -60,21 +60,35 @@
 
   function notify(reason='navigation'){
     const route=current();
-    listeners.forEach(listener=>{try{listener(route,reason);}catch(error){console.error('[OUTBASE router]',error);}});
+    const pending=[];
+    listeners.forEach(listener=>{
+      try{const result=listener(route,reason);if(result&&typeof result.then==='function')pending.push(result);}
+      catch(error){console.error('[OUTBASE router]',error);}
+    });
     globalThis.dispatchEvent?.(new CustomEvent('outbase:navigation',{detail:{route,reason}}));
-    return route;
+    return pending.length?Promise.allSettled(pending).then(()=>route):route;
+  }
+  function reducedMotion(){return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;}
+  function transition(commit,options={}){
+    if(options.skipTransition||reducedMotion()||typeof document?.startViewTransition!=='function')return commit();
+    try{
+      const value=document.startViewTransition(()=>Promise.resolve(commit()));
+      return value.finished.catch(()=>current());
+    }catch(_error){return commit();}
   }
 
   function navigate(name,values={},options={}){
     const url=shellUrl(name,values);
-    if(options.replace){
-      const state={...(history.state||{}),outbaseShell:true,route:name,[SCROLL_KEY]:options.preserveScroll?savedScrollY()||viewportScrollY():0};
-      history.replaceState(state,'',url);
-      return notify(options.preserveScroll?'replace-preserve':'replace');
-    }
-    rememberScroll();
-    history.pushState({outbaseShell:true,route:name,[SCROLL_KEY]:0},'',url);
-    return notify('push');
+    return transition(()=>{
+      if(options.replace){
+        const state={...(history.state||{}),outbaseShell:true,route:name,[SCROLL_KEY]:options.preserveScroll?savedScrollY()||viewportScrollY():0};
+        history.replaceState(state,'',url);
+        return notify(options.preserveScroll?'replace-preserve':'replace');
+      }
+      rememberScroll();
+      history.pushState({outbaseShell:true,route:name,[SCROLL_KEY]:0},'',url);
+      return notify('push');
+    },options);
   }
 
   function open(route,values={}){location.assign(legacyUrl(route,values));}
@@ -84,7 +98,7 @@
 
   globalThis.OUTBASE_ROUTER=Object.freeze({
     current,legacyUrl,shellUrl,open,navigate,back,subscribe,shellRequested,
-    rememberScroll,savedScrollY,viewportScrollY,SCROLL_KEY,
+    rememberScroll,savedScrollY,viewportScrollY,SCROLL_KEY,reducedMotion,
     legacyToRoute,routeToLegacy,SHELL_ROUTES:Object.freeze([...SHELL_ROUTES])
   });
 })();

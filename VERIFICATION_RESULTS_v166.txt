@@ -1,0 +1,29 @@
+OUTBASE v166 Formal Design Integration Verification
+Date: 2026-07-15 Asia/Tokyo
+Base GitHub main: aee51d0219be3608f9427e3ef83cf09b0922906f
+FIELD03 app.js SHA: 13a44b35562d5fd325368acd94ca49b0005502a8
+
+PASS all JavaScript syntax checks
+PASS tests/phase2a-loader-main-smoke.js
+PASS tests/phase2a-smoke.js
+PASS tests/phase2b-domain-smoke.js
+PASS tests/phase3-shell-smoke.js
+PASS tests/phase4-home-smoke.js
+PASS tests/phase5-integrated-smoke.js
+PASS tests/v1651-android-evidence-hotfix-smoke.js
+PASS tests/v1652-scroll-restore-smoke.js
+PASS tests/v166-formal-design-lock-smoke.js
+PASS CSS parser style-shell.css: 0 errors
+PASS CSS parser style-design-system.css: 0 errors
+PASS no MutationObserver added
+PASS no whole-screen overflow:hidden added
+PASS FIELD03 src/app.js not included in patch
+PASS v166 version/cache/design references
+PASS NORTH idle mode
+PASS TRAIL LENS active/paused mode
+PASS v165.2 scroll restoration regression
+PASS data mutation: none
+PASS database schema change: none
+PASS cutover: false
+PENDING GitHub main reflection
+PENDING Android NORTH/TRAIL LENS E2E
