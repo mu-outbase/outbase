@@ -1,0 +1,12 @@
+OUTBASE v166.9 HOME DOM REBUILD verification
+- Base commit: 388aafbfe9024165d4b8650161268e37b29e4355
+- shell-renderer.js syntax: PASS
+- version.js syntax: PASS
+- home render smoke: PASS
+- v1669 dedicated smoke: PASS
+- CSS parser errors: 0
+- service worker cache reference: PASS
+- ZIP root layout: PASS
+- src/app.js / FIELD03 / DB / GPS / media / persistence: not included, unchanged
+- Search / Vault / Add sheet: unchanged from v166.8
+- Android visual verification: pending after GitHub apply

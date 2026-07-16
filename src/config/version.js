@@ -1,13 +1,13 @@
 (() => {
   'use strict';
   const VERSION=Object.freeze({
-    app:'v166.8-quiet-field-ui-lock',
+    app:'v166.9-home-dom-rebuild-lock',
     legacy:'outbase-field03-compact-2',
     data:'outbase-v160-phase1',
     domain:'outbase-v1663-visual',
-    shell:'outbase-v1668-quiet',
-    design:'outbase-v1668-quiet',
-    cache:'outbase-field03-v1668-quiet'
+    shell:'outbase-v1669-home',
+    design:'outbase-v1669-home',
+    cache:'outbase-field03-v1669-home'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();
