@@ -1,0 +1,12 @@
+OUTBASE v166.9.1 home visual containment verification
+- Base commit: 04fe35f2815e879d9259ee404543dd531da158b7
+- Root ZIP layout: PASS
+- style-v1669-home.css brace balance: PASS
+- next thumbnail positioned containing block: PASS
+- recent thumbnail positioned containing block: PASS
+- fallback + scene SVG forced inside thumbnail: PASS
+- version.js syntax: PASS
+- cache-bust references: PASS
+- v16691 smoke: PASS
+- FIELD03 / src/app.js / DB / persistence: not included, unchanged
+- Android visual verification: pending after GitHub apply
