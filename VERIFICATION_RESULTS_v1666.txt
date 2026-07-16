@@ -1,0 +1,12 @@
+OUTBASE v166.6 verification
+
+PASS JavaScript syntax: src/shell/shell-renderer.js
+PASS JavaScript syntax: src/config/version.js
+PASS focused smoke: tests/v1666-magazine-canvas-smoke.js
+PASS CSS brace balance: 812 rules/blocks
+PASS cache bust: outbase-v1666-magazine
+PASS src/app.js absent from patch
+PASS domain/repository/migration absent from patch
+PASS external image/font additions: 0
+
+Android verification pending.

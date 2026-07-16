@@ -1,13 +1,13 @@
 (() => {
   'use strict';
   const VERSION=Object.freeze({
-    app:'v166.5-editorial-layout-lock',
+    app:'v166.6-magazine-canvas-lock',
     legacy:'outbase-field03-compact-2',
     data:'outbase-v160-phase1',
     domain:'outbase-v1663-visual',
-    shell:'outbase-v1665-editorial',
-    design:'outbase-v1665-editorial',
-    cache:'outbase-field03-v1664-polish'
+    shell:'outbase-v1666-magazine',
+    design:'outbase-v1666-magazine',
+    cache:'outbase-field03-v1666-magazine'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();

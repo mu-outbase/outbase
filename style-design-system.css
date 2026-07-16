@@ -500,3 +500,226 @@ body.outbaseNorth .ob3-main{padding-top:16px}
 .ob9-vault-head p{text-transform:uppercase;letter-spacing:.05em}.ob9-vault-bento{height:300px;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,.8fr);grid-template-rows:repeat(2,1fr);gap:3px;background:var(--ob-line)}.ob9-vault-bento>a{position:relative;overflow:hidden;color:white;text-decoration:none;background:#789081}.ob9-bento-main{grid-row:1/3}.ob9-bento-side.side-1{grid-column:2;grid-row:1}.ob9-bento-side.side-2{grid-column:2;grid-row:2}.ob9-bento-visual{position:absolute;inset:0;display:block;background-image:var(--ob-preview-image);background-size:cover;background-position:center}.ob9-bento-visual .ob8-scene{position:absolute;inset:0}.ob9-bento-visual.has-photo .ob8-scene{opacity:0}.ob9-vault-bento>a:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(7,27,22,.84) 100%)}.ob9-vault-bento>a>span:last-child{position:absolute;left:12px;right:12px;bottom:11px;z-index:2}.ob9-vault-bento small,.ob9-vault-bento b,.ob9-vault-bento em{display:block}.ob9-vault-bento small{color:#E9D48E;font-size:7px;font-weight:950;letter-spacing:.08em}.ob9-vault-bento b{margin-top:4px;font-size:13px;line-height:1.18}.ob9-bento-main b{font-size:20px}.ob9-vault-bento em{margin-top:5px;color:#D8E1DD;font-size:8px;font-style:normal}.ob9-vault-metrics{display:grid;grid-template-columns:repeat(3,1fr);margin:17px 0 26px;border-top:1px solid var(--ob-line);border-bottom:1px solid var(--ob-line)}.ob9-vault-metrics>span,.ob9-vault-metrics>button{min-height:70px;padding:10px;border:0;border-right:1px solid var(--ob-line);background:transparent;color:var(--ob-ink);display:flex;flex-direction:column;align-items:center;justify-content:center}.ob9-vault-metrics>*:last-child{border-right:0}.ob9-vault-metrics b{font-size:24px}.ob9-vault-metrics small{margin-top:3px;color:var(--ob-muted);font-size:8px}.ob9-vault-metrics svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:middle}.ob9-vault-list .ob7-story-row{border-radius:0;background:transparent;box-shadow:none}
 .ob9-sheet{border-radius:20px 20px 0 0}.ob9-sheet-actions{border-top:1px solid var(--ob-line)}.ob9-sheet-primary{width:100%;min-height:104px;padding:13px 0;border:0;border-bottom:1px solid var(--ob-line);background:transparent;color:var(--ob-ink);display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px;text-align:left}.ob9-sheet-primary>span{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--ob-forest);color:var(--ob-brass)}.ob9-sheet-primary svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8}.ob9-sheet-primary div small{display:block;color:var(--ob-brass);font-size:8px;font-weight:950;letter-spacing:.13em}.ob9-sheet-primary div b{display:block;margin-top:4px;font-size:20px}.ob9-sheet-primary div em{display:block;margin-top:4px;color:var(--ob-muted);font-size:9px;font-style:normal}.ob9-sheet-primary strong{min-height:38px;padding:0 12px;border-radius:3px;background:var(--ob-brass);display:inline-flex;align-items:center;font-size:11px}.ob9-sheet-line{width:100%;min-height:72px;padding:10px 0;border:0;border-bottom:1px solid var(--ob-line);background:transparent;color:var(--ob-ink);display:grid;grid-template-columns:30px minmax(0,1fr) 18px;align-items:center;gap:10px;text-align:left}.ob9-sheet-line>span{color:var(--ob-forest)}.ob9-sheet-line svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}.ob9-sheet-line b{display:block;font-size:14px}.ob9-sheet-line small{display:block;margin-top:4px;color:var(--ob-muted);font-size:9px}
 @media(max-width:390px){.ob9-next-hero{grid-template-columns:minmax(0,1fr) 40%;min-height:228px}.ob9-next-hero .ob7-next-content{padding-left:14px}.ob9-quick-secondary button{grid-template-columns:18px minmax(0,1fr);padding-inline:5px}.ob9-quick-secondary b{font-size:10px}.ob9-vault-bento{height:270px}.ob9-bento-main b{font-size:18px}}
+
+/* ========================================================================
+   OUTBASE v166.6 — magazine canvas / no-card visual reset LOCK
+   References: real app hierarchy + editorial web composition.
+   Structure and behavior remain v166.5; only the visual language changes.
+   ======================================================================== */
+:root{
+  --ob10-paper:#F4F0E6;
+  --ob10-ink:#0A3328;
+  --ob10-line:rgba(10,51,40,.22);
+  --ob10-muted:#6D756F;
+}
+body.outbaseNorth .ob3-shell{
+  background:var(--ob10-paper);
+}
+body.outbaseNorth .ob3-header{
+  background:var(--ob10-paper);
+  border-bottom:1px solid rgba(10,51,40,.12);
+}
+body.outbaseNorth .ob3-main{padding-left:22px;padding-right:22px}
+
+/* Typography owns the hierarchy; surfaces do not. */
+.ob9-home-hero,.ob9-page-hero{padding-top:26px}
+.ob9-home-hero:after,.ob9-page-hero:after{width:54px;height:2px;border-radius:0}
+.ob9-home-hero h1,.ob9-page-hero h1{letter-spacing:-.065em}
+.ob9-kicker{border-bottom:1px solid var(--ob10-line)}
+.ob9-kicker span{color:#B48A2D;letter-spacing:.18em}
+
+/* Family is metadata, not a card. */
+.ob7-family-line,.ob6-family-line{
+  min-height:0!important;
+  margin:0 0 34px!important;
+  padding:10px 0 15px!important;
+  border:0!important;
+  border-bottom:1px solid var(--ob10-line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.ob7-family-line .ob6-avatar{box-shadow:none}
+
+/* Now is a sentence and action, not a surface. */
+.ob9-now .ob6-now-line,.ob9-now .ob6-current-line,.ob9-now .ob7-now-line{
+  min-height:72px!important;
+  padding:10px 0 16px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.ob9-now .ob7-now-mark{width:28px;height:28px;border-radius:0;background:transparent}
+.ob9-now .ob6-primary{border-radius:0;box-shadow:none}
+
+/* Next is a full-bleed magazine cover, not a split card. */
+.ob9-next-hero{
+  position:relative!important;
+  display:block!important;
+  min-height:350px!important;
+  margin:0 -22px!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#173F34!important;
+  box-shadow:none!important;
+}
+.ob9-next-hero .ob8-next-visual{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:100%!important;
+}
+.ob9-next-hero .ob8-next-visual:before{
+  background:linear-gradient(180deg,rgba(7,27,22,.06) 0,rgba(7,27,22,.22) 40%,rgba(7,27,22,.92) 100%)!important;
+}
+.ob9-next-hero .ob7-next-content{
+  position:relative!important;
+  z-index:2!important;
+  min-height:350px!important;
+  padding:116px 22px 22px!important;
+  justify-content:flex-end!important;
+  background:transparent!important;
+}
+.ob9-next-hero .ob8-next-visual-meta{top:18px;right:18px;bottom:auto;border-radius:0;background:rgba(7,27,22,.62);backdrop-filter:blur(6px)}
+.ob9-next-hero h3{max-width:82%;font-size:clamp(34px,9vw,48px)!important;line-height:.98!important;letter-spacing:-.07em!important}
+.ob9-next-hero .ob6-next-top span{color:#E4C66F}
+.ob9-next-hero .ob6-next-actions{align-items:center}
+.ob9-next-hero .ob6-secondary{
+  min-height:38px!important;
+  padding:0!important;
+  border:0!important;
+  border-bottom:1px solid rgba(255,255,255,.58)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:white!important;
+}
+.ob9-next-hero .ob6-primary{border-radius:0!important;box-shadow:none!important}
+.ob9-following .ob7-story-row{border-bottom:1px solid var(--ob10-line)!important}
+
+/* Tools are an index. */
+.ob9-quick{border:0!important}
+.ob9-quick-primary{min-height:92px;border-top:1px solid var(--ob10-line)!important;border-bottom:1px solid var(--ob10-line)!important}
+.ob9-quick-primary>span{border-radius:0;background:transparent;color:var(--ob-forest)}
+.ob9-quick-primary div b{font-size:22px;letter-spacing:-.035em}
+.ob9-quick-secondary{border-bottom:1px solid var(--ob10-line)}
+.ob9-quick-secondary button{min-height:64px;border-right:0!important;border-bottom:0!important;padding:10px 4px!important;display:flex;align-items:center;gap:7px}
+.ob9-quick-secondary button+button{border-left:1px solid var(--ob10-line)!important;padding-left:12px!important}
+
+/* Recent is a film strip, never a row of cards. */
+.ob9-recent-rail{gap:4px;margin-inline:-22px;padding-inline:22px}
+.ob9-recent-item{flex-basis:min(70vw,280px)}
+.ob9-recent-visual{height:162px}
+.ob9-recent-item>span{padding:10px 4px 0}
+
+/* Discover: text tabs + one edge-to-edge visual canvas. */
+.ob9-search-tabs{border-top:1px solid var(--ob10-line);border-bottom:1px solid var(--ob10-line)}
+.ob9-search-tabs button{border-right:0!important;padding:10px 2px!important;background:transparent!important}
+.ob9-search-tabs button+button{padding-left:14px!important}
+.ob9-search-tabs button.active{box-shadow:inset 0 -2px 0 var(--ob-brass)}
+.ob9-search-rail{
+  gap:0!important;
+  margin:18px -22px 0!important;
+  padding:0 0 12px!important;
+}
+.ob9-search-panel{
+  flex:0 0 100%!important;
+  width:100%!important;
+  height:390px!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.ob9-search-panel-copy{left:22px;right:22px;bottom:22px}
+.ob9-search-panel-copy b{font-size:34px}
+
+/* Vault: one cover image with editorial links over it, not a Bento card mosaic. */
+.ob9-vault-bento{
+  position:relative!important;
+  display:block!important;
+  height:430px!important;
+  margin:0 -22px!important;
+  background:#789081!important;
+  overflow:hidden!important;
+}
+.ob9-vault-bento>a{border:0!important;border-radius:0!important;box-shadow:none!important}
+.ob9-bento-main{position:absolute!important;inset:0!important;display:block!important}
+.ob9-bento-main>a{display:block}
+.ob9-vault-bento .ob9-bento-main>span:last-child{left:22px;right:40%;bottom:24px}
+.ob9-bento-main b{font-size:30px!important;letter-spacing:-.055em}
+.ob9-bento-side{
+  position:absolute!important;
+  z-index:3!important;
+  left:auto!important;
+  right:18px!important;
+  width:34%!important;
+  min-height:58px!important;
+  padding:10px 0!important;
+  background:transparent!important;
+  border-top:1px solid rgba(255,255,255,.62)!important;
+  overflow:visible!important;
+}
+.ob9-bento-side.side-1{top:22px!important}
+.ob9-bento-side.side-2{top:92px!important}
+.ob9-bento-side .ob9-bento-visual{display:none!important}
+.ob9-bento-side:after{display:none!important}
+.ob9-vault-bento .ob9-bento-side>span:last-child{position:static!important;color:white}
+.ob9-vault-bento .ob9-bento-side small{color:#E9D48E}
+.ob9-vault-bento .ob9-bento-side b{font-size:13px}
+.ob9-vault-metrics{margin-top:0;border-top:0}
+.ob9-vault-metrics>span,.ob9-vault-metrics>button{border-right:0!important;align-items:flex-start;padding-left:0}
+.ob9-vault-metrics>*+*{padding-left:16px;border-left:1px solid var(--ob10-line)!important}
+
+/* Stories are a newspaper index: thumbnail + text + rule. */
+.ob9-vault-list .ob7-story-list{gap:0!important}
+.ob9-vault-list .ob7-story-row,.ob9-following .ob7-story-row{
+  min-height:76px!important;
+  padding:10px 0!important;
+  border:0!important;
+  border-bottom:1px solid var(--ob10-line)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.ob9-vault-list .ob7-thumb{border-radius:0!important}
+
+/* Navigation is a system bar, not a floating pill card. */
+body.outbaseNorth .ob3-nav{
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  min-height:68px!important;
+  padding:5px 14px calc(5px + env(safe-area-inset-bottom))!important;
+  border:0!important;
+  border-top:1px solid rgba(10,51,40,.16)!important;
+  border-radius:0!important;
+  background:rgba(248,246,239,.97)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(14px)!important;
+}
+body.outbaseNorth .ob3-nav button{border-radius:0!important;background:transparent!important}
+body.outbaseNorth .ob3-nav button.active{color:var(--ob-forest)!important;box-shadow:inset 0 2px 0 var(--ob-forest)}
+body.outbaseNorth .ob3-nav .ob3-central{
+  width:52px!important;
+  min-height:52px!important;
+  justify-self:center!important;
+  border-radius:50%!important;
+  background:var(--ob-brass)!important;
+  box-shadow:none!important;
+}
+
+/* A modal may remain a sheet, but its content stays flat. */
+.ob9-sheet{border-radius:18px 18px 0 0!important;box-shadow:none!important}
+.ob9-sheet-primary>span{border-radius:0;background:transparent;color:var(--ob-forest)}
+.ob9-sheet-primary strong{border-radius:0}
+
+@media(max-width:390px){
+  .ob9-next-hero,.ob9-next-hero .ob7-next-content{min-height:330px!important}
+  .ob9-next-hero h3{max-width:90%;font-size:34px!important}
+  .ob9-search-panel{height:360px!important}
+  .ob9-vault-bento{height:390px!important}
+  .ob9-vault-bento .ob9-bento-main>span:last-child{right:32%}
+  .ob9-bento-side{width:30%!important}
+}
