@@ -1,0 +1,24 @@
+OUTBASE v166.5 verification
+
+PASS JS syntax: src/config/version.js
+PASS JS syntax: src/shell/shell-renderer.js
+PASS JS syntax: tests/phase2a-loader-main-smoke.js
+PASS JS syntax: tests/phase2a-smoke.js
+PASS JS syntax: tests/v166-formal-design-lock-smoke.js
+PASS JS syntax: tests/v1662-density-lock-smoke.js
+PASS JS syntax: tests/v1663-visual-hierarchy-lock-smoke.js
+PASS JS syntax: tests/v1664-completion-polish-smoke.js
+PASS JS syntax: tests/v1665-editorial-layout-smoke.js
+
+PASS editorial home
+PASS flat quick actions
+PASS search horizontal rail
+PASS vault bento
+PASS flat add sheet
+PASS display type correction
+PASS no field03 edit
+PASS css editorial lock
+PASS horizontal recent
+PASS no external assets
+
+FIELD03 src/app.js included: NO

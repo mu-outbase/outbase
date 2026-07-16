@@ -7,6 +7,6 @@ assert(css.includes('.ob7-vault-feature'));assert(css.includes('.ob7-search-grid
 assert(renderer.includes('IntersectionObserver'));assert(renderer.includes('getRecordBlob'));assert(renderer.includes("rootMargin:'180px 0px'"));
 assert(renderer.includes('ob7-vault-feature'));assert(renderer.includes('ob7-search-card'));assert(renderer.includes('ob7-story-row'));
 assert(home.includes('mediaPreviewMap'));assert(home.includes('previewBlobReads:0'));assert(vault.includes('previewMedia'));
-assert(version.includes("app:'v166.4-completion-polish-lock'"));assert(sw.includes('outbase-field03-v1664-polish'));assert.equal(manifest.version,'166.4');
+assert(version.includes("app:'v166.5-editorial-layout-lock'"));assert(sw.includes('outbase-field03-v1664-polish'));assert.equal(manifest.version,'166.4');
 assert.equal((css.match(/MutationObserver/g)||[]).length,0);assert(!/(body|html|#outbaseShellRoot|\.ob3-shell)[^{]*\{[^}]*overflow\s*:\s*hidden/i.test(css));
 console.log(JSON.stringify({status:'pass',visualHierarchy:true,lazyPhotoPreview:true,initialBlobReads:0,typeFallbacks:true,densityPreserved:true,performancePreserved:true,field03EngineChanged:false},null,2));

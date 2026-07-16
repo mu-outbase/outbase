@@ -28,7 +28,7 @@ function baseContext({shell}){
     localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)},
     document:{documentElement:{classList:{remove(){}}},getElementById(){return null;}},
     CustomEvent:class CustomEvent{constructor(type,init={}){this.type=type;this.detail=init.detail;}},dispatchEvent(){},
-    OUTBASE_VERSION:{app:'v166.4-completion-polish-lock'},OUTBASE_LIFECYCLE:lifecycle,
+    OUTBASE_VERSION:{app:'v166.5-editorial-layout-lock'},OUTBASE_LIFECYCLE:lifecycle,
     OUTBASE_MODULE_MANIFEST:{legacy:['legacy-1','legacy-2'],data:['data-1'],domain:['domain-1','domain-2'],shell:['shell-1']},
     OUTBASE_SCRIPT_LOADER:{async loadSeries(list){calls.push([...list]);return list;}},
     OUTBASE_APP_STATE:{async snapshot(){return {ok:true};}},

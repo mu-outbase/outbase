@@ -1,0 +1,110 @@
+{
+  "version": "v166.5-editorial-layout-lock",
+  "base_git_head": "28acdd4a7933a3b43ec162aeb812c5dda3fa5051",
+  "target": "repository root",
+  "field03_app_js_changed": false,
+  "database_schema_change": false,
+  "data_mutation": false,
+  "files": [
+    {
+      "path": "OUTBASE_BOOT_v7.7_v166.5カード依存解消LOCK.md",
+      "sha256": "c694318504b109bbd7de8e66e7cf2cf245ff35047509cf91f7e944ed4cc76674",
+      "size_bytes": 950
+    },
+    {
+      "path": "OUTBASE_NEXT_ROADMAP_v1665.md",
+      "sha256": "a0d3d0261150db5c3ccf1c9664cc8bff2607e55990449e5d28bccc75be9b645c",
+      "size_bytes": 574
+    },
+    {
+      "path": "OUTBASE_STATUSLOCK_v1665.md",
+      "sha256": "3cfb4195d779456bdd92e0d6367412251e75b14b5c9e6ea07e9a394cb9d63940",
+      "size_bytes": 435
+    },
+    {
+      "path": "OUTBASE_v1665_EDITORIAL_LAYOUT_AUDIT.md",
+      "sha256": "a296ed1c8f36842aa10014051ed344dacacb6476b0c795d1a6470f560b72d2ee",
+      "size_bytes": 917
+    },
+    {
+      "path": "README_OUTBASE_HANDOFF_v1665.md",
+      "sha256": "c0a6c92e665efb1c0ad2dbf8eef4d1d49415846284ff5348ec4f0ead4f7a5a9b",
+      "size_bytes": 302
+    },
+    {
+      "path": "VERIFICATION_RESULTS_v1665.txt",
+      "sha256": "c47988647f6f572bad6247dc756dffb2e4e3958b2ae499e892bbb1ebfb764882",
+      "size_bytes": 738
+    },
+    {
+      "path": "docs/V1665_EDITORIAL_LAYOUT_LOCK.md",
+      "sha256": "298b6b4f49291e70cadd4b6ad604a5848c9b4ac076974c3a8c74bc1f8557ff11",
+      "size_bytes": 478
+    },
+    {
+      "path": "index.html",
+      "sha256": "a6c726a8d9d671b686ee78950fff934e8c9b351473cd328dad6cc278af1bce19",
+      "size_bytes": 4945
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "57bd927855c75de787074938602552320888feca2077472e00da5e32b00755af",
+      "size_bytes": 1447
+    },
+    {
+      "path": "service-worker.js",
+      "sha256": "240eef6538260edf4491c32ef7e7976b220c125970ee1a5986b8e7e738965707",
+      "size_bytes": 5115
+    },
+    {
+      "path": "src/config/version.js",
+      "sha256": "1318f6463089c1c37ea1a4c9bdf33e583b7293ba43db7bec0bea263064a62b69",
+      "size_bytes": 370
+    },
+    {
+      "path": "src/shell/shell-renderer.js",
+      "sha256": "5e8b8231b0a83b34a1fbac892e85a94ccc9530ccaf91dc6d3da5ea82773ef1d3",
+      "size_bytes": 35521
+    },
+    {
+      "path": "style-design-system.css",
+      "sha256": "667c02700c6baf13ebf562f58d87423da6eb356a5ed05d6d85b1fb5957db8b0d",
+      "size_bytes": 69498
+    },
+    {
+      "path": "tests/phase2a-loader-main-smoke.js",
+      "sha256": "86f95ac008aa9e2e8aa3b18b0a18eee2b9e40885b83c3997a14cb276e601f70e",
+      "size_bytes": 3963
+    },
+    {
+      "path": "tests/phase2a-smoke.js",
+      "sha256": "8db596d21a20d06798b55243edb5dc9cd91b8a6a4fb408a97fa9e410c410da2d",
+      "size_bytes": 4611
+    },
+    {
+      "path": "tests/v166-formal-design-lock-smoke.js",
+      "sha256": "12a9867f89ce6e07b20231af0d160f98242d5024ba5777c7086b8c8e27a5569e",
+      "size_bytes": 3783
+    },
+    {
+      "path": "tests/v1662-density-lock-smoke.js",
+      "sha256": "107fea0de5d3256fa3e4d20ace1fb056dca50f1482e728bae41132552c794d45",
+      "size_bytes": 1673
+    },
+    {
+      "path": "tests/v1663-visual-hierarchy-lock-smoke.js",
+      "sha256": "f54e9b55e777b372677177d0eb8ced86b5acc8d48400aa968c95c4a9bb9365bc",
+      "size_bytes": 1658
+    },
+    {
+      "path": "tests/v1664-completion-polish-smoke.js",
+      "sha256": "9f643c90e726658cd91f2404f46118ecf4c3decc18eb611998b2ba14c884043f",
+      "size_bytes": 3426
+    },
+    {
+      "path": "tests/v1665-editorial-layout-smoke.js",
+      "sha256": "e4d13c1968bbdbcc7c57a8c74c02da5a28b0387ba7da0fcab833ea9b3e3941ef",
+      "size_bytes": 1112
+    }
+  ]
+}

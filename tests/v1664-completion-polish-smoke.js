@@ -31,8 +31,8 @@ assert(rendererSource.includes('vaultTile'));
 assert(rendererSource.includes('ob8-vault-gallery'));
 assert(rendererSource.includes('ob8-sheet-primary'));
 
-assert(version.includes("app:'v166.4-completion-polish-lock'"));
-assert(index.includes('outbase-v1664-polish'));
+assert(version.includes("app:'v166.5-editorial-layout-lock'"));
+assert(index.includes('outbase-v1665-editorial'));
 assert(sw.includes('outbase-field03-v1664-polish'));
 assert.equal(manifest.version, '166.4');
 assert.equal((css.match(/MutationObserver/g) || []).length, 0);
