@@ -1,13 +1,13 @@
 (() => {
   'use strict';
   const VERSION=Object.freeze({
-    app:'v166.9.1-home-visual-containment-lock',
+    app:'v166.3-visual-hierarchy-lock',
     legacy:'outbase-field03-compact-2',
     data:'outbase-v160-phase1',
     domain:'outbase-v1663-visual',
-    shell:'outbase-v16691-homefix',
-    design:'outbase-v16691-homefix',
-    cache:'outbase-field03-v16691-homefix'
+    shell:'outbase-v1663-visual',
+    design:'outbase-v1663-visual',
+    cache:'outbase-field03-v1663-visual'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();
