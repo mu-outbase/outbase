@@ -1,0 +1,8 @@
+v166.7 native app experience verification
+- node syntax: PASS
+- dedicated smoke: PASS
+- CSS brace balance: PASS
+- FIELD03 src/app.js included: NO
+- DB/domain/repository/migration files included: NO
+- normal URL defaults to NORTH: YES
+- active/paused remains TRAIL LENS: YES

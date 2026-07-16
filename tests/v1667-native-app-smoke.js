@@ -1,0 +1,13 @@
+const fs=require('fs');
+const assert=require('assert');
+const index=fs.readFileSync('index.html','utf8');
+const css=fs.readFileSync('style-native-app.css','utf8');
+const version=fs.readFileSync('src/config/version.js','utf8');
+assert(index.includes('style-native-app.css?v=outbase-v1667-native'));
+assert(index.includes("query.get('shell')!=='0'"));
+assert(css.includes('Native App Experience LOCK'));
+assert(css.includes('.ob9-search-panel'));
+assert(css.includes('.ob9-vault-list .ob6-story-list'));
+assert(css.includes('.ob3-backdrop'));
+assert(version.includes('v166.7-native-app-experience-lock'));
+console.log('v166.7 native app smoke: PASS');
