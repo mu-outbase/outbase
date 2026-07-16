@@ -1,0 +1,18 @@
+'use strict';
+const fs=require('fs');
+const assert=require('assert');
+const index=fs.readFileSync('index.html','utf8');
+const css=fs.readFileSync('style-native-app.css','utf8');
+const version=fs.readFileSync('src/config/version.js','utf8');
+assert(index.includes('style-native-app.css?v=outbase-v1668-quiet'));
+assert(index.includes("query.get('shell')!=='0'"));
+assert(css.includes('OUTBASE v166.8 — QUIET FIELD UI'));
+assert(css.includes('.ob9-next-hero'));
+assert(css.includes('min-height:250px'));
+assert(css.includes('.ob9-search-panel'));
+assert(css.includes('height:305px'));
+assert(css.includes('.ob9-bento-main'));
+assert(css.includes('height:255px'));
+assert(css.includes('border-radius:0!important'));
+assert(version.includes("app:'v166.8-quiet-field-ui-lock'"));
+console.log('v1668 quiet field ui smoke: PASS');

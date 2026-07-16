@@ -20,17 +20,17 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}button,input,textarea,select{font:inherit}
 #outbaseBootScreen{display:none}
-html.outbaseShellBoot body{background:#eef1ec;color:#0C2D25}
+html.outbaseShellBoot body{background:#F4F1E9;color:#0C2D25}
 html.outbaseShellBoot #app{visibility:hidden!important}
-html.outbaseShellBoot #outbaseBootScreen{position:fixed;z-index:2147483640;inset:0;display:grid;place-items:center;background:#eef1ec}
+html.outbaseShellBoot #outbaseBootScreen{position:fixed;z-index:2147483640;inset:0;display:grid;place-items:center;background:#F4F1E9}
 .outbaseBootBrand{display:flex;align-items:center;gap:13px;font-size:19px;font-weight:900;letter-spacing:.14em;color:#0A3328}
 .outbaseBootMark{width:40px;height:40px;padding:8px;border-radius:13px;background:#0A3328;display:flex;align-items:flex-end;justify-content:center;gap:3px}
 .outbaseBootMark i{display:block;width:4px;border-radius:4px;background:#D3A94B}.outbaseBootMark i:nth-child(1){height:11px}.outbaseBootMark i:nth-child(2){height:21px}.outbaseBootMark i:nth-child(3){height:16px}
 html.outbaseShellReady #outbaseBootScreen{display:none!important}
 </style>
-<link rel="apple-touch-icon" href="icons/outbase-192.png?v=outbase-v1667-native">
+<link rel="apple-touch-icon" href="icons/outbase-192.png?v=outbase-v1668-quiet">
 <title>OUTBASE</title>
-<link rel="manifest" href="manifest.json?v=outbase-v1667-native">
+<link rel="manifest" href="manifest.json?v=outbase-v1668-quiet">
 <link rel="stylesheet" href="style.css?v=outbase-field03-compact-2" media="not all" data-ob-legacy-style>
 <link rel="stylesheet" href="style-flow.css?v=outbase-field03-compact-2" media="not all" data-ob-legacy-style>
 <link rel="stylesheet" href="style-entry.css?v=outbase-field03-compact-2" media="not all" data-ob-legacy-style>
@@ -41,25 +41,25 @@ html.outbaseShellReady #outbaseBootScreen{display:none!important}
 <link rel="stylesheet" href="style-scenarios.css?v=outbase-field03-compact-2" media="not all" data-ob-legacy-style>
 <link rel="stylesheet" href="style-compact-ui.css?v=outbase-field03-compact-2" media="not all" data-ob-legacy-style>
 <script>if(!globalThis.__OUTBASE_FAST_SHELL__)document.querySelectorAll('[data-ob-legacy-style]').forEach(link=>link.media='all');</script>
-<link rel="stylesheet" href="style-shell.css?v=outbase-v1667-native">
-<link rel="stylesheet" href="style-design-system.css?v=outbase-v1667-native">
-<link rel="stylesheet" href="style-native-app.css?v=outbase-v1667-native">
+<link rel="stylesheet" href="style-shell.css?v=outbase-v1668-quiet">
+<link rel="stylesheet" href="style-design-system.css?v=outbase-v1668-quiet">
+<link rel="stylesheet" href="style-native-app.css?v=outbase-v1668-quiet">
 </head><body>
 <div id="outbaseBootScreen" aria-hidden="true"><div class="outbaseBootBrand"><span class="outbaseBootMark"><i></i><i></i><i></i></span><b>OUTBASE</b></div></div>
 <div id="app"></div>
 <input id="fileInput" type="file" accept=".json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*" multiple hidden>
-<script src="src/config/version.js?v=outbase-v1667-native" defer></script>
-<script src="src/config/module-manifest.js?v=outbase-v1667-native" defer></script>
-<script src="src/runtime/script-loader.js?v=outbase-v1667-native" defer></script>
-<script src="src/runtime/lifecycle.js?v=outbase-v1667-native" defer></script>
-<script src="src/state/app-state.js?v=outbase-v1667-native" defer></script>
-<script src="src/router.js?v=outbase-v1667-native" defer></script>
-<script src="src/design/theme-controller.js?v=outbase-v1667-native" defer></script>
-<script src="src/main.js?v=outbase-v1667-native" defer></script>
+<script src="src/config/version.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/config/module-manifest.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/runtime/script-loader.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/runtime/lifecycle.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/state/app-state.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/router.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/design/theme-controller.js?v=outbase-v1668-quiet" defer></script>
+<script src="src/main.js?v=outbase-v1668-quiet" defer></script>
 <script>
 if(!globalThis.__OUTBASE_FAST_SHELL__){
   ['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js','https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js'].forEach(src=>{const script=document.createElement('script');script.src=src;script.async=true;document.head.appendChild(script);});
 }
 </script>
-<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-v1667-native').catch(error=>console.warn('Service Worker registration failed:',error)));}</script>
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=outbase-v1668-quiet').catch(error=>console.warn('Service Worker registration failed:',error)));}</script>
 </body></html>

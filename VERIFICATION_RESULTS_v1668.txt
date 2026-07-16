@@ -1,0 +1,10 @@
+OUTBASE v166.8 QUIET FIELD UI verification
+- Base commit: 6b6e435dc01ae848d8e4b2198c4d9605abe36e6d
+- CSS parser errors: 0
+- CSS brace balance: PASS
+- version.js syntax: PASS
+- v1668 smoke: PASS
+- cache-bust references: PASS
+- ZIP root layout: PASS
+- src/app.js / FIELD03 / DB / persistence: not included, unchanged
+- Android visual verification: pending after GitHub apply
