@@ -96,8 +96,16 @@
     samplePlan({id:'drive',type:'drive',typeLabel:'ドライブ',title:'海辺ドライブ',place:'九十九里海岸',start:dateOffset(now,18,9),end:dateOffset(now,18,18),coverVariant:'sea',prep:[3,5]}),
     samplePlan({id:'event',type:'event',typeLabel:'イベント',title:'野外音楽イベント',place:'森のイベント広場',start:dateOffset(now,31,11),end:dateOffset(now,31,20),coverVariant:'festival',prep:[1,4]})
   ]);}
+  const TEMPORARY_PLAN_PLACE=Object.freeze({
+    title:'きゃんぷ',place:'ふもとっぱら（仮）',latitude:35.3994381,longitude:138.5650706,temporaryPlace:true
+  });
+  function applyTemporaryPlanPlace(row){
+    if(!row||String(row.place||'').trim())return row;
+    if(String(row.title||'').trim()!==TEMPORARY_PLAN_PLACE.title)return row;
+    return Object.freeze({...row,place:TEMPORARY_PLAN_PLACE.place,latitude:TEMPORARY_PLAN_PLACE.latitude,longitude:TEMPORARY_PLAN_PLACE.longitude,temporaryPlace:true});
+  }
   function displayPlans(realRows,now){
-    const rows=[...(Array.isArray(realRows)?realRows:[])];const used=new Set(rows.map(row=>row.id));
+    const rows=(Array.isArray(realRows)?realRows:[]).map(applyTemporaryPlanPlace);const used=new Set(rows.map(row=>row.id));
     for(const sample of samplePlans(now)){if(rows.length>=4)break;if(!used.has(sample.id)){rows.push(sample);used.add(sample.id);}}
     return Object.freeze(rows.slice(0,5));
   }
@@ -196,7 +204,7 @@
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:smartLine({...value,next,weather}),weather,weatherIntel:weatherIntel(selected,now),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r15'
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r16'
     });
   }
 
