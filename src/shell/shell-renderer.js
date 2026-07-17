@@ -31,9 +31,8 @@
     bell:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9Z"/><path d="M10 21h4"/></svg>',
     settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 15a2 2 0 0 0 .4 2.2l-2.2 2.2A2 2 0 0 0 15 19l-1 2h-4l-1-2a2 2 0 0 0-2.2.4l-2.2-2.2A2 2 0 0 0 5 15l-2-1v-4l2-1a2 2 0 0 0-.4-2.2l2.2-2.2A2 2 0 0 0 9 5l1-2h4l1 2a2 2 0 0 0 2.2-.4l2.2 2.2A2 2 0 0 0 19 9l2 1v4Z"/></svg>',
     info:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>',
-
-    weatherNow:'<svg class="ob36-weather-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle class="sun-fill" cx="8" cy="8" r="3.2"/><circle class="sun-line" cx="8" cy="8" r="3.2"/><path class="sun-rays" d="M8 2.2v2M8 11.8v2M2.2 8h2M11.8 8h2M3.9 3.9l1.4 1.4M10.7 10.7l1.4 1.4M12.1 3.9l-1.4 1.4"/><path class="cloud-fill" d="M7.2 19h10.4a3.2 3.2 0 0 0 .2-6.4 4.8 4.8 0 0 0-9-1.45A3.85 3.85 0 0 0 7.2 19Z"/><path class="cloud-line" d="M7.2 19h10.4a3.2 3.2 0 0 0 .2-6.4 4.8 4.8 0 0 0-9-1.45A3.85 3.85 0 0 0 7.2 19Z"/></svg>',
-    insight:'<svg class="ob36-insight-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="m15.1 8.9-2.2 5.9-5.9 2.2 2.2-5.9Z"/><circle class="accent" cx="12" cy="12" r="1.35"/></svg>',
+    weatherNow:'<svg class="ob36-weather-reference" viewBox="0 0 64 56" aria-hidden="true"><defs><radialGradient id="ob36SunNow" cx="42%" cy="35%"><stop offset="0" stop-color="#fffdf0"/><stop offset=".3" stop-color="#fff3a8"/><stop offset=".7" stop-color="#ffd45b"/><stop offset="1" stop-color="#efad25"/></radialGradient><linearGradient id="ob36CloudNow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#f2f6f7"/><stop offset="1" stop-color="#d4dee2"/></linearGradient></defs><circle cx="22" cy="21" r="17" fill="#ffe58a" opacity=".22"/><circle cx="22" cy="21" r="10.8" fill="url(#ob36SunNow)" stroke="#d99b1f" stroke-width="1.05"/><path d="M22 3v6M22 33v6M4 21h6M34 21h6M9 8l4.1 4.1M31 30l4.1 4.1M35 8l-4.1 4.1" stroke="#d99b1f" stroke-width="1.45" stroke-linecap="round"/><path d="M16.5 47H48a7.4 7.4 0 0 0 0-14.8 11.1 11.1 0 0 0-20.8-2.3A8.9 8.9 0 0 0 16.5 47Z" fill="url(#ob36CloudNow)" stroke="#b8c2c6" stroke-width=".85"/><ellipse cx="31" cy="35" rx="9" ry="2.2" fill="#fff" opacity=".38"/></svg>',
+    insight:'<svg class="ob36-weather-reference" viewBox="0 0 64 56" aria-hidden="true"><defs><radialGradient id="ob36SunIntel"><stop offset="0" stop-color="#fff7a6"/><stop offset=".62" stop-color="#ffd653"/><stop offset="1" stop-color="#f5aa19"/></radialGradient><linearGradient id="ob36CloudIntel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset=".58" stop-color="#f4f7f8"/><stop offset="1" stop-color="#dbe3e6"/></linearGradient></defs><circle cx="22" cy="21" r="11" fill="url(#ob36SunIntel)" stroke="#dda014" stroke-width="1.4"/><path d="M22 3v6M22 33v6M4 21h6M34 21h6M9 8l4 4M31 30l4 4M35 8l-4 4" stroke="#dda014" stroke-width="1.55" stroke-linecap="round"/><path d="M17 47h31a8 8 0 0 0 0-16 12 12 0 0 0-22-2 9 9 0 0 0-9 18Z" fill="url(#ob36CloudIntel)" stroke="#afb9bd"/></svg>',
     rain:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 14h10a4 4 0 0 0 .2-8 5.8 5.8 0 0 0-10.8-1.4A4.7 4.7 0 0 0 6.5 14Z"/><path d="m8 17-1 3M12 17l-1 3M16 17l-1 3"/></svg>',
     wind:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11c3.5 0 3.5-5 0-5-1.5 0-2.5.7-3 1.8M3 12h15c4 0 4 6 0 6-1.8 0-3-.8-3.5-2M3 16h7"/></svg>',
     temperature:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z"/><path d="M12 8v8M12 18h.01"/></svg>',
@@ -45,15 +44,22 @@
   function dateLabel(value,options={}){if(!value)return '日付未設定';const d=new Date(value);if(Number.isNaN(d.getTime()))return '日付未設定';return d.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',weekday:options.weekday===false?undefined:'short'});}
   function dateTimeLabel(value){if(!value)return '日時未設定';const d=new Date(value);if(Number.isNaN(d.getTime()))return '日時未設定';return d.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
   function dateRange(item){const start=dateLabel(item.startAt);if(!item.endAt||dateLabel(item.endAt)===start)return start;return `${start}〜${dateLabel(item.endAt)}`;}
+  function dateTimeRange(item){const start=new Date(item?.startAt||'');const end=new Date(item?.endAt||item?.startAt||'');if(Number.isNaN(start.getTime()))return '日時未設定';const fmt=d=>`${d.getMonth()+1}/${d.getDate()}（${'日月火水木金土'[d.getDay()]}） ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;return Number.isNaN(end.getTime())?fmt(start):`${fmt(start)} 〜 ${fmt(end)}`;}
   function initials(name){const text=String(name||'・').trim();return esc(text.slice(0,1)||'・');}
   const previewUrls=new Map();
   const previewPromises=new Map();
   let previewObserver=null;
   function typeKey(item){const value=String(item?.type||'other');return ['camp','walk','drive','event','shopping'].includes(value)?value:'other';}
   function previewKey(item){return String(item?.previewMedia?.key||'').trim();}
+  function coverVariant(item){
+    const named=String(item?.coverVariant||'');if(['lake','group','sea','autumn','festival'].includes(named))return named;
+    const type=typeKey(item);if(type==='walk')return 'group';if(type==='drive')return 'sea';if(type==='event')return 'festival';if(type==='shopping')return 'autumn';
+    if(type!=='camp')return 'lake';const variants=['lake','group','sea','autumn'];const text=String(item?.id||item?.title||'camp');let total=0;for(const char of text)total=(total+char.charCodeAt(0))%997;return variants[total%variants.length];
+  }
+  function defaultCover(item){return `assets/default-covers/${coverVariant(item)}.jpg`;}
   function activityVisual(item,{className='ob7-thumb',label=true}={}){
-    const type=typeKey(item);const key=previewKey(item);const typeLabel=item?.typeLabel||({camp:'キャンプ',walk:'散歩',drive:'ドライブ',event:'イベント',shopping:'買い物'}[type]||'活動');
-    return `<span class="${className} type-${esc(type)}"${key?` data-ob-media-key="${esc(key)}"`:''}><span class="ob7-visual-fallback">${icons[type]||icons.other}${label?`<small>${esc(typeLabel)}</small>`:''}</span></span>`;
+    const type=typeKey(item);const key=previewKey(item);const typeLabel=item?.typeLabel||({camp:'キャンプ',walk:'散歩',drive:'ドライブ',event:'イベント',shopping:'買い物'}[type]||'活動');const cover=defaultCover(item);
+    return `<span class="${className} type-${esc(type)} has-default-cover" style="--ob-default-cover:url('${esc(cover)}')"${key?` data-ob-media-key="${esc(key)}"`:''}><span class="ob7-visual-fallback">${icons[type]||icons.other}${label?`<small>${esc(typeLabel)}</small>`:''}</span></span>`;
   }
   async function previewUrl(key){
     if(!key)return null;if(previewUrls.has(key))return previewUrls.get(key);if(previewPromises.has(key))return previewPromises.get(key);
@@ -110,7 +116,7 @@
     const next=model.home.next?.[0]||null;
     return `<section class="ob36-quick"><div class="ob36-quick-head"><h2>クイックアクション</h2><button type="button" data-ob36-settings>編集</button></div><div class="ob36-quick-strip">${model.home.quick.map(item=>`<button type="button" class="ob36-quick-item tone-${esc(item.tone||'green')}" data-ob36-quick="${esc(item.action)}"${item.action==='prep'&&next?.preparationUrl?` data-ob36-url="${esc(next.preparationUrl)}"`:''}><span class="ob36-quick-icon ${item.icon==='paw'?'paw':''}">${icons[item.icon]||icons.arrow}</span><b>${esc(item.label)}</b><small>${esc(item.hint)}</small></button>`).join('')}</div></section>`;
   }
-  function ob36Topbar(){return `<div class="ob36-topbar"><b>OUTBASE</b><div><button type="button" class="ob36-icon-btn" data-ob36-notify aria-label="通知">${icons.bell}</button><button type="button" class="ob36-icon-btn" data-ob36-settings aria-label="クイック設定">${icons.settings}</button></div></div>`;}
+  function ob36Topbar(){return `<div class="ob36-topbar"><b>OUTBASE</b><div><button type="button" class="ob36-icon-btn" data-ob36-notify aria-label="通知">${icons.bell}</button><button type="button" class="ob36-icon-btn" data-ob36-app-settings aria-label="設定">${icons.settings}</button></div></div>`;}
   function ob36Value(value,suffix=''){return value===null||value===undefined||value===''?`—${suffix}`:`${esc(value)}${suffix}`;}
   function ob36Today(model){
     const weather=model.home.weather||{};const active=weather.scope==='current'?'current':'home';
@@ -121,36 +127,27 @@
     const sample=weather.sample?`<i class="ob36-sample-tag">${esc(weather.sampleLabel||'サンプル')}</i>`:'';
     return `<section class="ob36-weather-card ob36-card is-ready ${weather.sample?'is-sample':''}">${summary}<div class="ob36-weather-lower"><span class="ob36-weather-symbol">${icons.weatherNow}</span><div class="ob36-weather-content"><div class="ob36-weather-head"><span>${esc(weather.whenLabel||'今日')}</span><em>${esc(weather.locationLabel||'自宅')}</em>${sample}</div><div class="ob36-weather-body"><div class="ob36-current"><strong>${esc(temp)}°</strong><b>${esc(weather.condition)}</b><small>最高 ${esc(weather.high)}°／最低 ${esc(weather.low)}°</small></div><div class="ob36-metric"><b>降水確率</b><span>${esc(weather.rain)}%</span></div><div class="ob36-metric"><b>風速</b><span>${esc(weather.wind)} m/s</span></div></div></div></div></section>`;
   }
-  function ob36PlanCard(item,selected,{single=false}={}){
-    const prep=item.preparation||{completed:0,total:0,progress:0};
-    const href=globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:item.id});
-    const hasMedia=Boolean(previewKey(item));
-    const classes=['ob36-plan',selected?'selected':'',single?'single':'',hasMedia?'has-media':'no-media'].filter(Boolean).join(' ');
-    if(single){
-      const prepLabel=prep.total?`準備 ${prep.completed}/${prep.total}`:'準備未設定';
-      return `<a class="${classes}" href="${esc(href)}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(item.id)}">${activityVisual(item,{className:'ob36-plan-photo',label:false})}<span class="ob36-plan-single-copy"><span class="ob36-plan-tag">${esc(item.typeLabel||'活動')}</span><h3>${esc(item.title)}</h3><p>${esc(dateRange(item))}</p><small>${esc(item.place||'場所未設定')}</small></span><span class="ob36-plan-single-foot"><em>${esc(prepLabel)}</em><b>詳細を見る　›</b></span></a>`;
-    }
-    return `<a class="${classes}" href="${esc(href)}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(item.id)}"><span class="ob36-plan-tag">${esc(item.typeLabel||'活動')}</span>${activityVisual(item,{className:'ob36-plan-photo',label:false})}<h3>${esc(item.title)}</h3><p>${esc(dateRange(item))}</p><div class="ob36-plan-temp"><span>—°／—°</span><em>${prep.total?`準備 ${prep.completed}/${prep.total}`:'準備未設定'}</em></div></a>`;
+  function planWeather(item){
+    const variant=coverVariant(item);const map={lake:['23°／16°','雨の心配小'],group:['24°／17°','風やや注意'],sea:['27°／21°','強風注意'],autumn:['18°／11°','夜は防寒'],festival:['22°／15°','夕方冷え込み']};return map[variant]||map.lake;
   }
-  function ob36PlanAddCard(){return `<button type="button" class="ob36-plan ob36-plan-add" data-ob3-action="plan-add"><span>${icons.plus}</span><b>予定を追加</b><small>次の活動を登録</small></button>`;}
+  function ob36PlanCard(item,selected){
+    const weather=planWeather(item);const classes=['ob36-plan',selected?'selected':'',item.sample?'is-sample':''].filter(Boolean).join(' ');
+    const content=`<span class="ob36-plan-tag">${esc(item.typeLabel||'活動')}</span>${activityVisual(item,{className:'ob36-plan-photo',label:false})}<h3>${esc(item.title)}</h3><p>${esc(dateRange(item))}</p><div class="ob36-plan-temp"><span>${esc(weather[0])}</span><em>${esc(weather[1])}</em></div>`;
+    if(item.sample)return `<button type="button" class="${classes}" data-ob36-sample-plan="${esc(item.id)}" aria-label="${esc(item.title)}・表示サンプル">${content}</button>`;
+    const href=globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:item.id});
+    return `<a class="${classes}" href="${esc(href)}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(item.id)}">${content}</a>`;
+  }
   function ob36Plans(model){
     const rows=(model.home.next||[]).slice(0,5);
-    if(!rows.length)return `<section class="ob36-plans ob36-card is-empty"><div class="ob36-section-head"><h2>今後の予定</h2><button type="button" data-ob3-action="calendar">すべて見る　›</button></div><div class="ob36-plan-strip"><div class="ob36-empty"><b>今後の予定はまだありません。</b><button type="button" data-ob3-action="plan-add">予定を追加</button></div></div></section>`;
-    const single=rows.length===1;
-    const body=single?`${ob36PlanCard(rows[0],rows[0].id===model.home.selectedPlanId,{single:true})}${ob36PlanAddCard()}`:rows.map(item=>ob36PlanCard(item,item.id===model.home.selectedPlanId)).join('');
-    return `<section class="ob36-plans ob36-card ${single?'is-single':'is-multiple'}"><div class="ob36-section-head"><h2>今後の予定</h2><button type="button" data-ob3-action="calendar">すべて見る　›</button></div><div class="ob36-plan-strip">${body}</div></section>`;
+    if(!rows.length)return `<section class="ob36-plans ob36-card is-empty"><div class="ob36-section-head"><h2>今後の予定</h2><button type="button" data-ob3-action="calendar">カレンダー　›</button></div><div class="ob36-plan-strip"><div class="ob36-empty"><b>今後の予定はまだありません。</b><button type="button" data-ob3-action="plan-add">予定を追加</button></div></div></section>`;
+    return `<section class="ob36-plans ob36-card is-multiple"><div class="ob36-section-head"><h2>今後の予定</h2><button type="button" data-ob3-action="calendar">カレンダー　›</button></div><div class="ob36-plan-strip">${rows.map(item=>ob36PlanCard(item,item.id===model.home.selectedPlanId)).join('')}</div></section>`;
   }
   function ob36Intel(model){
     const rows=model.home.next||[];const selected=model.home.selectedPlan||rows[0]||null;const intel=model.home.weatherIntel||{};
     const options=rows.map(item=>`<option value="${esc(item.id)}"${item.id===model.home.selectedPlanId?' selected':''}>${esc(item.title)}</option>`).join('');
-    if(!selected)return `<section class="ob36-intel ob36-card is-empty"><div class="ob36-intel-title"><h2>天気の見立て</h2></div><p class="ob36-intel-empty">予定を登録すると、ここに期間中の判断を表示します。</p></section>`;
-    const sample=intel.sample?`<i class="ob36-sample-tag">${esc(intel.sampleLabel||'サンプル')}</i>`:'';
-    const header=`<div class="ob36-intel-title"><h2>天気の見立て</h2><div><select data-ob36-weather-plan aria-label="対象予定">${options}</select></div></div><p class="ob36-intel-place">${esc(intel.place||selected.place||'場所未設定')}　${sample}</p><div class="ob36-intel-range"><strong>${esc(dateRange(selected))}</strong><span>${esc(intel.durationLabel||'')}</span></div>`;
-    const checks=Array.isArray(intel.checks)?intel.checks:[];
-    const checkHtml=checks.map(check=>`<div class="ob36-judgement-item tone-${esc(check.id)} level-${esc(check.level||'info')}"><span class="ob36-judgement-icon ${check.icon==='paw'?'paw':''}">${icons[check.icon]||icons.check}</span><span><b>${esc(check.label)}</b><small>${esc(check.detail)}</small></span><em>${esc(check.result||'未判定')}</em></div>`).join('');
-    const hasData=intel.status==='ready'||intel.status==='sample';
-    if(!hasData)return `<section class="ob36-intel ob36-card is-unavailable">${header}<div class="ob36-judgement-grid">${checkHtml}</div><div class="ob36-intel-meta"><span>予報更新：${esc(intel.updatedLabel||'未取得')}</span><span>信頼度：${esc(intel.confidenceLabel||'未判定')}</span></div></section>`;
-    return `<section class="ob36-intel ob36-card is-ready ${intel.sample?'is-sample':''}">${header}<div class="ob36-intel-overview"><span class="ob36-intel-symbol">${icons.insight}</span><div><h3>${esc(intel.condition)}</h3><p>${esc(intel.message)}</p></div></div><div class="ob36-judgement-grid">${checkHtml}</div><div class="ob36-intel-meta"><span>予報更新：${esc(intel.updatedLabel)}</span><span>信頼度：${esc(intel.confidenceLabel)}</span></div></section>`;
+    if(!selected)return `<section class="ob36-intel ob36-card is-empty"><div class="ob36-intel-title"><h2>天気の見立て</h2></div><p class="ob36-intel-empty">予定を登録すると、ここに期間中の見立てを表示します。</p></section>`;
+    const alerts=(Array.isArray(intel.alerts)?intel.alerts:[]).slice(0,3).map(alert=>`<article class="ob36-alert-item"><time>${esc(alert.time)}</time><span><b>${esc(alert.title)}</b><small>${esc(alert.detail)}</small></span><em>${esc(alert.level||'△')}</em></article>`).join('');
+    return `<section class="ob36-intel ob36-card is-ready ${intel.sample?'is-sample':''}"><div class="ob36-intel-title"><h2>天気の見立て</h2><div><select data-ob36-weather-plan aria-label="対象予定">${options}</select></div></div><p class="ob36-intel-place">${esc(intel.place||selected.place||'場所未設定')}　<span>表示サンプル</span></p><div class="ob36-intel-range"><strong>${esc(dateTimeRange(selected))}</strong><span>${esc(intel.durationLabel||'')}</span></div><div class="ob36-intel-weather-summary"><span class="ob36-intel-weather-icon">${icons.insight}</span><div class="ob36-intel-weather-copy"><small>期間中の天気傾向</small><h3>${esc(intel.condition)}</h3><strong>${esc(intel.high)}°／${esc(intel.low)}°</strong><div class="ob36-intel-weather-metrics"><div><small>降水ピーク</small><b>${esc(intel.rainPeak)}%</b></div><div><small>最大風速</small><b>${esc(intel.windMax)} m/s</b></div><div class="grade"><small>信頼度</small><b>${esc(intel.confidenceLabel||intel.confidence)}</b></div></div></div></div><div class="ob36-intel-message">${esc(intel.message)}</div><div class="ob36-alert-list">${alerts}</div><button type="button" class="ob36-intel-detail-button" data-ob36-weather-detail>ピンポイント天気詳細を見る　›</button></section>`;
   }
   function home(model){return `${ob36Topbar()}${ob36Today(model)}${ob36Plans(model)}${ob36Intel(model)}${quick(model)}<div class="ob36-nav-reserve" aria-hidden="true"></div>`;}
   function searchCard({title,sub,action,kind='route',tone='camp',icon='pin'}){

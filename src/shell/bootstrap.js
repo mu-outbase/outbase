@@ -20,6 +20,7 @@
   }
   function openHomeModal(id,markup){
     const host=modalHost();if(!host)return null;
+    const top=modals?.top?.();if(top?.id?.startsWith?.('home-v36-')&&top.id!==id)modals?.close?.({historyBack:false});
     host.innerHTML=markup;document.body.classList.add('ob36-modal-open');
     if(modals?.top?.()?.id!==id)modals?.open?.(id);
     return host;
@@ -80,6 +81,46 @@
   }
   function openQuickSettings(){const host=openHomeModal('home-v36-quick',quickSettingsMarkup(currentQuickIds()));if(host)renderQuickSettings(currentQuickIds());}
 
+
+  function appSettingsMarkup(){
+    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet" role="dialog" aria-modal="true" aria-label="設定"><div class="ob36-sheet-grab"></div><header><div><small>OUTBASE SETTINGS</small><h2>設定</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-settings-menu"><button type="button" data-ob36-open-weather-settings><span><b>天気設定</b><small>参照サイト・比較先・場所の優先順</small></span><em>›</em></button><button type="button" data-ob36-open-quick-settings><span><b>クイックアクション</b><small>HOMEの5枠と並び順</small></span><em>›</em></button></div></section></div>`;
+  }
+  function openAppSettings(){
+    const host=openHomeModal('home-v36-settings',appSettingsMarkup());if(!host)return;
+    host.querySelector('[data-ob36-open-weather-settings]')?.addEventListener('click',openWeatherSettings);
+    host.querySelector('[data-ob36-open-quick-settings]')?.addEventListener('click',openQuickSettings);
+  }
+  function weatherSettingsMarkup(){
+    const api=homeModel();const value=api?.weatherSettings?.()||{primary:'jma',compare:['weathernews','tenki'],locationMode:'plan',sources:[]};
+    const options=(value.sources||api?.WEATHER_SOURCES||[]).map(item=>`<option value="${esc(item.id)}"${item.id===value.primary?' selected':''}>${esc(item.label)}</option>`).join('');
+    const compare=(value.sources||api?.WEATHER_SOURCES||[]).map(item=>`<label><input type="checkbox" data-ob36-weather-compare value="${esc(item.id)}"${value.compare.includes(item.id)?' checked':''}${item.id===value.primary?' disabled':''}><span>${esc(item.label)}</span></label>`).join('');
+    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet" role="dialog" aria-modal="true" aria-label="天気設定"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER SOURCES</small><h2>天気設定</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-weather-settings"><fieldset><legend>優先して見る予報サイト</legend><select data-ob36-weather-primary>${options}</select></fieldset><fieldset><legend>比較する予報サイト</legend>${compare}</fieldset><fieldset><legend>最初に使う場所</legend><label><input type="radio" name="ob36WeatherLocation" value="plan"${value.locationMode==='plan'?' checked':''}>予定の場所</label><label><input type="radio" name="ob36WeatherLocation" value="home"${value.locationMode==='home'?' checked':''}>自宅</label><label><input type="radio" name="ob36WeatherLocation" value="current"${value.locationMode==='current'?' checked':''}>現在地</label></fieldset></div><button class="ob36-sheet-done" type="button" data-ob36-weather-settings-save>保存</button></section></div>`;
+  }
+  function openWeatherSettings(){
+    const host=openHomeModal('home-v36-weather-settings',weatherSettingsMarkup());if(!host)return;
+    const primary=host.querySelector('[data-ob36-weather-primary]');
+    primary?.addEventListener('change',()=>host.querySelectorAll('[data-ob36-weather-compare]').forEach(box=>{box.disabled=box.value===primary.value;if(box.disabled)box.checked=false;}));
+    host.querySelector('[data-ob36-weather-settings-save]')?.addEventListener('click',()=>{
+      const api=homeModel();const selectedPrimary=primary?.value||'jma';const compare=[...host.querySelectorAll('[data-ob36-weather-compare]:checked')].map(box=>box.value).filter(id=>id!==selectedPrimary);const mode=host.querySelector('input[name="ob36WeatherLocation"]:checked')?.value||'plan';
+      safeSet(api.WEATHER_SOURCE_PRIMARY_KEY,selectedPrimary);safeSet(api.WEATHER_SOURCE_COMPARE_KEY,JSON.stringify(compare));safeSet(api.WEATHER_LOCATION_MODE_KEY,mode);closeHomeModal();refreshHome();toast('天気設定を保存しました');
+    });
+  }
+  function isoDate(value){const d=new Date(value||Date.now());return Number.isNaN(d.getTime())?'':`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  function pinpointResult({place='西湖キャンプビレッジ・ノーム',start='',end=''}={}){
+    const range=start?`${start}${end&&end!==start?` 〜 ${end}`:''}`:'日付未設定';
+    return `<div class="ob36-pinpoint-result"><small>${esc(place)}　${esc(range)}　表示サンプル</small><h3>くもり時々晴れ</h3><strong>24°／16°</strong><p>夕方に弱い雨の可能性。風は最大4.1m/sで、設営は15時頃、撤収は午前中が安心です。</p></div>`;
+  }
+  async function openWeatherDetail({mode='plan',place='',start='',end=''}={}){
+    const model=await homeModel()?.build?.();const rows=model?.next||[];const selected=model?.selectedPlan||rows[0]||null;const planPlace=selected?.place||'西湖キャンプビレッジ・ノーム';const planStart=isoDate(selected?.startAt);const planEnd=isoDate(selected?.endAt||selected?.startAt);const customPlace=place||'山中湖村';const customStart=start||isoDate(Date.now());const customEnd=end||customStart;const result=mode==='custom'?pinpointResult({place:customPlace,start:customStart,end:customEnd}):pinpointResult({place:planPlace,start:planStart,end:planEnd});
+    const options=rows.map(item=>`<option value="${esc(item.id)}"${item.id===model?.selectedPlanId?' selected':''}>${esc(item.title)}</option>`).join('');
+    const markup=`<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet ob36-weather-detail-sheet" role="dialog" aria-modal="true" aria-label="ピンポイント天気詳細"><div class="ob36-sheet-grab"></div><header><div><small>PINPOINT WEATHER</small><h2>ピンポイント天気詳細</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-weather-mode"><button type="button" class="${mode==='plan'?'active':''}" data-ob36-weather-mode="plan">予定から見る</button><button type="button" class="${mode==='custom'?'active':''}" data-ob36-weather-mode="custom">場所・日付で見る</button></div>${mode==='plan'?`<div class="ob36-weather-search"><label class="wide"><span>予定</span><select data-ob36-detail-plan>${options}</select></label></div>`:`<div class="ob36-weather-search"><label class="wide"><span>場所</span><input type="text" data-ob36-custom-place value="${esc(customPlace)}" placeholder="キャンプ場・市区町村"></label><label><span>開始日</span><input type="date" data-ob36-custom-start value="${esc(customStart)}"></label><label><span>終了日</span><input type="date" data-ob36-custom-end value="${esc(customEnd)}"></label><button type="button" data-ob36-custom-weather>この条件で見る</button></div>`}${result}<button class="ob36-sheet-done" type="button" data-ob36-open-weather-settings>参照サイト設定</button></section></div>`;
+    const host=openHomeModal('home-v36-weather-detail',markup);if(!host)return;
+    host.querySelectorAll('[data-ob36-weather-mode]').forEach(button=>button.addEventListener('click',()=>openWeatherDetail({mode:button.dataset.ob36WeatherMode})));
+    host.querySelector('[data-ob36-detail-plan]')?.addEventListener('change',event=>{safeSet(homeModel().WEATHER_PLAN_KEY,event.target.value||'');refreshHome();openWeatherDetail({mode:'plan'});});
+    host.querySelector('[data-ob36-custom-weather]')?.addEventListener('click',()=>openWeatherDetail({mode:'custom',place:host.querySelector('[data-ob36-custom-place]')?.value||'',start:host.querySelector('[data-ob36-custom-start]')?.value||'',end:host.querySelector('[data-ob36-custom-end]')?.value||''}));
+    host.querySelector('[data-ob36-open-weather-settings]')?.addEventListener('click',openWeatherSettings);
+  }
+
   function openMemoTarget(target){safeSet('outbase_record_target',target);location.assign(`${location.pathname}?tab=record&sheet=memo`);}
   function openKotaWalk(){safeSet('outbase_record_target','コタ散歩');location.assign(`${location.pathname}?tab=record&sheet=start`);}
   function openGenericMemo(){safeSet('outbase_record_target','メモ');legacy?.openMemo?.();}
@@ -96,11 +137,11 @@
     if(action==='vault'){router?.navigate?.('vault');return true;}
     return false;
   }
-  const homeBridge=Object.freeze({runQuick,openCooking,openQuickSettings,closeModal:closeHomeModal,toast,openMemoTarget,openKotaWalk,openGenericMemo,openGenericStart,readPrepCommon,cookingState,writeCooking,normalizedQuickIds});
+  const homeBridge=Object.freeze({runQuick,openCooking,openQuickSettings,openAppSettings,openWeatherSettings,openWeatherDetail,closeModal:closeHomeModal,toast,openMemoTarget,openKotaWalk,openGenericMemo,openGenericStart,readPrepCommon,cookingState,writeCooking,normalizedQuickIds});
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r7',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r8',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -117,7 +158,7 @@
   async function performRender(reason){if(!mounted||!root)return;const before=currentScrollY();const force=reason==='data-change';await renderer.mount(root,{force});await applyScroll(routeScrollTarget(reason,before));}
   function render(reason='refresh'){
     if(!mounted||!root)return Promise.resolve();pendingReason=reason;if(renderPromise)return renderPromise;
-    renderPromise=(async()=>{while(pendingReason){const next=pendingReason;pendingReason=null;await performRender(next);}})().catch(error=>{console.error('[OUTBASE v166.3 HOME v36 r3] shell render failed',error);fallback('render_failed');}).finally(()=>{renderPromise=null;});return renderPromise;
+    renderPromise=(async()=>{while(pendingReason){const next=pendingReason;pendingReason=null;await performRender(next);}})().catch(error=>{console.error('[OUTBASE v166.3 HOME v36 r8] shell render failed',error);fallback('render_failed');}).finally(()=>{renderPromise=null;});return renderPromise;
   }
   function action(name){if(name==='plan-add')return legacy.openPlanAdd();if(name==='memo')return homeBridge.openGenericMemo();if(name==='start')return homeBridge.openGenericStart();if(name==='calendar')return router.navigate('calendar');}
   function navValues(element){return {activityId:element.dataset.ob5ActivityId||'',month:element.dataset.ob5Month||'',people:element.dataset.ob5People||''};}
@@ -130,7 +171,10 @@
       if(!mounted)return;
       const modalClose=event.target.closest?.('[data-ob36-modal-close]');if(modalClose){event.preventDefault();closeHomeModal();return;}
       const homeBackdrop=event.target.closest?.('[data-ob36-sheet-backdrop]');if(homeBackdrop&&event.target===homeBackdrop){event.preventDefault();closeHomeModal();return;}
+      const appSettings=event.target.closest?.('[data-ob36-app-settings]');if(appSettings){event.preventDefault();homeBridge.openAppSettings();return;}
       const settings=event.target.closest?.('[data-ob36-settings]');if(settings){event.preventDefault();homeBridge.openQuickSettings();return;}
+      const weatherDetail=event.target.closest?.('[data-ob36-weather-detail]');if(weatherDetail){event.preventDefault();homeBridge.openWeatherDetail();return;}
+      const samplePlan=event.target.closest?.('[data-ob36-sample-plan]');if(samplePlan){event.preventDefault();homeBridge.toast('表示サンプルです。実際の予定はカレンダーから開けます');return;}
       const notify=event.target.closest?.('[data-ob36-notify]');if(notify){event.preventDefault();homeBridge.toast('通知機能は接続準備中です');return;}
       const quick=event.target.closest?.('[data-ob36-quick]');if(quick){event.preventDefault();homeBridge.runQuick(quick.dataset.ob36Quick,quick);return;}
       const weatherScope=event.target.closest?.('[data-ob36-weather-scope]');if(weatherScope){event.preventDefault();safeSet(globalThis.OUTBASE_HOME_SCREEN_MODEL_V164.WEATHER_SCOPE_KEY,weatherScope.dataset.ob36WeatherScope==='current'?'current':'home');refreshHome();return;}
@@ -153,7 +197,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();
-    const detail={status:'ready',version:'v166.3-home-v36-r7',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r8',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
