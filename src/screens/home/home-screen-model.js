@@ -60,6 +60,18 @@
   function todayLabel(now){return new Intl.DateTimeFormat('ja-JP',{month:'long',day:'numeric',weekday:'short'}).format(now);}
   function clockLabel(value){const d=new Date(value);if(Number.isNaN(d.getTime()))return '未更新';return new Intl.DateTimeFormat('ja-JP',{hour:'2-digit',minute:'2-digit'}).format(d);}
   function smartLine(value){
+    const weather=value?.weather||null;
+    if(weather?.status==='ready'){
+      const nearRain=Number(weather.rain)||0;const dailyRain=Number(weather.rainPeakToday)||0;const temperature=Number(weather.temperature);const gust=Number(weather.windGust)||0;
+      if(nearRain>=70)return '雨の可能性が高め。外出前に雨雲を確認。';
+      if(dailyRain>=70)return '今日は雨の時間あり。外時間は雨雲を見て。';
+      if(nearRain>=40||dailyRain>=40)return '空模様が変わりやすい一日。雨具を近くに。';
+      if(gust>=8)return '風が強まる時間あり。外の道具は早めに確認。';
+      if(Number.isFinite(temperature)&&temperature>=30)return '暑さを避けて、涼しい時間に外へ。';
+      if(/雨|雷|雪/.test(String(weather.condition||'')))return '天気の変化に備えて、無理のない外時間を。';
+      if(/晴/.test(String(weather.condition||'')))return '外の空気が気持ちいい時間を、逃さずに。';
+      return '雲の動きを見ながら、気持ちよく過ごそう。';
+    }
     const sessionValue=sessionGet(HOME_LINE_SESSION_KEY);if(sessionValue)return sessionValue;
     const next=value?.next?.[0]||null;const context=[];
     if(next?.daysUntil===0)context.push(`今日は「${next.title}」の日。焦らず、気持ちよく。`);
@@ -173,12 +185,12 @@
 
   async function build({now=new Date()}={}){
     const value=await globalThis.OUTBASE_HOME_DOMAIN_V164.build({now,nowLimit:3,nextLimit:5,recentLimit:5});
-    const next=displayPlans(value.next||[],now);const selected=selectedPlan(next);
+    const next=displayPlans(value.next||[],now);const selected=selectedPlan(next);const weather=weatherPreview(now,selected);
     return Object.freeze({
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
-      todayLabel:todayLabel(now),todaySummary:smartLine({...value,next}),weather:weatherPreview(now,selected),weatherIntel:weatherIntel(selected,now),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r12'
+      todayLabel:todayLabel(now),todaySummary:smartLine({...value,next,weather}),weather,weatherIntel:weatherIntel(selected,now),
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r13'
     });
   }
 

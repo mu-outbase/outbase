@@ -15,6 +15,12 @@
     '九十九里海岸':'九十九里町 千葉県',
     '森のイベント広場':'柏市 千葉県'
   });
+  const PLACE_COORDINATES=Object.freeze({
+    '西湖キャンプビレッジ・ノーム':Object.freeze({label:'西湖キャンプビレッジ・ノーム',latitude:35.50351,longitude:138.683287,timezone:'Asia/Tokyo',source:'place-catalog'}),
+    '柏の葉公園':Object.freeze({label:'柏の葉公園',latitude:35.8948784,longitude:139.9414857,timezone:'Asia/Tokyo',source:'place-catalog'}),
+    '九十九里海岸':Object.freeze({label:'九十九里海岸（片貝）',latitude:35.530721,longitude:140.44638,timezone:'Asia/Tokyo',source:'place-catalog'}),
+    '森のイベント広場':Object.freeze({label:'柏市',latitude:35.8676,longitude:139.9758,timezone:'Asia/Tokyo',source:'place-catalog'})
+  });
 
   function storageGet(key,fallback=''){try{return localStorage.getItem(key)||fallback;}catch(_error){return fallback;}}
   function storageSet(key,value){try{localStorage.setItem(key,value);return true;}catch(_error){return false;}}
@@ -71,6 +77,7 @@
   function simplifyPlace(place){return String(place||'').replace(/[・]/g,' ').replace(/(オート)?キャンプ(場|フィールド|ビレッジ)?/g,' ').replace(/サイト/g,' ').replace(/\s+/g,' ').trim();}
   async function geocode(place){
     const original=String(place||'').trim();if(!original)throw new Error('weather_place_missing');
+    const fixed=PLACE_COORDINATES[original];if(fixed){const value={...fixed,query:original};writeGeocode(original,value);return value;}
     const query=PLACE_ALIASES[original]||original;const cached=geocodeCache()[query];if(cached&&Date.now()-(cached.storedAt||0)<30*86400000)return cached;
     const queries=[query,simplifyPlace(query)].filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index);
     for(const candidate of queries){
@@ -129,7 +136,11 @@
   }
   function summaryConfidence(rows){if(!rows.length)return '—';const rank={'A':5,'A−':4,'B＋':3,'B':2,'C＋':1,'C':0};return rows.reduce((worst,row)=>rank[row.confidence]<rank[worst]?row.confidence:worst,rows[0].confidence||'C');}
   function todayView(forecast,now=new Date()){
-    if(!forecast)return null;const day=dayFor(forecast,now)||forecast.daily?.[0];const current=forecast.current||{};return Object.freeze({status:'ready',sample:false,locationLabel:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,condition:current.condition||day?.condition||'天気情報',temperature:current.temperature,high:day?.high,low:day?.low,rain:day?.rainProbability??0,wind:current.windAverage??day?.windMax??0,windGust:current.windGust??day?.windGust??0,provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
+    if(!forecast)return null;
+    const day=dayFor(forecast,now)||forecast.daily?.[0];const current=forecast.current||{};const nowMs=new Date(now).getTime();
+    const nearRows=(forecast.hourly||[]).filter(row=>{const atMs=new Date(row.at).getTime();return Number.isFinite(atMs)&&atMs>=nowMs-30*60000&&atMs<=nowMs+3*3600000;});
+    const rainNear=Math.max(0,...nearRows.map(row=>Number(row.rainProbability)||0));const rainPeakToday=Number(day?.rainProbability)||0;
+    return Object.freeze({status:'ready',sample:false,locationLabel:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,condition:current.condition||day?.condition||'天気情報',temperature:current.temperature,high:day?.high,low:day?.low,rain:rainNear,rainPeakToday,wind:current.windAverage??day?.windMax??0,windGust:current.windGust??day?.windGust??0,provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
   }
   function planView(forecast,plan){
     if(!forecast)return null;const start=plan?.startAt||Date.now(),end=plan?.endAt||start;const days=(forecast.daily||[]).filter(row=>row.date>=isoDate(start)&&row.date<=isoDate(end));const hours=hoursFor(forecast,start,end);if(!days.length&&!hours.length)return Object.freeze({status:'out-of-range',sample:false,place:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,condition:'予報期間外',message:'16日より先の予報は、日程が近づくと自動表示します。',alerts:[],provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
@@ -164,10 +175,10 @@
   }
   function targetKeyForPlan(plan){return `plan:${plan?.id||hash(plan?.place||'')}`;}
   function targetKeyForCustom(place){return `custom:${hash(place)}`;}
-  function getToday({scope='home'}={}){const key=scope==='current'?(readTarget('current')?'current':'current-fallback'):'home';return todayView(readTarget(key));}
+  function getToday({scope='home',now=new Date()}={}){const key=scope==='current'?(readTarget('current')?'current':'current-fallback'):'home';return todayView(readTarget(key),now);}
   function getPlan(plan){return planView(readTarget(targetKeyForPlan(plan)),plan);}
   function getDetail(plan,options={}){const forecast=options.place?readTarget(targetKeyForCustom(options.place)):readTarget(targetKeyForPlan(plan));return detailView(forecast,plan,options);}
   function cacheInfo(){const state=cacheState();return Object.freeze({count:Object.keys(state.targets).length,targets:Object.freeze(Object.keys(state.targets))});}
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,attribution:ATTRIBUTION,HOME_LOCATION,CACHE_KEY});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,attribution:ATTRIBUTION,HOME_LOCATION,PLACE_COORDINATES,CACHE_KEY});
 })();
