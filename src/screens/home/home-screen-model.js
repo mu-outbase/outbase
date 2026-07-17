@@ -173,6 +173,12 @@
     ];
     return Object.freeze(template.map((row,index)=>Object.freeze({at:isoAt(base,index*3),condition:row[0],temperature:row[1],feelsLike:row[2],rainProbability:row[3],rainfall:row[4],windDirection:row[5],windAverage:row[6],windGust:row[7],confidence:row[8]})));
   }
+  function todayWeatherDetail(now=new Date()){
+    const scope=weatherScope();const live=liveService()?.getTodayDetail?.({scope,now});
+    const update=weatherUpdateMeta(null,new Date(live?.fetchedAt||now));const settings=weatherSettings();
+    if(live)return Object.freeze({...live,scope,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,externalProviderIds:Object.freeze([settings.primary,...settings.compare]),updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});
+    return Object.freeze({status:'loading',kind:'today',sample:false,place:scope==='current'?'現在地':'千葉県 柏市',condition:'予報を取得しています',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),primarySource:liveService()?.provider||'Open-Meteo',compareSources:Object.freeze([]),provider:liveService()?.provider||'Open-Meteo',attribution:liveService()?.attribution||'',updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});
+  }
   function weatherDetail(item,{place='',start='',end=''}={}){
     const live=liveService()?.getDetail?.(item,{place,start,end});
     if(live){const update=weatherUpdateMeta(item,new Date(live.fetchedAt||Date.now()));const settings=weatherSettings();return Object.freeze({...live,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,externalProviderIds:Object.freeze([settings.primary,...settings.compare]),updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});}
@@ -190,14 +196,14 @@
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:smartLine({...value,next,weather}),weather,weatherIntel:weatherIntel(selected,now),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r14'
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r15'
     });
   }
 
   globalThis.OUTBASE_HOME_SCREEN_MODEL_V164=Object.freeze({
     build,QUICK:QUICK_CATALOG,QUICK_CATALOG,DEFAULT_QUICK_IDS,QUICK_STORE_KEY,WEATHER_SCOPE_KEY,WEATHER_PLAN_KEY,
     WEATHER_SOURCE_PRIMARY_KEY,WEATHER_SOURCE_COMPARE_KEY,WEATHER_LOCATION_MODE_KEY,WEATHER_LAST_UPDATE_KEY,WEATHER_NEXT_UPDATE_KEY,WEATHER_SOURCES,
-    quickIds,quickRows,catalog,smartLine,weatherPreview,weatherIntel,weatherSettings,weatherDetail,samplePlans,displayPlans,SMART_LINES,
+    quickIds,quickRows,catalog,smartLine,weatherPreview,weatherIntel,weatherSettings,todayWeatherDetail,weatherDetail,samplePlans,displayPlans,SMART_LINES,
     weatherIntervalMs,weatherUpdateMeta,weatherNeedsRefresh,markWeatherUpdated
   });
 })();

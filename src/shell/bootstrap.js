@@ -162,31 +162,32 @@
   }
   function bindHourlyRows(host){host.querySelectorAll('[data-ob36-hourly-toggle]').forEach(button=>button.addEventListener('click',()=>{const row=button.closest('[data-ob36-hourly-row]');const extra=row?.querySelector('.ob36-hourly-extra');if(!extra)return;const open=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',open?'false':'true');extra.hidden=open;row.classList.toggle('open',!open);}));}
   async function openWeatherDetail({mode='plan',place='',start='',end='',skipFetch=false}={}){
-    const model=await homeModel()?.build?.();const rows=model?.next||[];const selected=model?.selectedPlan||rows[0]||null;const planPlace=selected?.place||'場所未設定';const planStart=isoDate(selected?.startAt);const planEnd=isoDate(selected?.endAt||selected?.startAt);const customPlace=place||'山中湖村';const customStart=start||isoDate(Date.now());const customEnd=end||customStart;const targetPlace=mode==='custom'?customPlace:planPlace;const targetStart=mode==='custom'?customStart:planStart;const targetEnd=mode==='custom'?customEnd:planEnd;
-    if(!skipFetch&&navigator.onLine){try{await performWeatherRefresh(mode==='custom'?'custom-search':'detail-open',{silent:true,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:selected});}catch(_error){}}
-    const detail=homeModel()?.weatherDetail?.(selected,{place:mode==='custom'?targetPlace:'',start:targetStart,end:targetEnd})||{};
-    const options=rows.map(item=>`<option value="${esc(item.id)}"${item.id===model?.selectedPlanId?' selected':''}>${esc(item.title)}</option>`).join('');
-    const markup=`<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet ob36-weather-detail-sheet" role="dialog" aria-modal="true" aria-label="時間ごとの天気"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER DETAIL</small><h2>時間ごとの天気</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-weather-mode"><button type="button" class="${mode==='plan'?'active':''}" data-ob36-weather-mode="plan">予定から見る</button><button type="button" class="${mode==='custom'?'active':''}" data-ob36-weather-mode="custom">場所・日付で見る</button></div>${mode==='plan'?`<div class="ob36-weather-search"><label class="wide"><span>予定</span><select data-ob36-detail-plan>${options}</select></label></div>`:`<div class="ob36-weather-search"><label class="wide"><span>場所</span><input type="text" data-ob36-custom-place value="${esc(customPlace)}" placeholder="キャンプ場・市区町村"></label><label><span>開始日</span><input type="date" data-ob36-custom-start value="${esc(customStart)}"></label><label><span>終了日</span><input type="date" data-ob36-custom-end value="${esc(customEnd)}"></label><button type="button" data-ob36-custom-weather>この条件で見る</button></div>`}${weatherDetailMarkup(detail)}<button class="ob36-sheet-done ob36-sheet-settings" type="button" data-ob36-open-weather-settings>参考サイト設定</button></section></div>`;
+    const model=await homeModel()?.build?.();const rows=model?.next||[];const selected=model?.selectedPlan||rows[0]||null;const planPlace=selected?.place||'場所未設定';const planStart=isoDate(selected?.startAt);const planEnd=isoDate(selected?.endAt||selected?.startAt);const customPlace=place||'山中湖村';const customStart=start||isoDate(Date.now());const customEnd=end||customStart;const todayScope=model?.weather?.scope||'home';const targetPlace=mode==='custom'?customPlace:mode==='today'?(model?.weather?.locationLabel||'現在地'):planPlace;const targetStart=mode==='custom'?customStart:mode==='today'?isoDate(Date.now()):planStart;const targetEnd=mode==='custom'?customEnd:mode==='today'?targetStart:planEnd;
+    if(!skipFetch&&navigator.onLine){try{await performWeatherRefresh(mode==='custom'?'custom-search':mode==='today'?'today-detail-open':'detail-open',{silent:true,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:mode==='plan'?selected:null,plansOverride:mode==='plan'?rows:[],scopeOverride:mode==='today'?todayScope:null});}catch(_error){}}
+    const detail=mode==='today'?(homeModel()?.todayWeatherDetail?.(new Date())||{}):(homeModel()?.weatherDetail?.(selected,{place:mode==='custom'?targetPlace:'',start:targetStart,end:targetEnd})||{});
+    const options=rows.map(item=>`<option value="${esc(item.id)}"${item.id===model?.selectedPlanId?' selected':''}>${esc(item.title)}</option>`).join('');const title=mode==='today'?'今日の詳しい天気':'時間ごとの天気';
+    const modeButtons=mode==='today'?`<div class="ob36-weather-mode"><button type="button" class="active" data-ob36-weather-mode="today">今日を見る</button><button type="button" data-ob36-weather-mode="plan">予定から見る</button></div>`:`<div class="ob36-weather-mode"><button type="button" class="${mode==='plan'?'active':''}" data-ob36-weather-mode="plan">予定から見る</button><button type="button" class="${mode==='custom'?'active':''}" data-ob36-weather-mode="custom">場所・日付で見る</button></div>`;
+    const search=mode==='plan'?`<div class="ob36-weather-search"><label class="wide"><span>予定</span><select data-ob36-detail-plan>${options}</select></label></div>`:mode==='custom'?`<div class="ob36-weather-search"><label class="wide"><span>場所</span><input type="text" data-ob36-custom-place value="${esc(customPlace)}" placeholder="キャンプ場・市区町村"></label><label><span>開始日</span><input type="date" data-ob36-custom-start value="${esc(customStart)}"></label><label><span>終了日</span><input type="date" data-ob36-custom-end value="${esc(customEnd)}"></label><button type="button" data-ob36-custom-weather>この条件で見る</button></div>`:`<div class="ob36-weather-search"><label class="wide"><span>対象</span><input type="text" value="${esc(model?.weather?.locationLabel||'現在地')}・今日の残り時間" disabled></label></div>`;
+    const markup=`<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet ob36-weather-detail-sheet" role="dialog" aria-modal="true" aria-label="${title}"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER DETAIL</small><h2>${title}</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header>${modeButtons}${search}${weatherDetailMarkup(detail)}<button class="ob36-sheet-done ob36-sheet-settings" type="button" data-ob36-open-weather-settings>参考サイト設定</button></section></div>`;
     const host=openHomeModal('home-v36-weather-detail',markup);if(!host)return;
-    host.querySelectorAll('[data-ob36-weather-mode]').forEach(button=>button.addEventListener('click',()=>openWeatherDetail({mode:button.dataset.ob36WeatherMode}))); 
+    host.querySelectorAll('[data-ob36-weather-mode]').forEach(button=>button.addEventListener('click',()=>openWeatherDetail({mode:button.dataset.ob36WeatherMode})));
     host.querySelector('[data-ob36-detail-plan]')?.addEventListener('change',async event=>{safeSet(homeModel().WEATHER_PLAN_KEY,event.target.value||'');await performWeatherRefresh('plan-change',{silent:true});openWeatherDetail({mode:'plan',skipFetch:true});});
     host.querySelector('[data-ob36-custom-weather]')?.addEventListener('click',async()=>{const nextPlace=host.querySelector('[data-ob36-custom-place]')?.value||'';const nextStart=host.querySelector('[data-ob36-custom-start]')?.value||'';const nextEnd=host.querySelector('[data-ob36-custom-end]')?.value||'';await performWeatherRefresh('custom-search',{silent:false,custom:{place:nextPlace,start:nextStart,end:nextEnd}});openWeatherDetail({mode:'custom',place:nextPlace,start:nextStart,end:nextEnd,skipFetch:true});});
-    host.querySelector('[data-ob36-detail-refresh]')?.addEventListener('click',async()=>{await performWeatherRefresh('manual',{silent:false,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:selected});openWeatherDetail({mode,place:targetPlace,start:targetStart,end:targetEnd,skipFetch:true});});
+    host.querySelector('[data-ob36-detail-refresh]')?.addEventListener('click',async()=>{await performWeatherRefresh('manual',{silent:false,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:mode==='plan'?selected:null,plansOverride:mode==='plan'?rows:[],scopeOverride:mode==='today'?todayScope:null});openWeatherDetail({mode,place:targetPlace,start:targetStart,end:targetEnd,skipFetch:true});});
     host.querySelector('[data-ob36-open-weather-settings]')?.addEventListener('click',openWeatherSettings);
-    bindHourlyRows(host);
-    bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});
+    bindHourlyRows(host);bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});
   }
 
-  async function weatherContext(){const model=await homeModel()?.build?.();return {model,selected:model?.selectedPlan||model?.next?.[0]||null};}
+  async function weatherContext(){const model=await homeModel()?.build?.();return {model,selected:model?.selectedPlan||model?.next?.[0]||null,plans:model?.next||[]};}
   function clearWeatherTimer(){if(weatherTimer){clearTimeout(weatherTimer);weatherTimer=null;}}
   async function scheduleWeatherRefresh(){clearWeatherTimer();if(!mounted)return;const {selected}=await weatherContext();const meta=homeModel()?.weatherUpdateMeta?.(selected,new Date());if(!meta)return;const delay=Math.max(15000,Math.min(2147480000,Number(meta.nextUpdateAt)-Date.now()));weatherTimer=setTimeout(()=>performWeatherRefresh('timer',{silent:true}),delay);}
-  async function performWeatherRefresh(reason='manual',{silent=false,custom=null,planOverride=null,scopeOverride=null}={}){
+  async function performWeatherRefresh(reason='manual',{silent=false,custom=null,planOverride=null,plansOverride=null,scopeOverride=null}={}){
     if(weatherRefreshing)return false;weatherRefreshing=true;document.body.classList.add('ob36-weather-refreshing');
     let connected=false,failed=false;
     try{
-      const {selected}=await weatherContext();const service=globalThis.OUTBASE_WEATHER_SERVICE_V1;const activePlan=planOverride||selected;const scope=scopeOverride||homeModel()?.weatherPreview?.(new Date(),activePlan)?.scope||'home';
+      const {selected,plans}=await weatherContext();const service=globalThis.OUTBASE_WEATHER_SERVICE_V1;const activePlan=planOverride||selected;const scope=scopeOverride||homeModel()?.weatherPreview?.(new Date(),activePlan)?.scope||'home';
       if(!service?.refresh)throw new Error('weather_service_unavailable');
-      await service.refresh({reason,plan:activePlan,scope,custom});connected=true;
+      await service.refresh({reason,plan:activePlan,plans:plansOverride||plans,scope,custom});connected=true;
       homeModel()?.markWeatherUpdated?.(new Date(),activePlan);modelApi?.invalidate?.('home');await render('data-change');
     }catch(error){failed=true;console.warn('[OUTBASE weather refresh]',error);modelApi?.invalidate?.('home');await render('data-change');}
     finally{weatherRefreshing=false;document.body.classList.remove('ob36-weather-refreshing');scheduleWeatherRefresh();}
@@ -217,7 +218,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r14',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r15',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -250,7 +251,8 @@
       const appSettings=event.target.closest?.('[data-ob36-app-settings]');if(appSettings){event.preventDefault();homeBridge.openAppSettings();return;}
       const settings=event.target.closest?.('[data-ob36-settings]');if(settings){event.preventDefault();homeBridge.openQuickSettings();return;}
       const weatherRefresh=event.target.closest?.('[data-ob36-weather-refresh]');if(weatherRefresh){event.preventDefault();homeBridge.performWeatherRefresh('manual',{silent:false});return;}
-      const weatherDetail=event.target.closest?.('[data-ob36-weather-detail]');if(weatherDetail){event.preventDefault();homeBridge.openWeatherDetail();return;}
+      const todayWeatherDetail=event.target.closest?.('[data-ob36-today-weather-detail]');if(todayWeatherDetail){event.preventDefault();homeBridge.openWeatherDetail({mode:'today'});return;}
+      const weatherDetail=event.target.closest?.('[data-ob36-weather-detail]');if(weatherDetail){event.preventDefault();homeBridge.openWeatherDetail({mode:'plan'});return;}
       const samplePlan=event.target.closest?.('[data-ob36-sample-plan]');if(samplePlan){event.preventDefault();homeBridge.toast('表示サンプルです。実際の予定はカレンダーから開けます');return;}
       const notify=event.target.closest?.('[data-ob36-notify]');if(notify){event.preventDefault();homeBridge.toast('通知機能は接続準備中です');return;}
       const quick=event.target.closest?.('[data-ob36-quick]');if(quick){event.preventDefault();homeBridge.runQuick(quick.dataset.ob36Quick,quick);return;}
@@ -276,7 +278,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r14',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r15',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();

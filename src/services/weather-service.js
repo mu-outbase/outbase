@@ -173,11 +173,32 @@
     if(rainy&&rainy.rainProbability>=30)alerts.push({time:`${jpDate(rainy.at)} ${timeLabel(rainy.at)}`,text:`雨に備えて雨具を準備（降水${rainy.rainProbability}%）`});
     if(windy&&windy.windGust>=6)alerts.push({time:`${jpDate(windy.at)} ${timeLabel(windy.at)}`,text:`風の強まりを確認（瞬間${windy.windGust}m/s）`});
     if(hottest&&hottest.temperature>=28)alerts.push({time:`${jpDate(hottest.at)} ${timeLabel(hottest.at)}`,text:`コタの暑さ対策と水分を準備（${hottest.temperature}°）`});
-    if(alerts.length<3){const endLabel=`${jpDate(end)} ${timeLabel(end)}`;alerts.push({time:endLabel,text:rainPeak<30?'予定時間は大きな天気崩れが少ない見込み':'終了前に雨雲を再確認'});}
     const condition=representativeCondition(hours,days[0]?.condition||'天気変化あり');
     const confidence=summaryConfidence(hours.length?hours:days);
     const message=rainPeak>=50?'予定時間内は雨対策を優先。':windGustMax>=8?'予定時間内の強風に注意。':Number.isFinite(high)&&high>=28?'暑さを避けて休憩と水分を。':'予定時間内は大きな崩れが少なめ。';
     return Object.freeze({status:'ready',sample:false,place:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,condition,high:Number.isFinite(high)?high:null,low:Number.isFinite(low)?low:null,rainPeak,windMax,windGustMax,confidence,confidenceLabel:confidence,message,alerts:Object.freeze(alerts.slice(0,3)),provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
+  }
+  function todayDetailView(forecast,now=new Date()){
+    if(!forecast)return null;
+    const current=new Date(now);const end=new Date(current);end.setHours(23,59,59,999);
+    const hourly=(forecast.hourly||[]).filter(row=>{const at=new Date(row.at).getTime();return at>=current.getTime()-30*60*1000&&at<=end.getTime();});
+    if(!hourly.length)return Object.freeze({status:'out-of-range',kind:'today',sample:false,place:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,condition:'今日の予報なし',message:'今日の残り時間の予報は終了しました。',hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
+    const values=key=>hourly.map(row=>Number(row[key])).filter(Number.isFinite);
+    const temperatures=values('temperature');const high=temperatures.length?Math.max(...temperatures):null;const low=temperatures.length?Math.min(...temperatures):null;
+    const rainiest=hourly.reduce((best,row)=>(row.rainProbability||0)>(best?.rainProbability??-1)?row:best,null);
+    const windiest=hourly.reduce((best,row)=>(row.windGust||0)>(best?.windGust??-1)?row:best,null);
+    const hottest=hourly.reduce((best,row)=>(row.feelsLike??row.temperature??-99)>(best?.feelsLike??best?.temperature??-99)?row:best,null);
+    const walkable=hourly.filter(row=>(row.rainProbability||0)<30&&(row.windAverage||0)<4&&(row.feelsLike??row.temperature??99)<29).sort((a,b)=>((a.rainProbability||0)+(a.windAverage||0)*8+Math.abs((a.feelsLike??a.temperature??24)-23)*3)-((b.rainProbability||0)+(b.windAverage||0)*8+Math.abs((b.feelsLike??b.temperature??24)-23)*3))[0]||null;
+    const rainPeak=rainiest?.rainProbability??0;const windGust=windiest?.windGust??0;const windAverageMax=Math.max(0,...values('windAverage'));
+    const condition=representativeCondition(hourly,forecast.current?.condition||'天気変化あり');const confidence=summaryConfidence(hourly);
+    const comparisons=[{source:forecast.provider,summary:condition,rainProbability:rainPeak,windGust,status:'live'}];
+    return Object.freeze({status:'ready',kind:'today',sample:false,place:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,activityType:'today',condition,high,low,rainPeak,windAverageMax,windGust,confidence,hourly:Object.freeze(hourly),judgements:Object.freeze([
+      {label:'雨',value:rainPeak>=70?'雨の可能性高め':rainPeak>=40?'雨具を準備':'大きな心配小',detail:rainiest?`${timeLabel(rainiest.at)}頃 ${rainPeak}%`:'降水データなし'},
+      {label:'風',value:windGust>=8?'強風注意':windGust>=6?'やや注意':'概ね安心',detail:windiest?`${timeLabel(windiest.at)}頃 平均${windiest.windAverage}m/s・瞬間${windiest.windGust}m/s`:'風データなし'},
+      {label:'暑さ',value:hottest&&(hottest.feelsLike??hottest.temperature)>=30?'暑さ注意':'概ね安心',detail:hottest?`${timeLabel(hottest.at)}頃 気温${hottest.temperature}°・体感${hottest.feelsLike}°`:'気温データなし'},
+      {label:'散歩',value:walkable?`${timeLabel(walkable.at)}頃`:'短時間・様子見',detail:walkable?'雨・風・体感が比較的穏やか':'雨・風・暑さを確認して判断'},
+      {label:'コタ',value:hottest&&(hottest.feelsLike??hottest.temperature)>=28?'暑さ対策':'概ね安心',detail:hottest&&(hottest.feelsLike??hottest.temperature)>=28?'日陰・水分・路面温度を確認':'無理のない時間で散歩'}
+    ]),comparisons:Object.freeze(comparisons),primarySource:forecast.provider,compareSources:Object.freeze([]),provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
   }
   function detailView(forecast,plan,{place='',start='',end=''}={}){
     if(!forecast)return null;
@@ -198,12 +219,14 @@
       {label:'ペット',value:hottest&&hottest.temperature>=28?'暑さ注意':'概ね安心',detail:hottest?`予定時間内の最高気温 ${hottest.temperature}°・日陰と水分を確認`:'気温データ未取得'}
     ]),comparisons:Object.freeze(comparisons),primarySource:forecast.provider,compareSources:Object.freeze([]),provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
   }
-  async function refresh({plan=null,scope='home',custom=null}={}){
+  async function refresh({plan=null,plans=[],scope='home',custom=null}={}){
     if(!navigator.onLine)throw new Error('weather_offline');const targets=[];const resolutionErrors=[];
     if(custom?.place){const geo=await geocode(custom.place);targets.push({key:`custom:${hash(custom.place)}`,label:custom.place,...geo,source:'custom'});}
     else{
       targets.push(await resolveTarget({kind:scope==='current'?'current':'home'}));
-      if(plan?.place||coordinateFromPlan(plan)){try{targets.push(await resolveTarget({kind:'plan',plan}));}catch(error){resolutionErrors.push(error);}}
+      const planRows=[plan,...(Array.isArray(plans)?plans:[])].filter(Boolean).filter((item,index,array)=>array.findIndex(row=>(row.id||row.place)===(item.id||item.place))===index).slice(0,5);
+      const resolved=await Promise.allSettled(planRows.map(item=>(item?.place||coordinateFromPlan(item))?resolveTarget({kind:'plan',plan:item}):Promise.reject(new Error('weather_place_missing'))));
+      for(const result of resolved){if(result.status==='fulfilled')targets.push(result.value);else resolutionErrors.push(result.reason);}
     }
     const unique=[...new Map(targets.map(item=>[item.key,item])).values()];const settled=await Promise.allSettled(unique.map(fetchTarget));const results=settled.filter(item=>item.status==='fulfilled').map(item=>item.value);const errors=[...resolutionErrors,...settled.filter(item=>item.status==='rejected').map(item=>item.reason)];
     if(!results.length)throw errors[0]||new Error('weather_refresh_failed');
@@ -211,10 +234,12 @@
   }
   function targetKeyForPlan(plan){return `plan:${plan?.id||hash(plan?.place||'')}`;}
   function targetKeyForCustom(place){return `custom:${hash(place)}`;}
-  function getToday({scope='home',now=new Date()}={}){const key=scope==='current'?(readTarget('current')?'current':'current-fallback'):'home';return todayView(readTarget(key),now);}
+  function weatherTargetForScope(scope='home'){const key=scope==='current'?(readTarget('current')?'current':'current-fallback'):'home';return readTarget(key);}
+  function getToday({scope='home',now=new Date()}={}){return todayView(weatherTargetForScope(scope),now);}
+  function getTodayDetail({scope='home',now=new Date()}={}){return todayDetailView(weatherTargetForScope(scope),now);}
   function getPlan(plan){return planView(readTarget(targetKeyForPlan(plan)),plan);}
   function getDetail(plan,options={}){const forecast=options.place?readTarget(targetKeyForCustom(options.place)):readTarget(targetKeyForPlan(plan));return detailView(forecast,plan,options);}
   function cacheInfo(){const state=cacheState();return Object.freeze({count:Object.keys(state.targets).length,targets:Object.freeze(Object.keys(state.targets))});}
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,attribution:ATTRIBUTION,HOME_LOCATION,PLACE_COORDINATES,CACHE_KEY});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getTodayDetail,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,attribution:ATTRIBUTION,HOME_LOCATION,PLACE_COORDINATES,CACHE_KEY});
 })();
