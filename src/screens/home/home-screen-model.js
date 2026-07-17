@@ -80,7 +80,7 @@
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:todaySummary(value),
       weather:weatherPlaceholder(now),weatherIntel:weatherIntel(selected),
-      version:'v166.3-home-v36-r2'
+      version:'v166.3-home-v36-r3'
     });
   }
 

@@ -1,4 +1,4 @@
-/* OUTBASE HOME v36 — approved white hi-fi visual integrated into v166.3 shell. */
+/* OUTBASE HOME v36 r3 — real-data adaptive layout for v166.3 shell. */
 :root{
   --ob36-bg:#fbfaf7;--ob36-card:#fff;--ob36-ink:#171b19;--ob36-muted:#676d69;--ob36-line:#e7e3db;
   --ob36-green:#174d31;--ob36-lime:#52751c;--ob36-amber:#d58e12;--ob36-blue:#66a9c7;--ob36-taupe:#8e8279;
@@ -132,4 +132,64 @@ body.outbaseNorth .ob3-nav.ob36-nav svg{position:relative;z-index:1;width:22px!i
   body.outbaseNorth .ob3-shell[data-ob6-route="home"]>.ob3-main{padding-left:15px;padding-right:15px}
   .ob36-today-summary h1{font-size:14.5px}.ob36-scope button{padding:4px 6px}.ob36-weather-lower{grid-template-columns:57px minmax(0,1fr);gap:8px}.ob36-weather-symbol{width:56px;height:53px}.ob36-weather-symbol svg{width:54px;height:51px}.ob36-plan{flex-basis:139px}
   body.outbaseNorth .ob3-nav.ob36-nav{width:min(calc(100% - 30px),400px)!important}
+}
+
+
+/* ===== r3: real-data adaptive HOME ===== */
+.ob36-plans.is-single{padding-bottom:12px}
+.ob36-plans.is-single .ob36-plan-strip{
+  display:grid;grid-template-columns:minmax(0,1fr) 102px;gap:9px;overflow:visible;padding-bottom:2px
+}
+.ob36-plan.single{
+  min-width:0;min-height:126px;padding:10px;display:grid;grid-template-columns:64px minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) auto;column-gap:10px;row-gap:7px;align-items:center
+}
+.ob36-plan.single .ob36-plan-photo{
+  grid-column:1;grid-row:1;width:64px;height:72px;margin:0;border-radius:14px
+}
+.ob36-plan.single.no-media .ob36-plan-photo{
+  height:64px;background-image:linear-gradient(145deg,#edf3e9,#dce9dd)
+}
+.ob36-plan.single .ob36-plan-photo .ob7-visual-fallback svg{width:25px;height:25px}
+.ob36-plan-single-copy{grid-column:2;grid-row:1;min-width:0;align-self:center}
+.ob36-plan.single .ob36-plan-tag{margin:0 0 5px;padding:3px 8px;font-size:9px}
+.ob36-plan.single h3{margin:0 0 3px;font-size:14px}
+.ob36-plan.single p{margin:0 0 2px;font-size:10.5px}
+.ob36-plan-single-copy>small{display:block;color:var(--ob36-muted);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-plan-single-foot{
+  grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding-top:7px;border-top:1px solid var(--ob36-line);font-size:9px
+}
+.ob36-plan-single-foot em{color:var(--ob36-muted);font-style:normal}
+.ob36-plan-single-foot b{color:var(--ob36-green);font-size:9.5px;white-space:nowrap}
+.ob36-plan-add{
+  min-height:126px;padding:10px 6px;border-style:dashed!important;background:rgba(251,250,247,.72)!important;
+  display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:var(--ob36-green)
+}
+.ob36-plan-add>span{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#edf3e8}
+.ob36-plan-add svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8}
+.ob36-plan-add b{font-size:10.5px}.ob36-plan-add small{font-size:8px;color:var(--ob36-muted);line-height:1.35;text-align:center}
+
+.ob36-intel.is-unavailable{padding-bottom:13px}
+.ob36-intel-unavailable{
+  margin-top:10px;padding:10px 11px;border:1px solid #e5e9df;border-radius:15px;
+  background:linear-gradient(135deg,#fbfcf8 0%,#f5f8f1 100%);display:grid;grid-template-columns:54px minmax(0,1fr);gap:10px;align-items:center
+}
+.ob36-intel-unavailable>span{width:50px;height:48px;display:grid;place-items:center;border-radius:15px;background:rgba(255,255,255,.68)}
+.ob36-intel-unavailable>span svg{width:49px;height:46px;filter:drop-shadow(0 0 2px rgba(218,153,20,.15))}
+.ob36-intel-unavailable>div{min-width:0}
+.ob36-intel-unavailable small{display:block;color:#6b716d;font-size:8.5px;margin-bottom:1px}
+.ob36-intel-unavailable h3{margin:0;font-size:13.5px;line-height:1.35}
+.ob36-intel-unavailable p{margin:4px 0 0;color:var(--ob36-muted);font-size:9.5px;line-height:1.4}
+
+body.outbaseNorth .ob3-shell[data-ob6-route="home"]>.ob3-main{
+  padding-bottom:calc(96px + env(safe-area-inset-bottom))
+}
+body.outbaseNorth .ob3-nav.ob36-nav{height:68px!important;min-height:68px!important}
+
+@media(max-width:380px){
+  .ob36-plans.is-single .ob36-plan-strip{grid-template-columns:minmax(0,1fr) 92px}
+  .ob36-plan.single{grid-template-columns:58px minmax(0,1fr);column-gap:8px}
+  .ob36-plan.single .ob36-plan-photo{width:58px;height:64px}
+  .ob36-plan-add{padding-inline:4px}
 }
