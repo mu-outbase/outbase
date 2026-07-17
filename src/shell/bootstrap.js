@@ -84,7 +84,7 @@
 
 
   function appSettingsMarkup(){
-    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet" role="dialog" aria-modal="true" aria-label="設定"><div class="ob36-sheet-grab"></div><header><div><small>OUTBASE SETTINGS</small><h2>設定</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-settings-menu"><button type="button" data-ob36-open-weather-settings><span><b>天気設定</b><small>参照サイト・比較先・場所の優先順</small></span><em>›</em></button><button type="button" data-ob36-open-quick-settings><span><b>クイックアクション</b><small>HOMEの5枠と並び順</small></span><em>›</em></button></div></section></div>`;
+    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet" role="dialog" aria-modal="true" aria-label="設定"><div class="ob36-sheet-grab"></div><header><div><small>OUTBASE SETTINGS</small><h2>設定</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-settings-menu"><button type="button" data-ob36-open-weather-settings><span><b>天気設定</b><small>外部予報サイト・場所の優先順</small></span><em>›</em></button><button type="button" data-ob36-open-quick-settings><span><b>クイックアクション</b><small>HOMEの5枠と並び順</small></span><em>›</em></button></div></section></div>`;
   }
   function openAppSettings(){
     const host=openHomeModal('home-v36-settings',appSettingsMarkup());if(!host)return;
@@ -92,17 +92,17 @@
     host.querySelector('[data-ob36-open-quick-settings]')?.addEventListener('click',openQuickSettings);
   }
   function weatherSettingsMarkup(){
-    const api=homeModel();const value=api?.weatherSettings?.()||{primary:'jma',compare:['weathernews','tenki'],locationMode:'plan',sources:[]};
+    const api=homeModel();const value=api?.weatherSettings?.()||{primary:'weathernews',compare:['tenki','yahoo','sototenki'],locationMode:'plan',sources:[]};
     const options=(value.sources||api?.WEATHER_SOURCES||[]).map(item=>`<option value="${esc(item.id)}"${item.id===value.primary?' selected':''}>${esc(item.label)}</option>`).join('');
     const compare=(value.sources||api?.WEATHER_SOURCES||[]).map(item=>`<label><input type="checkbox" data-ob36-weather-compare value="${esc(item.id)}"${value.compare.includes(item.id)?' checked':''}${item.id===value.primary?' disabled':''}><span>${esc(item.label)}</span></label>`).join('');
-    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet" role="dialog" aria-modal="true" aria-label="天気設定"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER SOURCES</small><h2>天気設定</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-weather-source-note"><b>自動取得</b><span>Open-Meteo Best Match（日本ではJMA等の高解像度モデルを自動選択）</span></div><div class="ob36-weather-settings"><fieldset><legend>優先して確認する予報サイト</legend><select data-ob36-weather-primary>${options}</select></fieldset><fieldset><legend>追加で確認する予報サイト</legend>${compare}</fieldset><fieldset><legend>最初に使う場所</legend><label><input type="radio" name="ob36WeatherLocation" value="plan"${value.locationMode==='plan'?' checked':''}>予定の場所</label><label><input type="radio" name="ob36WeatherLocation" value="home"${value.locationMode==='home'?' checked':''}>自宅</label><label><input type="radio" name="ob36WeatherLocation" value="current"${value.locationMode==='current'?' checked':''}>現在地</label></fieldset></div><button class="ob36-sheet-done" type="button" data-ob36-weather-settings-save>保存</button></section></div>`;
+    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet" role="dialog" aria-modal="true" aria-label="天気設定"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER SOURCES</small><h2>天気設定</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-weather-source-note"><b>自動取得</b><span>Open-Meteo Best Match（日本ではJMA等の高解像度モデルを自動選択）</span></div><div class="ob36-weather-settings"><fieldset><legend>最初に表示する外部予報サイト</legend><select data-ob36-weather-primary>${options}</select></fieldset><fieldset><legend>時間別画面に表示する外部予報サイト</legend>${compare}</fieldset><fieldset><legend>最初に使う場所</legend><label><input type="radio" name="ob36WeatherLocation" value="plan"${value.locationMode==='plan'?' checked':''}>予定の場所</label><label><input type="radio" name="ob36WeatherLocation" value="home"${value.locationMode==='home'?' checked':''}>自宅</label><label><input type="radio" name="ob36WeatherLocation" value="current"${value.locationMode==='current'?' checked':''}>現在地</label></fieldset></div><button class="ob36-sheet-done" type="button" data-ob36-weather-settings-save>保存</button></section></div>`;
   }
   function openWeatherSettings(){
     const host=openHomeModal('home-v36-weather-settings',weatherSettingsMarkup());if(!host)return;
     const primary=host.querySelector('[data-ob36-weather-primary]');
     primary?.addEventListener('change',()=>host.querySelectorAll('[data-ob36-weather-compare]').forEach(box=>{box.disabled=box.value===primary.value;if(box.disabled)box.checked=false;}));
     host.querySelector('[data-ob36-weather-settings-save]')?.addEventListener('click',()=>{
-      const api=homeModel();const selectedPrimary=primary?.value||'jma';const compare=[...host.querySelectorAll('[data-ob36-weather-compare]:checked')].map(box=>box.value).filter(id=>id!==selectedPrimary);const mode=host.querySelector('input[name="ob36WeatherLocation"]:checked')?.value||'plan';
+      const api=homeModel();const selectedPrimary=primary?.value||'weathernews';const compare=[...host.querySelectorAll('[data-ob36-weather-compare]:checked')].map(box=>box.value).filter(id=>id!==selectedPrimary);const mode=host.querySelector('input[name="ob36WeatherLocation"]:checked')?.value||'plan';
       safeSet(api.WEATHER_SOURCE_PRIMARY_KEY,selectedPrimary);safeSet(api.WEATHER_SOURCE_COMPARE_KEY,JSON.stringify(compare));safeSet(api.WEATHER_LOCATION_MODE_KEY,mode);closeHomeModal();refreshHome();toast('天気設定を保存しました');
     });
   }
@@ -115,6 +115,41 @@
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h13a4.5 4.5 0 0 0 .2-9 6 6 0 0 0-11.3-1.5A5.2 5.2 0 0 0 5 17Z"/></svg>';
   }
   function weatherTone(kind,value){const n=Number(value);if(kind==='temperature'){if(n>=35)return 'danger';if(n>=28)return 'warm';if(n<10)return 'cool';return 'good';}if(kind==='rain'){if(n>=70)return 'danger';if(n>=40)return 'watch';if(n>=20)return 'info';return 'good';}if(kind==='wind'){if(n>=8)return 'danger';if(n>=4)return 'watch';return 'good';}if(kind==='confidence'){const text=String(value||'');if(/^A/.test(text))return 'good';if(/^B/.test(text))return 'watch';return 'danger';}return 'info';}
+  function externalLinksService(){return globalThis.OUTBASE_WEATHER_EXTERNAL_LINKS_V1||null;}
+  function externalWeatherIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.2 2.2 3.3 4.9 3.3 8S14.2 17.8 12 20M12 4c-2.2 2.2-3.3 4.9-3.3 8s1.1 5.8 3.3 8"/></svg>';}
+  function externalWeatherMarkup(detail){
+    const service=externalLinksService();if(!service)return '';
+    const providerIds=Array.isArray(detail?.externalProviderIds)&&detail.externalProviderIds.length?detail.externalProviderIds:['weathernews','tenki','yahoo','sototenki'];
+    const rows=service.getLinks({place:detail?.place||'',latitude:detail?.latitude,longitude:detail?.longitude,type:detail?.activityType||'',providerIds});
+    const cards=rows.map(row=>{
+      const mainAction=row.ready?`data-ob36-external-open="${esc(row.directUrl)}"`:row.id==='weathernews'?`data-ob36-external-search="${esc(row.searchUrl)}"`:`data-ob36-external-config="${esc(row.id)}"`;
+      const edit=row.ready&&row.id!=='weathernews'?`<button type="button" class="ob36-external-edit" data-ob36-external-config="${esc(row.id)}" aria-label="${esc(row.label)}のリンクを変更">変更</button>`:'';
+      return `<article class="ob36-external-card ${row.ready?'is-ready':'needs-setup'}"><button type="button" class="ob36-external-main" ${mainAction}><span class="ob36-external-symbol">${externalWeatherIcon()}</span><span><b>${esc(row.label)}</b><small>${esc(row.ready?'この場所の詳細天気を開く':'初回だけリンクを設定')}</small></span><em>${esc(row.statusLabel)}</em></button>${edit}</article>`;
+    }).join('');
+    return `<section class="ob36-external-weather"><div class="ob36-detail-section-head"><h3>他の予報でも確認</h3><span>${esc(detail?.place||'対象地点')}</span></div><div class="ob36-external-grid">${cards}</div><p>ウェザーニュースは位置から直接開きます。その他は未登録の場所だけ初回設定が必要です。</p></section>`;
+  }
+  function externalSetupMarkup({provider,detail}={}){
+    const service=externalLinksService();const search=service?.searchUrl?.(provider?.id,detail?.place||'',detail?.activityType||'')||'';
+    return `<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet ob36-external-setup-sheet" role="dialog" aria-modal="true" aria-label="外部予報リンク設定"><div class="ob36-sheet-grab"></div><header><div><small>EXTERNAL WEATHER</small><h2>${esc(provider?.label||'外部予報')}を設定</h2></div><button type="button" data-ob36-external-back aria-label="戻る">×</button></header><div class="ob36-external-target"><small>対象地点</small><b>${esc(detail?.place||'場所未設定')}</b></div><div class="ob36-external-steps"><div><i>1</i><span><b>サイトで対象地点を探す</b><small>1時間天気やピンポイント天気のページを開きます。</small></span></div><button type="button" data-ob36-external-site-search="${esc(search)}">${esc(provider?.label||'外部サイト')}で探す</button><div><i>2</i><span><b>見つけたページのURLを貼る</b><small>ブラウザのアドレスをコピーしてOUTBASEへ戻ります。</small></span></div><input type="url" data-ob36-external-url placeholder="https://…/1hour…" inputmode="url" autocomplete="off"></div><p class="ob36-external-validation" data-ob36-external-validation></p><button class="ob36-sheet-done" type="button" data-ob36-external-save>保存して直接開けるようにする</button></section></div>`;
+  }
+  function openExternalWeatherSetup({providerId,detail,mode='plan',place='',start='',end=''}={}){
+    const service=externalLinksService();const provider=(service?.PROVIDERS||[]).find(item=>item.id===providerId);if(!provider)return;
+    const host=openHomeModal('home-v36-external-weather',externalSetupMarkup({provider,detail}));if(!host)return;
+    const back=()=>openWeatherDetail({mode,place,start,end,skipFetch:true});
+    host.querySelector('[data-ob36-external-back]')?.addEventListener('click',back);
+    host.querySelector('[data-ob36-external-site-search]')?.addEventListener('click',event=>service.open?.(event.currentTarget.dataset.ob36ExternalSiteSearch));
+    host.querySelector('[data-ob36-external-save]')?.addEventListener('click',()=>{
+      const input=host.querySelector('[data-ob36-external-url]');const message=host.querySelector('[data-ob36-external-validation]');
+      try{service.saveLink({place:detail?.place||place,latitude:detail?.latitude,longitude:detail?.longitude,providerId,url:input?.value||''});toast(`${provider.label}を登録しました`);back();}
+      catch(error){if(message)message.textContent=error?.message==='invalid_weather_link_provider'?`${provider.label}のURLを貼り付けてください。`:'1時間天気またはピンポイント天気のURLを確認してください。';input?.focus();}
+    });
+  }
+  function bindExternalWeatherLinks(host,{detail,mode='plan',place='',start='',end=''}={}){
+    const service=externalLinksService();if(!service)return;
+    host.querySelectorAll('[data-ob36-external-open]').forEach(button=>button.addEventListener('click',()=>service.open?.(button.dataset.ob36ExternalOpen)));
+    host.querySelectorAll('[data-ob36-external-search]').forEach(button=>button.addEventListener('click',()=>service.open?.(button.dataset.ob36ExternalSearch)));
+    host.querySelectorAll('[data-ob36-external-config]').forEach(button=>button.addEventListener('click',()=>openExternalWeatherSetup({providerId:button.dataset.ob36ExternalConfig,detail,mode,place,start,end})));
+  }
   function hourlyRowMarkup(row,index){
     return `<article class="ob36-hourly-row" data-ob36-hourly-row><button type="button" class="ob36-hourly-summary" data-ob36-hourly-toggle aria-expanded="false"><time><b>${esc(detailTime(row.at))}</b><small>${esc(detailDate(row.at))}</small></time><span class="ob36-hourly-condition">${detailWeatherIcon(row.condition)}<b>${esc(row.condition)}</b></span><span class="ob36-hourly-temp tone-${weatherTone('temperature',row.temperature)}"><b>${esc(row.temperature)}°</b><small>体感${esc(row.feelsLike)}°</small></span><span class="ob36-hourly-rain tone-${weatherTone('rain',row.rainProbability)}"><b>${esc(row.rainProbability)}%</b><small>降水</small></span><span class="ob36-hourly-wind tone-${weatherTone('wind',row.windAverage)}"><b>${esc(row.windAverage)}m/s</b><small>${esc(row.windDirection)}</small></span><em class="tone-${weatherTone('confidence',row.confidence)}">${esc(row.confidence)}</em><i aria-hidden="true">⌄</i></button><div class="ob36-hourly-extra" hidden><span><b>${esc(row.rainfall)}mm</b><small>降水量</small></span><span><b>${esc(row.windDirection)}</b><small>風向</small></span><span><b>${esc(row.windAverage)}m/s</b><small>平均風速</small></span><span><b>${esc(row.windGust)}m/s</b><small>最大瞬間</small></span><p>予報サイト間の差を含めた信頼度：<strong>${esc(row.confidence)}</strong></p></div></article>`;
   }
@@ -123,7 +158,7 @@
     const hourly=(detail.hourly||[]).map(hourlyRowMarkup).join('');
     const judgements=(detail.judgements||[]).map(row=>`<div><b>${esc(row.label)}</b><span><strong>${esc(row.value)}</strong><small>${esc(row.detail)}</small></span></div>`).join('');
     const comparisons=(detail.comparisons||[]).map(row=>`<div><b>${esc(row.source)}</b><span>${esc(row.summary||'取得済み')}</span><em>${row.status==='reference'?'確認先':`${esc(row.rainProbability)}%・瞬間${esc(row.windGust)}m/s`}</em></div>`).join('');
-    return `<section class="ob36-detail-summary"><div><small>${esc(detail.place)}　${esc(detail.provider||detail.primarySource||'自動取得')}</small><h3>${esc(detail.condition)}</h3><strong class="tone-${weatherTone('temperature',detail.high)}">${detail.high==null?'—':esc(detail.high)}°／${detail.low==null?'—':esc(detail.low)}°</strong></div><div><span><b class="tone-${weatherTone('rain',detail.rainPeak)}">${detail.rainPeak==null?'—':esc(detail.rainPeak)}%</b><small>降水ピーク</small></span><span><b class="tone-${weatherTone('wind',detail.windGust)}">${detail.windGust==null?'—':esc(detail.windGust)}m/s</b><small>最大瞬間風速</small></span><span><b class="tone-${weatherTone('confidence',detail.confidence)}">${esc(detail.confidence||'—')}</b><small>総合信頼度</small></span></div><div class="ob36-detail-update"><span>最終更新 ${esc(detail.updatedLabel)}</span><span>次回 ${esc(detail.nextUpdateLabel)}頃</span><button type="button" data-ob36-detail-refresh aria-label="天気を更新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M18.5 15.5A7 7 0 1 1 19 8l1 4"/></svg></button></div></section><section class="ob36-hourly-section"><div class="ob36-detail-section-head"><h3>時間ごとの予報</h3><span>行を押すと詳細</span></div><div class="ob36-hourly-column-head"><span>時刻</span><span>天気</span><span>気温</span><span>降水</span><span>風</span><span>信頼度</span></div><div class="ob36-hourly-list">${hourly||'<p class="ob36-intel-empty">この期間の時間別予報はまだありません。</p>'}</div></section><section class="ob36-detail-judgement"><div class="ob36-detail-section-head"><h3>外時間の判断</h3></div>${judgements||'<p class="ob36-intel-empty">予報取得後に判定します。</p>'}</section><section class="ob36-source-compare"><div class="ob36-detail-section-head"><h3>取得データ</h3><span>自動更新</span></div>${comparisons||'<p class="ob36-intel-empty">取得元を確認中です。</p>'}${detail.attribution?`<p>${esc(detail.attribution)}</p>`:''}</section><div class="ob36-detail-meta"><span>自動取得：${esc(detail.primarySource||detail.provider||'Open-Meteo')}</span><span>参考先：${esc((detail.compareSources||[]).join('・')||'設定から選択')}</span></div>`;
+    return `<section class="ob36-detail-summary"><div><small>${esc(detail.place)}　${esc(detail.provider||detail.primarySource||'自動取得')}</small><h3>${esc(detail.condition)}</h3><strong class="tone-${weatherTone('temperature',detail.high)}">${detail.high==null?'—':esc(detail.high)}°／${detail.low==null?'—':esc(detail.low)}°</strong></div><div><span><b class="tone-${weatherTone('rain',detail.rainPeak)}">${detail.rainPeak==null?'—':esc(detail.rainPeak)}%</b><small>降水ピーク</small></span><span><b class="tone-${weatherTone('wind',detail.windGust)}">${detail.windGust==null?'—':esc(detail.windGust)}m/s</b><small>最大瞬間風速</small></span><span><b class="tone-${weatherTone('confidence',detail.confidence)}">${esc(detail.confidence||'—')}</b><small>総合信頼度</small></span></div><div class="ob36-detail-update"><span>最終更新 ${esc(detail.updatedLabel)}</span><span>次回 ${esc(detail.nextUpdateLabel)}頃</span><button type="button" data-ob36-detail-refresh aria-label="天気を更新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M18.5 15.5A7 7 0 1 1 19 8l1 4"/></svg></button></div></section><section class="ob36-hourly-section"><div class="ob36-detail-section-head"><h3>時間ごとの予報</h3><span>行を押すと詳細</span></div><div class="ob36-hourly-column-head"><span>時刻</span><span>天気</span><span>気温</span><span>降水</span><span>風</span><span>信頼度</span></div><div class="ob36-hourly-list">${hourly||'<p class="ob36-intel-empty">この期間の時間別予報はまだありません。</p>'}</div></section><section class="ob36-detail-judgement"><div class="ob36-detail-section-head"><h3>外時間の判断</h3></div>${judgements||'<p class="ob36-intel-empty">予報取得後に判定します。</p>'}</section><section class="ob36-source-compare"><div class="ob36-detail-section-head"><h3>取得データ</h3><span>自動更新</span></div>${comparisons||'<p class="ob36-intel-empty">取得元を確認中です。</p>'}${detail.attribution?`<p>${esc(detail.attribution)}</p>`:''}</section>${externalWeatherMarkup(detail)}<div class="ob36-detail-meta"><span>自動取得：${esc(detail.primarySource||detail.provider||'Open-Meteo')}</span><span>参考先：${esc((detail.compareSources||[]).join('・')||'設定から選択')}</span></div>`;
   }
   function bindHourlyRows(host){host.querySelectorAll('[data-ob36-hourly-toggle]').forEach(button=>button.addEventListener('click',()=>{const row=button.closest('[data-ob36-hourly-row]');const extra=row?.querySelector('.ob36-hourly-extra');if(!extra)return;const open=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',open?'false':'true');extra.hidden=open;row.classList.toggle('open',!open);}));}
   async function openWeatherDetail({mode='plan',place='',start='',end='',skipFetch=false}={}){
@@ -139,6 +174,7 @@
     host.querySelector('[data-ob36-detail-refresh]')?.addEventListener('click',async()=>{await performWeatherRefresh('manual',{silent:false,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:selected});openWeatherDetail({mode,place:targetPlace,start:targetStart,end:targetEnd,skipFetch:true});});
     host.querySelector('[data-ob36-open-weather-settings]')?.addEventListener('click',openWeatherSettings);
     bindHourlyRows(host);
+    bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});
   }
 
   async function weatherContext(){const model=await homeModel()?.build?.();return {model,selected:model?.selectedPlan||model?.next?.[0]||null};}
@@ -181,7 +217,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r11',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r12',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -240,7 +276,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r11',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r12',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();

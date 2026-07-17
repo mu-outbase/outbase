@@ -13,11 +13,10 @@
   const WEATHER_NEXT_UPDATE_KEY='outbase_weather_next_update_v1';
 
   const WEATHER_SOURCES=Object.freeze([
-    Object.freeze({id:'jma',label:'気象庁'}),
     Object.freeze({id:'weathernews',label:'ウェザーニュース'}),
     Object.freeze({id:'tenki',label:'tenki.jp'}),
     Object.freeze({id:'yahoo',label:'Yahoo!天気'}),
-    Object.freeze({id:'sototenki',label:'そとてんき'})
+    Object.freeze({id:'sototenki',label:'アウトドア天気.jp'})
   ]);
 
   const QUICK_CATALOG=Object.freeze([
@@ -144,9 +143,9 @@
     });
   }
   function weatherSettings(){
-    const primary=storageGet(WEATHER_SOURCE_PRIMARY_KEY,'jma');let compare=[];
-    try{compare=JSON.parse(storageGet(WEATHER_SOURCE_COMPARE_KEY,'["weathernews","tenki"]'));}catch(_error){compare=['weathernews','tenki'];}
-    const allowed=new Set(WEATHER_SOURCES.map(item=>item.id));compare=(Array.isArray(compare)?compare:[]).filter(id=>allowed.has(id)&&id!==primary);
+    const storedPrimary=storageGet(WEATHER_SOURCE_PRIMARY_KEY,'weathernews');let primary=storedPrimary;let compare=[];
+    try{compare=JSON.parse(storageGet(WEATHER_SOURCE_COMPARE_KEY,'["tenki","yahoo","sototenki"]'));}catch(_error){compare=['tenki','yahoo','sototenki'];}
+    const allowed=new Set(WEATHER_SOURCES.map(item=>item.id));const legacyPrimary=!allowed.has(primary);if(legacyPrimary)primary='weathernews';if(legacyPrimary)compare=['tenki','yahoo','sototenki'];compare=(Array.isArray(compare)?compare:[]).filter(id=>allowed.has(id)&&id!==primary);
     const locationMode=['plan','home','current'].includes(storageGet(WEATHER_LOCATION_MODE_KEY,'plan'))?storageGet(WEATHER_LOCATION_MODE_KEY,'plan'):'plan';
     const primaryLabel=WEATHER_SOURCES.find(item=>item.id===primary)?.label||WEATHER_SOURCES[0].label;
     const compareLabels=compare.map(id=>WEATHER_SOURCES.find(item=>item.id===id)?.label).filter(Boolean);
@@ -164,7 +163,7 @@
   }
   function weatherDetail(item,{place='',start='',end=''}={}){
     const live=liveService()?.getDetail?.(item,{place,start,end});
-    if(live){const update=weatherUpdateMeta(item,new Date(live.fetchedAt||Date.now()));const settings=weatherSettings();return Object.freeze({...live,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});}
+    if(live){const update=weatherUpdateMeta(item,new Date(live.fetchedAt||Date.now()));const settings=weatherSettings();return Object.freeze({...live,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,externalProviderIds:Object.freeze([settings.primary,...settings.compare]),updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});}
     const update=weatherUpdateMeta(item,new Date());return Object.freeze({
       status:'loading',sample:false,place:place||item?.place||'場所未設定',condition:'予報を取得しています',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',
       hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),primarySource:liveService()?.provider||'Open-Meteo',compareSources:Object.freeze([]),
@@ -179,7 +178,7 @@
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:smartLine({...value,next}),weather:weatherPreview(now,selected),weatherIntel:weatherIntel(selected,now),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r11'
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r12'
     });
   }
 
