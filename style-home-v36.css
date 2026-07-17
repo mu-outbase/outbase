@@ -1,4 +1,4 @@
-/* OUTBASE HOME v36 r9 — explicit nav reserve, update-safe density, and richer honest weather states. */
+/* OUTBASE HOME v36 r10 — explicit nav reserve, update-safe density, and richer honest weather states. */
 :root{
   --ob36-bg:#fbfaf7;--ob36-card:#fff;--ob36-ink:#171b19;--ob36-muted:#676d69;--ob36-line:#e7e3db;
   --ob36-green:#174d31;--ob36-lime:#52751c;--ob36-amber:#d58e12;--ob36-blue:#66a9c7;--ob36-taupe:#8e8279;
@@ -574,7 +574,7 @@ button.ob36-plan{font:inherit}
 }
 
 
-/* OUTBASE HOME v36 r9 — readable text, unified weather layout, consolidated notices, detailed hourly forecast. */
+/* OUTBASE HOME v36 r10 — readable text, unified weather layout, consolidated notices, detailed hourly forecast. */
 body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-today-summary small{font-size:12px!important;line-height:1.3}
 body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-today-summary h1{font-size:17px!important;line-height:1.36}
 body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-scope button{font-size:11.5px!important;min-height:34px}
@@ -675,3 +675,165 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-quick-item small{font-
 .ob36-hourly-data>span:nth-child(4){grid-column:3;grid-row:2;margin-top:8px;padding-top:8px;border-top:1px solid #ece8e0}
 .ob36-hourly-data b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25}
 .ob36-hourly-data small{font-size:10.5px!important}
+
+/* OUTBASE HOME v36 r10 — weather hierarchy, readable numbers, grouped advice, and expandable hourly detail. */
+:root{
+  --ob36-value-good:#52751c;
+  --ob36-value-info:#4f91ad;
+  --ob36-value-watch:#c98212;
+  --ob36-value-warm:#d16f18;
+  --ob36-value-danger:#bf4c3c;
+  --ob36-value-cool:#4b87a7;
+}
+.ob36-value,.ob36-detail-summary .tone-good,.ob36-hourly-summary .tone-good{color:var(--ob36-value-good)!important}
+.ob36-value.tone-info,.ob36-detail-summary .tone-info,.ob36-hourly-summary .tone-info{color:var(--ob36-value-info)!important}
+.ob36-value.tone-watch,.ob36-detail-summary .tone-watch,.ob36-hourly-summary .tone-watch{color:var(--ob36-value-watch)!important}
+.ob36-value.tone-warm,.ob36-detail-summary .tone-warm,.ob36-hourly-summary .tone-warm{color:var(--ob36-value-warm)!important}
+.ob36-value.tone-danger,.ob36-detail-summary .tone-danger,.ob36-hourly-summary .tone-danger{color:var(--ob36-value-danger)!important}
+.ob36-value.tone-cool,.ob36-detail-summary .tone-cool,.ob36-hourly-summary .tone-cool{color:var(--ob36-value-cool)!important}
+
+/* 今日の天気：日付と場所は上部に一度だけ表示する。 */
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-card{padding:14px 15px 12px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-today-summary{align-items:center;padding:0!important;border-bottom:0!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-title{min-width:0;display:flex;flex-direction:column;gap:2px}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-title>b{font-size:19px;line-height:1.2;letter-spacing:-.02em}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-title>small{font-size:12.5px!important;line-height:1.35;color:#626a65;font-weight:650}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-message{margin:13px 0 0;padding:0 0 12px;border-bottom:1px solid var(--ob36-line);font-size:18px!important;line-height:1.4;font-weight:760;letter-spacing:-.025em;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-scope button{font-size:11.5px!important;min-height:36px!important;padding:5px 11px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-lower{grid-template-columns:76px minmax(0,1fr)!important;gap:13px!important;padding-top:13px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-symbol{width:72px!important;height:64px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-symbol svg{width:70px!important;height:61px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-head{margin-bottom:3px}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-head>em{font-size:14px!important;font-style:normal;font-weight:760;color:#303632}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag{font-size:10.5px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-body{grid-template-columns:1.14fr .86fr .86fr!important;margin-top:4px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-current strong{font-size:34px!important;line-height:1!important;font-weight:650!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-current small{font-size:12px!important;margin-top:4px!important;color:#59625d!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-metric{padding-left:12px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-metric b{font-size:11.5px!important;color:#626a65!important;font-weight:650!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-metric span{font-size:20px!important;line-height:1.15!important;font-weight:750!important;margin-top:4px!important}
+
+.ob36-weather-update{display:flex;align-items:center;gap:9px;margin-top:10px;padding-top:9px;border-top:1px solid #ece8e0;color:#69706b;font-size:11.5px;line-height:1.2}
+.ob36-weather-update span:nth-child(2){margin-left:auto}
+.ob36-weather-update button{width:30px;height:30px;padding:0;border:1px solid #e4e1d9;border-radius:11px;background:#fff;color:#52715f;display:grid;place-items:center}
+.ob36-weather-update button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ob36-weather-refreshing .ob36-weather-update button svg,.ob36-weather-refreshing [data-ob36-detail-refresh] svg{animation:ob36-spin .9s linear infinite}
+@keyframes ob36-spin{to{transform:rotate(360deg)}}
+
+/* 予定の天気見立て：数値は今日の天気と同じ読み方・同じ色体系。 */
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-intel-title h2{font-size:20px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-intel-title select{font-size:12.5px!important;min-height:40px!important;width:142px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-intel-place{font-size:12.5px!important;margin-top:8px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-intel-range strong{font-size:13.5px!important}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-intel-range>span{font-size:11.5px!important}
+.ob36-intel-weather-summary{display:grid!important;grid-template-columns:70px minmax(0,1fr)!important;gap:13px!important;padding:14px!important}
+.ob36-intel-weather-copy>small{font-size:12px!important;color:#626a65!important}
+.ob36-intel-weather-copy>h3{margin:3px 0 0;font-size:17px;line-height:1.35}
+.ob36-intel-metric-row{display:grid;grid-template-columns:1.18fr .85fr .95fr .68fr;margin-top:10px;padding-top:10px;border-top:1px solid var(--ob36-line)}
+.ob36-intel-metric-row>div{min-width:0;padding:0 9px;border-left:1px solid var(--ob36-line)}
+.ob36-intel-metric-row>div:first-child{padding-left:0;border-left:0}
+.ob36-intel-metric-row b{display:block;font-size:17px;line-height:1.15;font-weight:760;white-space:nowrap}
+.ob36-intel-metric-row .primary b{font-size:21px}
+.ob36-intel-metric-row small{display:block;margin-top:4px;color:#69706b;font-size:10.8px;white-space:nowrap}
+
+/* 注意は一つのまとまり。区切り線ではなく余白で読む。 */
+.ob36-notice-panel{margin-top:12px!important;padding:13px 14px!important;border:1px solid #e2e6dd!important;border-radius:16px!important;background:#f8f9f5!important;overflow:visible!important}
+.ob36-notice-heading{display:flex;align-items:baseline;gap:10px;min-width:0}
+.ob36-notice-heading h3{margin:0;font-size:15px;white-space:nowrap}
+.ob36-notice-heading p{margin:0;color:#58625c;font-size:12.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-notice-list{border:0!important;margin-top:10px!important;display:grid;gap:8px}
+.ob36-notice-row{display:grid!important;grid-template-columns:78px minmax(0,1fr)!important;gap:10px!important;padding:0!important;border:0!important;align-items:baseline}
+.ob36-notice-row time{font-size:12px!important;font-weight:700!important;color:#636c67!important}
+.ob36-notice-row span{font-size:13px!important;line-height:1.35;font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-intel-detail-button{min-height:62px!important;margin-top:13px!important}
+.ob36-intel-detail-button>span:nth-child(2)>b{font-size:15px!important}
+.ob36-intel-detail-button>span:nth-child(2)>small{font-size:12px!important}
+.ob36-weather-update.compact{margin-top:10px}
+
+/* 時間ごとの天気：要点は一行、追加情報は展開時だけ表示。 */
+.ob36-weather-detail-sheet{max-height:94dvh!important}
+.ob36-weather-detail-sheet>header h2{font-size:22px!important}
+.ob36-weather-mode button,.ob36-weather-search label>span,.ob36-weather-search input,.ob36-weather-search select,.ob36-weather-search button{font-size:12.5px!important}
+.ob36-detail-summary{padding:14px!important}
+.ob36-detail-summary>div:first-child small{font-size:12px!important}
+.ob36-detail-summary h3{font-size:18px!important}
+.ob36-detail-summary>div:first-child>strong{font-size:27px!important}
+.ob36-detail-summary span b{font-size:16px!important}.ob36-detail-summary span small{font-size:11px!important}
+.ob36-detail-update{display:flex;align-items:center;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid #dde3db;color:#68716c;font-size:11.5px}
+.ob36-detail-update span:nth-child(2){margin-left:auto}
+.ob36-detail-update button{width:31px;height:31px;border:1px solid #dfe4dc;border-radius:11px;background:#fff;color:#52715f;display:grid;place-items:center;padding:0}
+.ob36-detail-update svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ob36-detail-section-head h3{font-size:17px!important}.ob36-detail-section-head span{font-size:11.5px!important}
+.ob36-hourly-column-head{display:grid;grid-template-columns:56px 1.2fr .72fr .62fr .78fr 42px;gap:6px;padding:0 10px 6px;color:#717975;font-size:10.5px;font-weight:700;text-align:center}
+.ob36-hourly-column-head span:nth-child(2){text-align:left}
+.ob36-hourly-list{overflow:visible!important;border:1px solid #e5e1d9!important;border-radius:16px!important}
+.ob36-hourly-row{padding:0!important;border-top:1px solid #ece8e0!important}
+.ob36-hourly-row:first-child{border-top:0!important}
+.ob36-hourly-summary{width:100%;min-height:62px;padding:9px 10px;border:0;background:#fff;display:grid;grid-template-columns:56px 1.2fr .72fr .62fr .78fr 42px 16px;gap:6px;align-items:center;text-align:left;color:var(--ob36-ink)}
+.ob36-hourly-summary time b{display:block;font-size:13px}.ob36-hourly-summary time small{display:block;margin-top:2px;color:#747c77;font-size:9.5px}
+.ob36-hourly-summary .ob36-hourly-condition{display:flex!important;align-items:center!important;gap:6px!important;margin:0!important;min-width:0}
+.ob36-hourly-summary .ob36-hourly-condition svg{width:23px!important;height:23px!important;flex:0 0 auto}
+.ob36-hourly-summary .ob36-hourly-condition b{font-size:12.5px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-hourly-temp b,.ob36-hourly-rain b,.ob36-hourly-wind b{display:block;font-size:14px;line-height:1.15;font-weight:760;white-space:nowrap;text-align:center}
+.ob36-hourly-temp small,.ob36-hourly-rain small,.ob36-hourly-wind small{display:block;margin-top:2px;color:#717975;font-size:9.5px;text-align:center;white-space:nowrap}
+.ob36-hourly-summary>em{font-style:normal;font-size:13px;font-weight:800;text-align:center}
+.ob36-hourly-summary>i{font-style:normal;color:#6d7671;font-size:16px;transition:transform .18s ease}
+.ob36-hourly-summary[aria-expanded="true"]>i{transform:rotate(180deg)}
+.ob36-hourly-extra{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px 12px;background:#f8f9f5;border-top:1px solid #ece8e0}
+.ob36-hourly-extra[hidden]{display:none}
+.ob36-hourly-extra span{min-width:0}.ob36-hourly-extra b{display:block;font-size:13px}.ob36-hourly-extra small{display:block;margin-top:2px;color:#707873;font-size:10px}
+.ob36-hourly-extra p{grid-column:1/-1;margin:2px 0 0;font-size:11.5px;color:#59625d}
+.ob36-detail-judgement>div:not(.ob36-detail-section-head){grid-template-columns:78px minmax(0,1fr)!important}
+.ob36-detail-judgement>div>b{font-size:12.5px!important}.ob36-detail-judgement span strong{font-size:13.5px!important}.ob36-detail-judgement span small{font-size:12px!important}
+.ob36-source-compare b,.ob36-source-compare span{font-size:12px!important}.ob36-source-compare em{font-size:11px!important}.ob36-source-compare>p{font-size:12.5px!important}
+.ob36-detail-meta{font-size:11.5px!important}
+
+@media(max-width:380px){
+  body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-title>b{font-size:17.5px}
+  body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-title>small{font-size:11.5px!important}
+  body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-message{font-size:16px!important}
+  body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-weather-body{grid-template-columns:1.04fr .9fr .9fr!important}
+  body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-current strong{font-size:30px!important}
+  body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-metric span{font-size:17px!important}
+  .ob36-intel-metric-row{grid-template-columns:1.08fr .8fr .88fr .65fr}
+  .ob36-intel-metric-row b{font-size:14px}.ob36-intel-metric-row .primary b{font-size:18px}.ob36-intel-metric-row small{font-size:9.5px}
+  .ob36-notice-heading{display:block}.ob36-notice-heading p{margin-top:3px}
+  .ob36-hourly-column-head,.ob36-hourly-summary{grid-template-columns:48px 1.05fr .68fr .58fr .68fr 38px 14px;gap:4px}
+  .ob36-hourly-column-head{grid-template-columns:48px 1.05fr .68fr .58fr .68fr 38px}
+  .ob36-hourly-summary{padding-left:8px;padding-right:8px}
+  .ob36-hourly-summary .ob36-hourly-condition b{font-size:11.5px!important}
+  .ob36-hourly-temp b,.ob36-hourly-rain b,.ob36-hourly-wind b{font-size:12.5px}
+  .ob36-hourly-extra{grid-template-columns:1fr 1fr}
+}
+
+/* r10 final density correction: high/low sits beside condition, three metrics stay clear. */
+.ob36-intel-weather-summary{grid-template-columns:60px minmax(0,1fr)!important}
+.ob36-intel-weather-icon{width:58px!important}.ob36-intel-weather-icon svg{width:55px!important}
+.ob36-intel-condition{display:flex!important;align-items:baseline!important;justify-content:space-between!important;gap:10px!important;margin-top:2px!important}
+.ob36-intel-condition h3{margin:0!important;font-size:17px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-intel-condition strong{font-size:22px!important;font-weight:760!important;white-space:nowrap}
+.ob36-intel-metric-row{grid-template-columns:1fr 1fr .78fr!important}
+.ob36-intel-metric-row>div{text-align:left}
+.ob36-intel-metric-row b{font-size:16px!important}
+.ob36-intel-metric-row small{font-size:10.8px!important}
+
+/* Detail summary gained an update row; keep the actual three values in the second block. */
+.ob36-detail-summary>div:nth-child(2){display:grid!important;grid-template-columns:1fr 1fr 1fr!important;margin-top:11px!important;padding-top:10px!important;border-top:1px solid #dde3db!important}
+.ob36-detail-summary>div:nth-child(2)>span{padding:0 9px!important;border-left:1px solid #dde3db!important}
+.ob36-detail-summary>div:nth-child(2)>span:first-child{padding-left:0!important;border-left:0!important}
+@media(max-width:380px){
+  .ob36-intel-weather-summary{grid-template-columns:54px minmax(0,1fr)!important;gap:9px!important;padding:11px!important}
+  .ob36-intel-weather-icon{width:52px!important}.ob36-intel-weather-icon svg{width:50px!important}
+  .ob36-intel-condition strong{font-size:19px!important}.ob36-intel-condition h3{font-size:15px!important}
+  .ob36-intel-metric-row b{font-size:14px!important}.ob36-intel-metric-row small{font-size:9.5px!important}
+}
+
+/* r10 readability LOCK: HOME supporting text must remain readable on the real device. */
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] small{font-size:11.5px!important;line-height:1.35}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag,body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-intel-place span{font-size:10.5px!important}
+
+/* r10 detail controls readability. */
+.ob36-weather-detail-sheet header>div>small{font-size:10.5px!important}
+.ob36-weather-detail-sheet header h2{font-size:22px!important}
+.ob36-weather-search select,.ob36-weather-search input{width:100%!important;min-height:44px!important;border:1px solid #ddd9d1!important;border-radius:12px!important;background:#fff!important;padding:8px 10px!important;font-size:13px!important;color:#202622!important}
+.ob36-weather-search label>span{font-size:12px!important;font-weight:650!important}
