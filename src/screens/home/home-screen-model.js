@@ -105,15 +105,52 @@
   function alertTime(item,dayOffset,hourLabel){const d=new Date(item?.startAt||Date.now());d.setDate(d.getDate()+dayOffset);return `${d.getMonth()+1}/${d.getDate()} ${hourLabel}`;}
   function weatherIntel(item){
     const alerts=Object.freeze([
-      Object.freeze({time:alertTime(item,0,'18:00'),title:'夕食はタープ下が安心',detail:'降水確率40％。すぐ移せる配置にする。',level:'△'}),
-      Object.freeze({time:alertTime(item,0,'夜'),title:'焚火は現地の風を再確認',detail:'最大4.1m/s。中止できる準備をする。',level:'△'}),
-      Object.freeze({time:alertTime(item,2,'9:00'),title:'乾燥は早めに始める',detail:'昼前から雨の可能性が上がる。',level:'△'})
+      Object.freeze({time:alertTime(item,0,'18:00'),title:'夕食はタープ下が安心',detail:'降水確率40％。料理と荷物をすぐ移せる配置にする。',level:'注意'}),
+      Object.freeze({time:alertTime(item,0,'夜'),title:'焚火は現地の風を再確認',detail:'最大瞬間風速4.7m/s予想。中止できる準備をしておく。',level:'確認'}),
+      Object.freeze({time:alertTime(item,2,'9:00'),title:'乾燥撤収は早めに始める',detail:'昼前から雨の可能性が上がるため、朝の乾燥時間を使う。',level:'早め'})
     ]);
     return Object.freeze({
       status:'sample',sample:true,activityId:item?.id||null,place:item?.place||'西湖キャンプビレッジ・ノーム',durationLabel:durationLabel(item),
-      condition:'くもり時々晴れ',high:24,low:16,rainPeak:40,windMax:4.1,confidence:'A−',
+      condition:'くもり時々晴れ',high:24,low:16,rainPeak:40,windAverage:2.6,windMax:4.7,confidence:'A−',
       message:'初日夕方の雨と、最終日の乾燥時間に注意。',updatedLabel:'9:00',confidenceLabel:'A−',alerts,
       sampleLabel:'表示サンプル',primarySource:weatherSettings().primaryLabel
+    });
+  }
+  function weatherDetail(item,{place='',start='',end=''}={}){
+    const baseStart=new Date(start||item?.startAt||Date.now());
+    const stamp=(day,hour)=>{const d=new Date(baseStart);d.setHours(hour,0,0,0);d.setDate(d.getDate()+day);return d.toISOString();};
+    const rows=Object.freeze([
+      Object.freeze({at:stamp(0,13),condition:'くもり',temperature:24,feelsLike:24,rainProbability:20,rainfall:0,windDirection:'南西',windAverage:2.3,windGust:4.0,confidence:'A'}),
+      Object.freeze({at:stamp(0,15),condition:'晴れ間あり',temperature:24,feelsLike:25,rainProbability:20,rainfall:0,windDirection:'南西',windAverage:2.8,windGust:4.3,confidence:'A−'}),
+      Object.freeze({at:stamp(0,18),condition:'弱い雨',temperature:21,feelsLike:21,rainProbability:40,rainfall:0.5,windDirection:'南南西',windAverage:3.1,windGust:4.7,confidence:'B＋'}),
+      Object.freeze({at:stamp(0,21),condition:'くもり',temperature:19,feelsLike:18,rainProbability:30,rainfall:0,windDirection:'西南西',windAverage:2.4,windGust:3.9,confidence:'B'}),
+      Object.freeze({at:stamp(1,6),condition:'くもり',temperature:17,feelsLike:16,rainProbability:20,rainfall:0,windDirection:'北北西',windAverage:1.8,windGust:2.8,confidence:'A−'}),
+      Object.freeze({at:stamp(1,9),condition:'晴れ時々くもり',temperature:20,feelsLike:20,rainProbability:10,rainfall:0,windDirection:'北西',windAverage:2.0,windGust:3.1,confidence:'A'}),
+      Object.freeze({at:stamp(1,12),condition:'晴れ',temperature:24,feelsLike:25,rainProbability:10,rainfall:0,windDirection:'西',windAverage:2.6,windGust:4.1,confidence:'A'}),
+      Object.freeze({at:stamp(1,15),condition:'晴れ時々くもり',temperature:23,feelsLike:23,rainProbability:20,rainfall:0,windDirection:'西南西',windAverage:3.0,windGust:4.6,confidence:'A−'}),
+      Object.freeze({at:stamp(1,18),condition:'くもり',temperature:20,feelsLike:20,rainProbability:20,rainfall:0,windDirection:'南西',windAverage:2.2,windGust:3.7,confidence:'B＋'}),
+      Object.freeze({at:stamp(2,6),condition:'くもり',temperature:17,feelsLike:16,rainProbability:30,rainfall:0,windDirection:'北',windAverage:1.6,windGust:2.5,confidence:'B＋'}),
+      Object.freeze({at:stamp(2,9),condition:'弱い雨',temperature:18,feelsLike:18,rainProbability:40,rainfall:0.5,windDirection:'北北東',windAverage:2.1,windGust:3.4,confidence:'B'})
+    ]);
+    const comparisons=Object.freeze([
+      Object.freeze({source:'気象庁',rainProbability:40,windGust:4.5,summary:'夕方に弱い雨'}),
+      Object.freeze({source:'ウェザーニュース',rainProbability:30,windGust:4.7,summary:'短時間の雨に注意'}),
+      Object.freeze({source:'tenki.jp',rainProbability:40,windGust:4.1,summary:'くもり一時雨'}),
+      Object.freeze({source:'Yahoo!天気',rainProbability:20,windGust:4.0,summary:'くもり中心'}),
+      Object.freeze({source:'そとてんき',rainProbability:40,windGust:4.6,summary:'設営後の雨に注意'})
+    ]);
+    const judgements=Object.freeze([
+      Object.freeze({label:'設営',value:'15時頃',detail:'風が弱く、雨の前に設営しやすい'}),
+      Object.freeze({label:'雨を避ける',value:'19日午前',detail:'降水確率10％で最も安定'}),
+      Object.freeze({label:'焚火',value:'18日夜は確認',detail:'最大瞬間風速4.7m/s予想'}),
+      Object.freeze({label:'撤収・乾燥',value:'20日8時まで',detail:'雨が強まる前に乾燥を始める'}),
+      Object.freeze({label:'ペット',value:'19日昼は暑さ注意',detail:'日陰・水分・地面温度を確認'})
+    ]);
+    const settings=weatherSettings();
+    return Object.freeze({
+      sample:true,place:place||item?.place||'西湖キャンプビレッジ・ノーム',start:start||item?.startAt||'',end:end||item?.endAt||item?.startAt||'',
+      condition:'くもり時々晴れ',high:24,low:16,rainPeak:40,windAverage:2.6,windGust:4.7,confidence:'A−',hourly:rows,comparisons,judgements,
+      primarySource:settings.primaryLabel,compareSources:settings.compare.map(id=>settings.sources.find(source=>source.id===id)?.label).filter(Boolean),updatedLabel:'7/17 9:00'
     });
   }
   function weatherSettings(){
@@ -132,13 +169,13 @@
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:smartLine({...value,next}),weather:weatherPreview(now),weatherIntel:weatherIntel(selected),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r8'
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r9'
     });
   }
 
   globalThis.OUTBASE_HOME_SCREEN_MODEL_V164=Object.freeze({
     build,QUICK:QUICK_CATALOG,QUICK_CATALOG,DEFAULT_QUICK_IDS,QUICK_STORE_KEY,WEATHER_SCOPE_KEY,WEATHER_PLAN_KEY,
     WEATHER_SOURCE_PRIMARY_KEY,WEATHER_SOURCE_COMPARE_KEY,WEATHER_LOCATION_MODE_KEY,WEATHER_SOURCES,
-    quickIds,quickRows,catalog,smartLine,weatherPreview,weatherIntel,weatherSettings,samplePlans,displayPlans,SMART_LINES
+    quickIds,quickRows,catalog,smartLine,weatherPreview,weatherIntel,weatherDetail,weatherSettings,samplePlans,displayPlans,SMART_LINES
   });
 })();
