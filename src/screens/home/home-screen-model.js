@@ -18,6 +18,14 @@
   ]);
   const DEFAULT_QUICK_IDS=Object.freeze(['prep','walk','memo','cook','improve']);
   const byId=new Map(QUICK_CATALOG.map(item=>[item.id,item]));
+  const WEATHER_JUDGEMENT_CHECKS=Object.freeze([
+    Object.freeze({id:'rain',label:'雨',detail:'降水・雨雲',icon:'rain'}),
+    Object.freeze({id:'wind',label:'風',detail:'最大風速・突風',icon:'wind'}),
+    Object.freeze({id:'temperature',label:'最低気温',detail:'服装・暖房',icon:'temperature'}),
+    Object.freeze({id:'setup',label:'設営',detail:'設営しやすい時間',icon:'setup'}),
+    Object.freeze({id:'pack',label:'撤収',detail:'濡れ・乾燥リスク',icon:'pack'}),
+    Object.freeze({id:'pet',label:'ペット',detail:'暑さ・寒さ注意',icon:'paw'})
+  ]);
 
   function storageGet(key,fallback=''){
     try{return localStorage.getItem(key)||fallback;}catch(_error){return fallback;}
@@ -67,7 +75,8 @@
     return Object.freeze({
       status:'unavailable',activityId:item?.id||null,place:item?.place||'場所未設定',durationLabel:durationLabel(item),
       condition:'予報データ未接続',high:null,low:null,rainPeak:null,windMax:null,confidence:null,
-      message:'実予報は天気接続後に表示します。',alerts:Object.freeze([])
+      message:'雨・風・気温・設営・撤収・ペットへの影響を、予報接続後に自動判定します。',
+      updatedLabel:'予報未取得',confidenceLabel:'未判定',checks:WEATHER_JUDGEMENT_CHECKS,alerts:Object.freeze([])
     });
   }
 
@@ -80,12 +89,12 @@
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:todaySummary(value),
       weather:weatherPlaceholder(now),weatherIntel:weatherIntel(selected),
-      version:'v166.3-home-v36-r3'
+      version:'v166.3-home-v36-r6'
     });
   }
 
   globalThis.OUTBASE_HOME_SCREEN_MODEL_V164=Object.freeze({
     build,QUICK:QUICK_CATALOG,QUICK_CATALOG,DEFAULT_QUICK_IDS,QUICK_STORE_KEY,WEATHER_SCOPE_KEY,WEATHER_PLAN_KEY,
-    quickIds,quickRows,catalog,todaySummary,weatherPlaceholder,weatherIntel
+    quickIds,quickRows,catalog,todaySummary,weatherPlaceholder,weatherIntel,WEATHER_JUDGEMENT_CHECKS
   });
 })();
