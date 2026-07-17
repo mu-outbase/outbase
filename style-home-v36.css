@@ -1,4 +1,4 @@
-/* OUTBASE HOME v36 r4 — real-device density and bottom-nav correction for v166.3 shell. */
+/* OUTBASE HOME v36 r5 — explicit nav reserve, update-safe density, and richer honest weather states. */
 :root{
   --ob36-bg:#fbfaf7;--ob36-card:#fff;--ob36-ink:#171b19;--ob36-muted:#676d69;--ob36-line:#e7e3db;
   --ob36-green:#174d31;--ob36-lime:#52751c;--ob36-amber:#d58e12;--ob36-blue:#66a9c7;--ob36-taupe:#8e8279;
@@ -296,4 +296,77 @@ body.outbaseNorth .ob3-nav.ob36-nav svg{width:20px!important;height:20px!importa
   .ob36-plan.single .ob36-plan-photo{width:52px;height:56px}
   .ob36-plan.single.no-media .ob36-plan-photo{height:52px}
   .ob36-quick-item{flex-basis:88px}
+}
+
+
+/* ===== r5: explicit nav reserve + richer unavailable weather state ===== */
+body.outbaseNorth .ob3-shell[data-ob6-route="home"]{
+  padding-bottom:0!important;
+}
+body.outbaseNorth .ob3-shell[data-ob6-route="home"]>.ob3-main{
+  padding-bottom:0!important;
+}
+.ob36-nav-reserve{
+  display:block;height:calc(64px + env(safe-area-inset-bottom));width:100%;pointer-events:none;
+}
+
+.ob36-weather-card.is-unavailable{padding-bottom:10px}
+.ob36-weather-unavailable{
+  position:relative;isolation:isolate;overflow:hidden;margin-top:7px;min-height:67px;padding:7px 9px;
+  display:grid;grid-template-columns:68px minmax(0,1fr);gap:8px;align-items:center;
+  border:1px solid rgba(207,219,211,.9);border-radius:15px;
+  background:
+    radial-gradient(circle at 10% 28%,rgba(255,222,118,.24),transparent 32%),
+    radial-gradient(circle at 88% 18%,rgba(145,196,219,.18),transparent 38%),
+    linear-gradient(135deg,#fbfcf8 0%,#f1f7f2 58%,#f7faf8 100%);
+}
+.ob36-weather-unavailable:before{
+  content:"";position:absolute;z-index:-1;right:-16px;bottom:-21px;width:116px;height:54px;border-radius:50%;
+  border-top:1px solid rgba(102,169,199,.25);transform:rotate(-8deg);box-shadow:0 -10px 0 -9px rgba(102,169,199,.16),0 -20px 0 -19px rgba(102,169,199,.12)
+}
+.ob36-weather-card.is-unavailable .ob36-weather-symbol{
+  position:relative;width:66px;height:58px;border-radius:18px;
+  background:radial-gradient(circle at 42% 38%,rgba(255,255,255,.98) 0 30%,rgba(255,225,137,.24) 54%,rgba(255,255,255,0) 80%);
+}
+.ob36-weather-card.is-unavailable .ob36-weather-symbol:before{
+  content:"";position:absolute;inset:4px;border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.56),rgba(210,233,222,.16));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.74),0 7px 18px rgba(48,89,66,.07)
+}
+.ob36-weather-card.is-unavailable .ob36-weather-symbol svg{position:relative;z-index:1;width:68px;height:56px;filter:drop-shadow(0 2px 2px rgba(45,73,61,.09)) drop-shadow(0 0 8px rgba(218,153,20,.13))}
+.ob36-weather-unavailable-copy{min-width:0}
+.ob36-weather-unavailable-copy .ob36-weather-head{margin-bottom:4px}
+.ob36-weather-state{display:flex;align-items:center;gap:7px;min-width:0}
+.ob36-weather-state>b{font-size:11.6px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-weather-state>span{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,.76);border:1px solid rgba(23,77,49,.11);color:var(--ob36-green);font-size:7.6px;font-weight:800}
+.ob36-weather-state>span i{display:block;width:5px;height:5px;border-radius:50%;background:#d59a26;box-shadow:0 0 0 3px rgba(213,154,38,.12)}
+.ob36-weather-unavailable-copy>p{margin:4px 0 0;color:var(--ob36-muted);font-size:8.3px;line-height:1.35}
+
+.ob36-intel-unavailable{
+  position:relative;overflow:hidden;grid-template-columns:62px minmax(0,1fr);min-height:68px;padding:7px 9px;
+  background:
+    radial-gradient(circle at 9% 24%,rgba(255,222,118,.22),transparent 34%),
+    radial-gradient(circle at 92% 12%,rgba(145,196,219,.16),transparent 38%),
+    linear-gradient(135deg,#fbfcf8 0%,#f1f7f2 62%,#f8faf8 100%)
+}
+.ob36-intel-unavailable:after{
+  content:"";position:absolute;right:-12px;bottom:-22px;width:112px;height:55px;border-radius:50%;border-top:1px solid rgba(102,169,199,.22);transform:rotate(-7deg)
+}
+.ob36-intel-weather-art{position:relative!important;width:59px!important;height:55px!important;border-radius:17px!important;background:rgba(255,255,255,.66)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.72),0 7px 16px rgba(48,89,66,.06)}
+.ob36-intel-weather-art svg{width:60px!important;height:51px!important;filter:drop-shadow(0 2px 2px rgba(45,73,61,.08)) drop-shadow(0 0 7px rgba(218,153,20,.12))!important}
+.ob36-intel-weather-art i{position:absolute;right:-2px;bottom:-2px;padding:2px 5px;border-radius:999px;background:#fff;border:1px solid rgba(23,77,49,.12);color:var(--ob36-green);font-size:6.7px;font-weight:850;font-style:normal;white-space:nowrap;box-shadow:0 3px 8px rgba(35,65,50,.07)}
+.ob36-intel-unavailable h3{font-size:12.6px}.ob36-intel-unavailable p{font-size:8.6px}
+
+.ob36-quick-strip{padding-right:16px;scroll-padding-right:16px}
+.ob36-quick-item{flex-basis:clamp(99px,31%,112px)}
+
+@media(max-width:380px){
+  .ob36-weather-unavailable{grid-template-columns:62px minmax(0,1fr)}
+  .ob36-weather-card.is-unavailable .ob36-weather-symbol{width:60px;height:55px}
+  .ob36-weather-card.is-unavailable .ob36-weather-symbol svg{width:63px;height:53px}
+  .ob36-weather-state>b{font-size:10.8px}
+  .ob36-weather-unavailable-copy>p{font-size:7.8px}
+  .ob36-intel-unavailable{grid-template-columns:57px minmax(0,1fr)}
+  .ob36-intel-weather-art{width:55px!important;height:52px!important}
+  .ob36-intel-weather-art svg{width:56px!important;height:49px!important}
+  .ob36-quick-item{flex-basis:99px}
 }
