@@ -46,6 +46,7 @@
   ]);
 
   function storageGet(key,fallback=''){try{return localStorage.getItem(key)||fallback;}catch(_error){return fallback;}}
+  function liveService(){return globalThis.OUTBASE_WEATHER_SERVICE_V1||null;}
   function storageSet(key,value){try{localStorage.setItem(key,String(value));return true;}catch(_error){return false;}}
   function sessionGet(key){try{return sessionStorage.getItem(key)||'';}catch(_error){return '';}}
   function sessionSet(key,value){try{sessionStorage.setItem(key,value);}catch(_error){}}
@@ -124,24 +125,22 @@
     const meta=weatherUpdateMeta(item,now);if(reason==='resume')return meta.elapsedMs>=30*60*1000;return meta.needsRefresh;
   }
   function weatherPreview(now,item){
-    const scope=weatherScope();return Object.freeze({
-      status:'sample',sample:true,scope,locationLabel:scope==='current'?'千葉県 柏市・現在地':'千葉県 柏市',
-      condition:'くもり時々晴れ',temperature:23.4,high:25,low:16,rain:20,wind:2,
-      sourceType:'sample',sampleLabel:'表示サンプル',update:weatherUpdateMeta(item,now)
+    const scope=weatherScope();const live=liveService()?.getToday?.({scope,plan:item,now});
+    if(live)return Object.freeze({...live,scope,update:weatherUpdateMeta(item,new Date(live.fetchedAt||now))});
+    return Object.freeze({
+      status:'loading',sample:false,scope,locationLabel:scope==='current'?'現在地':'千葉県 柏市',condition:'予報を取得しています',
+      temperature:null,high:null,low:null,rain:null,wind:null,sourceType:'live',provider:liveService()?.provider||'Open-Meteo',
+      update:weatherUpdateMeta(item,now)
     });
   }
   function alertTime(item,dayOffset,hourLabel){const d=new Date(item?.startAt||Date.now());d.setDate(d.getDate()+dayOffset);return `${d.getMonth()+1}/${d.getDate()} ${hourLabel}`;}
   function weatherIntel(item,now=new Date()){
-    const alerts=Object.freeze([
-      Object.freeze({time:alertTime(item,0,'18:00'),text:'夕食はタープ下が安心（降水40％）'}),
-      Object.freeze({time:alertTime(item,0,'夜'),text:'焚火前に風を再確認（瞬間4.7m/s）'}),
-      Object.freeze({time:alertTime(item,2,'9:00'),text:'乾燥撤収は早めに始める'})
-    ]);
+    const live=liveService()?.getPlan?.(item);
+    if(live)return Object.freeze({...live,activityId:item?.id||null,durationLabel:durationLabel(item),update:weatherUpdateMeta(item,new Date(live.fetchedAt||now))});
     return Object.freeze({
-      status:'sample',sample:true,activityId:item?.id||null,place:item?.place||'西湖キャンプビレッジ・ノーム',durationLabel:durationLabel(item),
-      condition:'くもり時々晴れ',high:24,low:16,rainPeak:40,windMax:4.7,confidence:'A−',
-      message:'初日夕方の雨と、最終日の乾燥時間に注意。',confidenceLabel:'A−',alerts,
-      sampleLabel:'表示サンプル',primarySource:weatherSettings().primaryLabel,update:weatherUpdateMeta(item,now)
+      status:'loading',sample:false,activityId:item?.id||null,place:item?.place||'場所未設定',durationLabel:durationLabel(item),
+      condition:'予報を取得しています',high:null,low:null,rainPeak:null,windMax:null,confidence:'—',confidenceLabel:'—',
+      message:'場所と日程を確認して、最新予報を自動取得します。',alerts:Object.freeze([]),provider:liveService()?.provider||'Open-Meteo',update:weatherUpdateMeta(item,now)
     });
   }
   function weatherSettings(){
@@ -164,22 +163,12 @@
     return Object.freeze(template.map((row,index)=>Object.freeze({at:isoAt(base,index*3),condition:row[0],temperature:row[1],feelsLike:row[2],rainProbability:row[3],rainfall:row[4],windDirection:row[5],windAverage:row[6],windGust:row[7],confidence:row[8]})));
   }
   function weatherDetail(item,{place='',start='',end=''}={}){
-    const settings=weatherSettings();const base=start?new Date(`${start}T09:00:00`):new Date(item?.startAt||Date.now());
-    const update=weatherUpdateMeta(item,new Date());
-    return Object.freeze({
-      sample:true,place:place||item?.place||'西湖キャンプビレッジ・ノーム',start:start||'',end:end||'',condition:'くもり時々晴れ',high:24,low:16,rainPeak:70,windGust:5.3,confidence:'B＋',
-      hourly:hourlyRows(base),
-      judgements:Object.freeze([
-        Object.freeze({label:'設営',value:'15時頃',detail:'風が弱く、雨の前に設営しやすい'}),Object.freeze({label:'雨',value:'18〜21時',detail:'短時間の雨に備えてタープ下を確保'}),
-        Object.freeze({label:'焚火',value:'夜は再確認',detail:'最大瞬間風速4.7m/s前後'}),Object.freeze({label:'撤収',value:'9時まで',detail:'乾燥時間を早めに使う'}),
-        Object.freeze({label:'ペット',value:'昼は暑さ注意',detail:'日陰と水分を確保'})
-      ]),
-      comparisons:Object.freeze([
-        Object.freeze({source:'気象庁',summary:'夕方に弱い雨',rainProbability:50,windGust:4.7}),Object.freeze({source:'ウェザーニュース',summary:'18時から雨',rainProbability:60,windGust:5.1}),
-        Object.freeze({source:'tenki.jp',summary:'夜に一時雨',rainProbability:40,windGust:4.5}),Object.freeze({source:'Yahoo!天気',summary:'くもり中心',rainProbability:30,windGust:4.2}),
-        Object.freeze({source:'そとてんき',summary:'設営後に雨注意',rainProbability:55,windGust:5.0})
-      ]),
-      primarySource:settings.primaryLabel,compareSources:settings.compareLabels,updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update
+    const live=liveService()?.getDetail?.(item,{place,start,end});
+    if(live){const update=weatherUpdateMeta(item,new Date(live.fetchedAt||Date.now()));const settings=weatherSettings();return Object.freeze({...live,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});}
+    const update=weatherUpdateMeta(item,new Date());return Object.freeze({
+      status:'loading',sample:false,place:place||item?.place||'場所未設定',condition:'予報を取得しています',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',
+      hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),primarySource:liveService()?.provider||'Open-Meteo',compareSources:Object.freeze([]),
+      provider:liveService()?.provider||'Open-Meteo',attribution:liveService()?.attribution||'',updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update
     });
   }
 
@@ -190,7 +179,7 @@
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:smartLine({...value,next}),weather:weatherPreview(now,selected),weatherIntel:weatherIntel(selected,now),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r10'
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r11'
     });
   }
 

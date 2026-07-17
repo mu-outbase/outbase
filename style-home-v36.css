@@ -1,4 +1,4 @@
-/* OUTBASE HOME v36 r10 — explicit nav reserve, update-safe density, and richer honest weather states. */
+/* OUTBASE HOME v36 r11 — explicit nav reserve, update-safe density, and richer honest weather states. */
 :root{
   --ob36-bg:#fbfaf7;--ob36-card:#fff;--ob36-ink:#171b19;--ob36-muted:#676d69;--ob36-line:#e7e3db;
   --ob36-green:#174d31;--ob36-lime:#52751c;--ob36-amber:#d58e12;--ob36-blue:#66a9c7;--ob36-taupe:#8e8279;
@@ -574,7 +574,7 @@ button.ob36-plan{font:inherit}
 }
 
 
-/* OUTBASE HOME v36 r10 — readable text, unified weather layout, consolidated notices, detailed hourly forecast. */
+/* OUTBASE HOME v36 r11 — readable text, unified weather layout, consolidated notices, detailed hourly forecast. */
 body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-today-summary small{font-size:12px!important;line-height:1.3}
 body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-today-summary h1{font-size:17px!important;line-height:1.36}
 body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-scope button{font-size:11.5px!important;min-height:34px}
@@ -676,7 +676,7 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-quick-item small{font-
 .ob36-hourly-data b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25}
 .ob36-hourly-data small{font-size:10.5px!important}
 
-/* OUTBASE HOME v36 r10 — weather hierarchy, readable numbers, grouped advice, and expandable hourly detail. */
+/* OUTBASE HOME v36 r11 — weather hierarchy, readable numbers, grouped advice, and expandable hourly detail. */
 :root{
   --ob36-value-good:#52751c;
   --ob36-value-info:#4f91ad;
@@ -837,3 +837,17 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag,body.outbas
 .ob36-weather-detail-sheet header h2{font-size:22px!important}
 .ob36-weather-search select,.ob36-weather-search input{width:100%!important;min-height:44px!important;border:1px solid #ddd9d1!important;border-radius:12px!important;background:#fff!important;padding:8px 10px!important;font-size:13px!important;color:#202622!important}
 .ob36-weather-search label>span{font-size:12px!important;font-weight:650!important}
+
+
+/* r11 live weather connection states — additive only; approved r10 structure remains locked. */
+.ob36-weather-source-note{margin:0 0 12px;padding:11px 12px;border:1px solid #e4e9e2;border-radius:14px;background:#f7faf7;display:grid;gap:4px}
+.ob36-weather-source-note b{font-size:12.5px;color:var(--ob36-green)}
+.ob36-weather-source-note span{font-size:11.5px;line-height:1.45;color:var(--ob36-muted)}
+.ob36-intel-loading{margin-top:12px;padding:14px;border:1px solid #e5e9df;border-radius:16px;background:#f7faf7;display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center}
+.ob36-intel-loading .ob36-intel-weather-icon{width:50px;height:50px}
+.ob36-intel-loading b{display:block;font-size:15px}
+.ob36-intel-loading p{margin:5px 0 0;font-size:12px;line-height:1.5;color:var(--ob36-muted)}
+.ob36-detail-empty{margin:14px 0;padding:18px;border:1px solid #e4e8e2;border-radius:16px;background:#f8faf7;text-align:center}
+.ob36-detail-empty b{font-size:15px;color:var(--ob36-green)}
+.ob36-detail-empty p{margin:7px 0 0;font-size:12px;color:var(--ob36-muted)}
+.ob36-source-compare>p{font-size:10.5px;line-height:1.45;color:var(--ob36-muted)}
