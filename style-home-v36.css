@@ -871,3 +871,40 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag,body.outbas
 .ob36-external-steps>button{min-height:43px;border:1px solid #dbe3da;border-radius:13px;background:#fff;color:#3f6650;font-size:13px;font-weight:750}.ob36-external-steps>input{width:100%;min-height:46px;padding:9px 11px;border:1px solid #dcded8;border-radius:13px;background:#fff;font-size:13px;color:#202622}
 .ob36-external-validation{min-height:18px;margin:8px 2px 0;color:#b64f40;font-size:11.5px;line-height:1.4}
 @media(max-width:380px){.ob36-external-grid{grid-template-columns:1fr}.ob36-external-main{min-height:68px}.ob36-external-main b{font-size:12.5px}.ob36-external-main small{font-size:11px}}
+
+/* r17 rain radar + 1/3/6/12/24h precipitation outlook. HOME r10 design remains locked. */
+.ob36-radar-section{margin-top:14px;padding:13px;border:1px solid #dfe5dd;border-radius:18px;background:#fbfcfa;overflow:hidden}
+.ob36-radar-section>.ob36-detail-section-head{margin-bottom:9px}
+.ob36-radar-horizons{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;padding:3px;border-radius:13px;background:#efeee9}
+.ob36-radar-horizons button{min-height:34px;padding:5px 2px;border:0;border-radius:10px;background:transparent;color:#656b67;font-size:11.5px;font-weight:750;white-space:nowrap}
+.ob36-radar-horizons button.active{background:#fff;color:#21593b;box-shadow:0 2px 7px rgba(36,45,39,.08)}
+.ob36-radar-map{position:relative;height:220px;border:1px solid #d9ded7;border-radius:16px;overflow:hidden;background:#dfe6df}
+.ob36-radar-map-grid{position:absolute;width:768px;height:768px}
+.ob36-radar-tile{position:absolute;width:256px;height:256px;overflow:hidden;background:#e7ece8}
+.ob36-radar-tile img{position:absolute;inset:0;width:256px;height:256px;object-fit:cover}
+.ob36-radar-tile img.base{z-index:1;filter:saturate(.72) brightness(1.04)}
+.ob36-radar-tile img.rain{z-index:2;opacity:.84}
+.ob36-radar-pin{position:absolute;z-index:4;left:50%;top:50%;width:17px;height:17px;border:3px solid #fff;border-radius:50%;background:#1d6a48;box-shadow:0 1px 7px rgba(0,0,0,.28);transform:translate(-50%,-50%)}
+.ob36-radar-pin:after{content:"";position:absolute;left:50%;top:100%;width:2px;height:12px;background:#1d6a48;transform:translateX(-50%)}
+.ob36-radar-map-caption{position:absolute;z-index:5;left:9px;top:9px;padding:7px 9px;border-radius:11px;background:rgba(255,255,255,.91);box-shadow:0 2px 8px rgba(35,42,38,.1);display:grid;gap:1px}
+.ob36-radar-map-caption b{font-size:12.5px}.ob36-radar-map-caption small{font-size:10.5px;color:#69706c}
+.ob36-radar-unavailable{min-height:120px;padding:22px 16px;border:1px dashed #d7ddd5;border-radius:16px;background:#f5f8f4;display:grid;place-content:center;text-align:center}
+.ob36-radar-unavailable b{font-size:14px;color:#315c43}.ob36-radar-unavailable p{margin:6px 0 0;font-size:11.5px;line-height:1.45;color:#6d746f}
+.ob36-radar-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:10px;border:1px solid #e0e4de;border-radius:14px;overflow:hidden;background:#e0e4de}
+.ob36-radar-summary>div{min-width:0;padding:9px 8px;background:#fff}
+.ob36-radar-summary small{display:block;font-size:10px;color:#737a75}.ob36-radar-summary b{display:block;margin-top:3px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob36-radar-message{margin:9px 2px 7px;font-size:11.5px;line-height:1.45;color:#626a65}
+.ob36-rain-timeline{display:grid;grid-auto-flow:column;grid-auto-columns:54px;gap:5px;overflow-x:auto;padding:3px 1px 7px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.ob36-rain-timeline article{height:128px;padding:7px 5px;border:1px solid #e1e5df;border-radius:12px;background:#fff;display:grid;grid-template-rows:auto 1fr auto auto;justify-items:center;gap:3px;scroll-snap-align:start}
+.ob36-rain-timeline time{font-size:10.5px;font-weight:750;color:#4c544f}.ob36-rain-timeline b{font-size:11.5px}.ob36-rain-timeline small{font-size:9.5px;color:#737a75}
+.ob36-rain-bar{position:relative;width:15px;height:66px;border-radius:9px;background:#eef1ed;overflow:hidden;align-self:end}
+.ob36-rain-bar i{position:absolute;left:0;right:0;bottom:0;border-radius:9px 9px 0 0;background:#78a8c2}
+.ob36-rain-timeline article.tone-good .ob36-rain-bar i{background:#8ca56d}.ob36-rain-timeline article.tone-watch .ob36-rain-bar i{background:#d79a39}.ob36-rain-timeline article.tone-danger .ob36-rain-bar i{background:#c95a4a}
+.ob36-radar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ob36-radar-actions button{min-height:40px;border:1px solid #d9e1d9;border-radius:13px;background:#fff;color:#356349;font-size:12px;font-weight:750}
+.ob36-radar-actions button:last-child{background:#eef5ef}
+.ob36-radar-source{display:block;margin:8px 2px 0;font-size:9.8px;line-height:1.4;color:#787f7a}
+.ob36-radar-empty{padding:14px;border:1px dashed #dce1da;border-radius:13px;text-align:center;font-size:11.5px;color:#6c736e}
+@media(max-width:380px){
+  .ob36-radar-section{padding:11px}.ob36-radar-map{height:196px}.ob36-radar-horizons button{font-size:10.5px}.ob36-radar-summary>div{padding:8px 6px}.ob36-radar-summary b{font-size:11.5px}.ob36-rain-timeline{grid-auto-columns:50px}.ob36-radar-actions{grid-template-columns:1fr}
+}
