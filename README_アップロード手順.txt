@@ -1,12 +1,15 @@
-OUTBASE カレンダーv2 正式表示ルート修正版
+OUTBASE カレンダーv2 r4 正式ルート統合
 
-このZIPをいつものGitHub ZIPアップロードで反映してください。
+このZIPを展開せず、いつものGitHub ZIPアップロードで反映してください。
 
-修正内容
-・カレンダー画面が内部的にhomeルートで描画される場合でも、新カレンダーv2を正式表示
-・旧カレンダー本文を残さず置換
-・URL view=calendar / route=calendar / screen=calendar に対応
-・FIELD03のoutbase_dbには変更なし
-・既存の予定データ、インポート、エクスポート、ウィジェット準備機能は維持
+変更対象:
+- index.html
+- service-worker.js
+- style-calendar-v2.css
+- src/config/module-manifest.js
+- src/calendar-v2/outbase-calendar-v2.js
+- src/shell/calendar-route-renderer.js
 
-反映後はOUTBASEを完全に閉じてから開き直してください。
+ホーム「今後の予定」右上のカレンダーは既存の router.navigate('calendar') を使います。
+今回はその正式calendarルートの描画本体へ新カレンダーを組み込み、DOM文字判定・MutationObserver・後付けscriptタグ方式を廃止しています。
+FIELD03の outbase_db は変更しません。

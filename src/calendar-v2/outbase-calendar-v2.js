@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='calendar-v2-r3-direct-route';
+  const VERSION='calendar-v2-r4-formal-route';
   const DB_NAME='outbase_calendar_db';
   const DB_VERSION=1;
   const STORES={
@@ -17,7 +17,7 @@
     selected:dateKey(new Date()),
     view:'month',
     calendars:[],entries:[],todos:[],filters:new Set(),
-    mounted:false,editing:null
+    mounted:false,editing:null,routeMain:null
   };
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -121,27 +121,23 @@
     return Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d;});
   }
 
-  function calendarRequested(){
-    const q=new URLSearchParams(location.search);
-    const route=q.get('view')||q.get('route')||q.get('screen')||'';
-    if(route==='calendar')return true;
-    const shell=document.querySelector('.ob3-shell');
-    if(shell?.dataset?.ob6Route==='calendar')return true;
-    const main=shell?.querySelector('.ob3-main');
+  function mountRoute(root){
+    const shell=root?.querySelector?.('.ob3-shell')||root?.matches?.('.ob3-shell')&&root||document.querySelector('.ob3-shell');
+    const main=shell?.querySelector?.('.ob3-main')||root?.querySelector?.('.ob3-main');
     if(!main)return false;
-    const text=(main.textContent||'').replace(/\s+/g,' ');
-    return /\d{4}年\d{1,2}月/.test(text)&&(/この月/.test(text)||main.querySelector('[data-date],[class*=calendar],[class*=month]'));
+    shell.dataset.ob6Route='calendar';
+    state.routeMain=main;
+    render(main);
+    root?.querySelectorAll?.('.ob3-nav a,.ob3-bottom-nav a,[data-ob6-nav]').forEach(node=>{
+      node.classList.remove('active');node.removeAttribute('aria-current');
+    });
+    return true;
   }
 
-  function targetMain(){
-    if(!calendarRequested())return null;
-    const shell=document.querySelector('.ob3-shell[data-ob6-route="calendar"]')||document.querySelector('.ob3-shell[data-ob6-route="home"]')||document.querySelector('.ob3-shell');
-    return shell?.querySelector('.ob3-main')||null;
-  }
-
-  function render(){
-    const main=targetMain();
+  function render(target=state.routeMain){
+    const main=target;
     if(!main)return;
+    state.routeMain=main;
     main.classList.add('obcal-main');
     main.innerHTML=`<section class="obcal-shell" data-version="${VERSION}">
       ${renderHeader()}
@@ -273,82 +269,24 @@
   }
   const light=e=>({id:e.id,title:e.title,start_at:e.start_at,end_at:e.end_at,all_day:e.all_day,calendar_id:e.calendar_id,activity_id:e.activity_id||null});
 
-  function mountWhenReady(){
-    let lastSignature='';
-    const attempt=()=>{
-      const main=targetMain();
-      if(!main)return false;
-      const signature=`${location.href}|${main.childElementCount}|${main.textContent?.slice(0,80)}`;
-      if(main.querySelector('.obcal-shell[data-version="'+VERSION+'"]'))return true;
-      if(signature===lastSignature)return false;
-      lastSignature=signature;
-      render();
-      return true;
-    };
-    attempt();
-    const observer=new MutationObserver(()=>setTimeout(attempt,0));
-    observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ob6-route']});
-    addEventListener('popstate',()=>setTimeout(attempt,0));
-    addEventListener('outbase:app-ready',()=>setTimeout(attempt,0));
-    setTimeout(attempt,250);
-    setTimeout(attempt,1000);
-  }
-
-  function claimCalendarRoute(){
-    const q=new URLSearchParams(location.search);
-    const current=q.get('view')||q.get('route')||q.get('screen')||'';
-    if(current==='calendar')return;
-    const main=document.querySelector('.ob3-main');
-    const text=(main?.textContent||'').replace(/\s+/g,' ');
-    const looksLegacy=Boolean(main&&/\d{4}年\d{1,2}月/.test(text)&&(/この月/.test(text)||main.querySelector('[data-date],[class*=calendar],[class*=month]')));
-    if(!looksLegacy)return;
-    q.set('shell','1');q.set('view','calendar');
-    q.delete('route');q.delete('screen');
-    history.replaceState({...history.state,outbaseShell:true,route:'calendar'},'',`${location.pathname}?${q.toString()}`);
-    const shell=document.querySelector('.ob3-shell');
-    if(shell)shell.dataset.ob6Route='calendar';
-  }
-
-  function directMount(){
-    claimCalendarRoute();
-    const main=targetMain();
-    if(!main)return false;
-    if(!state.calendars.length){
-      state.calendars=[
-        {id:'cal-outbase',name:'OUTBASE',color:'#174d31',visible:true,kind:'outbase'},
-        {id:'cal-family',name:'家族',color:'#d58e12',visible:true,kind:'family'},
-        {id:'cal-personal',name:'個人',color:'#66a9c7',visible:true,kind:'personal'},
-        {id:'cal-import',name:'取込',color:'#8e8279',visible:true,kind:'import'}
-      ];
-      state.calendars.forEach(x=>state.filters.add(x.id));
-    }
-    render();
-    document.querySelectorAll('.ob3-nav a,.ob3-bottom-nav a,[data-ob6-nav]').forEach(node=>{
-      const href=node.getAttribute('href')||'';
-      const target=node.dataset?.ob6Nav||'';
-      const isCalendar=target==='calendar'||/[?&]view=calendar(?:&|$)/.test(href);
-      node.classList.toggle('active',isCalendar);
-      if(isCalendar)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');
-    });
-    return true;
-  }
+  let readyResolve;
+  const ready=new Promise(resolve=>{readyResolve=resolve;});
 
   async function init(){
-    mountWhenReady();
-    directMount();
-    globalThis.OUTBASE_CALENDAR_V2=Object.freeze({version:VERSION,refresh,openEditor,exportData,generateWidgetSnapshot,db:{open:openDb,all,put,remove},directMount});
-    if(!('indexedDB'in globalThis))return;
+    if(!('indexedDB'in globalThis)){readyResolve({status:'memory-only'});return;}
     try{
       await ensureDefaults();
       await migrateLegacy();
-      await refresh();
-      directMount();
+      state.calendars=(await all('calendars')).filter(x=>!x.deleted_at);
+      if(state.filters.size===0)state.calendars.filter(x=>x.visible!==false).forEach(x=>state.filters.add(x.id));
+      state.entries=(await all('entries')).filter(x=>!x.deleted_at);
+      state.todos=(await all('todos')).filter(x=>!x.deleted_at);
+      readyResolve({status:'ready'});
     }catch(error){
-      console.error('[OUTBASE Calendar v2] data init failed; calendar UI remains available',error);
-      directMount();
+      console.error('[OUTBASE Calendar v2] data init failed',error);
+      readyResolve({status:'failed',error:String(error?.message||error)});
     }
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init(),{once:true});else init();
-  addEventListener('outbase:app-ready',()=>setTimeout(directMount,0));
-  addEventListener('outbase:navigation',()=>setTimeout(directMount,0));
+  globalThis.OUTBASE_CALENDAR_V2=Object.freeze({version:VERSION,ready,refresh,openEditor,exportData,generateWidgetSnapshot,mountRoute,db:{open:openDb,all,put,remove}});
+  init();
 })();
