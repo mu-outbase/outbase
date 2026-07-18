@@ -908,3 +908,12 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag,body.outbas
 @media(max-width:380px){
   .ob36-radar-section{padding:11px}.ob36-radar-map{height:196px}.ob36-radar-horizons button{font-size:10.5px}.ob36-radar-summary>div{padding:8px 6px}.ob36-radar-summary b{font-size:11.5px}.ob36-rain-timeline{grid-auto-columns:50px}.ob36-radar-actions{grid-template-columns:1fr}
 }
+
+/* r18 external forecast controls: remove duplicate settings footer and use compact edit mode. */
+.ob36-external-edit-toggle{min-height:30px;padding:4px 9px;border:0;border-radius:10px;background:#eef3ee;color:#315f43;font-size:11.5px;font-weight:800}
+.ob36-external-card-actions{display:none;position:absolute;inset:0;padding:9px;background:rgba(255,255,255,.96);align-items:center;justify-content:center;gap:8px;z-index:2}
+.ob36-external-weather.is-editing .ob36-external-card-actions{display:flex}
+.ob36-external-weather.is-editing .ob36-external-main{opacity:.42;pointer-events:none}
+.ob36-external-card-actions button{min-height:34px;padding:6px 12px;border:1px solid #d7dfd6;border-radius:10px;background:#fff;color:#315f43;font-size:11.5px;font-weight:800}
+.ob36-external-card-actions button.danger{border-color:#ead7d2;color:#a54f40;background:#fffaf8}
+.ob36-external-weather.is-editing .ob36-external-card.not-editable .ob36-external-main{opacity:.72}
