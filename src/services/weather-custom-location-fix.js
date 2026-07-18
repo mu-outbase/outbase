@@ -2,7 +2,7 @@
   'use strict';
 
   const base=globalThis.OUTBASE_WEATHER_SERVICE_V1;
-  if(!base||base.customLocationFixVersion==='r25')return;
+  if(!base||base.customLocationFixVersion==='r26')return;
 
   const CACHE_KEY=base.CACHE_KEY||'outbase_weather_live_cache_v1';
   const POI_CACHE_KEY='outbase_weather_poi_geocode_cache_v1';
@@ -94,7 +94,7 @@
   }
   function withTarget(result,key,extra={}){
     const targets=[...new Set([...(Array.isArray(result?.targets)?result.targets:[]),key])];
-    return Object.freeze({...result,...extra,targets:Object.freeze(targets),customLocationFix:'r25'});
+    return Object.freeze({...result,...extra,targets:Object.freeze(targets),customLocationFix:'r26'});
   }
 
   function readPoiCache(){
@@ -261,5 +261,5 @@
     return detail;
   }
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,poiGeocode,pinpointSpot,PINPOINT_SPOTS,POI_CACHE_KEY,customLocationFixVersion:'r25'});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,poiGeocode,pinpointSpot,PINPOINT_SPOTS,POI_CACHE_KEY,customLocationFixVersion:'r26'});
 })();

@@ -31,9 +31,9 @@
   function removeWeatherPlaceHistory(value){const key=placeHistoryKey(value);const rows=readWeatherPlaceHistory().filter(item=>placeHistoryKey(item)!==key);writeWeatherPlaceHistory(rows);return rows;}
   function clearWeatherPlaceHistory(){safeSet(WEATHER_PLACE_HISTORY_KEY,'[]');return [];}
   function weatherPlaceHistoryMarkup(){
-    const fixed=fixedWeatherPlaces().map(item=>`<button type="button" class="ob36-place-choice fixed" data-ob36-place-history-select="${esc(item.value)}">${esc(item.label)}</button>`).join('');
-    const rows=readWeatherPlaceHistory();const recent=rows.map(value=>`<span class="ob36-place-choice recent"><button type="button" data-ob36-place-history-select="${esc(value)}">${esc(value)}</button><button type="button" class="remove" data-ob36-place-history-remove="${esc(value)}" aria-label="${esc(value)}を履歴から削除">×</button></span>`).join('');
-    return `<div class="ob36-place-history"><div class="ob36-place-history-head"><span>場所を選ぶ</span>${rows.length?'<button type="button" data-ob36-place-history-clear>履歴をすべて削除</button>':''}</div><div class="ob36-place-history-list">${fixed}${recent}</div></div>`;
+    const fixed=fixedWeatherPlaces().map(item=>`<button type="button" class="ob36-place-choice fixed" data-ob36-place-history-select="${esc(item.value)}" aria-label="${esc(item.label)}を選択">${esc(item.label)}</button>`).join('');
+    const rows=readWeatherPlaceHistory();const recent=rows.map(value=>`<span class="ob36-place-choice recent" role="group" aria-label="${esc(value)}"><button type="button" class="label" data-ob36-place-history-select="${esc(value)}" aria-label="${esc(value)}を選択">${esc(value)}</button><button type="button" class="remove" data-ob36-place-history-remove="${esc(value)}" aria-label="${esc(value)}を履歴から削除">×</button></span>`).join('');
+    return `<div class="ob36-place-history"><div class="ob36-place-history-head"><span>場所を選ぶ</span>${rows.length?'<button type="button" data-ob36-place-history-clear>履歴をすべて削除</button>':''}</div><div class="ob36-place-history-list" role="list">${fixed}${recent}</div></div>`;
   }
   function clearRadarTimer(){if(radarTimer){clearTimeout(radarTimer);radarTimer=null;}}
   function clearHomeModal(){clearRadarTimer();const host=modalHost();if(host)host.innerHTML='';document.body.classList.remove('ob36-modal-open');}
@@ -322,7 +322,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r25',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r26',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -382,7 +382,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r25',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r26',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
