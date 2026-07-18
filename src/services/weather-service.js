@@ -225,7 +225,7 @@
     const comparisons=[{source:forecast.provider,summary:planSummary?.condition||'取得済み',rainProbability:planSummary?.rainPeak??0,windGust,status:'live'}];
     const rainPeak=planSummary?.rainPeak??0;const confidence=planSummary?.confidence||'—';
     return Object.freeze({status:'ready',sample:false,place:place||forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,activityType:plan?.type||'',condition:planSummary?.condition||days[0]?.condition||'天気情報',high:planSummary?.high,low:planSummary?.low,rainPeak,windAverageMax:planSummary?.windMax??0,windGust,confidence,confidenceDescription:confidenceDescription(confidence),hourly:Object.freeze(hourly),judgements:Object.freeze([
-      {label:'雨対策',value:rainPeak>=70?'必須':rainPeak>=40?'準備推奨':'大きな心配小',detail:`予定期間内の降水ピーク ${rainPeak}%`},
+      {label:'雨対策',value:rainPeak>=70?'雨具を準備':rainPeak>=40?'雨具があると安心':'大きな心配は小さめ',detail:rainPeak>=70?'雨の強まる時間は時間別予報で確認':rainPeak>=40?'時間帯により降る可能性':'予定全体では大きな崩れは少なめ'},
       {label:'風対策',value:windGust>=8?'強風注意':windGust>=6?'やや注意':'概ね安心',detail:`予定期間内 平均最大 ${planSummary?.windMax??0}m/s・瞬間最大 ${windGust}m/s`},
       {label:'暑さ',value:hottest&&(hottest.feelsLike??hottest.temperature)>=30?'強い暑さ':hottest&&(hottest.feelsLike??hottest.temperature)>=28?'暑さ注意':'概ね安心',detail:hottest?`予定期間内の最高体感 ${hottest.feelsLike??hottest.temperature}°・日陰と水分を確認`:'気温データ未取得'},
       {label:'ペット',value:hottest&&(hottest.feelsLike??hottest.temperature)>=28?'暑さ対策':'概ね安心',detail:hottest&&(hottest.feelsLike??hottest.temperature)>=28?'日陰・水分・路面温度を確認':'無理のない時間で活動'},

@@ -269,11 +269,14 @@
       const score=row=>hourlyNumber(row.rainProbability)*1.2+hourlyNumber(row.windAverage)*10+Math.max(0,hourlyNumber(row.feelsLike,row.temperature)-28)*5+Math.max(0,12-hourlyNumber(row.feelsLike,row.temperature))*2;
       return score(a)-score(b);
     })[0];
+    const rainValue=hourlyNumber(rain?.rainProbability);
+    const windAverage=hourlyNumber(wind?.windAverage);
+    const hotValue=hourlyNumber(hot?.feelsLike,hot?.temperature);
     return [
-      {label:'雨ピーク',value:`${hourlyTimeLabel(rain)} ${esc(rain?.rainProbability??'—')}%`,tone:weatherTone('rain',rain?.rainProbability)},
-      {label:'風ピーク',value:`${hourlyTimeLabel(wind)} 平均${esc(wind?.windAverage??'—')}・瞬間${esc(wind?.windGust??'—')}m/s`,tone:weatherTone('wind',wind?.windGust??wind?.windAverage)},
-      {label:'暑さピーク',value:`${hourlyTimeLabel(hot)} 体感${esc(hot?.feelsLike??hot?.temperature??'—')}°`,tone:weatherTone('temperature',hot?.feelsLike??hot?.temperature)},
-      {label:'外時間候補',value:`${hourlyTimeLabel(calm)}頃`,tone:'good'}
+      {label:'雨',value:rainValue>=70?`${hourlyTimeLabel(rain)}頃は雨具を準備`:rainValue>=40?'雨具があると安心':'大きな雨の心配は小さめ',detail:'詳しい確率は時間カードで確認',tone:rainValue>=70?'watch':'good'},
+      {label:'風',value:windAverage>=5?'風の強まる時間に注意':'風は概ね穏やか',detail:'平均風速を基準に判断',tone:windAverage>=5?'watch':'good'},
+      {label:'暑さ',value:hotValue>=30?'昼は日陰と水分補給':hotValue>=26?'暑さ対策があると安心':'過ごしやすい見込み',detail:hotValue>=30?`${hourlyTimeLabel(hot)}頃に暑さが強まる見込み`:'時間ごとの体感を確認',tone:hotValue>=35?'danger':hotValue>=26?'watch':'good'},
+      {label:'おすすめの時間',value:`${hourlyTimeLabel(calm)}頃`,detail:'雨・風・体感が比較的穏やか',tone:'good'}
     ];
   }
   function hourlyCardMarkup(row,index,previousDate=''){
@@ -287,8 +290,8 @@
   function hourlyOverviewMarkup(rows){
     const list=Array.isArray(rows)?rows:[];let previousDate='';const cards=[];
     list.forEach((row,index)=>{const key=hourlyDateKey(row);cards.push(hourlyCardMarkup(row,index,previousDate));if(key)previousDate=key;});
-    const highlights=hourlyHighlights(list).map(item=>`<div><small>${item.label}</small><b class="tone-${item.tone}">${item.value}</b></div>`).join('');
-    return `<section class="ob36-hourly-section"><div class="ob36-detail-section-head"><h3>時間ごとの予報</h3><span>横で流れを見る</span></div><div class="ob36-hourly-highlights">${highlights}</div><div class="ob36-hourly-density" role="group" aria-label="時間間隔"><button type="button" class="active" data-ob36-hourly-density="3">3時間ごと</button><button type="button" data-ob36-hourly-density="1">1時間ごと</button></div><div class="ob36-hourly-rail" data-ob36-hourly-rail>${cards.join('')||'<p class="ob36-intel-empty">この期間の時間別予報はまだありません。</p>'}</div>${hourlySelectedMarkup(list[0],0)}</section>`;
+    const highlights=hourlyHighlights(list).map(item=>`<div><small>${item.label}</small><span><b class="tone-${item.tone}">${item.value}</b><em>${item.detail||''}</em></span></div>`).join('');
+    return `<section class="ob36-hourly-section"><div class="ob36-detail-section-head"><h3>時間ごとの予報</h3><span>横で流れを見る</span></div><div class="ob36-hourly-points"><h4>この期間のポイント</h4><div class="ob36-hourly-highlights">${highlights}</div></div><div class="ob36-hourly-density" role="group" aria-label="時間間隔"><button type="button" class="active" data-ob36-hourly-density="3">3時間ごと</button><button type="button" data-ob36-hourly-density="1">1時間ごと</button></div><div class="ob36-hourly-rail" data-ob36-hourly-rail>${cards.join('')||'<p class="ob36-intel-empty">この期間の時間別予報はまだありません。</p>'}</div>${hourlySelectedMarkup(list[0],0)}</section>`;
   }
   function weatherDetailMarkup(detail){
     if(!detail||detail.status==='loading')return `<section class="ob36-detail-empty"><b>予報を取得しています</b><p>場所と日付を確認して最新データへ接続します。</p></section>`;
@@ -302,7 +305,7 @@
     const rainSub=rain>=80?'一時的に強まる可能性':rain>=40?'時間帯により降る可能性':'予定全体では大きな崩れなし';
     const windText=maxAverage>=8?'風が強い時間あり':maxAverage>=5?'風に注意':maxAverage>=3?'やや風あり':'風は概ね穏やか';
     const windSub=gust>=10?`突風は最大${gust}m/s予測`:`平均最大${maxAverage.toFixed(1)}m/s・突風は補足値`;
-    const weatherSummary=`<div class="ob36-detail-decision-metrics"><span><b>${esc(rainText)}</b><small>${esc(rainSub)}</small></span><span><b>${esc(windText)}</b><small>${esc(windSub)}</small></span><span><b class="tone-${weatherTone('confidence',detail.confidence)}">${esc(detail.confidenceDescription||confidenceLabel(detail.confidence))}</b><small>期間全体の確度</small></span></div>`;
+    const weatherSummary=`<div class="ob36-detail-decision-metrics"><span><b>${esc(rainText)}</b><small>${esc(rainSub)}</small></span><span><b>${esc(windText)}</b><small>${esc(windSub)}</small></span><span><b class="tone-${weatherTone('confidence',detail.confidence)}">${esc(detail.confidenceDescription||confidenceLabel(detail.confidence))}</b><small>予報の信頼度</small></span></div>`;
     return `<section class="ob36-detail-summary"><div class="ob36-detail-summary-main"><span class="ob36-detail-main-icon">${detailWeatherIcon(detail.condition)}</span><div><small>${esc(detail.place)}　${esc(detail.provider||detail.primarySource||'自動取得')}</small><h3>${esc(detail.condition)}</h3><strong><span class="tone-${weatherTone('temperature',detail.high)}">${detail.high==null?'—':esc(detail.high)}°</span><i>／</i><span class="tone-${weatherTone('temperature',detail.low)}">${detail.low==null?'—':esc(detail.low)}°</span></strong></div></div>${weatherSummary}<div class="ob36-detail-update"><span>最終更新 ${esc(detail.updatedLabel)}</span><span>次回 ${esc(detail.nextUpdateLabel)}頃</span><button type="button" data-ob36-detail-refresh aria-label="天気を更新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M18.5 15.5A7 7 0 1 1 19 8l1 4"/></svg></button></div></section><section class="ob36-detail-judgement"><div class="ob36-detail-section-head"><h3>外時間の判断</h3></div>${judgements||'<p class="ob36-intel-empty">予報取得後に判定します。</p>'}</section>${hourlyOverviewMarkup(hourlyRows)}${externalWeatherMarkup(detail)}<section class="ob36-source-compare ob36-source-compare-last"><div class="ob36-detail-section-head"><h3>取得データ</h3><span>自動更新</span></div>${comparisons||'<p class="ob36-intel-empty">取得元を確認中です。</p>'}<p class="ob36-weather-attribution">天気データ：<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>　予報モデル：自動選択</p>${detail.geocodeAttribution?`<p>${esc(detail.geocodeAttribution)}</p>`:''}</section>`;
   }
   function bindHourlyRows(host){
@@ -394,7 +397,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r33',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r34',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -454,7 +457,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r33',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r34',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
