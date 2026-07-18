@@ -919,19 +919,22 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag,body.outbas
 .ob36-external-weather.is-editing .ob36-external-card.not-editable .ob36-external-main{opacity:.72}
 
 
-/* r19 weather mode slide + universal sheet swipe dismiss. */
+/* r20 weather mode tabs + universal sheet swipe dismiss + shared action button. */
 .ob36-source-compare-last{margin-top:14px;margin-bottom:4px}
-.ob36-weather-mode-zone{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .ob36-weather-mode{position:relative;grid-template-columns:repeat(3,minmax(0,1fr))!important;overflow:hidden}
 .ob36-weather-mode:before{content:"";position:absolute;z-index:0;left:3px;top:3px;bottom:3px;width:calc((100% - 6px)/3);border-radius:999px;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.07);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
 .ob36-weather-mode.mode-plan:before{transform:translateX(100%)}
 .ob36-weather-mode.mode-custom:before{transform:translateX(200%)}
 .ob36-weather-mode button{position:relative;z-index:1;padding:5px 3px!important;background:transparent!important;box-shadow:none!important;white-space:nowrap;line-height:1.15}
 .ob36-weather-mode button.active{background:transparent!important;box-shadow:none!important}
-.ob36-weather-swipe-hint{display:block;margin:6px 2px 0;text-align:center;color:#858b87;font-size:10px;font-weight:650}
-.ob36-weather-mode-page{will-change:transform,opacity}
-.ob36-weather-mode-page.is-swiping{pointer-events:none}
+
+.ob36-action-button{width:100%;min-height:62px;margin-top:2px;padding:8px 10px;border:1px solid #e4e1d9!important;border-radius:16px!important;background:#fff!important;color:var(--ob36-ink)!important;box-shadow:0 5px 14px rgba(37,42,39,.055)!important;display:grid!important;grid-template-columns:46px minmax(0,1fr) 20px!important;align-items:center;gap:9px;text-align:left}
+.ob36-action-button-icon{--accent:#54751b;--halo:rgba(84,117,27,.14);position:relative;width:44px;height:42px;display:grid;place-items:center;color:var(--accent)}
+.ob36-action-button-icon:before{content:"";position:absolute;width:38px;height:38px;border-radius:14px;background:radial-gradient(circle at 46% 40%,rgba(255,255,255,.98) 0 27%,var(--halo) 54%,rgba(255,255,255,0) 78%)}
+.ob36-action-button-icon svg{position:relative;z-index:1;width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
+.ob36-action-button-copy{min-width:0}.ob36-action-button-copy b{display:block;font-size:15px}.ob36-action-button-copy small{display:block;margin-top:2px;color:#69706b;font-size:12px;font-weight:550}
+.ob36-action-button-arrow{display:grid;place-items:center}.ob36-action-button-arrow svg{width:19px;height:19px;fill:none;stroke:#65706a;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ob36-action-button:active{transform:translateY(1px);box-shadow:0 2px 7px rgba(37,42,39,.05)!important}
 .ob36-sheet,.ob3-sheet,[role="dialog"][class*="sheet"]{will-change:transform}
 .ob36-sheet-grab,.ob3-sheet-handle,.ob3-sheet-grab,[class*="sheet-grab"],[class*="sheet-handle"],.ob36-sheet>header,.ob3-sheet>.ob3-sheet-head{touch-action:none}
 .ob36-sheet.ob-swipe-tracking,.ob3-sheet.ob-swipe-tracking,[role="dialog"][class*="sheet"].ob-swipe-tracking{transition:none!important}
-@media(max-width:380px){.ob36-weather-mode button{font-size:11px!important}.ob36-weather-swipe-hint{font-size:9.5px}}
