@@ -938,3 +938,17 @@ body.outbaseNorth .ob3-shell[data-ob6-route="home"] .ob36-sample-tag,body.outbas
 .ob36-sheet,.ob3-sheet,[role="dialog"][class*="sheet"]{will-change:transform}
 .ob36-sheet-grab,.ob3-sheet-handle,.ob3-sheet-grab,[class*="sheet-grab"],[class*="sheet-handle"],.ob36-sheet>header,.ob3-sheet>.ob3-sheet-head{touch-action:none}
 .ob36-sheet.ob-swipe-tracking,.ob3-sheet.ob-swipe-tracking,[role="dialog"][class*="sheet"].ob-swipe-tracking{transition:none!important}
+
+/* r23 reusable weather place history. */
+.ob36-place-history{display:grid;gap:7px;padding:1px 0 2px}
+.ob36-place-history-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ob36-place-history-head>span{font-size:12px;font-weight:750;color:#5f6862}
+.ob36-place-history-head>button{min-height:28px!important;padding:3px 8px!important;border:0!important;border-radius:9px!important;background:#f4f1ec!important;color:#8a5d49!important;font-size:10.5px!important;font-weight:750!important}
+.ob36-place-history-list{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 5px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ob36-place-history-list::-webkit-scrollbar{display:none}
+.ob36-place-choice{flex:0 0 auto;min-height:36px!important;border:1px solid #dce2dc!important;border-radius:999px!important;background:#fff!important;color:#2f6244!important;font-size:12px!important;font-weight:750!important;box-shadow:none!important}
+button.ob36-place-choice{padding:6px 13px!important}
+.ob36-place-choice.fixed{background:#eef5ef!important}
+.ob36-place-choice.recent{display:inline-grid;grid-template-columns:minmax(0,1fr) 31px;align-items:center;overflow:hidden;padding:0!important}
+.ob36-place-choice.recent>button:first-child{min-height:34px;padding:5px 9px 5px 12px;border:0;background:transparent;color:#2f6244;font:inherit;white-space:nowrap}
+.ob36-place-choice.recent>.remove{align-self:stretch;min-width:31px;border:0;border-left:1px solid #e5e8e4;background:#fafafa;color:#8c7064;font-size:17px;line-height:1}

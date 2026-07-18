@@ -2,7 +2,7 @@
   'use strict';
 
   const base=globalThis.OUTBASE_WEATHER_SERVICE_V1;
-  if(!base||base.customLocationFixVersion==='r22')return;
+  if(!base||base.customLocationFixVersion==='r23')return;
 
   const CACHE_KEY=base.CACHE_KEY||'outbase_weather_live_cache_v1';
   const HOME=base.HOME_LOCATION||Object.freeze({key:'home',label:'千葉県 柏市',latitude:35.8676,longitude:139.9758});
@@ -49,7 +49,7 @@
   }
   function withTarget(result,key){
     const targets=[...new Set([...(Array.isArray(result?.targets)?result.targets:[]),key])];
-    return Object.freeze({...result,targets:Object.freeze(targets),customLocationFix:'r22'});
+    return Object.freeze({...result,targets:Object.freeze(targets),customLocationFix:'r23'});
   }
   async function refresh(options={}){
     const custom=options?.custom&&typeof options.custom==='object'?options.custom:null;
@@ -91,5 +91,5 @@
     return base.getDetail(plan,options);
   }
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,customLocationFixVersion:'r22'});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,customLocationFixVersion:'r23'});
 })();
