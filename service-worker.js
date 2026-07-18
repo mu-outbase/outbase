@@ -1,4 +1,4 @@
-const CACHE_NAME='outbase-field03-v1663-visual-home-v36-r34';
+const CACHE_NAME='outbase-field03-v1663-visual-home-v36-r34-nav1';
 const CORE_ASSETS=[
   './','./index.html','./manifest.json?v=outbase-v1663-visual','./icons/outbase-192.png','./icons/outbase-512.png',
   './assets/default-covers/lake.jpg','./assets/default-covers/group.jpg','./assets/default-covers/sea.jpg','./assets/default-covers/autumn.jpg','./assets/default-covers/festival.jpg',
@@ -24,7 +24,7 @@ const CORE_ASSETS=[
   './src/screens/calendar/calendar-screen-model.js?v=outbase-v1663-home-v36-r34','./src/domain/activity/activity-detail-domain.js?v=outbase-v1663-home-v36-r34',
   './src/screens/activity/activity-detail-screen-model.js?v=outbase-v1663-home-v36-r34','./src/shell/legacy-adapter.js?v=outbase-v1663-home-v36-r34',
   './src/shell/modal-stack.js?v=outbase-v1663-home-v36-r34','./src/shell/shell-model.js?v=outbase-v1663-home-v36-r34',
-  './src/shell/shell-renderer.js?v=outbase-v1663-home-v36-r34','./src/shell/bootstrap.js?v=outbase-v1663-home-v36-r34',
+  './src/shell/shell-renderer.js?v=outbase-v1663-home-v36-r34','./src/shell/bootstrap.js?v=outbase-v1663-home-v36-r34','./src/shell/navigation-audit-fix.js?v=outbase-v1663-home-v36-r34-nav1',
   './outbase_library10a/style.css?v=outbase-field03-compact-2'
 ];
 
