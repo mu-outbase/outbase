@@ -4,50 +4,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A3328">
-<title>OUTBASE Calendar Lab</title>
-<link rel="stylesheet" href="calendar-preview.css">
+<title>OUTBASE Calendar Preview</title>
+<link rel="stylesheet" href="calendar-preview-v21.css?v=20260719-1">
 </head>
 <body>
-<div class="top-strip"></div>
+<div class="status-strip"></div>
 <header class="app-header">
   <div class="brand">OUTBASE</div>
   <div class="header-actions">
-    <button id="todayBtn" class="icon-btn">今日</button>
-    <button id="settingsBtn" class="icon-btn" aria-label="設定">⚙</button>
+    <button id="todayBtn" class="text-btn">今日</button>
+    <button id="settingsBtn" class="icon-btn" aria-label="カレンダー設定">⚙</button>
   </div>
 </header>
 
 <main class="page">
-  <section class="calendar-head">
+  <section class="calendar-hero">
     <div>
       <small>CALENDAR</small>
       <h1 id="monthLabel"></h1>
     </div>
-    <button id="addBtn" class="add-btn">＋ 予定を追加</button>
+    <button id="addBtn" class="hero-add" aria-label="予定を追加">＋</button>
   </section>
 
-  <section class="toolbar">
-    <div class="view-tabs">
+  <section class="calendar-toolbar">
+    <div class="view-tabs" role="tablist">
       <button data-view="month" class="active">月</button>
       <button data-view="week">週</button>
       <button data-view="day">日</button>
       <button data-view="list">一覧</button>
     </div>
-    <div class="toolbar-actions">
-      <button id="prevBtn" aria-label="前へ">‹</button>
-      <button id="nextBtn" aria-label="次へ">›</button>
-      <button id="filterBtn">絞り込み</button>
+    <div class="nav-row">
+      <div class="period-nav">
+        <button id="prevBtn" aria-label="前へ">‹</button>
+        <button id="nextBtn" aria-label="次へ">›</button>
+      </div>
+      <button id="filterBtn" class="filter-btn">絞り込み</button>
     </div>
   </section>
 
-  <section id="filterPanel" class="filter-panel hidden">
-    <label><input type="checkbox" data-filter="activity" checked> 活動</label>
-    <label><input type="checkbox" data-filter="camp" checked> キャンプ</label>
-    <label><input type="checkbox" data-filter="walk" checked> 散歩</label>
-    <label><input type="checkbox" data-filter="family" checked> 家族</label>
-  </section>
+  <section id="filterPanel" class="filter-panel hidden"></section>
 
-  <section id="calendarArea"></section>
+  <section id="calendarArea" aria-live="polite"></section>
 
   <section class="agenda">
     <div class="section-title">
@@ -55,7 +52,7 @@
         <small>選択日</small>
         <h2 id="selectedLabel"></h2>
       </div>
-      <button id="quickAddBtn">＋</button>
+      <button id="quickAddBtn" aria-label="選択日に追加">＋</button>
     </div>
     <div id="agendaList"></div>
   </section>
@@ -68,45 +65,18 @@
   <a href="./?shell=1&view=vault">▤<span>保管庫</span></a>
 </nav>
 
-<div id="modal" class="modal hidden">
-  <div class="sheet">
+<div id="modal" class="modal hidden" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true">
     <div class="grab"></div>
     <div class="sheet-head">
-      <div><small>予定</small><h2 id="formTitle">予定を追加</h2></div>
-      <button id="closeModal">×</button>
+      <div><small id="sheetEyebrow">予定</small><h2 id="sheetTitle">予定を追加</h2></div>
+      <button id="closeModal" aria-label="閉じる">×</button>
     </div>
-    <form id="eventForm">
-      <input type="hidden" name="id">
-      <label>タイトル<input name="title" required maxlength="80"></label>
-      <div class="row">
-        <label>開始<input name="start" type="datetime-local" required></label>
-        <label>終了<input name="end" type="datetime-local" required></label>
-      </div>
-      <label class="check"><input name="allDay" type="checkbox"> 終日</label>
-      <label>種類
-        <select name="type">
-          <option value="activity">活動</option>
-          <option value="camp">キャンプ</option>
-          <option value="walk">散歩</option>
-          <option value="family">家族</option>
-        </select>
-      </label>
-      <label>場所<input name="place"></label>
-      <label>メモ<textarea name="memo" rows="3"></textarea></label>
-      <div class="form-actions">
-        <button type="button" id="deleteBtn" class="danger hidden">削除</button>
-        <button type="button" id="duplicateBtn" class="secondary hidden">複製</button>
-        <button type="submit" class="primary">保存</button>
-      </div>
-    </form>
-    <div class="transfer">
-      <button id="importBtn">ICS取込</button>
-      <button id="exportBtn">ICS出力</button>
-      <input id="icsFile" type="file" accept=".ics,text/calendar" hidden>
-    </div>
+    <div id="sheetBody"></div>
   </div>
 </div>
 
-<script src="calendar-preview-fix2.js?v=20260719-1"></script>
+<input id="icsFile" type="file" accept=".ics,text/calendar" hidden>
+<script src="calendar-preview-v21.js?v=20260719-1"></script>
 </body>
 </html>
