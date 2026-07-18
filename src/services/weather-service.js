@@ -6,7 +6,8 @@
   const HOME_LOCATION=Object.freeze({key:'home',label:'千葉県 柏市',latitude:35.8676,longitude:139.9758,source:'home-default'});
   const FORECAST_ENDPOINT='https://api.open-meteo.com/v1/forecast';
   const GEOCODE_ENDPOINT='https://geocoding-api.open-meteo.com/v1/search';
-  const PROVIDER='Open-Meteo Best Match';
+  const PROVIDER='Open-Meteo';
+  const MODEL_LABEL='自動選択';
   const ATTRIBUTION='Weather data by Open-Meteo.com';
   const MAX_CACHE_TARGETS=12;
   const PLACE_ALIASES=Object.freeze({
@@ -253,5 +254,5 @@
   function getDetail(plan,options={}){const forecast=options.place?readTarget(targetKeyForCustom(options.place)):readTarget(targetKeyForPlan(plan));return detailView(forecast,plan,options);}
   function cacheInfo(){const state=cacheState();return Object.freeze({count:Object.keys(state.targets).length,targets:Object.freeze(Object.keys(state.targets))});}
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getTodayDetail,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,attribution:ATTRIBUTION,HOME_LOCATION,PLACE_COORDINATES,CACHE_KEY});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getTodayDetail,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,modelLabel:MODEL_LABEL,attribution:ATTRIBUTION,HOME_LOCATION,PLACE_COORDINATES,CACHE_KEY});
 })();

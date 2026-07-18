@@ -1067,3 +1067,25 @@ button.ob36-place-choice{
 .ob36-radar-section{display:none!important}
 .ob36-detail-judgement{margin-top:14px}
 .ob36-hourly-section{margin-top:14px}
+
+/* OUTBASE HOME v36 r32 — weather color rules, readable icons and attribution. */
+.ob36-weather-glyph{width:100%;height:100%;overflow:visible}
+.ob36-weather-glyph .cloud{fill:#8c9aa0;stroke:#64747a;stroke-width:1.15;stroke-linejoin:round}
+.ob36-weather-glyph .sun{fill:#f2b63d;stroke:#d58b18;stroke-width:1.15}
+.ob36-weather-glyph .sun-ray{fill:none;stroke:#e29a20;stroke-width:1.7;stroke-linecap:round}
+.ob36-weather-glyph .rain{fill:none;stroke:#438fc5;stroke-width:1.8;stroke-linecap:round}
+.ob36-weather-glyph .bolt{fill:#efb528;stroke:#cc8614;stroke-width:.7;stroke-linejoin:round}
+.ob36-weather-glyph.is-cloud .cloud{fill:#aab4b8}
+.ob36-weather-glyph.is-rain .cloud,.ob36-weather-glyph.is-thunder .cloud{fill:#7f9199}
+.ob36-hourly-card-icon svg,.ob36-hourly-selected-head svg{width:32px;height:32px}
+.ob36-hourly-selected-head svg{width:42px;height:42px}
+.ob36-detail-summary strong>i{font-style:normal;color:#6e746f;margin:0 2px}
+.ob36-detail-summary .tone-good,.ob36-hourly-section .tone-good,.ob36-detail-judgement .tone-good{color:var(--ob36-value-good)!important}
+.ob36-detail-summary .tone-info,.ob36-hourly-section .tone-info,.ob36-detail-judgement .tone-info{color:var(--ob36-value-info)!important}
+.ob36-detail-summary .tone-watch,.ob36-hourly-section .tone-watch,.ob36-detail-judgement .tone-watch{color:var(--ob36-value-watch)!important}
+.ob36-detail-summary .tone-warm,.ob36-hourly-section .tone-warm,.ob36-detail-judgement .tone-warm{color:var(--ob36-value-warm)!important}
+.ob36-detail-summary .tone-danger,.ob36-hourly-section .tone-danger,.ob36-detail-judgement .tone-danger{color:var(--ob36-value-danger)!important}
+.ob36-detail-summary .tone-cool,.ob36-hourly-section .tone-cool,.ob36-detail-judgement .tone-cool{color:var(--ob36-value-cool)!important}
+.ob36-weather-attribution{font-size:11px!important;color:#69716c!important;line-height:1.55!important}
+.ob36-weather-attribution a{color:#3e7466;text-decoration:underline;text-underline-offset:2px;font-weight:700}
+.ob36-hourly-highlights>div:nth-child(2) b{font-size:12px;line-height:1.35}

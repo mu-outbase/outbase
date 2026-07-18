@@ -204,7 +204,7 @@
       ...value,next,quick:quickRows(),quickCatalog:QUICK_CATALOG,
       selectedPlanId:selected?.id||null,selectedPlan:selected,
       todayLabel:todayLabel(now),todaySummary:smartLine({...value,next,weather}),weather,weatherIntel:weatherIntel(selected,now),
-      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r31'
+      weatherSettings:weatherSettings(),demoPreview:true,version:'v166.3-home-v36-r32'
     });
   }
 
