@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='calendar-v2-r1';
+  const VERSION='calendar-v2-r2-routefix';
   const DB_NAME='outbase_calendar_db';
   const DB_VERSION=1;
   const STORES={
@@ -121,9 +121,26 @@
     return Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d;});
   }
 
-  function render(){
-    const shell=document.querySelector('.ob3-shell[data-ob6-route="calendar"]');
+  function calendarRequested(){
+    const q=new URLSearchParams(location.search);
+    const route=q.get('view')||q.get('route')||q.get('screen')||'';
+    if(route==='calendar')return true;
+    const shell=document.querySelector('.ob3-shell');
+    if(shell?.dataset?.ob6Route==='calendar')return true;
     const main=shell?.querySelector('.ob3-main');
+    if(!main)return false;
+    const text=(main.textContent||'').replace(/\s+/g,' ');
+    return /\d{4}年\d{1,2}月/.test(text)&&(/この月/.test(text)||main.querySelector('[data-date],[class*=calendar],[class*=month]'));
+  }
+
+  function targetMain(){
+    if(!calendarRequested())return null;
+    const shell=document.querySelector('.ob3-shell[data-ob6-route="calendar"]')||document.querySelector('.ob3-shell[data-ob6-route="home"]')||document.querySelector('.ob3-shell');
+    return shell?.querySelector('.ob3-main')||null;
+  }
+
+  function render(){
+    const main=targetMain();
     if(!main)return;
     main.classList.add('obcal-main');
     main.innerHTML=`<section class="obcal-shell" data-version="${VERSION}">
@@ -257,12 +274,24 @@
   const light=e=>({id:e.id,title:e.title,start_at:e.start_at,end_at:e.end_at,all_day:e.all_day,calendar_id:e.calendar_id,activity_id:e.activity_id||null});
 
   function mountWhenReady(){
-    const attempt=()=>{const shell=document.querySelector('.ob3-shell[data-ob6-route="calendar"]');if(shell){render();return true;}return false;};
+    let lastSignature='';
+    const attempt=()=>{
+      const main=targetMain();
+      if(!main)return false;
+      const signature=`${location.href}|${main.childElementCount}|${main.textContent?.slice(0,80)}`;
+      if(main.querySelector('.obcal-shell[data-version="'+VERSION+'"]'))return true;
+      if(signature===lastSignature)return false;
+      lastSignature=signature;
+      render();
+      return true;
+    };
     attempt();
-    const observer=new MutationObserver(()=>{if(document.querySelector('.ob3-shell[data-ob6-route="calendar"]'))render();});
+    const observer=new MutationObserver(()=>setTimeout(attempt,0));
     observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ob6-route']});
-    addEventListener('popstate',()=>setTimeout(render,0));
-    addEventListener('outbase:app-ready',()=>setTimeout(render,0));
+    addEventListener('popstate',()=>setTimeout(attempt,0));
+    addEventListener('outbase:app-ready',()=>setTimeout(attempt,0));
+    setTimeout(attempt,250);
+    setTimeout(attempt,1000);
   }
 
   async function init(){
