@@ -322,7 +322,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r23',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r24',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -382,7 +382,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r23',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r24',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();

@@ -2,10 +2,23 @@
   'use strict';
 
   const base=globalThis.OUTBASE_WEATHER_SERVICE_V1;
-  if(!base||base.customLocationFixVersion==='r23')return;
+  if(!base||base.customLocationFixVersion==='r24')return;
 
   const CACHE_KEY=base.CACHE_KEY||'outbase_weather_live_cache_v1';
   const HOME=base.HOME_LOCATION||Object.freeze({key:'home',label:'千葉県 柏市',latitude:35.8676,longitude:139.9758});
+
+  const PINPOINT_SPOTS=Object.freeze([
+    Object.freeze({
+      id:'fumotoppara',
+      label:'ふもとっぱら',
+      latitude:35.3994381,
+      longitude:138.5650706,
+      aliases:Object.freeze([
+        'ふもとっぱら','フモトッパラ','ふもとっぱらキャンプ場','ふもとっぱらオートキャンプ場',
+        '静岡県富士宮市麓156','〒418-0109 静岡県富士宮市麓156'
+      ])
+    })
+  ]);
 
   function storageGet(key,fallback=''){try{return localStorage.getItem(key)||fallback;}catch(_error){return fallback;}}
   function storageSet(key,value){try{localStorage.setItem(key,value);return true;}catch(_error){return false;}}
@@ -23,8 +36,11 @@
   const CURRENT_ALIASES=new Set([
     '現在地','現在位置','今いる場所'
   ].map(normalizeText));
+  const PINPOINT_BY_ALIAS=new Map();
+  for(const spot of PINPOINT_SPOTS){for(const alias of spot.aliases||[]){PINPOINT_BY_ALIAS.set(normalizeText(alias),spot);}}
   function isHomeAlias(place){return HOME_ALIASES.has(normalizeText(place));}
   function isCurrentAlias(place){return CURRENT_ALIASES.has(normalizeText(place));}
+  function pinpointSpot(place){return PINPOINT_BY_ALIAS.get(normalizeText(place))||null;}
   function municipalityCandidate(place){
     let text=String(place||'').trim();
     try{text=text.normalize('NFKC');}catch(_error){}
@@ -49,7 +65,7 @@
   }
   function withTarget(result,key){
     const targets=[...new Set([...(Array.isArray(result?.targets)?result.targets:[]),key])];
-    return Object.freeze({...result,targets:Object.freeze(targets),customLocationFix:'r23'});
+    return Object.freeze({...result,targets:Object.freeze(targets),customLocationFix:'r24'});
   }
   async function refresh(options={}){
     const custom=options?.custom&&typeof options.custom==='object'?options.custom:null;
@@ -70,6 +86,23 @@
       return withTarget(result,key);
     }
 
+    const spot=pinpointSpot(requestedPlace);
+    if(spot){
+      const planId=`pinpoint-${spot.id}`;
+      const plan={
+        id:planId,
+        place:requestedPlace,
+        latitude:spot.latitude,
+        longitude:spot.longitude,
+        startAt:custom?.start?`${custom.start}T00:00:00`:Date.now(),
+        endAt:custom?.end?`${custom.end}T23:59:59`:custom?.start?`${custom.start}T23:59:59`:Date.now()
+      };
+      const result=await base.refresh({...options,custom:null,plan,plans:[],scope:'home'});
+      const fromKey=`plan:${planId}`;const toKey=customKey(requestedPlace);
+      if(!copyTarget(fromKey,toKey,requestedPlace))throw new Error('weather_pinpoint_cache_failed');
+      return withTarget(result,toKey);
+    }
+
     try{return await base.refresh(options);}catch(firstError){
       const candidate=municipalityCandidate(requestedPlace);
       if(!candidate||normalizeText(candidate)===normalizeText(requestedPlace))throw firstError;
@@ -87,9 +120,12 @@
     }else if(requestedPlace&&isHomeAlias(requestedPlace)){
       const state=readState();const key=customKey(requestedPlace);
       if(!state.targets[key]&&state.targets[HOME.key||'home'])copyTarget(HOME.key||'home',key,requestedPlace);
+    }else if(requestedPlace){
+      const spot=pinpointSpot(requestedPlace);const state=readState();const key=customKey(requestedPlace);
+      if(spot&&!state.targets[key])copyTarget(`plan:pinpoint-${spot.id}`,key,requestedPlace);
     }
     return base.getDetail(plan,options);
   }
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,customLocationFixVersion:'r23'});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,pinpointSpot,PINPOINT_SPOTS,customLocationFixVersion:'r24'});
 })();
