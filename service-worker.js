@@ -5,7 +5,7 @@ const CORE_ASSETS=[
   './style.css?v=outbase-field03-compact-2','./style-flow.css?v=outbase-field03-compact-2','./style-memo.css?v=outbase-field03-compact-2',
   './style-review.css?v=outbase-field03-compact-2','./style-entry.css?v=outbase-field03-compact-2','./style-activity.css?v=outbase-field03-compact-2',
   './style-chappy.css?v=outbase-field03-compact-2','./style-scenarios.css?v=outbase-field03-compact-2','./style-compact-ui.css?v=outbase-field03-compact-2',
-  './style-shell.css?v=outbase-v1663-visual','./style-design-system.css?v=outbase-v1663-visual','./style-home-v36.css?v=outbase-v1663-home-v36-r34','./style-calendar-v2.css?v=outbase-calendar-v2-r2-routefix','./src/config/version.js?v=outbase-v1663-home-v36-r34','./src/config/module-manifest.js?v=outbase-v1663-visual',
+  './style-shell.css?v=outbase-v1663-visual','./style-design-system.css?v=outbase-v1663-visual','./style-home-v36.css?v=outbase-v1663-home-v36-r34','./style-calendar-v2.css?v=outbase-calendar-v2-r3-direct-route','./src/config/version.js?v=outbase-v1663-home-v36-r34','./src/config/module-manifest.js?v=outbase-v1663-visual',
   './src/runtime/script-loader.js?v=outbase-v1663-visual','./src/runtime/lifecycle.js?v=outbase-v1663-visual','./src/state/app-state.js?v=outbase-v1663-visual',
   './src/router.js?v=outbase-v1663-visual','./src/design/theme-controller.js?v=outbase-v1663-visual','./src/services/weather-service.js?v=outbase-v1663-home-v36-r34','./src/services/weather-custom-location-fix.js?v=outbase-v1663-home-v36-r34','./src/services/weather-external-links.js?v=outbase-v1663-home-v36-r34','./src/main.js?v=outbase-v1663-visual',
   './src/app.js?v=outbase-field03-compact-2','./src/outbase-core.js?v=outbase-field03-compact-2','./src/outbase-chappy.js?v=outbase-field03-compact-2',
@@ -25,7 +25,7 @@ const CORE_ASSETS=[
   './src/screens/activity/activity-detail-screen-model.js?v=outbase-v1663-home-v36-r34','./src/shell/legacy-adapter.js?v=outbase-v1663-home-v36-r34',
   './src/shell/modal-stack.js?v=outbase-v1663-home-v36-r34','./src/shell/shell-model.js?v=outbase-v1663-home-v36-r34',
   './src/shell/shell-renderer.js?v=outbase-v1663-home-v36-r34','./src/shell/bootstrap.js?v=outbase-v1663-home-v36-r34','./src/shell/navigation-audit-fix.js?v=outbase-v1663-home-v36-r34-nav1',
-  './src/calendar-v2/outbase-calendar-v2.js?v=outbase-calendar-v2-r2-routefix','./outbase_library10a/style.css?v=outbase-field03-compact-2'
+  './src/calendar-v2/outbase-calendar-v2.js?v=outbase-calendar-v2-r3-direct-route','./outbase_library10a/style.css?v=outbase-field03-compact-2'
 ];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});

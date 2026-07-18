@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION='calendar-v2-r2-routefix';
+  const VERSION='calendar-v2-r3-direct-route';
   const DB_NAME='outbase_calendar_db';
   const DB_VERSION=1;
   const STORES={
@@ -294,10 +294,61 @@
     setTimeout(attempt,1000);
   }
 
-  async function init(){
-    if(!('indexedDB'in globalThis))return;
-    await ensureDefaults();await migrateLegacy();await refresh();mountWhenReady();
-    globalThis.OUTBASE_CALENDAR_V2=Object.freeze({version:VERSION,refresh,openEditor,exportData,generateWidgetSnapshot,db:{open:openDb,all,put,remove}});
+  function claimCalendarRoute(){
+    const q=new URLSearchParams(location.search);
+    const current=q.get('view')||q.get('route')||q.get('screen')||'';
+    if(current==='calendar')return;
+    const main=document.querySelector('.ob3-main');
+    const text=(main?.textContent||'').replace(/\s+/g,' ');
+    const looksLegacy=Boolean(main&&/\d{4}年\d{1,2}月/.test(text)&&(/この月/.test(text)||main.querySelector('[data-date],[class*=calendar],[class*=month]')));
+    if(!looksLegacy)return;
+    q.set('shell','1');q.set('view','calendar');
+    q.delete('route');q.delete('screen');
+    history.replaceState({...history.state,outbaseShell:true,route:'calendar'},'',`${location.pathname}?${q.toString()}`);
+    const shell=document.querySelector('.ob3-shell');
+    if(shell)shell.dataset.ob6Route='calendar';
   }
-  init().catch(error=>console.error('[OUTBASE Calendar v2] init failed',error));
+
+  function directMount(){
+    claimCalendarRoute();
+    const main=targetMain();
+    if(!main)return false;
+    if(!state.calendars.length){
+      state.calendars=[
+        {id:'cal-outbase',name:'OUTBASE',color:'#174d31',visible:true,kind:'outbase'},
+        {id:'cal-family',name:'家族',color:'#d58e12',visible:true,kind:'family'},
+        {id:'cal-personal',name:'個人',color:'#66a9c7',visible:true,kind:'personal'},
+        {id:'cal-import',name:'取込',color:'#8e8279',visible:true,kind:'import'}
+      ];
+      state.calendars.forEach(x=>state.filters.add(x.id));
+    }
+    render();
+    document.querySelectorAll('.ob3-nav a,.ob3-bottom-nav a,[data-ob6-nav]').forEach(node=>{
+      const href=node.getAttribute('href')||'';
+      const target=node.dataset?.ob6Nav||'';
+      const isCalendar=target==='calendar'||/[?&]view=calendar(?:&|$)/.test(href);
+      node.classList.toggle('active',isCalendar);
+      if(isCalendar)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');
+    });
+    return true;
+  }
+
+  async function init(){
+    mountWhenReady();
+    directMount();
+    globalThis.OUTBASE_CALENDAR_V2=Object.freeze({version:VERSION,refresh,openEditor,exportData,generateWidgetSnapshot,db:{open:openDb,all,put,remove},directMount});
+    if(!('indexedDB'in globalThis))return;
+    try{
+      await ensureDefaults();
+      await migrateLegacy();
+      await refresh();
+      directMount();
+    }catch(error){
+      console.error('[OUTBASE Calendar v2] data init failed; calendar UI remains available',error);
+      directMount();
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>init(),{once:true});else init();
+  addEventListener('outbase:app-ready',()=>setTimeout(directMount,0));
+  addEventListener('outbase:navigation',()=>setTimeout(directMount,0));
 })();
