@@ -1043,7 +1043,7 @@ button.ob36-place-choice{
   .ob36-hourly-card{flex-basis:76px;min-height:136px}.ob36-hourly-selected-grid{grid-template-columns:repeat(2,1fr)}
 }
 
-/* r30 weather result consistency + compact true 3-hour overview. */
+/* r31 weather result consistency + compact true 3-hour overview. */
 .ob36-hourly-rail{gap:6px}
 .ob36-hourly-date-chip{display:none!important}
 .ob36-hourly-card{flex-basis:68px;min-height:128px;padding:7px 5px;gap:4px;border-radius:13px}
@@ -1061,3 +1061,9 @@ button.ob36-place-choice{
   .ob36-hourly-card{flex-basis:64px}
   .ob36-hourly-selected-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
+
+
+/* r31 judgement-first weather detail; radar removed from every mode. */
+.ob36-radar-section{display:none!important}
+.ob36-detail-judgement{margin-top:14px}
+.ob36-hourly-section{margin-top:14px}

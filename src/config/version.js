@@ -4,10 +4,10 @@
     app:'v166.3-visual-hierarchy-lock',
     legacy:'outbase-field03-compact-2',
     data:'outbase-v160-phase1',
-    domain:'outbase-v1663-home-v36-r30',
-    shell:'outbase-v1663-home-v36-r30',
+    domain:'outbase-v1663-home-v36-r31',
+    shell:'outbase-v1663-home-v36-r31',
     design:'outbase-v1663-visual',
-    cache:'outbase-field03-v1663-visual-home-v36-r30'
+    cache:'outbase-field03-v1663-visual-home-v36-r31'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();
