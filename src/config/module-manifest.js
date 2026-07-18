@@ -19,12 +19,12 @@
     'src/screens/preparation/preparation-screen-model.js','src/screens/vault/vault-screen-model.js','src/domain/bootstrap.js',
     'src/domain/home/home-domain.js','src/screens/home/home-screen-model.js',
     'src/domain/filters/family-filter-domain.js','src/domain/calendar/calendar-domain.js',
-    'src/screens/calendar/calendar-screen-model.js','src/calendar-v2/outbase-calendar-v2.js','src/domain/activity/activity-detail-domain.js',
+    'src/screens/calendar/calendar-screen-model.js','src/domain/activity/activity-detail-domain.js',
     'src/screens/activity/activity-detail-screen-model.js'
   ].map(path=>withVersion(path,version.domain));
   const shell=[
     'src/shell/legacy-adapter.js','src/shell/modal-stack.js','src/shell/shell-model.js',
-    'src/shell/shell-renderer.js','src/shell/calendar-route-renderer.js','src/shell/bootstrap.js'
+    'src/shell/shell-renderer.js','src/shell/bootstrap.js'
   ].map(path=>withVersion(path,version.shell));
   globalThis.OUTBASE_MODULE_MANIFEST=Object.freeze({
     legacy:Object.freeze(legacy),data:Object.freeze(data),domain:Object.freeze(domain),shell:Object.freeze(shell),
