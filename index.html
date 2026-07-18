@@ -43,22 +43,22 @@ html.outbaseShellReady #outbaseBootScreen{display:none!important}
 <script>if(!globalThis.__OUTBASE_FAST_SHELL__)document.querySelectorAll('[data-ob-legacy-style]').forEach(link=>link.media='all');</script>
 <link rel="stylesheet" href="style-shell.css?v=outbase-v1663-visual">
 <link rel="stylesheet" href="style-design-system.css?v=outbase-v1663-visual">
-<link rel="stylesheet" href="style-home-v36.css?v=outbase-v1663-home-v36-r26">
+<link rel="stylesheet" href="style-home-v36.css?v=outbase-v1663-home-v36-r27">
 </head><body>
 <div id="outbaseBootScreen" aria-hidden="true"><div class="outbaseBootBrand"><span class="outbaseBootMark"><i></i><i></i><i></i></span><b>OUTBASE</b></div></div>
 <div id="app"></div>
 <input id="fileInput" type="file" accept=".json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*" multiple hidden>
-<script src="src/config/version.js?v=outbase-v1663-home-v36-r26" defer></script>
+<script src="src/config/version.js?v=outbase-v1663-home-v36-r27" defer></script>
 <script src="src/config/module-manifest.js?v=outbase-v1663-visual" defer></script>
 <script src="src/runtime/script-loader.js?v=outbase-v1663-visual" defer></script>
 <script src="src/runtime/lifecycle.js?v=outbase-v1663-visual" defer></script>
 <script src="src/state/app-state.js?v=outbase-v1663-visual" defer></script>
 <script src="src/router.js?v=outbase-v1663-visual" defer></script>
 <script src="src/design/theme-controller.js?v=outbase-v1663-visual" defer></script>
-<script src="src/services/weather-service.js?v=outbase-v1663-home-v36-r26" defer></script>
-<script src="src/services/weather-custom-location-fix.js?v=outbase-v1663-home-v36-r26" defer></script>
-<script src="src/services/weather-radar-service.js?v=outbase-v1663-home-v36-r26" defer></script>
-<script src="src/services/weather-external-links.js?v=outbase-v1663-home-v36-r26" defer></script>
+<script src="src/services/weather-service.js?v=outbase-v1663-home-v36-r27" defer></script>
+<script src="src/services/weather-custom-location-fix.js?v=outbase-v1663-home-v36-r27" defer></script>
+<script src="src/services/weather-radar-service.js?v=outbase-v1663-home-v36-r27" defer></script>
+<script src="src/services/weather-external-links.js?v=outbase-v1663-home-v36-r27" defer></script>
 <script src="src/main.js?v=outbase-v1663-visual" defer></script>
 <script>
 if(!globalThis.__OUTBASE_FAST_SHELL__){
@@ -68,7 +68,7 @@ if(!globalThis.__OUTBASE_FAST_SHELL__){
 <script>
 if('serviceWorker'in navigator){
   window.addEventListener('load',async()=>{
-    const reloadKey='outbase-sw-controller-r26';let reloading=false;
+    const reloadKey='outbase-sw-controller-r27';let reloading=false;
     const storageGet=()=>{try{return sessionStorage.getItem(reloadKey)||'';}catch(_error){return '';}};
     const storageSet=()=>{try{sessionStorage.setItem(reloadKey,'1');}catch(_error){}};
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
@@ -76,7 +76,7 @@ if('serviceWorker'in navigator){
       reloading=true;storageSet();location.reload();
     });
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=outbase-v1663-home-v36-r26');
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=outbase-v1663-home-v36-r27');
       await registration.update();
       if(registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});
     }catch(error){console.warn('Service Worker registration failed:',error);}
