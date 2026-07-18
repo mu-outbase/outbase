@@ -254,7 +254,7 @@
     const host=openHomeModal('home-v36-weather-detail',markup);if(!host)return;
     host.querySelectorAll('[data-ob36-weather-mode]').forEach(button=>button.addEventListener('click',()=>{const params=weatherModeParams(host,{place:targetPlace,start:targetStart,end:targetEnd});openWeatherDetail({mode:button.dataset.ob36WeatherMode,...params});}));
     host.querySelector('[data-ob36-detail-plan]')?.addEventListener('change',async event=>{safeSet(homeModel().WEATHER_PLAN_KEY,event.target.value||'');await performWeatherRefresh('plan-change',{silent:true});openWeatherDetail({mode:'plan',skipFetch:true});});
-    host.querySelector('[data-ob36-custom-weather]')?.addEventListener('click',async()=>{const nextPlace=host.querySelector('[data-ob36-custom-place]')?.value||'';const nextStart=host.querySelector('[data-ob36-custom-start]')?.value||'';const nextEnd=host.querySelector('[data-ob36-custom-end]')?.value||'';await performWeatherRefresh('custom-search',{silent:false,custom:{place:nextPlace,start:nextStart,end:nextEnd}});openWeatherDetail({mode:'custom',place:nextPlace,start:nextStart,end:nextEnd,skipFetch:true});});
+    host.querySelector('[data-ob36-custom-weather]')?.addEventListener('click',async event=>{const button=event.currentTarget;const nextPlace=String(host.querySelector('[data-ob36-custom-place]')?.value||'').trim();const nextStart=host.querySelector('[data-ob36-custom-start]')?.value||'';const nextEnd=host.querySelector('[data-ob36-custom-end]')?.value||'';if(!nextPlace){toast('場所を入力してください');host.querySelector('[data-ob36-custom-place]')?.focus();return;}if(!nextStart||!nextEnd){toast('開始日と終了日を選んでください');return;}if(nextEnd<nextStart){toast('終了日は開始日以降にしてください');return;}button.disabled=true;button.setAttribute('aria-busy','true');const ok=await performWeatherRefresh('custom-search',{silent:false,custom:{place:nextPlace,start:nextStart,end:nextEnd}});if(ok){openWeatherDetail({mode:'custom',place:nextPlace,start:nextStart,end:nextEnd,skipFetch:true});return;}button.disabled=false;button.removeAttribute('aria-busy');});
     host.querySelector('[data-ob36-detail-refresh]')?.addEventListener('click',async()=>{await performWeatherRefresh('manual',{silent:false,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:mode==='plan'?selected:null,plansOverride:mode==='plan'?rows:[],scopeOverride:mode==='today'?todayScope:null});openWeatherDetail({mode,place:targetPlace,start:targetStart,end:targetEnd,skipFetch:true});});
     bindHourlyRows(host);bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});bindRainRadar(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd,horizon:selectedHorizon,radarStartAt});
   }
@@ -299,7 +299,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r20',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r21',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -359,7 +359,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r20',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r21',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
