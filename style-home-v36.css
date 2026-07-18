@@ -1068,7 +1068,7 @@ button.ob36-place-choice{
 .ob36-detail-judgement{margin-top:14px}
 .ob36-hourly-section{margin-top:14px}
 
-/* OUTBASE HOME v36 r32 — weather color rules, readable icons and attribution. */
+/* OUTBASE HOME v36 r33 — weather color rules, readable icons and attribution. */
 .ob36-weather-glyph{width:100%;height:100%;overflow:visible}
 .ob36-weather-glyph .cloud{fill:#8c9aa0;stroke:#64747a;stroke-width:1.15;stroke-linejoin:round}
 .ob36-weather-glyph .sun{fill:#f2b63d;stroke:#d58b18;stroke-width:1.15}
@@ -1089,3 +1089,23 @@ button.ob36-place-choice{
 .ob36-weather-attribution{font-size:11px!important;color:#69716c!important;line-height:1.55!important}
 .ob36-weather-attribution a{color:#3e7466;text-decoration:underline;text-underline-offset:2px;font-weight:700}
 .ob36-hourly-highlights>div:nth-child(2) b{font-size:12px;line-height:1.35}
+
+
+/* OUTBASE HOME v36 r33 — shared HOME-style weather icons, decision-first summary, portrait layout. */
+.ob36-detail-summary-main{display:flex;align-items:center;gap:11px;min-width:0}
+.ob36-detail-main-icon{flex:0 0 64px;width:64px;height:56px;display:grid;place-items:center;border-radius:16px;background:radial-gradient(circle at 45% 40%,rgba(255,255,255,.98) 0 30%,rgba(244,224,168,.14) 55%,rgba(255,255,255,0) 78%)}
+.ob36-detail-main-icon svg{width:64px;height:56px;filter:drop-shadow(0 2px 2px rgba(45,73,61,.08)) drop-shadow(0 0 6px rgba(218,153,20,.09))}
+.ob36-detail-decision-metrics{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;gap:7px!important;margin-top:12px!important}
+.ob36-detail-decision-metrics>span{min-width:0;padding:9px 8px!important;border-radius:13px;background:#f7f8f4;border:1px solid #e5e7e1;text-align:left!important}
+.ob36-detail-decision-metrics b{display:block!important;font-size:13px!important;line-height:1.28!important;color:#244c39!important;white-space:normal!important}
+.ob36-detail-decision-metrics small{display:block!important;margin-top:4px!important;font-size:9.5px!important;line-height:1.35!important;color:#68716c!important;white-space:normal!important}
+.ob36-hourly-card-icon .ob36-weather-reference{width:30px!important;height:27px!important}
+.ob36-hourly-selected-head .ob36-weather-reference{width:46px!important;height:40px!important}
+@media(max-width:380px){
+  .ob36-detail-decision-metrics{grid-template-columns:1fr!important}
+  .ob36-detail-decision-metrics>span{padding:8px 9px!important}
+}
+@media(orientation:landscape) and (max-height:600px){
+  html,body{min-width:100%;min-height:100%;overflow-x:hidden}
+  .ob36-shell{max-width:480px!important;margin:0 auto!important}
+}

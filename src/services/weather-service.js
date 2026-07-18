@@ -229,7 +229,7 @@
       {label:'風対策',value:windGust>=8?'強風注意':windGust>=6?'やや注意':'概ね安心',detail:`予定期間内 平均最大 ${planSummary?.windMax??0}m/s・瞬間最大 ${windGust}m/s`},
       {label:'暑さ',value:hottest&&(hottest.feelsLike??hottest.temperature)>=30?'強い暑さ':hottest&&(hottest.feelsLike??hottest.temperature)>=28?'暑さ注意':'概ね安心',detail:hottest?`予定期間内の最高体感 ${hottest.feelsLike??hottest.temperature}°・日陰と水分を確認`:'気温データ未取得'},
       {label:'ペット',value:hottest&&(hottest.feelsLike??hottest.temperature)>=28?'暑さ対策':'概ね安心',detail:hottest&&(hottest.feelsLike??hottest.temperature)>=28?'日陰・水分・路面温度を確認':'無理のない時間で活動'},
-      {label:'外活動',value:outdoor?`${jpDate(outdoor.at)} ${timeLabel(outdoor.at)}`:'短時間・様子見',detail:outdoor?'5〜22時の範囲で雨・風・体感が比較的穏やか':'チェックイン・チェックアウト時間内で直近予報を確認'}
+      {label:'外で過ごしやすい時間',value:outdoor?`${jpDate(outdoor.at)} ${timeLabel(outdoor.at)}`:'短時間・様子見',detail:outdoor?'5〜22時の範囲で雨・風・体感が比較的穏やか':'チェックイン・チェックアウト時間内で直近予報を確認'}
     ]),comparisons:Object.freeze(comparisons),primarySource:forecast.provider,compareSources:Object.freeze([]),provider:forecast.provider,attribution:forecast.attribution,fetchedAt:forecast.fetchedAt});
   }
   async function refresh({plan=null,plans=[],scope='home',custom=null}={}){
