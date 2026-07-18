@@ -9,6 +9,7 @@
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   let root=null,mounted=false,bound=false,previousScrollRestoration=null,renderPromise=null,pendingReason=null;
   let weatherTimer=null,weatherRefreshing=false,radarTimer=null;
+  let sheetSwipe=null,weatherModeSwipe=null,weatherSwipeClickBlockUntil=0;
 
   function modalHost(){return document.getElementById('outbaseShellModal');}
   function homeModel(){return globalThis.OUTBASE_HOME_SCREEN_MODEL_V164;}
@@ -27,6 +28,50 @@
     host.innerHTML=markup;document.body.classList.add('ob36-modal-open');
     if(modals?.top?.()?.id!==id)modals?.open?.(id);
     return host;
+  }
+  const DISMISS_SHEET_SELECTOR='.ob36-sheet,.ob3-sheet,[role="dialog"][class*="sheet"]';
+  const DISMISS_HANDLE_SELECTOR='.ob36-sheet-grab,.ob3-sheet-handle,.ob3-sheet-grab,[class*="sheet-grab"],[class*="sheet-handle"]';
+  function sheetBackdrop(sheet){return sheet?.closest?.('[data-ob36-sheet-backdrop],[data-ob3-backdrop],.ob36-sheet-backdrop,.ob3-backdrop,[class*="sheet-backdrop"]')||null;}
+  function resetSheetPosition(sheet,{animate=true}={}){
+    if(!sheet)return;
+    sheet.style.transition=animate?'transform .2s ease,opacity .2s ease':'none';sheet.style.transform='';sheet.style.opacity='';sheet.classList.remove('ob-swipe-tracking','ob-swipe-closing');
+    const backdrop=sheetBackdrop(sheet);if(backdrop){backdrop.style.transition=animate?'background-color .2s ease':'none';backdrop.style.backgroundColor='';}
+    if(animate)setTimeout(()=>{if(!sheet.isConnected)return;sheet.style.transition='';const current=sheetBackdrop(sheet);if(current)current.style.transition='';},220);
+  }
+  function dismissSheet(sheet){
+    if(!sheet)return;
+    if(sheet.closest?.('#outbaseShellModal')||sheet.classList.contains('ob36-sheet')){closeHomeModal();return;}
+    if(sheet.classList.contains('ob3-sheet')||sheet.closest?.('[data-ob3-backdrop]')){renderer?.hideCentral?.();modals?.close?.();return;}
+    const close=sheet.querySelector?.('[data-ob36-modal-close],[data-ob3-close],[data-close],[aria-label="閉じる"]');if(close){close.click();return;}
+    const backdrop=sheetBackdrop(sheet);if(backdrop){backdrop.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));}
+  }
+  function finishSheetSwipe(cancelled=false){
+    const state=sheetSwipe;sheetSwipe=null;if(!state)return;
+    const elapsed=Math.max(1,performance.now()-state.startedAt);const velocity=state.dy/elapsed;const shouldClose=!cancelled&&state.dy>=72&&(state.dy>=112||velocity>=.48);
+    if(!shouldClose){resetSheetPosition(state.sheet);return;}
+    state.sheet.classList.add('ob-swipe-closing');state.sheet.style.transition='transform .2s ease-in,opacity .2s ease-in';state.sheet.style.transform='translate3d(0,110dvh,0)';state.sheet.style.opacity='.45';
+    const backdrop=sheetBackdrop(state.sheet);if(backdrop){backdrop.style.transition='background-color .2s ease-in';backdrop.style.backgroundColor='rgba(20,25,22,0)';}
+    setTimeout(()=>dismissSheet(state.sheet),190);
+  }
+  function bindSheetSwipeDismiss(){
+    document.addEventListener('pointerdown',event=>{
+      if(!mounted||event.isPrimary===false||event.button>0)return;
+      const sheet=event.target.closest?.(DISMISS_SHEET_SELECTOR);if(!sheet)return;
+      const rect=sheet.getBoundingClientRect();const handle=event.target.closest?.(DISMISS_HANDLE_SELECTOR);const header=event.target.closest?.('header,.ob3-sheet-head,[class*="sheet-head"]');const interactive=event.target.closest?.('button,input,select,textarea,a,[contenteditable="true"]');
+      if(!handle&&(!header||interactive||event.clientY>rect.top+112))return;
+      if(!handle&&Number(sheet.scrollTop||0)>1)return;
+      sheetSwipe={sheet,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,dy:0,startedAt:performance.now(),dragging:false};
+      resetSheetPosition(sheet,{animate:false});try{sheet.setPointerCapture?.(event.pointerId);}catch(_error){}
+    },true);
+    document.addEventListener('pointermove',event=>{
+      const state=sheetSwipe;if(!state||event.pointerId!==state.pointerId)return;
+      const dx=event.clientX-state.startX;const dy=Math.max(0,event.clientY-state.startY);state.dy=dy;
+      if(!state.dragging){if(dy<8)return;if(Math.abs(dx)>dy*.9){finishSheetSwipe(true);return;}state.dragging=true;state.sheet.classList.add('ob-swipe-tracking');}
+      event.preventDefault();const eased=Math.min(dy,Math.max(140,innerHeight*.55));state.sheet.style.transform=`translate3d(0,${eased}px,0)`;state.sheet.style.opacity=String(Math.max(.62,1-eased/700));
+      const backdrop=sheetBackdrop(state.sheet);if(backdrop)backdrop.style.backgroundColor=`rgba(20,25,22,${Math.max(0,.25-eased/900)})`;
+    },{capture:true,passive:false});
+    document.addEventListener('pointerup',event=>{if(sheetSwipe&&event.pointerId===sheetSwipe.pointerId)finishSheetSwipe(false);},true);
+    document.addEventListener('pointercancel',event=>{if(sheetSwipe&&event.pointerId===sheetSwipe.pointerId)finishSheetSwipe(true);},true);
   }
   function toast(text){
     let node=document.getElementById('outbaseHomeV36Toast');
@@ -90,6 +135,7 @@
   }
   function openAppSettings(){
     const host=openHomeModal('home-v36-settings',appSettingsMarkup());if(!host)return;
+    host.querySelector('[data-ob36-open-weather-settings]')?.addEventListener('click',openWeatherSettings);
     host.querySelector('[data-ob36-open-quick-settings]')?.addEventListener('click',openQuickSettings);
   }
   function weatherSettingsMarkup(){
@@ -188,9 +234,35 @@
     const hourly=(detail.hourly||[]).map(hourlyRowMarkup).join('');
     const judgements=(detail.judgements||[]).map(row=>`<div><b>${esc(row.label)}</b><span><strong>${esc(row.value)}</strong><small>${esc(row.detail)}</small></span></div>`).join('');
     const comparisons=(detail.comparisons||[]).map(row=>`<div><b>${esc(row.source)}</b><span>${esc(row.summary||'取得済み')}</span><em>${row.status==='reference'?'確認先':`${esc(row.rainProbability)}%・瞬間${esc(row.windGust)}m/s`}</em></div>`).join('');
-    return `<section class="ob36-detail-summary"><div><small>${esc(detail.place)}　${esc(detail.provider||detail.primarySource||'自動取得')}</small><h3>${esc(detail.condition)}</h3><strong class="tone-${weatherTone('temperature',detail.high)}">${detail.high==null?'—':esc(detail.high)}°／${detail.low==null?'—':esc(detail.low)}°</strong></div><div><span><b class="tone-${weatherTone('rain',detail.rainPeak)}">${detail.rainPeak==null?'—':esc(detail.rainPeak)}%</b><small>降水ピーク</small></span><span><b class="tone-${weatherTone('wind',detail.windGust)}">${detail.windGust==null?'—':esc(detail.windGust)}m/s</b><small>最大瞬間風速</small></span><span><b class="tone-${weatherTone('confidence',detail.confidence)}">${esc(detail.confidence||'—')}</b><small>総合信頼度</small></span></div><div class="ob36-detail-update"><span>最終更新 ${esc(detail.updatedLabel)}</span><span>次回 ${esc(detail.nextUpdateLabel)}頃</span><button type="button" data-ob36-detail-refresh aria-label="天気を更新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M18.5 15.5A7 7 0 1 1 19 8l1 4"/></svg></button></div></section>${radarView?rainRadarMarkup(radarView):''}<section class="ob36-hourly-section"><div class="ob36-detail-section-head"><h3>時間ごとの予報</h3><span>行を押すと詳細</span></div><div class="ob36-hourly-column-head"><span>時刻</span><span>天気</span><span>気温</span><span>降水</span><span>風</span><span>信頼度</span></div><div class="ob36-hourly-list">${hourly||'<p class="ob36-intel-empty">この期間の時間別予報はまだありません。</p>'}</div></section><section class="ob36-detail-judgement"><div class="ob36-detail-section-head"><h3>外時間の判断</h3></div>${judgements||'<p class="ob36-intel-empty">予報取得後に判定します。</p>'}</section><section class="ob36-source-compare"><div class="ob36-detail-section-head"><h3>取得データ</h3><span>自動更新</span></div>${comparisons||'<p class="ob36-intel-empty">取得元を確認中です。</p>'}${detail.attribution?`<p>${esc(detail.attribution)}</p>`:''}</section>${externalWeatherMarkup(detail)}`;
+    return `<section class="ob36-detail-summary"><div><small>${esc(detail.place)}　${esc(detail.provider||detail.primarySource||'自動取得')}</small><h3>${esc(detail.condition)}</h3><strong class="tone-${weatherTone('temperature',detail.high)}">${detail.high==null?'—':esc(detail.high)}°／${detail.low==null?'—':esc(detail.low)}°</strong></div><div><span><b class="tone-${weatherTone('rain',detail.rainPeak)}">${detail.rainPeak==null?'—':esc(detail.rainPeak)}%</b><small>降水ピーク</small></span><span><b class="tone-${weatherTone('wind',detail.windGust)}">${detail.windGust==null?'—':esc(detail.windGust)}m/s</b><small>最大瞬間風速</small></span><span><b class="tone-${weatherTone('confidence',detail.confidence)}">${esc(detail.confidence||'—')}</b><small>総合信頼度</small></span></div><div class="ob36-detail-update"><span>最終更新 ${esc(detail.updatedLabel)}</span><span>次回 ${esc(detail.nextUpdateLabel)}頃</span><button type="button" data-ob36-detail-refresh aria-label="天気を更新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M18.5 15.5A7 7 0 1 1 19 8l1 4"/></svg></button></div></section>${radarView?rainRadarMarkup(radarView):''}<section class="ob36-hourly-section"><div class="ob36-detail-section-head"><h3>時間ごとの予報</h3><span>行を押すと詳細</span></div><div class="ob36-hourly-column-head"><span>時刻</span><span>天気</span><span>気温</span><span>降水</span><span>風</span><span>信頼度</span></div><div class="ob36-hourly-list">${hourly||'<p class="ob36-intel-empty">この期間の時間別予報はまだありません。</p>'}</div></section><section class="ob36-detail-judgement"><div class="ob36-detail-section-head"><h3>外時間の判断</h3></div>${judgements||'<p class="ob36-intel-empty">予報取得後に判定します。</p>'}</section>${externalWeatherMarkup(detail)}<section class="ob36-source-compare ob36-source-compare-last"><div class="ob36-detail-section-head"><h3>取得データ</h3><span>自動更新</span></div>${comparisons||'<p class="ob36-intel-empty">取得元を確認中です。</p>'}${detail.attribution?`<p>${esc(detail.attribution)}</p>`:''}</section>`;
   }
   function bindHourlyRows(host){host.querySelectorAll('[data-ob36-hourly-toggle]').forEach(button=>button.addEventListener('click',()=>{const row=button.closest('[data-ob36-hourly-row]');const extra=row?.querySelector('.ob36-hourly-extra');if(!extra)return;const open=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',open?'false':'true');extra.hidden=open;row.classList.toggle('open',!open);}));}
+  const WEATHER_DETAIL_MODES=Object.freeze(['today','plan','custom']);
+  function weatherModeParams(host,{place='',start='',end=''}={}){return {place:host.querySelector('[data-ob36-custom-place]')?.value||place,start:host.querySelector('[data-ob36-custom-start]')?.value||start,end:host.querySelector('[data-ob36-custom-end]')?.value||end};}
+  function resetWeatherModeSwipe(page){if(!page)return;page.style.transition='transform .18s ease,opacity .18s ease';page.style.transform='';page.style.opacity='';page.classList.remove('is-swiping');setTimeout(()=>{if(page.isConnected)page.style.transition='';},190);}
+  function bindWeatherModeSwipe(host,{mode='today',place='',start='',end=''}={}){
+    const zone=host.querySelector('[data-ob36-weather-mode-swipe]');const page=host.querySelector('[data-ob36-weather-mode-page]');if(!zone||!page)return;
+    zone.addEventListener('pointerdown',event=>{
+      if(event.isPrimary===false||event.button>0||event.target.closest('input,select,textarea,a'))return;
+      weatherModeSwipe={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,dx:0,dy:0,dragging:false,page,host,mode,place,start,end};
+      page.style.transition='none';try{zone.setPointerCapture?.(event.pointerId);}catch(_error){}
+    });
+    zone.addEventListener('pointermove',event=>{
+      const state=weatherModeSwipe;if(!state||event.pointerId!==state.pointerId)return;
+      state.dx=event.clientX-state.startX;state.dy=event.clientY-state.startY;
+      if(!state.dragging){if(Math.abs(state.dx)<10)return;if(Math.abs(state.dy)>Math.abs(state.dx)*.85){weatherModeSwipe=null;resetWeatherModeSwipe(page);return;}state.dragging=true;page.classList.add('is-swiping');}
+      event.preventDefault();const offset=Math.max(-46,Math.min(46,state.dx*.3));page.style.transform=`translate3d(${offset}px,0,0)`;page.style.opacity=String(Math.max(.72,1-Math.abs(offset)/170));
+    },{passive:false});
+    const finish=event=>{
+      const state=weatherModeSwipe;if(!state||event.pointerId!==state.pointerId)return;weatherModeSwipe=null;
+      const switchMode=state.dragging&&Math.abs(state.dx)>=54&&Math.abs(state.dx)>Math.abs(state.dy)*1.15;
+      if(!switchMode){resetWeatherModeSwipe(page);return;}
+      const current=Math.max(0,WEATHER_DETAIL_MODES.indexOf(mode));const nextIndex=state.dx<0?Math.min(WEATHER_DETAIL_MODES.length-1,current+1):Math.max(0,current-1);const nextMode=WEATHER_DETAIL_MODES[nextIndex];
+      if(nextMode===mode){resetWeatherModeSwipe(page);return;}
+      weatherSwipeClickBlockUntil=Date.now()+450;const params=weatherModeParams(host,{place,start,end});page.style.transition='transform .16s ease,opacity .16s ease';page.style.transform=`translate3d(${state.dx<0?-80:80}px,0,0)`;page.style.opacity='.35';setTimeout(()=>openWeatherDetail({mode:nextMode,...params}),120);
+    };
+    zone.addEventListener('pointerup',finish);zone.addEventListener('pointercancel',event=>{if(weatherModeSwipe&&event.pointerId===weatherModeSwipe.pointerId){weatherModeSwipe=null;resetWeatherModeSwipe(page);}});
+  }
   async function openWeatherDetail({mode='plan',place='',start='',end='',horizon=null,skipFetch=false,skipRadarFetch=false}={}){
     const model=await homeModel()?.build?.();const rows=model?.next||[];const selected=model?.selectedPlan||rows[0]||null;const planPlace=selected?.place||'場所未設定';const planStart=isoDate(selected?.startAt);const planEnd=isoDate(selected?.endAt||selected?.startAt);const customPlace=place||'山中湖村';const customStart=start||isoDate(Date.now());const customEnd=end||customStart;const todayScope=model?.weather?.scope||'home';const targetPlace=mode==='custom'?customPlace:mode==='today'?(model?.weather?.locationLabel||'現在地'):planPlace;const targetStart=mode==='custom'?customStart:mode==='today'?isoDate(Date.now()):planStart;const targetEnd=mode==='custom'?customEnd:mode==='today'?targetStart:planEnd;
     if(!skipFetch&&navigator.onLine){try{await performWeatherRefresh(mode==='custom'?'custom-search':mode==='today'?'today-detail-open':'detail-open',{silent:true,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:mode==='plan'?selected:null,plansOverride:mode==='plan'?rows:[],scopeOverride:mode==='today'?todayScope:null});}catch(_error){}}
@@ -198,16 +270,16 @@
     const selectedHorizon=radarHorizon(horizon);const radarStartAt=mode==='plan'?(selected?.startAt||targetStart):mode==='custom'?`${targetStart}T00:00:00`:new Date().toISOString();
     if(!skipRadarFetch&&navigator.onLine){try{await radarService()?.refresh?.();}catch(_error){}}
     const radarView=radarService()?.view?.(detail,{horizon:selectedHorizon,startAt:radarStartAt,mode})||null;
-    const options=rows.map(item=>`<option value="${esc(item.id)}"${item.id===model?.selectedPlanId?' selected':''}>${esc(item.title)}</option>`).join('');const title=mode==='today'?'今日の詳しい天気':'時間ごとの天気';
-    const modeButtons=mode==='today'?`<div class="ob36-weather-mode"><button type="button" class="active" data-ob36-weather-mode="today">今日を見る</button><button type="button" data-ob36-weather-mode="plan">予定から見る</button></div>`:`<div class="ob36-weather-mode"><button type="button" class="${mode==='plan'?'active':''}" data-ob36-weather-mode="plan">予定から見る</button><button type="button" class="${mode==='custom'?'active':''}" data-ob36-weather-mode="custom">場所・日付で見る</button></div>`;
+    const options=rows.map(item=>`<option value="${esc(item.id)}"${item.id===model?.selectedPlanId?' selected':''}>${esc(item.title)}</option>`).join('');const title=mode==='today'?'今日の詳しい天気':mode==='custom'?'場所・日付の詳しい天気':'予定の詳しい天気';
+    const modeButtons=`<div class="ob36-weather-mode mode-${esc(mode)}"><button type="button" class="${mode==='today'?'active':''}" data-ob36-weather-mode="today">今日を見る</button><button type="button" class="${mode==='plan'?'active':''}" data-ob36-weather-mode="plan">予定を見る</button><button type="button" class="${mode==='custom'?'active':''}" data-ob36-weather-mode="custom">場所・日付で見る</button></div>`;
     const search=mode==='plan'?`<div class="ob36-weather-search"><label class="wide"><span>予定</span><select data-ob36-detail-plan>${options}</select></label></div>`:mode==='custom'?`<div class="ob36-weather-search"><label class="wide"><span>場所</span><input type="text" data-ob36-custom-place value="${esc(customPlace)}" placeholder="キャンプ場・市区町村"></label><label><span>開始日</span><input type="date" data-ob36-custom-start value="${esc(customStart)}"></label><label><span>終了日</span><input type="date" data-ob36-custom-end value="${esc(customEnd)}"></label><button type="button" data-ob36-custom-weather>この条件で見る</button></div>`:`<div class="ob36-weather-search"><label class="wide"><span>対象</span><input type="text" value="${esc(model?.weather?.locationLabel||'現在地')}・今日の残り時間" disabled></label></div>`;
-    const markup=`<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet ob36-weather-detail-sheet" role="dialog" aria-modal="true" aria-label="${title}"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER DETAIL</small><h2>${title}</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header>${modeButtons}${search}${weatherDetailMarkup(detail,radarView)}</section></div>`;
+    const markup=`<div class="ob36-sheet-backdrop" data-ob36-sheet-backdrop><section class="ob36-sheet ob36-weather-detail-sheet" role="dialog" aria-modal="true" aria-label="${title}"><div class="ob36-sheet-grab"></div><header><div><small>WEATHER DETAIL</small><h2>${title}</h2></div><button type="button" data-ob36-modal-close aria-label="閉じる">×</button></header><div class="ob36-weather-mode-zone" data-ob36-weather-mode-swipe>${modeButtons}${search}<small class="ob36-weather-swipe-hint">左右にスワイプして表示を切替</small></div><div class="ob36-weather-mode-page" data-ob36-weather-mode-page>${weatherDetailMarkup(detail,radarView)}</div></section></div>`;
     const host=openHomeModal('home-v36-weather-detail',markup);if(!host)return;
-    host.querySelectorAll('[data-ob36-weather-mode]').forEach(button=>button.addEventListener('click',()=>openWeatherDetail({mode:button.dataset.ob36WeatherMode})));
+    host.querySelectorAll('[data-ob36-weather-mode]').forEach(button=>button.addEventListener('click',event=>{if(Date.now()<weatherSwipeClickBlockUntil){event.preventDefault();return;}const params=weatherModeParams(host,{place:targetPlace,start:targetStart,end:targetEnd});openWeatherDetail({mode:button.dataset.ob36WeatherMode,...params});}));
     host.querySelector('[data-ob36-detail-plan]')?.addEventListener('change',async event=>{safeSet(homeModel().WEATHER_PLAN_KEY,event.target.value||'');await performWeatherRefresh('plan-change',{silent:true});openWeatherDetail({mode:'plan',skipFetch:true});});
     host.querySelector('[data-ob36-custom-weather]')?.addEventListener('click',async()=>{const nextPlace=host.querySelector('[data-ob36-custom-place]')?.value||'';const nextStart=host.querySelector('[data-ob36-custom-start]')?.value||'';const nextEnd=host.querySelector('[data-ob36-custom-end]')?.value||'';await performWeatherRefresh('custom-search',{silent:false,custom:{place:nextPlace,start:nextStart,end:nextEnd}});openWeatherDetail({mode:'custom',place:nextPlace,start:nextStart,end:nextEnd,skipFetch:true});});
     host.querySelector('[data-ob36-detail-refresh]')?.addEventListener('click',async()=>{await performWeatherRefresh('manual',{silent:false,custom:mode==='custom'?{place:targetPlace,start:targetStart,end:targetEnd}:null,planOverride:mode==='plan'?selected:null,plansOverride:mode==='plan'?rows:[],scopeOverride:mode==='today'?todayScope:null});openWeatherDetail({mode,place:targetPlace,start:targetStart,end:targetEnd,skipFetch:true});});
-    bindHourlyRows(host);bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});bindRainRadar(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd,horizon:selectedHorizon,radarStartAt});
+    bindWeatherModeSwipe(host,{mode,place:targetPlace,start:targetStart,end:targetEnd});bindHourlyRows(host);bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});bindRainRadar(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd,horizon:selectedHorizon,radarStartAt});
   }
 
   async function weatherContext(){const model=await homeModel()?.build?.();return {model,selected:model?.selectedPlan||model?.next?.[0]||null,plans:model?.next||[]};}
@@ -250,7 +322,7 @@
   globalThis.OUTBASE_HOME_V36_BRIDGE=homeBridge;
 
   function requested(){return router?.shellRequested?.()===true;}
-  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r18',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
+  function snapshot(){return Object.freeze({version:'v166.3-home-v36-r19',requested:requested(),mounted,route:router?.current?.()||null,safe:legacy?.shellSafe?.()??false,cutover:false,previewOnly:true});}
   function restoreBrowserScrollMode(){if(previousScrollRestoration!==null&&'scrollRestoration'in history)history.scrollRestoration=previousScrollRestoration;previousScrollRestoration=null;}
   function removeBoot(){document.documentElement.classList?.add?.('outbaseShellReady');document.documentElement.classList?.remove?.('outbaseShellBoot');document.getElementById('outbaseBootScreen')?.remove();}
   function fallback(reason){
@@ -275,7 +347,7 @@
   function refreshHome(){modelApi?.invalidate?.('home');return render('data-change');}
 
   function bind(){
-    if(bound)return;bound=true;
+    if(bound)return;bound=true;bindSheetSwipeDismiss();
     document.addEventListener('click',event=>{
       if(!mounted)return;
       const modalClose=event.target.closest?.('[data-ob36-modal-close]');if(modalClose){event.preventDefault();closeHomeModal();return;}
@@ -310,7 +382,7 @@
     if('scrollRestoration'in history){previousScrollRestoration=history.scrollRestoration;history.scrollRestoration='manual';}
     root=document.getElementById('outbaseShellRoot');if(!root){root=document.createElement('div');root.id='outbaseShellRoot';root.hidden=true;document.body.insertBefore(root,document.body.firstChild);}
     document.body.classList.add('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-start');mounted=true;bind();await render('initial');if(!mounted||!root)return {status:'fallback',reason:'render_failed',snapshot:snapshot()};root.hidden=false;removeBoot();schedulePreload();await performWeatherRefresh('app-open',{silent:true});
-    const detail={status:'ready',version:'v166.3-home-v36-r18',previewOnly:true,cutover:false,route:router.current()};
+    const detail={status:'ready',version:'v166.3-home-v36-r19',previewOnly:true,cutover:false,route:router.current()};
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-ready',{detail}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-ready',{detail}));return detail;
   }
   const ready=start();
