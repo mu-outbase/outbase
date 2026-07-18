@@ -2,14 +2,14 @@
 (() => {
   'use strict';
   const KEY='outbase_calendar_lab_events_v1';
+  const pad=n=>String(n).padStart(2,'0');
+  function key(d){const x=new Date(d);return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;}
   const state={date:new Date(),selected:key(new Date()),view:'month',filters:new Set(['activity','camp','walk','family']),editing:null};
   const sample=[
     {id:'s1',title:'湖畔キャンプ',start:'2026-07-20T10:00',end:'2026-07-22T12:00',allDay:false,type:'camp',place:'湖畔キャンプ場',memo:'表示確認用サンプル'},
     {id:'s2',title:'コタと公園散歩',start:'2026-07-27T08:00',end:'2026-07-27T09:30',allDay:false,type:'walk',place:'公園',memo:''}
   ];
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-  const pad=n=>String(n).padStart(2,'0');
-  function key(d){const x=new Date(d);return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`;}
   function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return Array.isArray(v)?v:sample;}catch(_){return sample;}}
   function save(v){localStorage.setItem(KEY,JSON.stringify(v));}
   function events(){return load().filter(e=>state.filters.has(e.type));}
