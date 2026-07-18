@@ -58,7 +58,7 @@
     }}
     return Object.freeze({tiles:Object.freeze(tiles),centerX:(1+fracX)*TILE_SIZE,centerY:(1+fracY)*TILE_SIZE,zoom:RADAR_ZOOM,frameTime:meta.frame.time*1000,generatedAt:meta.generated*1000});
   }
-  function confidenceRank(value){const rank={'A':5,'A−':4,'B＋':3,'B':2,'C＋':1,'C':0,'—':-1};return rank[String(value||'—')]??-1;}
+  function confidenceRank(value){const rank={'A':5,'A−':4,'A-':4,'B＋':3,'B+':3,'B':2,'C＋':1,'C+':1,'C':0,'—':-1};return rank[String(value||'—')]??-1;}
   function worstConfidence(rows){if(!rows.length)return '—';return rows.reduce((worst,row)=>confidenceRank(row.confidence)<confidenceRank(worst)?String(row.confidence||'—'):worst,String(rows[0].confidence||'—'));}
   function horizonRows(detail,{horizon=DEFAULT_HORIZON,startAt=null,now=new Date()}={}){
     const hours=HORIZONS.includes(Number(horizon))?Number(horizon):DEFAULT_HORIZON;const source=Array.isArray(detail?.hourly)?detail.hourly:[];
@@ -73,9 +73,9 @@
     const wetRows=rows.filter(wet);const start=wetRows[0]||null;
     const peak=rows.reduce((best,row)=>{const score=(Number(row.rainfall)||0)*20+(Number(row.rainProbability)||0);const bestScore=(Number(best?.rainfall)||0)*20+(Number(best?.rainProbability)||0);return score>bestScore?row:best;},rows[0]);
     let stop=null;if(start){const startIndex=rows.indexOf(start);stop=rows.slice(startIndex+1).find(row=>(Number(row.rainProbability)||0)<20&&(Number(row.rainfall)||0)<0.1)||null;}
-    const maxProbability=Math.max(...rows.map(row=>Number(row.rainProbability)||0));const totalRainfall=Math.round(rows.reduce((sum,row)=>sum+(Number(row.rainfall)||0),0)*10)/10;
+    const maxProbability=Math.max(...rows.map(row=>Number(row.rainProbability)||0));const rawRainfall=rows.reduce((sum,row)=>sum+(Number(row.rainfall)||0),0);const totalRainfall=Math.round(rawRainfall*10)/10;const rainfallLabel=totalRainfall>0?`${totalRainfall}mm`:maxProbability>=40?'微量予測':'0mm';
     const message=!start?'目立つ雨は少なめ。':maxProbability>=70?'雨の強まる時間に注意。':'弱い雨の可能性。時間を確認。';
-    return Object.freeze({start:start?`${hourLabel(start.at)}頃`:'目立つ雨なし',peak:peak?`${hourLabel(peak.at)} ${Math.round(Number(peak.rainProbability)||0)}%`:'—',stop:start?(stop?`${hourLabel(stop.at)}頃`:'表示範囲では続く可能性'):'—',maxProbability,totalRainfall,confidence:worstConfidence(rows),message});
+    return Object.freeze({start:start?`${hourLabel(start.at)}頃`:'目立つ雨なし',peak:peak?`${hourLabel(peak.at)} ${Math.round(Number(peak.rainProbability)||0)}%`:'—',stop:start?(stop?`${hourLabel(stop.at)}頃`:'表示範囲では続く可能性'):'—',maxProbability,totalRainfall,rainfallLabel,confidence:worstConfidence(rows),message});
   }
   function jmaUrl(latitude,longitude){
     const lat=validNumber(latitude),lon=validNumber(longitude);if(lat===null||lon===null)return 'https://www.jma.go.jp/bosai/nowc/';

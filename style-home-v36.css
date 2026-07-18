@@ -1042,3 +1042,22 @@ button.ob36-place-choice{
 @media(max-width:380px){
   .ob36-hourly-card{flex-basis:76px;min-height:136px}.ob36-hourly-selected-grid{grid-template-columns:repeat(2,1fr)}
 }
+
+/* r30 weather result consistency + compact true 3-hour overview. */
+.ob36-hourly-rail{gap:6px}
+.ob36-hourly-date-chip{display:none!important}
+.ob36-hourly-card{flex-basis:68px;min-height:128px;padding:7px 5px;gap:4px;border-radius:13px}
+.ob36-hourly-card-date{display:block;width:100%;min-height:13px;color:#66716b;font-size:8.8px;line-height:1.15;text-align:center;white-space:nowrap}
+.ob36-hourly-card time{font-size:11.5px}
+.ob36-hourly-card-icon{width:27px;height:27px}.ob36-hourly-card-icon svg{width:24px;height:24px}
+.ob36-hourly-card>b{font-size:15.5px}.ob36-hourly-card>small:not(.ob36-hourly-card-date){font-size:9.5px}
+.ob36-hourly-selected{padding:10px 11px}
+.ob36-hourly-selected-head{padding-bottom:7px}
+.ob36-hourly-selected-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.ob36-hourly-selected-grid>div{padding:6px 4px}
+.ob36-hourly-selected-grid b{font-size:12.5px}
+.ob36-hourly-selected-grid small{font-size:9px}
+@media(max-width:380px){
+  .ob36-hourly-card{flex-basis:64px}
+  .ob36-hourly-selected-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
