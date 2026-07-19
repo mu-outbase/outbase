@@ -49,7 +49,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-function-lock-v1'});
+    const query=new URLSearchParams({embedded:'1',defaultToday:'1',source:'shell-renderer-fix',release:'formal-v44-swipe-today-bg-v1'});
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];
       if(value)query.set(key,String(value));
@@ -93,6 +93,7 @@
     const header=shell.querySelector('.ob3-header');
     const main=shell.querySelector('.ob3-main');
     const nav=shell.querySelector('.ob3-nav');
+    main?.classList.toggle('ob3-main-calendar',route==='calendar');
 
     if(header){
       header.className='ob3-header ob-common-header-lock';

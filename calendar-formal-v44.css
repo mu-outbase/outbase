@@ -1308,3 +1308,25 @@ html.outbaseCalendarEmbedded .calendar-shell{
 .todo-card{
   cursor:pointer;
 }
+
+
+/* =========================================================
+   Calendar swipe + TODAY + HOME background LOCK v10
+   ========================================================= */
+html.outbaseCalendarEmbedded,
+html.outbaseCalendarEmbedded body,
+html.outbaseCalendarEmbedded .calendar-shell{
+  background:#fbfaf7!important;
+}
+html.outbaseCalendarEmbedded #calendarArea{
+  touch-action:pan-y;
+  transition:transform .13s ease-out,opacity .13s ease-out;
+}
+html.outbaseCalendarEmbedded #calendarArea.month-swipe-left{
+  transform:translateX(-10px);
+  opacity:.84;
+}
+html.outbaseCalendarEmbedded #calendarArea.month-swipe-right{
+  transform:translateX(10px);
+  opacity:.84;
+}

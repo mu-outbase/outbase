@@ -65,11 +65,21 @@
     const month=query.get('month');
     const selected=query.get('selected');
     const peopleParam=query.get('people');
-    if(month&&/^\d{4}-\d{2}$/.test(month)){
+    const defaultToday=query.get('defaultToday')==='1';
+
+    if(selected&&/^\d{4}-\d{2}-\d{2}$/.test(selected)){
+      state.selected=selected;
+      state.date=new Date(selected+'T12:00');
+    }else if(defaultToday){
+      const today=new Date();
+      state.selected=key(today);
+      state.date=new Date(today.getFullYear(),today.getMonth(),today.getDate(),12);
+    }else if(month&&/^\d{4}-\d{2}$/.test(month)){
       const [y,m]=month.split('-').map(Number);
       state.date=new Date(y,m-1,1,12);
+      state.selected=key(state.date);
     }
-    if(selected&&/^\d{4}-\d{2}-\d{2}$/.test(selected))state.selected=selected;
+
     if(peopleParam)state.people=new Set(peopleParam.split(',').filter(Boolean));
   }
   readUiState();
@@ -154,6 +164,17 @@
   }
   function dayEvents(k){return eventsForRange(k,k)}
   function fmtDate(k){const d=new Date(k+'T12:00');return `${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`}
+  function moveMonth(delta){
+    const selectedDate=new Date(state.selected+'T12:00');
+    const selectedDay=selectedDate.getDate();
+    const target=new Date(state.date.getFullYear(),state.date.getMonth()+delta,1,12);
+    const lastDay=new Date(target.getFullYear(),target.getMonth()+1,0,12).getDate();
+    target.setDate(Math.min(selectedDay,lastDay));
+    state.date=target;
+    state.selected=key(target);
+    render();
+  }
+
   function fmtRange(e){const s=new Date(e.start),t=new Date(e.end||e.start);if(e.allDay)return `${s.getMonth()+1}/${s.getDate()} 終日`;return key(s)===key(t)?`${s.getMonth()+1}/${s.getDate()} ${pad(s.getHours())}:${pad(s.getMinutes())}〜${pad(t.getHours())}:${pad(t.getMinutes())}`:`${s.getMonth()+1}/${s.getDate()} ${pad(s.getHours())}:${pad(s.getMinutes())}〜${t.getMonth()+1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`}
   function cells(){const y=state.date.getFullYear(),m=state.date.getMonth(),f=new Date(y,m,1),s=new Date(y,m,1-f.getDay());return Array.from({length:42},(_,i)=>{const d=new Date(s);d.setDate(s.getDate()+i);return d})}
 
@@ -330,6 +351,69 @@
     },{passive:true});
   }
 
+  let calendarSwipeBlockUntil=0;
+
+  function bindMonthSwipe(){
+    const area=$('#calendarArea');
+    if(!area||area.dataset.monthSwipeBound==='1')return;
+    area.dataset.monthSwipeBound='1';
+
+    let startX=0;
+    let startY=0;
+    let deltaX=0;
+    let deltaY=0;
+    let tracking=false;
+    let horizontal=false;
+
+    area.addEventListener('touchstart',event=>{
+      if(state.view!=='month'||event.touches.length!==1)return;
+      const touch=event.touches[0];
+      startX=touch.clientX;
+      startY=touch.clientY;
+      deltaX=0;
+      deltaY=0;
+      tracking=true;
+      horizontal=false;
+      area.classList.remove('month-swipe-left','month-swipe-right');
+    },{passive:true});
+
+    area.addEventListener('touchmove',event=>{
+      if(!tracking||state.view!=='month'||event.touches.length!==1)return;
+      const touch=event.touches[0];
+      deltaX=touch.clientX-startX;
+      deltaY=touch.clientY-startY;
+
+      if(!horizontal&&Math.max(Math.abs(deltaX),Math.abs(deltaY))>=12){
+        horizontal=Math.abs(deltaX)>Math.abs(deltaY)*1.18;
+        if(!horizontal&&Math.abs(deltaY)>Math.abs(deltaX))tracking=false;
+      }
+
+      if(horizontal){
+        event.preventDefault();
+        area.classList.toggle('month-swipe-left',deltaX<0);
+        area.classList.toggle('month-swipe-right',deltaX>0);
+      }
+    },{passive:false});
+
+    const finish=()=>{
+      if(!tracking)return;
+      const shouldMove=horizontal&&Math.abs(deltaX)>=56;
+      tracking=false;
+      area.classList.remove('month-swipe-left','month-swipe-right');
+
+      if(shouldMove){
+        calendarSwipeBlockUntil=Date.now()+450;
+        moveMonth(deltaX<0?1:-1);
+      }
+    };
+
+    area.addEventListener('touchend',finish,{passive:true});
+    area.addEventListener('touchcancel',()=>{
+      tracking=false;
+      area.classList.remove('month-swipe-left','month-swipe-right');
+    },{passive:true});
+  }
+
   function bind(){
     let tapTimer=0;
     let lastTapAt=0;
@@ -338,6 +422,7 @@
     $$('.day-cell[data-date]').forEach(cell=>{
       cell.addEventListener('click',event=>{
         event.preventDefault();
+        if(Date.now()<calendarSwipeBlockUntil)return;
         const date=cell.dataset.date;
         const now=Date.now();
         const doubleTap=lastTapDate===date&&(now-lastTapAt)<=360;
@@ -388,6 +473,8 @@
       state.people.has(name)?state.people.delete(name):state.people.add(name);
       render();
     }));
+
+    bindMonthSwipe();
   }
 
   function openEvent(id,forcedDate){
@@ -598,8 +685,8 @@
   $('#periodButton')?.addEventListener('click',()=>{const value=prompt('表示する年月を入力してください（例：2026-07）',`${state.date.getFullYear()}-${pad(state.date.getMonth()+1)}`);if(!value||!/^[0-9]{4}-[0-9]{2}$/.test(value))return;const [y,m]=value.split('-').map(Number);state.date=new Date(y,m-1,1,12);state.selected=key(state.date);render();});
   $('#addEventBtn')?.addEventListener('click',()=>openEvent());$('#quickAddBtn')?.addEventListener('click',()=>openEvent());$('#navAdd')?.addEventListener('click',()=>openEvent());$('#settingsBtn')?.addEventListener('click',openSettings);$('#filterBtn')?.addEventListener('click',()=>{$('#filterPanel')?.classList.toggle('hidden');reportEmbeddedHeight();});$('#closeModal')?.addEventListener('click',close);$('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal')close()});
   $('#todayBtn')?.addEventListener('click',()=>{state.date=new Date();state.selected=key(new Date());render()});
-  $('#prevBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list')state.date.setMonth(state.date.getMonth()-1);else state.date.setDate(state.date.getDate()-(state.view==='week'?7:1));state.selected=key(state.date);render()});
-  $('#nextBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list')state.date.setMonth(state.date.getMonth()+1);else state.date.setDate(state.date.getDate()+(state.view==='week'?7:1));state.selected=key(state.date);render()});
+  $('#prevBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list'){moveMonth(-1);return;}state.date.setDate(state.date.getDate()-(state.view==='week'?7:1));state.selected=key(state.date);render()});
+  $('#nextBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list'){moveMonth(1);return;}state.date.setDate(state.date.getDate()+(state.view==='week'?7:1));state.selected=key(state.date);render()});
   $$('.view-tabs button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});
   render();
 })();

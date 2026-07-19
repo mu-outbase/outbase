@@ -479,3 +479,13 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
   background:transparent!important;
   transition:height .12s ease-out;
 }
+
+
+/* =========================================================
+   Calendar route uses the exact HOME canvas color.
+   ========================================================= */
+.ob3-main.ob3-main-calendar,
+.ob3-main.ob3-main-calendar .ob-calendar-direct,
+.ob3-main.ob3-main-calendar iframe{
+  background:#fbfaf7!important;
+}
