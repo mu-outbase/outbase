@@ -3,6 +3,9 @@
 
   const FRAME_ID='outbaseIntegratedCalendar';
   const ROUTE_KEYS=['activityId','planId','month','people','sheet'];
+  const CALENDAR_NAV_ID='outbaseBottomCalendar';
+  let replacing=false;
+  let observer=null;
 
   function router(){return globalThis.OUTBASE_ROUTER||null;}
   function current(){return router()?.current?.()||null;}
@@ -16,6 +19,27 @@
       if(value)query.set(key,String(value));
     });
     return `./calendar-formal-v44.html?${query.toString()}`;
+  }
+
+  const calendarIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>';
+
+  function ensureFiveItemNav(){
+    const nav=document.querySelector('.ob3-nav');
+    if(!nav)return false;
+
+    let calendarButton=document.getElementById(CALENDAR_NAV_ID);
+    if(!calendarButton){
+      const home=nav.querySelector('[data-ob3-route="home"]');
+      calendarButton=document.createElement('button');
+      calendarButton.id=CALENDAR_NAV_ID;
+      calendarButton.type='button';
+      calendarButton.dataset.ob3Route='calendar';
+      calendarButton.innerHTML=`<span class="ob36-nav-icon">${calendarIcon}</span><span>カレンダー</span>`;
+      home?.insertAdjacentElement('afterend',calendarButton);
+    }
+
+    nav.classList.add('ob-nav-five');
+    return true;
   }
 
   function setCalendarNavActive(){
@@ -33,12 +57,17 @@
     const main=shellMain();
     if(!main)return false;
 
+    ensureFiveItemNav();
+
     let frame=document.getElementById(FRAME_ID);
     if(!frame){
+      if(replacing)return false;
+      replacing=true;
       main.innerHTML=`<section class="ob-calendar-integrated" aria-label="カレンダー">
         <iframe id="${FRAME_ID}" title="OUTBASE カレンダー" loading="eager"></iframe>
       </section>`;
       frame=document.getElementById(FRAME_ID);
+      replacing=false;
     }
 
     const next=calendarUrl(route);
@@ -94,12 +123,46 @@
 
   document.addEventListener('click',interceptCalendarClicks,true);
 
+  function syncRouteUi(){
+    ensureFiveItemNav();
+    const route=current();
+    document.querySelectorAll('.ob3-nav [data-ob3-route]').forEach(node=>{
+      const active=node.dataset.ob3Route===route?.name;
+      node.classList.toggle('active',active);
+      if(active)node.setAttribute('aria-current','page');
+      else node.removeAttribute('aria-current');
+    });
+  }
+
+  function observeAuthoritativeRenderer(){
+    const app=document.getElementById('app')||document.body;
+    if(observer)return;
+    let queued=false;
+    observer=new MutationObserver(()=>{
+      if(queued||replacing)return;
+      queued=true;
+      requestAnimationFrame(()=>{
+        queued=false;
+        syncRouteUi();
+        if(current()?.name==='calendar'&&!document.getElementById(FRAME_ID)){
+          mountCalendar();
+        }
+      });
+    });
+    observer.observe(app,{childList:true,subtree:true});
+  }
+
   function boot(){
     const api=router();
     if(!api){setTimeout(boot,30);return}
+    ensureFiveItemNav();
+    observeAuthoritativeRenderer();
     api.subscribe?.(route=>{
-      if(route?.name==='calendar')setTimeout(mountCalendar,0);
-      else unmountCalendar();
+      setTimeout(syncRouteUi,0);
+      if(route?.name==='calendar'){
+        setTimeout(mountCalendar,0);
+        setTimeout(mountCalendar,80);
+      }else unmountCalendar();
     });
 
     const waitForShell=()=>{
@@ -114,7 +177,7 @@
   else boot();
 
   globalThis.OUTBASE_CALENDAR_SHELL_INTEGRATION_V1=Object.freeze({
-    version:'formal-v44-shell1',
+    version:'formal-v44-shell-authoritative-1',
     mount:mountCalendar,
     frameId:FRAME_ID
   });
