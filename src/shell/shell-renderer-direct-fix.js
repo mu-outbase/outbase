@@ -49,7 +49,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-viewport-lock-v1'});
+    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-height-authority-v1'});
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];
       if(value)query.set(key,String(value));
@@ -105,7 +105,7 @@
       main.querySelectorAll('.ob36-topbar').forEach(node=>node.remove());
 
       if(route==='calendar'){
-        main.innerHTML=`<section class="ob-calendar-direct" aria-label="カレンダー"><iframe id="outbaseIntegratedCalendar" title="OUTBASE カレンダー" src="${calendarUrl(model.route)}" loading="eager"></iframe></section>`;
+        main.innerHTML=`<section class="ob-calendar-direct" aria-label="カレンダー"><iframe id="outbaseIntegratedCalendar" title="OUTBASE カレンダー" src="${calendarUrl(model.route)}" loading="eager" scrolling="no"></iframe></section>`;
       }
 
       ensureCopyright(main);
@@ -150,7 +150,10 @@
       if(!frame)return;
       const height=Math.max(360,Math.ceil(Number(event.data.height)||0));
       const current=Math.round(frame.getBoundingClientRect().height);
-      if(Math.abs(current-height)>2)frame.style.height=`${height}px`;
+      if(Math.abs(current-height)>2){
+        frame.style.setProperty('height',`${height}px`,'important');
+      }
+      frame.style.setProperty('overflow','hidden','important');
     });
   }
 

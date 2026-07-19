@@ -1270,3 +1270,16 @@ html.outbaseCalendarEmbedded .todo-view{
 html.outbaseCalendarEmbedded .agenda{
   margin-bottom:0!important;
 }
+
+
+/* =========================================================
+   Embedded calendar must expand its parent, never scroll inside.
+   ========================================================= */
+html.outbaseCalendarEmbedded,
+html.outbaseCalendarEmbedded body{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+html.outbaseCalendarEmbedded .calendar-shell{
+  overflow:visible!important;
+}

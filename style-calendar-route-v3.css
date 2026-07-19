@@ -456,11 +456,26 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
 }
 
 
+
+
 /* =========================================================
-   Calendar parent viewport LOCK v6
+   Calendar iframe height authority v7
+   JavaScript measured height is authoritative.
    ========================================================= */
-.ob-calendar-direct iframe{
-  height:420px!important;
+.ob-calendar-direct{
+  width:100%!important;
+  height:auto!important;
   min-height:0!important;
+  overflow:visible!important;
+}
+.ob-calendar-direct iframe{
+  display:block!important;
+  width:100%!important;
+  height:760px;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:hidden!important;
+  border:0!important;
+  background:transparent!important;
   transition:height .12s ease-out;
 }
