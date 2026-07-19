@@ -105,13 +105,23 @@
     returnActivityId:item?.id
   });
 
-  async function activateContext(item){
+  function activateLocalContext(item){
     if(!item?.id)return false;
     try{
       localStorage.setItem('outbase_core_activity_id',String(item.id));
       localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
       const planId=legacyPlanId(item);
       if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
+      return true;
+    }catch(_error){
+      return false;
+    }
+  }
+
+  async function persistContext(item){
+    if(!item?.id)return false;
+    try{
+      const planId=legacyPlanId(item);
       await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{
         mode:'legacy-shadow',
         current_plan_id:planId||null
@@ -120,6 +130,11 @@
     }catch(_error){
       return false;
     }
+  }
+
+  async function activateContext(item){
+    activateLocalContext(item);
+    return persistContext(item);
   }
 
   function state(item){
@@ -212,15 +227,18 @@
     main.querySelectorAll('[data-ob17-context]').forEach(link=>link.addEventListener('click',async event=>{
       if(!item)return;
       event.preventDefault();
-      await activateContext(item);
       const mode=link.dataset.ob17Context||'legacy';
       if(mode==='preparation'){
+        activateLocalContext(item);
+        globalThis.OUTBASE_PREPARATION_ROUTE_V17?.prime?.(item);
         globalThis.OUTBASE_ROUTER.navigate('preparation',{
           activityId:item.id,
           planId:legacyPlanId(item)
-        },{transition:true});
+        },{transition:false,skipTransition:true});
+        void persistContext(item);
         return;
       }
+      await activateContext(item);
       location.assign(link.href);
     }));
   }

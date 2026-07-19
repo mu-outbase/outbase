@@ -79,7 +79,10 @@
     if(!shell)throw new Error('OUTBASE preparation shell is not ready');
     shell.dataset.ob6Route=route?.name||'preparation';
     const main=shell.querySelector('.ob3-main');
-    if(main)main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
+    const renderedId=main?.querySelector?.('.ob17-preparation[data-ob17-activity-id]')?.dataset?.ob17ActivityId||'';
+    if(main&&String(renderedId)!==String(route?.activityId||'')){
+      main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
+    }
     apply(root,model);
     return model;
   }

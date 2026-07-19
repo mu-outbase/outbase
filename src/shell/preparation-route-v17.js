@@ -79,6 +79,38 @@
     return value.result;
   }
 
+  function resultFromActivity(item){
+    if(!item?.id)return null;
+    const domain=globalThis.OUTBASE_PREPARATION_DOMAIN_V162;
+    if(!domain)return null;
+    const preparation=item.preparation||{};
+    const provided=Array.isArray(preparation.items)?preparation.items:[];
+    const effective=provided.length?provided:domain.baselineFor(item);
+    const completed=effective.filter(row=>row.status==='completed'||row.completedAt).length;
+    const summary=Object.freeze({
+      activity:item,
+      items:Object.freeze([...effective]),
+      sections:Object.freeze(sections(effective,domain).map(section=>Object.freeze({
+        ...section,items:Object.freeze([...section.items])
+      }))),
+      total:Number(preparation.total??effective.length),
+      completed:Number(preparation.completed??completed),
+      pending:Number(preparation.pending??Math.max(0,effective.length-completed)),
+      progress:Number(preparation.progress??(effective.length?Math.round(completed/effective.length*100):0)),
+      persisted:Boolean(preparation.persisted||provided.some(row=>row?.id)),
+      generatedAt:new Date().toISOString(),
+      primed:true
+    });
+    return Object.freeze({status:'ready',summary,item});
+  }
+
+  function prime(item){
+    const result=resultFromActivity(item);
+    if(!result)return null;
+    cache.set(String(item.id),{createdAt:Date.now(),result});
+    return result;
+  }
+
   async function loadFast(activityId,{force=false}={}){
     if(!activityId)return {status:'missing'};
     if(!force){
@@ -230,6 +262,32 @@
     </section>`;
   }
 
+  function renderResult(main,result,{preserveScroll=false}={}){
+    if(!main||!result)return false;
+    const y=preserveScroll?window.scrollY:0;
+    main.innerHTML=markup(result);
+    bind(main,result);
+    if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
+    return true;
+  }
+
+  function isCurrentPreparation(main,activityId){
+    const route=globalThis.OUTBASE_ROUTER?.current?.();
+    return main?.isConnected&&route?.name==='preparation'&&String(route.activityId||'')===String(activityId||'');
+  }
+
+  function refreshAfterPaint(main,activityId){
+    requestAnimationFrame(()=>{
+      Promise.resolve(loadFast(activityId,{force:true}))
+        .then(result=>{
+          if(!isCurrentPreparation(main,activityId))return;
+          renderResult(main,result);
+          if(result.status==='ready'&&!result.summary.persisted)setTimeout(()=>persistBaseline(main,activityId),0);
+        })
+        .catch(()=>{});
+    });
+  }
+
   function persistBaseline(main,activityId){
     if(!activityId||baselineJobs.has(activityId))return;
     const domain=globalThis.OUTBASE_PREPARATION_DOMAIN_V162;
@@ -250,14 +308,12 @@
     baselineJobs.set(activityId,job);
   }
 
-  async function rerender(main,activityId,{preserveScroll=true}={}){
-    const y=preserveScroll?window.scrollY:0;
-    main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
+  async function rerender(main,activityId,{preserveScroll=true,showLoading=true}={}){
+    if(showLoading)main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
     const result=await loadFast(activityId);
-    main.innerHTML=markup(result);
-    bind(main,result);
+    renderResult(main,result,{preserveScroll});
     if(result.status==='ready'&&!result.summary.persisted)setTimeout(()=>persistBaseline(main,activityId),0);
-    if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
+    return result;
   }
 
   async function toggleItem(main,result,itemId){
@@ -315,19 +371,38 @@
     ...base,
     __preparationV17:true,
     async mount(root,options={}){
+      const requested=globalThis.OUTBASE_ROUTER?.current?.();
+      const primed=requested?.name==='preparation'?cached(requested.activityId):null;
+      const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
+      if(primed&&beforeMain){
+        beforeMain.classList.add('ob3-main-preparation');
+        beforeMain.classList.remove('ob3-main-calendar','ob3-main-activity');
+        renderResult(beforeMain,primed);
+      }
+
       const value=await base.mount(root,options);
       const main=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
       const active=value?.route?.name==='preparation';
       if(main)main.classList.toggle('ob3-main-preparation',active);
       if(active&&main){
         main.classList.remove('ob3-main-calendar','ob3-main-activity');
-        await rerender(main,value.route.activityId,{preserveScroll:false});
+        const ready=cached(value.route.activityId)||primed;
+        if(ready){
+          renderResult(main,ready);
+          refreshAfterPaint(main,value.route.activityId);
+        }else{
+          main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
+          void rerender(main,value.route.activityId,{preserveScroll:false,showLoading:false});
+        }
       }
       return value;
     },
     updateNav(root,value){base.updateNav?.(root,value);}
   });
 
+  globalThis.OUTBASE_PREPARATION_ROUTE_V17=Object.freeze({
+    prime,cached,loadFast,invalidate(activityId){cache.delete(String(activityId||''));}
+  });
   globalThis.OUTBASE_SHELL_RENDERER_V166=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;

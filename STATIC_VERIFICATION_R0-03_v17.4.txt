@@ -1,0 +1,17 @@
+OUTBASE R0-03 v17.4 STATIC VERIFICATION
+
+preparation_click_primes_existing_detail: PASS
+preparation_click_navigates_without_transition_wait: PASS
+preparation_context_db_write_is_background: PASS
+preparation_prime_api_exposed: PASS
+preparation_sync_render_before_base_mount: PASS
+preparation_db_refresh_after_paint: PASS
+direct_shell_preserves_primed_screen: PASS
+version_v174: PASS
+index_cache_busted_v174: PASS
+service_worker_cache_busted_v174: PASS
+field03_version_unchanged: PASS
+home_domain_version_unchanged: PASS
+
+JavaScript syntax: PASS (14 files)
+Overall: PASS
