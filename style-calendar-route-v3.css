@@ -54,3 +54,67 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated{
 html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
   min-height:760px;
 }
+
+
+/* =========================================================
+   Stable five-item bottom navigation
+   No MutationObserver / no flicker / fixed order
+   ========================================================= */
+.ob3-nav.ob-nav-five{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  grid-auto-flow:column!important;
+  align-items:center!important;
+  width:calc(min(430px,100vw) - 28px)!important;
+  min-height:68px!important;
+  padding:7px 4px calc(7px + env(safe-area-inset-bottom))!important;
+}
+.ob3-nav.ob-nav-five>button{
+  position:static!important;
+  float:none!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  margin:0!important;
+  transform:none!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:3px!important;
+  padding:2px 0!important;
+}
+.ob3-nav.ob-nav-five>button:nth-child(1){grid-column:1}
+.ob3-nav.ob-nav-five>button:nth-child(2){grid-column:2}
+.ob3-nav.ob-nav-five>button:nth-child(3){grid-column:3}
+.ob3-nav.ob-nav-five>button:nth-child(4){grid-column:4}
+.ob3-nav.ob-nav-five>button:nth-child(5){grid-column:5}
+.ob3-nav.ob-nav-five .ob3-central{
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#666d69!important;
+}
+.ob3-nav.ob-nav-five .ob3-central.active,
+.ob3-nav.ob-nav-five>button.active{
+  color:#d39219!important;
+}
+.ob3-nav.ob-nav-five>button>span:last-child{
+  display:block!important;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:clip;
+  font-size:9px!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+.ob3-nav.ob-nav-five .ob36-nav-icon{
+  width:23px!important;
+  height:23px!important;
+  display:grid!important;
+  place-items:center!important;
+}
+.ob3-nav.ob-nav-five .ob36-nav-icon svg{
+  width:21px!important;
+  height:21px!important;
+}

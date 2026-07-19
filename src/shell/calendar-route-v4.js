@@ -5,7 +5,7 @@
   const ROUTE_KEYS=['activityId','planId','month','people','sheet'];
   const CALENDAR_NAV_ID='outbaseBottomCalendar';
   let replacing=false;
-  let observer=null;
+  let navSyncTimer=0;
 
   function router(){return globalThis.OUTBASE_ROUTER||null;}
   function current(){return router()?.current?.()||null;}
@@ -27,17 +27,23 @@
     const nav=document.querySelector('.ob3-nav');
     if(!nav)return false;
 
+    const home=nav.querySelector('[data-ob3-route="home"]');
+    const search=nav.querySelector('[data-ob3-route="search"]');
+    const add=nav.querySelector('[data-ob3-central]');
+    const vault=nav.querySelector('[data-ob3-route="vault"]');
+    if(!home||!search||!add||!vault)return false;
+
     let calendarButton=document.getElementById(CALENDAR_NAV_ID);
     if(!calendarButton){
-      const home=nav.querySelector('[data-ob3-route="home"]');
       calendarButton=document.createElement('button');
       calendarButton.id=CALENDAR_NAV_ID;
       calendarButton.type='button';
       calendarButton.dataset.ob3Route='calendar';
       calendarButton.innerHTML=`<span class="ob36-nav-icon">${calendarIcon}</span><span>カレンダー</span>`;
-      home?.insertAdjacentElement('afterend',calendarButton);
     }
 
+    // Fixed order: Home / Calendar / Add / Search / Vault.
+    [home,calendarButton,add,search,vault].forEach(node=>nav.appendChild(node));
     nav.classList.add('ob-nav-five');
     return true;
   }
@@ -124,7 +130,7 @@
   document.addEventListener('click',interceptCalendarClicks,true);
 
   function syncRouteUi(){
-    ensureFiveItemNav();
+    if(!ensureFiveItemNav())return false;
     const route=current();
     document.querySelectorAll('.ob3-nav [data-ob3-route]').forEach(node=>{
       const active=node.dataset.ob3Route===route?.name;
@@ -132,38 +138,32 @@
       if(active)node.setAttribute('aria-current','page');
       else node.removeAttribute('aria-current');
     });
+    return true;
   }
 
-  function observeAuthoritativeRenderer(){
-    const app=document.getElementById('app')||document.body;
-    if(observer)return;
-    let queued=false;
-    observer=new MutationObserver(()=>{
-      if(queued||replacing)return;
-      queued=true;
-      requestAnimationFrame(()=>{
-        queued=false;
-        syncRouteUi();
-        if(current()?.name==='calendar'&&!document.getElementById(FRAME_ID)){
-          mountCalendar();
-        }
-      });
-    });
-    observer.observe(app,{childList:true,subtree:true});
+  function scheduleShellSync(includeCalendar=true){
+    clearTimeout(navSyncTimer);
+    const attempts=[0,60,180];
+    attempts.forEach(delay=>setTimeout(()=>{
+      syncRouteUi();
+      if(includeCalendar&&current()?.name==='calendar')mountCalendar();
+    },delay));
   }
 
   function boot(){
     const api=router();
     if(!api){setTimeout(boot,30);return}
-    ensureFiveItemNav();
-    observeAuthoritativeRenderer();
+    scheduleShellSync(current()?.name==='calendar');
     api.subscribe?.(route=>{
-      setTimeout(syncRouteUi,0);
       if(route?.name==='calendar'){
-        setTimeout(mountCalendar,0);
-        setTimeout(mountCalendar,80);
-      }else unmountCalendar();
+        scheduleShellSync(true);
+      }else{
+        unmountCalendar();
+        scheduleShellSync(false);
+      }
     });
+    addEventListener('outbase:app-ready',()=>scheduleShellSync(current()?.name==='calendar'));
+    addEventListener('pageshow',()=>scheduleShellSync(current()?.name==='calendar'));
 
     const waitForShell=()=>{
       if(current()?.name!=='calendar')return;
@@ -177,7 +177,7 @@
   else boot();
 
   globalThis.OUTBASE_CALENDAR_SHELL_INTEGRATION_V1=Object.freeze({
-    version:'formal-v44-shell-authoritative-1',
+    version:'formal-v44-shell-stable-nav-1',
     mount:mountCalendar,
     frameId:FRAME_ID
   });
