@@ -59,7 +59,7 @@
     navigate(name,event.data?.values||{},{transition:true});
   });
 
-  const api=Object.freeze({version:'v18.0-r1',valuesFrom,navigate});
+  const api=Object.freeze({version:'v18.1-r1-home-alignment',valuesFrom,navigate});
   globalThis.OUTBASE_NAVIGATION_AUDIT_V18=api;
   globalThis.OUTBASE_NAVIGATION_AUDIT_V17=api;
 })();

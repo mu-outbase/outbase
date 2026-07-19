@@ -31,6 +31,7 @@
   const cache=new Map();
   const baselineJobs=new Map();
   const CACHE_TTL_MS=30000;
+  const DETAIL_ORIGIN_KEY='outbase_preparation_origin_v1';
 
   const date=value=>{
     const d=new Date(value||'');
@@ -182,6 +183,31 @@
     return {context:activityContext(item),persisted:Promise.resolve(false)};
   }
 
+
+  function warmDetail(item){
+    if(!item?.id)return;
+    const activityRoute=globalThis.OUTBASE_ACTIVITY_ROUTE_V16;
+    if(activityRoute?.cached?.(item.id))return;
+    const modelApi=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
+    if(!modelApi?.preload)return;
+    Promise.resolve(modelApi.preload('activity',{activityId:item.id}))
+      .then(payload=>{if(payload?.detail)activityRoute?.prime?.(payload);})
+      .catch(()=>{});
+  }
+
+  function backToDetail(item){
+    if(!item?.id)return;
+    activateContext(item,{source:'preparation-to-detail'});
+    warmDetail(item);
+    const context=activityContext(item,{returnShell:'activity',returnActivityId:item.id});
+    const values=contextApi()?.params?.(context)||{activityId:item.id,planId:planId(item)};
+    try{
+      const origin=JSON.parse(sessionStorage.getItem(DETAIL_ORIGIN_KEY)||'null');
+      if(origin&&String(origin.activityId||'')===String(item.id))sessionStorage.removeItem(DETAIL_ORIGIN_KEY);
+    }catch(_error){}
+    globalThis.OUTBASE_ROUTER.navigate('activity',values,{transition:false,skipTransition:true});
+  }
+
   function prepareLegacyAnchor(item,control,{record=false,source='preparation-to-legacy'}={}){
     if(!item?.id||!control?.href)return false;
     activateContext(item,{record,source});
@@ -221,7 +247,7 @@
     const completed=Number(summary.completed||0);
     const pending=Number(summary.pending||Math.max(0,total-completed));
     const progress=Math.max(0,Math.min(100,Number(summary.progress||0)));
-    const legacyPlanId=planId(item);
+    const type=contextApi()?.typeLabel?.(item.type||item.activityType||'')||item.typeLabel||'予定';
     const advanced=legacyUrl('activity',item,{
       returnShell:'preparation',returnActivityId:item.id
     });
@@ -230,19 +256,27 @@
     });
 
     return `<section class="ob17-preparation" data-ob17-activity-id="${esc(item.id)}">
-      <button type="button" class="ob17-back" data-ob17-detail>${icons.back}<span>予定詳細</span></button>
+      <div class="ob17-route-head">
+        <button type="button" class="ob17-back" data-ob17-detail>${icons.back}<span>予定詳細へ</span></button>
+        <span class="ob17-route-label">準備</span>
+      </div>
 
-      <section class="ob17-prep-hero">
-        <small>PREPARATION</small>
-        <h1>${esc(item.title||'予定')}</h1>
-        <p>${esc(range(item))}</p>
-        <p>${esc(item.place||'場所未設定')}</p>
+      <section class="ob17-prep-hero ob36-card">
+        <div class="ob17-prep-heading">
+          <span class="ob17-prep-heading-icon">${icons.prep}</span>
+          <div>
+            <small>PREPARATION</small>
+            <h1>${esc(item.title||'予定')}</h1>
+            <p>${esc(type)}・${esc(range(item))}</p>
+            <p>${esc(item.place||'場所未設定')}</p>
+          </div>
+          <em>${pending?`${pending}件 未完了`:'準備完了'}</em>
+        </div>
         <div class="ob17-progress-row">
           <strong>${completed}<i>/ ${total}</i></strong>
           <div><span style="width:${progress}%"></span></div>
           <b>${progress}%</b>
         </div>
-        <em>${pending}件 未完了</em>
       </section>
 
       <div class="ob17-prep-sections">${sectionsMarkup(summary)}</div>
@@ -250,24 +284,22 @@
       <section class="ob17-flow-actions">
         <a class="primary" href="${esc(start)}" data-ob17-start>
           <span>${icons.play}</span>
-          <span><b>活動を始める</b><small>当日のGPS・写真・音声・メモへ</small></span>
+          <span><b>活動を始める</b><small>GPS・写真・音声・メモへ</small></span>
           ${icons.arrow}
         </a>
         <a class="secondary" href="${esc(advanced)}" data-ob17-advanced>
           <span>${icons.prep}</span>
-          <span><b>詳細な準備を開く</b><small>持ち物台帳・料理・買い物など</small></span>
+          <span><b>詳細な準備を開く</b><small>持ち物・料理・買い物など</small></span>
           ${icons.arrow}
         </a>
       </section>
-
-      <button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button>
     </section>`;
   }
 
   function renderResult(main,result,{preserveScroll=false}={}){
     if(!main||!result)return false;
     const y=preserveScroll?window.scrollY:0;
-    if(result.status==='ready')activateContext(result.item,{source:'preparation-render'});
+    if(result.status==='ready'){activateContext(result.item,{source:'preparation-render'});warmDetail(result.item);}
     main.innerHTML=markup(result);
     bind(main,result);
     if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
@@ -336,8 +368,6 @@
   }
 
   function bind(main,result){
-    main.querySelector('#outbaseCopyrightFooter')?.addEventListener('click',()=>globalThis.OUTBASE_ABOUT?.open?.());
-
     main.querySelector('[data-ob17-home]')?.addEventListener('click',()=>{
       globalThis.OUTBASE_ROUTER.navigate('home',{}, {transition:true});
     });
@@ -345,10 +375,7 @@
     if(result.status!=='ready')return;
     const item=result.item;
 
-    main.querySelector('[data-ob17-detail]')?.addEventListener('click',()=>{
-      activateContext(item,{source:'preparation-to-detail'});
-      globalThis.OUTBASE_ROUTER.navigate('activity',contextApi()?.params?.(activityContext(item))||{activityId:item.id,planId:planId(item)},{transition:true});
-    });
+    main.querySelector('[data-ob17-detail]')?.addEventListener('click',()=>backToDetail(item));
 
     main.querySelectorAll('[data-ob17-prep-toggle]').forEach(button=>button.addEventListener('click',async()=>{
       button.disabled=true;

@@ -1,0 +1,18 @@
+OUTBASE R1-02 v18.1 STATIC VERIFICATION
+
+PASS
+- 全同梱JavaScript node --check
+- index.html / service-worker.js / version.js のv18.1キャッシュ識別子一致
+- 予定詳細→準備 URLに returnShell=activity / returnActivityId を保持
+- 予定詳細表示モデルのメモリキャッシュ実装
+- 準備→予定詳細の transition:false / skipTransition:true
+- 準備表示時の予定詳細バックグラウンド先読み
+- 準備画面内コピーライト削除
+- ob17-preparation追加スペーサー無効化
+- 主役予定候補の完了・アーカイブ除外
+- 候補一件時の切替無効化
+- FIELD03関連ファイル src/app.js / src/outbase-activity.js / data/database.js は未変更
+
+LIMIT
+- Android実機のタップ速度と最終見た目は未確認
+- Chromiumヘッドレスは実行環境制約で完走しなかったため、視覚確認はDOM/CSS静的監査まで

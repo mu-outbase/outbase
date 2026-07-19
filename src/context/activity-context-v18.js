@@ -3,7 +3,7 @@
 
   if(globalThis.OUTBASE_ACTIVITY_CONTEXT_V18)return;
 
-  const VERSION='v18.0-r1-foundation';
+  const VERSION='v18.1-r1-home-alignment';
   const CONTEXT_KEY='outbase_activity_context_v1';
   const PENDING_KEY='outbase_pending_activity_context_v1';
   const RETURN_KEY='outbase_return_context_v1';

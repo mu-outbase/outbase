@@ -7,7 +7,7 @@
   const router=globalThis.OUTBASE_ROUTER;
   const modals=globalThis.OUTBASE_MODAL_STACK_V164;
   const modalId='outbasePlanSwitchV18';
-  const state={rows:[],opening:false};
+  const state={rows:[],opening:false,loaded:false};
 
   const esc=value=>String(value??'')
     .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
@@ -27,14 +27,19 @@
   function updateChip(context=currentContext()){
     const title=context.activityTitle||'予定を選ぶ';
     const type=context.activityTypeLabel||contextApi()?.typeLabel?.(context.activityType)||'主役プラン';
-    const meta=[type,context.startAt?shortDate(context.startAt):''].filter(Boolean).join('・')||'タップで切替';
+    const meta=[type,context.startAt?shortDate(context.startAt):''].filter(Boolean).join('・')||'現在の予定';
+    const switchable=!state.loaded||state.rows.length>1;
     document.querySelectorAll('[data-ob18-plan-switch]').forEach(button=>{
       const titleNode=button.querySelector('[data-ob18-plan-title]');
       const metaNode=button.querySelector('[data-ob18-plan-meta]');
+      const affordance=button.querySelector('i');
       if(titleNode&&titleNode.textContent!==title)titleNode.textContent=title;
       if(metaNode&&metaNode.textContent!==meta)metaNode.textContent=meta;
+      if(affordance)affordance.textContent=switchable?'切替':'';
       button.classList.toggle('is-empty',!context.activityId);
-      const label=context.activityId?`${title}を切り替える`:'主役プランを選ぶ';
+      button.classList.toggle('is-single',Boolean(context.activityId)&&state.loaded&&!switchable);
+      button.disabled=Boolean(context.activityId)&&state.loaded&&!switchable;
+      const label=!context.activityId?'主役プランを選ぶ':switchable?`${title}から別の予定へ切り替える`:`現在の主役プランは${title}`;
       if(button.getAttribute('aria-label')!==label)button.setAttribute('aria-label',label);
     });
   }
@@ -87,14 +92,24 @@
   async function loadRows(){
     const domain=globalThis.OUTBASE_PLAN_DOMAIN_V162;
     if(!domain?.list)return [];
+    const currentId=String(currentContext().activityId||'');
     const rows=await domain.list({includeDeleted:false,limit:200});
-    return [...rows].sort((a,b)=>{
-      const stateDiff=(stateOrder[a.state]??99)-(stateOrder[b.state]??99);
-      if(stateDiff)return stateDiff;
-      const aTime=new Date(a.startAt||a.calendar?.[0]?.startAt||8640000000000000).getTime();
-      const bTime=new Date(b.startAt||b.calendar?.[0]?.startAt||8640000000000000).getTime();
-      return aTime-bTime;
-    });
+    return [...rows]
+      .filter(item=>String(item?.id||'')===currentId||!['completed','archived'].includes(String(item?.state||'')))
+      .sort((a,b)=>{
+        const stateDiff=(stateOrder[a.state]??99)-(stateOrder[b.state]??99);
+        if(stateDiff)return stateDiff;
+        const aTime=new Date(a.startAt||a.calendar?.[0]?.startAt||8640000000000000).getTime();
+        const bTime=new Date(b.startAt||b.calendar?.[0]?.startAt||8640000000000000).getTime();
+        return aTime-bTime;
+      });
+  }
+
+  async function refreshAvailability(){
+    try{state.rows=await loadRows();state.loaded=true;}
+    catch(_error){state.rows=[];state.loaded=true;}
+    updateChip();
+    return state.rows;
   }
 
   async function open(){
@@ -106,11 +121,15 @@
     document.body.classList.add('ob18-plan-switch-open');
     try{
       state.rows=await loadRows();
+      state.loaded=true;
       render(state.rows);
+      updateChip();
       if(modals?.top?.()?.id!==modalId)modals?.open?.(modalId);
     }catch(_error){
       state.rows=[];
+      state.loaded=true;
       render([]);
+      updateChip();
     }finally{state.opening=false;}
   }
 
@@ -140,7 +159,7 @@
 
   document.addEventListener('click',event=>{
     const trigger=event.target.closest?.('[data-ob18-plan-switch]');
-    if(trigger){event.preventDefault();open();return;}
+    if(trigger){event.preventDefault();if(trigger.disabled||trigger.classList.contains('is-single'))return;open();return;}
     const closeButton=event.target.closest?.('[data-ob18-plan-close]');
     if(closeButton){close({historyBack:true});return;}
     const row=event.target.closest?.('[data-ob18-plan-id]');
@@ -161,9 +180,11 @@
     const app=document.getElementById('app');
     if(app)observer.observe(app,{childList:true,subtree:true});
     updateChip();
+    if(typeof requestIdleCallback==='function')requestIdleCallback(()=>refreshAvailability(),{timeout:1200});
+    else setTimeout(()=>refreshAvailability(),300);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 
-  globalThis.OUTBASE_PLAN_SWITCH_V18=Object.freeze({open,close,choose,loadRows,updateChip});
+  globalThis.OUTBASE_PLAN_SWITCH_V18=Object.freeze({open,close,choose,loadRows,refreshAvailability,updateChip});
 })();

@@ -80,6 +80,31 @@
   }
 
   const contextApi=()=>globalThis.OUTBASE_ACTIVITY_CONTEXT_V18||globalThis.OUTBASE_ACTIVITY_CONTEXT;
+  const DETAIL_ORIGIN_KEY='outbase_preparation_origin_v1';
+  const DETAIL_CACHE_TTL_MS=90000;
+  const detailCache=new Map();
+
+  function prime(model){
+    const item=model?.detail?.activity||null;
+    if(!item?.id)return null;
+    detailCache.set(String(item.id),{model,createdAt:Date.now()});
+    return model;
+  }
+  function cached(activityId){
+    const entry=detailCache.get(String(activityId||''));
+    if(!entry||Date.now()-entry.createdAt>=DETAIL_CACHE_TTL_MS){
+      if(entry)detailCache.delete(String(activityId||''));
+      return null;
+    }
+    return entry.model;
+  }
+  function rememberPreparationOrigin(item){
+    try{
+      sessionStorage.setItem(DETAIL_ORIGIN_KEY,JSON.stringify({
+        route:'activity',activityId:String(item?.id||''),planId:String(legacyPlanId(item)||''),savedAt:Date.now()
+      }));
+    }catch(_error){}
+  }
   const legacyPlanId=item=>contextApi()?.planIdFrom?.(item)||item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
   const activityContext=(item,overrides={})=>contextApi()?.fromActivity?.(item,overrides)||{
     activityId:item?.id||'',planId:legacyPlanId(item)||'',activityType:item?.type||'',activityTitle:item?.title||'',...overrides
@@ -97,7 +122,7 @@
     catch(_error){return `./?tab=${encodeURIComponent(name)}`;}
   };
 
-  const preparationHref=item=>routeUrl('preparation',item);
+  const preparationHref=item=>routeUrl('preparation',item,{returnShell:'activity',returnActivityId:item?.id});
   const startHref=item=>legacyUrl('record',item,{
     sheet:'start',returnShell:'activity',returnActivityId:item?.id
   });
@@ -227,10 +252,12 @@
       const mode=link.dataset.ob17Context||'legacy';
       if(mode==='preparation'){
         event.preventDefault();
+        rememberPreparationOrigin(item);
+        const context=activityContext(item,{returnShell:'activity',returnActivityId:item.id});
         activateContext(item,{source:'activity-to-preparation'});
         globalThis.OUTBASE_PREPARATION_ROUTE_V17?.prime?.(item);
-        globalThis.OUTBASE_ROUTER.navigate('preparation',contextApi()?.params?.(activityContext(item))||{
-          activityId:item.id,planId:legacyPlanId(item)
+        globalThis.OUTBASE_ROUTER.navigate('preparation',contextApi()?.params?.(context)||{
+          activityId:item.id,planId:legacyPlanId(item),returnShell:'activity',returnActivityId:item.id
         },{transition:false,skipTransition:true});
         return;
       }
@@ -246,13 +273,24 @@
     ...base,
     __activityV16:true,
     async mount(root,options={}){
+      const requested=globalThis.OUTBASE_ROUTER?.current?.()||{};
+      const primed=requested.name==='activity'?cached(requested.activityId):null;
+      const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
+      if(primed&&beforeMain){
+        beforeMain.classList.add('ob3-main-activity');
+        beforeMain.classList.remove('ob3-main-calendar','ob3-main-preparation');
+        beforeMain.innerHTML=markup(primed);
+        base.hydrateMedia?.(beforeMain);
+        bind(beforeMain,primed);
+      }
+
       const value = await base.mount(root,options);
       const main = root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
       if (main) main.classList.toggle('ob3-main-activity', value?.route?.name==='activity');
       if (value?.route?.name==='activity' && main) {
-        main.classList.remove('ob3-main-calendar');
+        main.classList.remove('ob3-main-calendar','ob3-main-preparation');
         const item=value?.detail?.activity||null;
-        if(item)activateContext(item,{source:'activity-render'});
+        if(item){activateContext(item,{source:'activity-render'});prime(value);}
         main.innerHTML = markup(value);
         base.hydrateMedia?.(main);
         bind(main,value);
@@ -261,6 +299,8 @@
     },
     updateNav(root,value){ base.updateNav?.(root,value); }
   });
+
+  globalThis.OUTBASE_ACTIVITY_ROUTE_V16=Object.freeze({prime,cached,invalidate(activityId){detailCache.delete(String(activityId||''));},DETAIL_CACHE_TTL_MS});
 
   globalThis.OUTBASE_SHELL_RENDERER_V166 = renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V165 = renderer;

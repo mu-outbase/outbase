@@ -23,7 +23,7 @@
     const title=context.activityTitle||'予定を選ぶ';
     const meta=context.activityTypeLabel||context.activityType||'主役プラン';
     return `<button type="button" class="ob18-context-chip ${context.activityId?'':'is-empty'}" data-ob18-plan-switch aria-label="主役プランを切り替える">
-      <span><b data-ob18-plan-title>${esc(title)}</b><small data-ob18-plan-meta>${esc(meta)}</small></span><i aria-hidden="true">⌄</i>
+      <span><b data-ob18-plan-title>${esc(title)}</b><small data-ob18-plan-meta>${esc(meta)}</small></span><i aria-hidden="true">切替</i>
     </button>`;
   }
 
