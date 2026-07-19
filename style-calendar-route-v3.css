@@ -995,3 +995,39 @@ body:has(.ob12-add-backdrop) .ob3-nav{
     padding-bottom:8px!important;
   }
 }
+
+/* =========================================================
+   OUTBASE Vault route v13
+   ACTIVITY / RECORD / ASSET
+   ========================================================= */
+.ob13-vault{min-height:calc(100dvh - 64px);padding:27px 28px 0;color:#171b19;background:#fbfaf7}
+.ob13-vault-hero>small{display:block;color:#858b87;font-size:9px;font-weight:800;letter-spacing:.18em}
+.ob13-vault-hero h1{margin:3px 0 0;color:#171b19;font-size:29px;line-height:1.15;font-weight:800}
+.ob13-vault-hero p{margin:7px 0 0;color:#666d69;font-size:12px;line-height:1.55}
+.ob13-vault-latest{min-height:118px;margin-top:20px;padding:18px;display:grid;grid-template-columns:60px minmax(0,1fr) 20px;align-items:center;gap:14px;border-radius:22px;background:#0b4a35;color:#fff;text-decoration:none;box-shadow:0 12px 30px rgba(20,69,48,.15)}
+.ob13-vault-latest.empty{grid-template-columns:52px minmax(0,1fr);background:#f0f3ee;color:#174d31;box-shadow:none}
+.ob13-vault-latest-icon,.ob13-vault-latest.empty>span:first-child{width:58px;height:58px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.08)}
+.ob13-vault-latest.empty>span:first-child{width:52px;height:52px;background:#fff}
+.ob13-vault-latest svg,.ob13-vault-row svg,.ob13-vault-ledger svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ob13-vault-latest svg{width:28px;height:28px}.ob13-vault-latest>svg{width:19px;height:19px}
+.ob13-vault-latest>span:nth-child(2){min-width:0;display:grid;gap:4px}
+.ob13-vault-latest small{color:rgba(255,255,255,.66);font-size:9px}.ob13-vault-latest.empty small{color:#7c837e}
+.ob13-vault-latest b{overflow:hidden;font-size:18px;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
+.ob13-vault-latest em,.ob13-vault-latest p{margin:0;color:rgba(255,255,255,.72);font-size:10px;font-style:normal}.ob13-vault-latest.empty p{color:#6d746f}
+.ob13-vault-metrics{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden;border:1px solid #e4e1da;border-radius:18px;background:#fff}
+.ob13-vault-metrics button{min-height:78px;display:grid;place-items:center;align-content:center;gap:4px;border:0;border-right:1px solid #e7e3dc;background:#fff;color:#174d31}.ob13-vault-metrics button:last-child{border-right:0}.ob13-vault-metrics button.active{background:#f0f5ef}
+.ob13-vault-metrics small{color:#717873;font-size:9px;font-weight:750}.ob13-vault-metrics b{font-size:24px;line-height:1}
+.ob13-vault-tabs{margin-top:18px;padding:4px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border:1px solid #e3e0d9;border-radius:15px;background:#f1f2ee}
+.ob13-vault-tabs button{min-height:38px;border:0;border-radius:11px;background:transparent;color:#5e6661;font-size:11px;font-weight:800}.ob13-vault-tabs button.active{background:#174d31;color:#fff;box-shadow:0 4px 12px rgba(23,77,49,.13)}
+.ob13-vault-panel{margin-top:20px}.ob13-vault-section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.ob13-vault-section-head>div small{display:block;color:#858b87;font-size:8px;font-weight:800;letter-spacing:.15em}.ob13-vault-section-head h2{margin:2px 0 0;color:#171b19;font-size:18px;line-height:1.3}.ob13-vault-section-head>span{color:#777e79;font-size:10px}
+.ob13-vault-list{display:grid;gap:8px}.ob13-vault-row{min-height:82px;padding:11px 12px;display:grid;grid-template-columns:42px minmax(0,1fr) 18px;align-items:center;gap:11px;border:1px solid #e5e2db;border-radius:18px;background:#fff;color:#171b19;text-decoration:none;box-shadow:0 5px 14px rgba(35,42,38,.035)}
+.ob13-vault-row-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;color:#174d31;background:#edf4ef}.ob13-vault-row.record .ob13-vault-row-icon{color:#3f7080;background:#edf5f7}.ob13-vault-row.asset .ob13-vault-row-icon{color:#55764a;background:#eff4ec}
+.ob13-vault-row svg{width:21px;height:21px}.ob13-vault-row>svg{width:17px;height:17px;color:#7c837e}
+.ob13-vault-row-copy{min-width:0;display:grid;gap:2px}.ob13-vault-row-copy small{color:#7b827d;font-size:8.5px}.ob13-vault-row-copy b,.ob13-vault-row-copy em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ob13-vault-row-copy b{font-size:13px;line-height:1.35}.ob13-vault-row-copy em{color:#707772;font-size:9.5px;font-style:normal}
+.ob13-vault-badges{margin-top:3px;display:flex;gap:4px;overflow:hidden}.ob13-vault-badges i{flex:0 0 auto;padding:3px 6px;border-radius:999px;background:#f0f3ef;color:#5e6862;font-size:7.5px;font-style:normal}
+.ob13-vault-ledger{min-height:68px;margin-bottom:10px;padding:11px 12px;display:grid;grid-template-columns:40px minmax(0,1fr) 18px;align-items:center;gap:10px;border:1px solid #dce5da;border-radius:17px;background:#eff4ec;color:#174d31;text-decoration:none}
+.ob13-vault-ledger>span:first-child{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:#fff}.ob13-vault-ledger>span:nth-child(2){min-width:0;display:grid;gap:2px}.ob13-vault-ledger b{font-size:12px}.ob13-vault-ledger small{color:#647066;font-size:9px}.ob13-vault-ledger svg{width:20px;height:20px}
+.ob13-vault-empty{padding:26px 18px;border:1px dashed #dcd8d0;border-radius:18px;text-align:center}.ob13-vault-empty b{color:#343b37;font-size:13px}.ob13-vault-empty p{margin:5px 0 0;color:#777e79;font-size:10px}
+.ob13-vault .ob-copyright-footer{margin-top:12px!important}.ob13-vault-nav-reserve{height:96px}
+@media(max-width:370px){.ob13-vault{padding-left:20px;padding-right:20px}.ob13-vault-latest{padding:15px}.ob13-vault-row{grid-template-columns:39px minmax(0,1fr) 16px}.ob13-vault-row-icon{width:39px;height:39px}}
