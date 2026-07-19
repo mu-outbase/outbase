@@ -24,7 +24,7 @@
   ].map(path=>withVersion(path,version.domain));
   const shell=[
     'src/shell/legacy-adapter.js','src/shell/modal-stack.js','src/shell/shell-model.js',
-    'src/shell/shell-renderer.js','src/shell/bootstrap.js'
+    'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/bootstrap.js'
   ].map(path=>withVersion(path,version.shell));
   globalThis.OUTBASE_MODULE_MANIFEST=Object.freeze({
     legacy:Object.freeze(legacy),data:Object.freeze(data),domain:Object.freeze(domain),shell:Object.freeze(shell),

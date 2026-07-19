@@ -118,3 +118,45 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
   width:21px!important;
   height:21px!important;
 }
+
+
+/* Direct renderer wrapper — authoritative five-item nav */
+.ob3-nav.ob-nav-direct{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  align-items:center!important;
+  padding-left:4px!important;
+  padding-right:4px!important;
+}
+.ob3-nav.ob-nav-direct>button{
+  position:static!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0!important;
+  transform:none!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:3px!important;
+}
+.ob3-nav.ob-nav-direct>button>span:last-child{
+  font-size:9px!important;
+  white-space:nowrap!important;
+}
+.ob-calendar-direct{
+  width:100%;
+  margin:0;
+  padding:0;
+  background:#fbfaf7;
+}
+.ob-calendar-direct iframe{
+  display:block;
+  width:100%;
+  min-height:1180px;
+  border:0;
+  background:transparent;
+}
