@@ -154,7 +154,7 @@
     const result = model?.detail;
     if (!result || result.status!=='ready' || !result.activity) return '<section class="ob16-not-found"><h1>活動が見つかりません</h1><p>削除されたか、まだ移行されていない可能性があります。</p></section>';
     const item = result.activity;
-    return `<section class="ob16-activity">${hero(item)}${next(item)}${prep(item)}${memory(item)}${improve(item)}<button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button><div class="ob16-nav-reserve"></div></section>`;
+    return `<section class="ob16-activity">${hero(item)}${next(item)}${prep(item)}${memory(item)}${improve(item)}<button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button></section>`;
   }
 
   function bind(main){
@@ -167,9 +167,13 @@
     __activityV16:true,
     async mount(root,options={}){
       const value = await base.mount(root,options);
-      if (value?.route?.name==='activity') {
-        const main = root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
-        if (main) { main.classList.remove('ob3-main-calendar'); main.innerHTML = markup(value); base.hydrateMedia?.(main); bind(main); }
+      const main = root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
+      if (main) main.classList.toggle('ob3-main-activity', value?.route?.name==='activity');
+      if (value?.route?.name==='activity' && main) {
+        main.classList.remove('ob3-main-calendar');
+        main.innerHTML = markup(value);
+        base.hydrateMedia?.(main);
+        bind(main);
       }
       return value;
     },

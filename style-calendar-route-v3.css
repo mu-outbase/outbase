@@ -1831,3 +1831,40 @@ body.outbaseNorth .ob3-main:has(.ob16-activity){
 .ob16-nav-reserve{
   height:78px!important;
 }
+
+
+/* =========================================================
+   OUTBASE Activity detail v16.2 —画像高さ／下余白LOCK
+   shell already reserves the fixed bottom navigation.
+   Do not reserve the same area again inside activity content.
+   ========================================================= */
+body.outbaseNorth .ob3-main.ob3-main-activity{
+  min-height:0!important;
+  padding-bottom:0!important;
+}
+body.outbaseNorth .ob3-shell[data-ob6-route="activity"]{
+  padding-bottom:calc(82px + env(safe-area-inset-bottom))!important;
+}
+.ob16-hero-visual{
+  height:148px!important;
+}
+.ob16-cover-media{
+  background-position:center 46%!important;
+  image-rendering:auto;
+}
+.ob16-cover-media.has-default-cover{
+  filter:saturate(1.03) contrast(1.025);
+}
+.ob16-activity > .ob-copyright-footer{
+  margin:8px auto 0!important;
+  padding:6px 16px 3px!important;
+}
+.ob16-nav-reserve{
+  display:none!important;
+  height:0!important;
+}
+@media(max-width:370px){
+  .ob16-hero-visual{
+    height:136px!important;
+  }
+}
