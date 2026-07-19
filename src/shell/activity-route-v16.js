@@ -79,10 +79,53 @@
     return label&&label!==title?label:'未完了';
   }
 
+  const routeUrl=(name,params={})=>{
+    try{return globalThis.OUTBASE_ROUTER.shellUrl(name,params);}
+    catch(_error){return `./?shell=1&view=${encodeURIComponent(name)}`;}
+  };
+
+  const legacyUrl=(name,params={})=>{
+    try{return globalThis.OUTBASE_ROUTER.legacyUrl(name,params);}
+    catch(_error){return `./?tab=${encodeURIComponent(name)}`;}
+  };
+
+  const legacyPlanId=item=>item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
+  const preparationHref=item=>routeUrl('preparation',{activityId:item?.id,planId:legacyPlanId(item)});
+  const startHref=item=>legacyUrl('record',{
+    activityId:item?.id,
+    planId:legacyPlanId(item),
+    sheet:'start',
+    returnShell:'activity',
+    returnActivityId:item?.id
+  });
+  const recordHref=item=>legacyUrl('record',{
+    activityId:item?.id,
+    planId:legacyPlanId(item),
+    returnShell:'activity',
+    returnActivityId:item?.id
+  });
+
+  async function activateContext(item){
+    if(!item?.id)return false;
+    try{
+      localStorage.setItem('outbase_core_activity_id',String(item.id));
+      localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
+      const planId=legacyPlanId(item);
+      if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
+      await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{
+        mode:'legacy-shadow',
+        current_plan_id:planId||null
+      });
+      return true;
+    }catch(_error){
+      return false;
+    }
+  }
+
   function state(item){
-    if (['active','paused'].includes(item.state)) return {phase:'実行中', title:'今は、残す。', label:'記録を開く', href:item.recordUrl, icon:icons.record, sub:'写真・音声・メモをその場で残します。'};
-    if (['organizing','completed','archived'].includes(item.state)) return {phase:'思い出', title:'残したものを振り返る。', label:'記録と思い出を見る', href:'#ob16-memory', icon:icons.photo, sub:'記録・写真・改善点をまとめて確認します。'};
-    return {phase:item.stateLabel || '準備中', title:'次にやることを、迷わない。', label:'準備を進める', href:item.preparationUrl, icon:icons.prep, sub:'持ち物・天気・料理・買い物を確認します。'};
+    if (['active','paused'].includes(item.state)) return {phase:'実行中', title:'今は、残す。', label:'記録を開く', href:recordHref(item), context:true, icon:icons.record, sub:'写真・音声・メモをその場で残します。'};
+    if (['organizing','completed','archived'].includes(item.state)) return {phase:'思い出', title:'残したものを振り返る。', label:'記録と思い出を見る', href:'#ob16-memory', context:false, icon:icons.photo, sub:'記録・写真・改善点をまとめて確認します。'};
+    return {phase:item.stateLabel || '準備中', title:'次にやることを、迷わない。', label:'準備を進める', href:preparationHref(item), context:true, shell:'preparation', icon:icons.prep, sub:'持ち物・天気・料理・買い物を確認します。'};
   }
 
   function people(item){
@@ -97,7 +140,7 @@
     return `<section class="ob16-hero">
       <div class="ob16-hero-visual">${visual}</div>
       <div class="ob16-hero-copy">
-        <div class="ob16-hero-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(item.legacyDetailUrl)}" aria-label="詳細設定">${icons.settings}</a></div>
+        <div class="ob16-hero-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(item.legacyDetailUrl)}" data-ob17-context="legacy" aria-label="詳細設定">${icons.settings}</a></div>
         <h1>${esc(item.title||'名称未設定')}</h1>
         <p>${icons.calendar}<span>${esc(range(item))}</span></p>
         <p>${icons.pin}<span>${esc(displayPlace(item))}</span></p>
@@ -108,12 +151,17 @@
 
   function next(item){
     const s = state(item);
+    const planned=!['active','paused','organizing','completed','archived'].includes(item.state);
+    const primaryAttr=s.context?` data-ob17-context="${s.shell||'legacy'}"`:'';
+    const first=planned
+      ?`<a href="${esc(startHref(item))}" data-ob17-context="legacy">${icons.photo}<span>活動開始</span></a>`
+      :`<a href="${esc(preparationHref(item))}" data-ob17-context="preparation">${icons.prep}<span>準備</span></a>`;
     return `<section class="ob16-next-card"><small>今やること</small><h2>${esc(s.title)}</h2><p>${esc(s.sub)}</p>
-      <a class="ob16-primary-action" href="${esc(s.href)}"><span>${s.icon}</span><b>${esc(s.label)}</b>${icons.arrow}</a>
+      <a class="ob16-primary-action" href="${esc(s.href)}"${primaryAttr}><span>${s.icon}</span><b>${esc(s.label)}</b>${icons.arrow}</a>
       <div class="ob16-secondary-actions">
-        <a href="${esc(item.recordUrl)}">${icons.record}<span>記録</span></a>
+        ${first}
+        <a href="${esc(recordHref(item))}" data-ob17-context="legacy">${icons.record}<span>記録</span></a>
         <a href="${esc(item.calendarUrl)}">${icons.calendar}<span>カレンダー</span></a>
-        <a href="${esc(item.legacyDetailUrl)}">${icons.settings}<span>詳細設定</span></a>
       </div>
     </section>`;
   }
@@ -123,16 +171,16 @@
     const total = Number(p.total || 0), completed = Number(p.completed || 0), pending = Number(p.pending || Math.max(0,total-completed));
     const progress = Math.max(0,Math.min(100,Number(p.progress || 0)));
     const items = (p.items || []).filter(x => !(x.status==='completed' || x.completedAt)).slice(0,4);
-    return `<section class="ob16-section-card"><div class="ob16-section-head"><div><small>いま使う</small><h2>準備</h2></div><a href="${esc(item.preparationUrl)}">開く ›</a></div>
+    return `<section class="ob16-section-card"><div class="ob16-section-head"><div><small>いま使う</small><h2>準備</h2></div><a href="${esc(preparationHref(item))}" data-ob17-context="preparation">開く ›</a></div>
       <div class="ob16-prep-summary"><strong>${completed}<i>/ ${total||'—'}</i></strong><div class="ob16-progress"><i style="width:${progress}%"></i></div><b>${progress}%</b><span>${pending}件 未完了</span></div>
       <div class="ob16-prep-list">${items.length?items.map(x=>`<div><b>${esc(x.title||'準備')}</b><small>${esc(prepMeta(x))}</small></div>`).join(''):'<p>準備項目はまだありません。</p>'}</div>
-      <a class="ob16-card-action" href="${esc(item.preparationUrl)}"><span>${icons.prep}</span><span><b>準備リストを開く</b><small>持ち物・天気・料理・買い物</small></span>${icons.arrow}</a>
+      <a class="ob16-card-action" href="${esc(preparationHref(item))}" data-ob17-context="preparation"><span>${icons.prep}</span><span><b>準備リストを開く</b><small>持ち物・天気・料理・買い物</small></span>${icons.arrow}</a>
     </section>`;
   }
 
   function memory(item){
     const records = (item.records || []).slice(0,3);
-    return `<section class="ob16-section-card" id="ob16-memory"><div class="ob16-section-head"><div><small>残したもの</small><h2>記録・思い出</h2></div><a href="${esc(item.recordUrl)}">記録を開く ›</a></div>
+    return `<section class="ob16-section-card" id="ob16-memory"><div class="ob16-section-head"><div><small>残したもの</small><h2>記録・思い出</h2></div><a href="${esc(recordHref(item))}" data-ob17-context="legacy">記録を開く ›</a></div>
       <div class="ob16-memory-metrics">
         <div>${icons.record}<small>記録</small><b>${Number(item.recordCount||0)}</b></div>
         <div>${icons.photo}<small>写真・動画</small><b>${Number(item.media?.types?.photo||0)+Number(item.media?.types?.video||0)}</b></div>
@@ -140,7 +188,7 @@
         <div>${icons.cook}<small>献立</small><b>${Number(item.mealCount||0)}</b></div>
       </div>
       <div class="ob16-record-list">${records.length?records.map(r=>`<article><span>${icons.record}</span><div><small>${esc(short(r.occurredAt))}</small><b>${esc(recordLabel(r))}</b></div></article>`).join(''):'<p>記録はまだありません。</p>'}</div>
-      <a class="ob16-card-action" href="${esc(item.recordUrl)}"><span>${icons.record}</span><span><b>記録を残す・見る</b><small>写真・動画・音声・メモ</small></span>${icons.arrow}</a>
+      <a class="ob16-card-action" href="${esc(recordHref(item))}" data-ob17-context="legacy"><span>${icons.record}</span><span><b>記録を残す・見る</b><small>写真・動画・音声・メモ</small></span>${icons.arrow}</a>
     </section>`;
   }
 
@@ -157,9 +205,24 @@
     return `<section class="ob16-activity">${hero(item)}${next(item)}${prep(item)}${memory(item)}${improve(item)}<button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button></section>`;
   }
 
-  function bind(main){
+  function bind(main,model){
+    const item=model?.detail?.activity||null;
     main.querySelector('#outbaseCopyrightFooter')?.addEventListener('click',()=>globalThis.OUTBASE_ABOUT?.open?.());
     main.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',event=>{const target=main.querySelector(a.getAttribute('href'));if(!target)return;event.preventDefault();target.scrollIntoView({behavior:'smooth',block:'start'});}));
+    main.querySelectorAll('[data-ob17-context]').forEach(link=>link.addEventListener('click',async event=>{
+      if(!item)return;
+      event.preventDefault();
+      await activateContext(item);
+      const mode=link.dataset.ob17Context||'legacy';
+      if(mode==='preparation'){
+        globalThis.OUTBASE_ROUTER.navigate('preparation',{
+          activityId:item.id,
+          planId:legacyPlanId(item)
+        },{transition:true});
+        return;
+      }
+      location.assign(link.href);
+    }));
   }
 
   const renderer = Object.freeze({
@@ -173,7 +236,7 @@
         main.classList.remove('ob3-main-calendar');
         main.innerHTML = markup(value);
         base.hydrateMedia?.(main);
-        bind(main);
+        bind(main,value);
       }
       return value;
     },

@@ -2,8 +2,8 @@
   'use strict';
   const listeners=new Set();
   const legacyToRoute=Object.freeze({plan:'home',search:'search',prep:'activity',record:'record',memory:'vault'});
-  const routeToLegacy=Object.freeze({home:'plan',search:'search',activity:'prep',record:'record',calendar:'plan',vault:'memory'});
-  const SHELL_ROUTES=new Set(['home','search','vault','activity','calendar']);
+  const routeToLegacy=Object.freeze({home:'plan',search:'search',activity:'prep',preparation:'prep',record:'record',calendar:'plan',vault:'memory'});
+  const SHELL_ROUTES=new Set(['home','search','vault','activity','preparation','calendar']);
   const RESERVED=new Set(['shell','view']);
   const SCROLL_KEY='outbaseScrollY';
 
@@ -68,6 +68,7 @@
     globalThis.dispatchEvent?.(new CustomEvent('outbase:navigation',{detail:{route,reason}}));
     return pending.length?Promise.allSettled(pending).then(()=>route):route;
   }
+
   function reducedMotion(){return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;}
   function transition(commit,options={}){
     if(options.transition!==true||options.skipTransition||reducedMotion()||typeof document?.startViewTransition!=='function')return commit();
