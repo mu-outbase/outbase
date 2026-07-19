@@ -156,7 +156,7 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
 .ob-calendar-direct iframe{
   display:block;
   width:100%;
-  min-height:1180px;
+  min-height:760px;
   border:0;
   background:transparent;
 }
