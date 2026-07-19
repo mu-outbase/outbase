@@ -23,7 +23,6 @@
         <div class="ob3-sheet-handle"></div>
         <div class="ob3-sheet-head ob12-add-head">
           <div>
-            <small>ADD</small>
             <h2 id="ob12AddTitle">何をする？</h2>
             <p>新しく作る・今から始める</p>
           </div>
@@ -33,25 +32,25 @@
         <div class="ob12-add-actions">
           <button type="button" class="tone-plan" data-ob3-action="plan-add">
             <span class="ob12-add-icon">${icons.calendar}</span>
-            <span><small>PLAN</small><b>予定を追加</b><em>これからの予定をカレンダーへ</em></span>
+            <span><b>予定を追加</b><em>これからの予定をカレンダーへ</em></span>
             ${icons.arrow}
           </button>
 
           <button type="button" class="tone-start" data-ob3-action="start">
             <span class="ob12-add-icon">${icons.play}</span>
-            <span><small>START</small><b>活動を始める</b><em>散歩・キャンプ・ドライブを記録開始</em></span>
+            <span><b>活動を始める</b><em>散歩・キャンプ・ドライブを記録開始</em></span>
             ${icons.arrow}
           </button>
 
           <button type="button" class="tone-record" data-ob3-action="memo">
             <span class="ob12-add-icon">${icons.memo}</span>
-            <span><small>RECORD</small><b>記録を残す</b><em>気づきやメモをすぐに残す</em></span>
+            <span><b>記録を残す</b><em>気づきやメモをすぐに残す</em></span>
             ${icons.arrow}
           </button>
 
           <button type="button" class="tone-gear" data-ob12-action="gear-add">
             <span class="ob12-add-icon">${icons.gear}</span>
-            <span><small>ITEM</small><b>持ち物を登録</b><em>ギア・消耗品を共通台帳へ</em></span>
+            <span><b>持ち物を登録</b><em>ギア・消耗品を共通台帳へ</em></span>
             ${icons.arrow}
           </button>
         </div>

@@ -143,7 +143,6 @@
     const rows=normalizeRows(search);
     return `<section class="ob-search-v11" data-ob-search-root>
       <header class="ob-search-hero">
-        <small>SEARCH</small>
         <h1>探す</h1>
         <p>予定、思い出、持ち物をまとめて見つけます。</p>
       </header>
