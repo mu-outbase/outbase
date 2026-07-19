@@ -12,7 +12,7 @@
     globalThis.OUTBASE_SHELL_RENDERER_V164;
 
   if(!modelBase||!rendererBase)throw new Error('OUTBASE search dependencies are not ready');
-  if(modelBase.__searchV11&&rendererBase.__searchV11)return;
+  if(modelBase.__searchV15&&rendererBase.__searchV15)return;
 
   const esc=value=>String(value??'')
     .replaceAll('&','&amp;')
@@ -20,6 +20,11 @@
     .replaceAll('>','&gt;')
     .replaceAll('"','&quot;')
     .replaceAll("'",'&#039;');
+
+  const token=value=>String(value??'default')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g,'-')
+    .slice(0,32)||'default';
 
   const lower=value=>{
     let text=String(value??'');
@@ -30,7 +35,6 @@
   const icons={
     search:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>',
     close:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>',
-    camp:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 19 8-14 8 14M7 19h10M9.2 14.5h5.6"/></svg>',
     memory:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h6M8 17h5"/></svg>',
     calendar:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
     gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
@@ -42,6 +46,8 @@
     try{return globalThis.OUTBASE_ROUTER.shellUrl(name,params);}
     catch(_error){return `./?shell=1&view=${encodeURIComponent(name)}`;}
   };
+
+  const vaultUrl=tab=>routeUrl('vault',{vaultTab:tab});
 
   const dateLabel=value=>{
     if(!value)return '';
@@ -74,7 +80,7 @@
 
   const model=Object.freeze({
     ...modelBase,
-    __searchV11:true,
+    __searchV15:true,
     async build(options={}){
       const value=await modelBase.build(options);
       if(value?.route?.name!=='search')return value;
@@ -92,6 +98,8 @@
       sub:item.place||item.typeLabel||'場所未設定',
       meta:rangeLabel(item),
       href:item.detailUrl||routeUrl('activity',{activityId:item.id}),
+      coverVariant:item.coverVariant||item.type||'default',
+      typeLabel:item.typeLabel||'予定',
       text:lower([item.title,item.place,item.typeLabel,item.stateLabel,(item.participants?.rows||[]).map(x=>x.name).join(' ')].join(' '))
     }));
 
@@ -113,7 +121,7 @@
       title:item.name||item.title||'名称未設定',
       sub:item.category||item.type||item.role||'持ち物',
       meta:item.quantity?`数量 ${item.quantity}`:'',
-      href:routeUrl('vault'),
+      href:vaultUrl('asset'),
       text:lower([item.name,item.title,item.category,item.type,item.role,item.memo].join(' '))
     }));
 
@@ -139,9 +147,79 @@
     </a>`;
   }
 
-  function searchMarkup(search){
+  function planPreview(row){
+    return `<a class="ob15-search-plan cover-${token(row.coverVariant)}" href="${esc(row.href)}">
+      <span class="ob15-search-plan-cover">
+        <i>${esc(row.typeLabel)}</i>
+      </span>
+      <span class="ob15-search-plan-copy">
+        <b>${esc(row.title)}</b>
+        <small>${esc(row.meta)}</small>
+        <em>${esc(row.sub)}</em>
+      </span>
+    </a>`;
+  }
+
+  function memoryPreview(row){
+    return `<a class="ob15-search-memory" href="${esc(row.href)}">
+      <span>${icons.memory}</span>
+      <span><small>${esc(row.meta||'思い出')}</small><b>${esc(row.title)}</b><em>${esc(row.sub)}</em></span>
+      ${icons.arrow}
+    </a>`;
+  }
+
+  function assetPreview(row){
+    return `<a class="ob15-search-asset" href="${esc(row.href)}">
+      <span>${icons.gear}</span>
+      <span><b>${esc(row.title)}</b><small>${esc(row.sub)}</small></span>
+    </a>`;
+  }
+
+  function emptyPreview(label){
+    return `<div class="ob15-search-preview-empty">${esc(label)}はまだありません。</div>`;
+  }
+
+  function browseMarkup(search){
     const rows=normalizeRows(search);
-    return `<section class="ob-search-v11" data-ob-search-root>
+    const plans=rows.filter(row=>row.kind==='plan').slice(0,3);
+    const memories=rows.filter(row=>row.kind==='memory').slice(0,3);
+    const assets=rows.filter(row=>row.kind==='asset').slice(0,4);
+
+    return `<section class="ob15-search-browse" id="outbaseSearchBrowse">
+      <section class="ob15-search-group">
+        <div class="ob15-search-group-head">
+          <h2>これからの予定</h2>
+          <a href="${esc(routeUrl('calendar'))}">カレンダー <span>›</span></a>
+        </div>
+        <div class="ob15-search-plan-strip">
+          ${plans.length?plans.map(planPreview).join(''):emptyPreview('予定')}
+        </div>
+      </section>
+
+      <section class="ob15-search-group">
+        <div class="ob15-search-group-head">
+          <h2>最近の思い出</h2>
+          <button type="button" data-search-preview-kind="memory">すべて見る <span>›</span></button>
+        </div>
+        <div class="ob15-search-memory-list">
+          ${memories.length?memories.map(memoryPreview).join(''):emptyPreview('思い出')}
+        </div>
+      </section>
+
+      <section class="ob15-search-group">
+        <div class="ob15-search-group-head">
+          <h2>登録した持ち物</h2>
+          <a href="${esc(vaultUrl('asset'))}">保管庫 <span>›</span></a>
+        </div>
+        <div class="ob15-search-asset-grid">
+          ${assets.length?assets.map(assetPreview).join(''):emptyPreview('持ち物')}
+        </div>
+      </section>
+    </section>`;
+  }
+
+  function searchMarkup(search){
+    return `<section class="ob-search-v11 ob15-search" data-ob-search-root>
       <header class="ob-search-hero">
         <h1>探す</h1>
         <p>予定、思い出、持ち物をまとめて見つけます。</p>
@@ -161,22 +239,24 @@
         <button type="button" data-search-kind="asset">持ち物</button>
       </div>
 
-      <section class="ob-search-actions">
+      <section class="ob-search-actions" id="outbaseSearchActions">
         <button type="button" data-search-place>
           <span>${icons.pin}</span>
           <span><b>キャンプ場・場所を探す</b><small>候補、天気、保存した場所</small></span>
           ${icons.arrow}
         </button>
-        <a href="${esc(routeUrl('vault'))}">
+        <a href="${esc(vaultUrl('activity'))}">
           <span>${icons.memory}</span>
           <span><b>保管庫から探す</b><small>写真、記録、活動ストーリー</small></span>
           ${icons.arrow}
         </a>
       </section>
 
-      <section class="ob-search-result-section">
+      ${browseMarkup(search)}
+
+      <section class="ob-search-result-section" id="outbaseSearchResultSection" hidden>
         <div class="ob-search-result-head">
-          <h2 id="outbaseSearchResultTitle">最近とこれから</h2>
+          <h2 id="outbaseSearchResultTitle">検索結果</h2>
           <span id="outbaseSearchResultCount"></span>
         </div>
         <div id="outbaseSearchResults" class="ob-search-results"></div>
@@ -199,38 +279,71 @@
     const rows=normalizeRows(search);
     const input=root.querySelector('#outbaseSearchInput');
     const clear=root.querySelector('#outbaseSearchClear');
+    const browse=root.querySelector('#outbaseSearchBrowse');
+    const actions=root.querySelector('#outbaseSearchActions');
+    const resultSection=root.querySelector('#outbaseSearchResultSection');
     const results=root.querySelector('#outbaseSearchResults');
     const empty=root.querySelector('#outbaseSearchEmpty');
     const count=root.querySelector('#outbaseSearchResultCount');
     const title=root.querySelector('#outbaseSearchResultTitle');
     let kind='all';
 
+    const setKind=value=>{
+      kind=value;
+      root.querySelectorAll('[data-search-kind]').forEach(button=>{
+        button.classList.toggle('active',button.dataset.searchKind===kind);
+      });
+    };
+
     const render=()=>{
       const query=lower(input?.value||'');
+      const resultMode=Boolean(query)||kind!=='all';
       const filtered=rows.filter(row=>
         (kind==='all'||row.kind===kind)&&
         (!query||row.text.includes(query)||lower(row.title).includes(query)||lower(row.sub).includes(query))
       );
-      const visible=query||kind!=='all'?filtered:filtered.slice(0,10);
-      results.innerHTML=visible.map(resultMarkup).join('');
-      empty.hidden=visible.length>0;
-      count.textContent=`${filtered.length}件`;
-      title.textContent=query?'検索結果':kind==='all'?'最近とこれから':{
-        plan:'予定',memory:'思い出',asset:'持ち物'
-      }[kind];
+
+      browse.hidden=resultMode;
+      actions.hidden=resultMode;
+      resultSection.hidden=!resultMode;
       clear.hidden=!query;
+
+      if(!resultMode)return;
+
+      results.innerHTML=filtered.map(resultMarkup).join('');
+      empty.hidden=filtered.length>0;
+      count.textContent=`${filtered.length}件`;
+      title.textContent=query?'検索結果':{
+        plan:'予定',memory:'思い出',asset:'持ち物'
+      }[kind]||'検索結果';
     };
 
     input?.addEventListener('input',render);
     input?.addEventListener('keydown',event=>{
-      if(event.key==='Escape'){input.value='';render();input.blur();}
+      if(event.key==='Escape'){
+        input.value='';
+        setKind('all');
+        render();
+        input.blur();
+      }
     });
-    clear?.addEventListener('click',()=>{input.value='';render();input.focus();});
+
+    clear?.addEventListener('click',()=>{
+      input.value='';
+      setKind('all');
+      render();
+      input.focus();
+    });
 
     root.querySelectorAll('[data-search-kind]').forEach(button=>button.addEventListener('click',()=>{
-      kind=button.dataset.searchKind;
-      root.querySelectorAll('[data-search-kind]').forEach(x=>x.classList.toggle('active',x===button));
+      setKind(button.dataset.searchKind);
       render();
+    }));
+
+    root.querySelectorAll('[data-search-preview-kind]').forEach(button=>button.addEventListener('click',()=>{
+      setKind(button.dataset.searchPreviewKind);
+      render();
+      root.querySelector('.ob-search-box')?.scrollIntoView({behavior:'smooth',block:'start'});
     }));
 
     root.querySelector('[data-search-place]')?.addEventListener('click',()=>{
@@ -246,7 +359,7 @@
 
   const renderer=Object.freeze({
     ...rendererBase,
-    __searchV11:true,
+    __searchV15:true,
     async mount(root,options={}){
       const value=await rendererBase.mount(root,options);
       if(value?.route?.name==='search'){
