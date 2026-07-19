@@ -52,7 +52,7 @@
     return globalThis.OUTBASE_ROUTER.legacyUrl(name,params);
   }
 
-  function location(activity){
+  function activityPlace(activity){
     const meta=activity?.metadata||{};
     const plan=meta.legacy_plan||{};
     const core=meta.legacy_core_activity||{};
@@ -139,7 +139,7 @@
         ...activity,
         startAt:activity.startAt||utils.iso(first?.start_at),
         endAt:activity.endAt||utils.iso(first?.end_at||first?.start_at),
-        place:location(activity)
+        place:activityPlace(activity)
       });
       const effective=currentItems.length?currentItems:domain.baselineFor(activity);
       const completed=effective.filter(row=>row.status==='completed'||row.completedAt).length;
@@ -198,19 +198,12 @@
     }
   }
 
-  function openLegacyNow(item,href,control){
-    const target=String(href||'').trim();
-    if(!target)return false;
+  function prepareLegacyAnchor(item,control){
+    if(!item?.id||!control?.href)return false;
     activateLocalContext(item);
-    control?.setAttribute?.('aria-busy','true');
-    control?.classList?.add?.('is-launching');
+    control.setAttribute?.('aria-busy','true');
+    control.classList?.add?.('is-launching');
     void persistContext(item);
-    try{location.assign(target);}catch(_error){location.href=target;}
-    setTimeout(()=>{
-      if(!control?.isConnected)return;
-      control.removeAttribute?.('aria-busy');
-      control.classList?.remove?.('is-launching');
-    },1600);
     return true;
   }
 
@@ -386,15 +379,11 @@
     }));
 
     main.querySelector('[data-ob17-start]')?.addEventListener('click',event=>{
-      event.preventDefault();
-      event.stopPropagation();
-      openLegacyNow(item,event.currentTarget.href,event.currentTarget);
+      prepareLegacyAnchor(item,event.currentTarget);
     });
 
     main.querySelector('[data-ob17-advanced]')?.addEventListener('click',event=>{
-      event.preventDefault();
-      event.stopPropagation();
-      openLegacyNow(item,event.currentTarget.href,event.currentTarget);
+      prepareLegacyAnchor(item,event.currentTarget);
     });
   }
 

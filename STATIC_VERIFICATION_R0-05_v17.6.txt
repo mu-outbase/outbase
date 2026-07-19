@@ -1,0 +1,16 @@
+OUTBASE v166.31 R0-05 v17.6 STATIC VERIFICATION
+
+PASS: all included JavaScript files parsed by node --check
+PASS: preparation helper no longer shadows browser window.location
+PASS: start and advanced actions are native href anchors
+PASS: click handlers do not call preventDefault or stopPropagation
+PASS: start href targets FIELD03 record start sheet
+PASS: advanced href targets detailed legacy preparation
+PASS: activityId and planId are stored synchronously before native navigation
+PASS: runtime_context persistence remains background-only
+PASS: service worker and index cache bust changed to v17.6
+PASS: FIELD03 implementation files are not modified in this overlay
+PASS: HOME weather, calendar engine and activity detail visual files are not functionally edited
+PASS: Node mock click regression confirmed both anchors remain unprevented
+
+Android end-to-end verification remains required.
