@@ -35,7 +35,19 @@
   function fmtRange(e){const s=new Date(e.start),t=new Date(e.end||e.start);if(e.allDay)return `${s.getMonth()+1}/${s.getDate()} 終日`;return key(s)===key(t)?`${s.getMonth()+1}/${s.getDate()} ${pad(s.getHours())}:${pad(s.getMinutes())}〜${pad(t.getHours())}:${pad(t.getMinutes())}`:`${s.getMonth()+1}/${s.getDate()} ${pad(s.getHours())}:${pad(s.getMinutes())}〜${t.getMonth()+1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`}
   function cells(){const y=state.date.getFullYear(),m=state.date.getMonth(),f=new Date(y,m,1),s=new Date(y,m,1-f.getDay());return Array.from({length:42},(_,i)=>{const d=new Date(s);d.setDate(s.getDate()+i);return d})}
 
+  function renderFormalPeople(){
+    const host=document.getElementById('formalPeopleFilters');
+    if(!host)return;
+    host.innerHTML=people.map(p=>`<button type="button" class="formal-person ${state.people.has(p)?'active':''}" data-formal-person="${esc(p)}">${['コタ','アオ','エラ','ユキ'].includes(p)?'🐾 ':''}${esc(p)}</button>`).join('');
+    host.querySelectorAll('[data-formal-person]').forEach(button=>button.addEventListener('click',()=>{
+      const p=button.dataset.formalPerson;
+      state.people.has(p)?state.people.delete(p):state.people.add(p);
+      render();
+    }));
+  }
+
   function render(){
+    renderFormalPeople();
     $('#periodLabel').textContent=state.view==='day'?fmtDate(state.selected):`${state.date.getFullYear()}年${state.date.getMonth()+1}月`;
     $('#selectedLabel').textContent=fmtDate(state.selected);
     $$('.view-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));

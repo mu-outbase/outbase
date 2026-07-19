@@ -10,20 +10,23 @@
 <body>
 <div class="status-strip"></div>
 <header class="app-header">
-  <div class="brand">OUTBASE</div>
-  <div class="header-actions">
-    <button id="todayBtn" class="text-btn">今日</button>
-    <button id="settingsBtn" class="icon-btn" aria-label="設定">⚙</button>
-  </div>
+  <a class="formal-brand" href="./?shell=1&view=home" aria-label="ホームへ戻る">
+    <span class="formal-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+    <strong>OUTBASE</strong>
+  </a>
+  <span class="connection-state">接続中</span>
 </header>
 
 <main class="page">
-  <section class="hero">
-    <div>
+  <section class="formal-calendar-head">
+    <a class="formal-back" href="./?shell=1&view=home" aria-label="ホームへ戻る">‹</a>
+    <button id="addEventBtn" class="hero-add" aria-label="予定を追加">＋</button>
+    <div class="formal-title">
       <small>CALENDAR</small>
       <h1 id="periodLabel"></h1>
+      <p>家族・ペット</p>
     </div>
-    <button id="addEventBtn" class="hero-add" aria-label="予定を追加">＋</button>
+    <div id="formalPeopleFilters" class="formal-people" aria-label="家族・ペット絞り込み"></div>
   </section>
 
   <section class="toolbar">
