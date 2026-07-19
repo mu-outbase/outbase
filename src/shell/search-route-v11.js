@@ -147,8 +147,27 @@
     </a>`;
   }
 
+  function planCover(row){
+    const known=new Set(['lake','group','sea','festival','autumn']);
+    const direct=token(row.coverVariant);
+    if(known.has(direct))return direct;
+
+    const hint=lower([
+      row.title,
+      row.sub,
+      row.typeLabel,
+      row.coverVariant
+    ].join(' '));
+
+    if(/海|海辺|海岸|ドライブ|sea|ocean/.test(hint))return 'sea';
+    if(/湖|湖畔|lake/.test(hint))return 'lake';
+    if(/公園|散歩|紅葉|walk|park|autumn/.test(hint))return 'autumn';
+    if(/祭|イベント|発売|festival|event/.test(hint))return 'festival';
+    return 'group';
+  }
+
   function planPreview(row){
-    return `<a class="ob15-search-plan cover-${token(row.coverVariant)}" href="${esc(row.href)}">
+    return `<a class="ob15-search-plan cover-${planCover(row)}" href="${esc(row.href)}">
       <span class="ob15-search-plan-cover">
         <i>${esc(row.typeLabel)}</i>
       </span>

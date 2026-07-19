@@ -1738,3 +1738,36 @@ body.outbaseNorth .ob3-main:has(.ob13-vault){
   font-size:9.5px;
   font-weight:800;
 }
+
+
+/* =========================================================
+   OUTBASE v15.1 final polish
+   - Never show an empty gray plan cover.
+   - On short vault content, keep copyright directly above nav.
+   ========================================================= */
+.ob15-search-plan-cover{
+  background-image:url('./assets/default-covers/group.jpg');
+  background-position:center;
+  background-size:cover;
+  background-color:#e8ece6;
+}
+.ob15-search-plan.cover-lake .ob15-search-plan-cover{background-image:url('./assets/default-covers/lake.jpg')!important}
+.ob15-search-plan.cover-group .ob15-search-plan-cover{background-image:url('./assets/default-covers/group.jpg')!important}
+.ob15-search-plan.cover-sea .ob15-search-plan-cover{background-image:url('./assets/default-covers/sea.jpg')!important}
+.ob15-search-plan.cover-festival .ob15-search-plan-cover{background-image:url('./assets/default-covers/festival.jpg')!important}
+.ob15-search-plan.cover-autumn .ob15-search-plan-cover{background-image:url('./assets/default-covers/autumn.jpg')!important}
+
+.ob15-vault{
+  min-height:calc(100dvh - 64px - 104px - env(safe-area-inset-top))!important;
+  display:flex!important;
+  flex-direction:column!important;
+  box-sizing:border-box!important;
+}
+.ob15-vault > .ob-copyright-footer{
+  margin-top:auto!important;
+  padding-top:12px!important;
+}
+.ob15-vault > .ob13-vault-nav-reserve{
+  height:4px!important;
+  flex:0 0 4px!important;
+}
