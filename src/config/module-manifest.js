@@ -7,7 +7,7 @@
     'src/app.js','src/outbase-core.js','src/outbase-chappy.js','src/outbase-chappy-ui.js',
     'src/outbase-import.js','src/outbase-memo-ui.js','src/outbase-review-ui.js','src/outbase-flow.js',
     'src/outbase-entry.js','src/outbase-activity.js','src/outbase-navigation-guard.js','src/outbase-scenarios.js',
-    'src/outbase-activity-title-guard.js','src/outbase-compact-ui.js'
+    'src/outbase-activity-title-guard.js','src/outbase-compact-ui.js','src/legacy/return-bridge-v17.js'
   ].map(path=>withVersion(path,version.legacy));
   const data=[
     'src/data/ids.js','src/data/validation.js','src/data/database.js','src/data/repositories.js',
@@ -24,7 +24,7 @@
   ].map(path=>withVersion(path,version.domain));
   const shell=[
     'src/shell/legacy-adapter.js','src/shell/modal-stack.js','src/shell/shell-model.js',
-    'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/shell/bootstrap.js'
+    'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/shell/navigation-audit-v17.js','src/shell/bootstrap.js'
   ].map(path=>withVersion(path,version.shell));
   globalThis.OUTBASE_MODULE_MANIFEST=Object.freeze({
     legacy:Object.freeze(legacy),data:Object.freeze(data),domain:Object.freeze(domain),shell:Object.freeze(shell),
