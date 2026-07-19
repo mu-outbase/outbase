@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const TARGET='./calendar-preview.html?integrated=1&v=3&source=shell';
+  const TARGET='./calendar-formal-v32.html?source=shell&release=formal-v32-1';
   let leaving=false;
 
   function openCalendar(){

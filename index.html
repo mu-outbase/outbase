@@ -29,7 +29,7 @@
 <link rel="stylesheet" href="style-shell.css?v=outbase-v1663-visual">
 <link rel="stylesheet" href="style-design-system.css?v=outbase-v1663-visual">
 <link rel="stylesheet" href="style-home-v36.css?v=outbase-v1663-home-v36-r34">
-<link rel="stylesheet" href="style-calendar-route-v3.css?v=outbase-calendar-v3-formal-4">
+<link rel="stylesheet" href="style-calendar-route-v3.css?v=outbase-calendar-formal-v32-1">
 </head><body>
 <div id="outbaseBootScreen" aria-hidden="true"><div class="outbaseBootBrand"><span class="outbaseBootMark"><i></i><i></i><i></i></span><b>OUTBASE</b></div></div>
 <div id="app"></div>
@@ -46,12 +46,12 @@
 <script src="src/services/weather-external-links.js?v=outbase-v1663-home-v36-r34" defer></script>
 <script src="src/main.js?v=outbase-v1663-visual" defer></script>
 <script src="src/shell/navigation-audit-fix.js?v=outbase-v1663-home-v36-r34-nav1" defer></script>
-<script src="src/shell/calendar-route-v3.js?v=outbase-calendar-v3-formal-4" defer></script>
+<script src="src/shell/calendar-route-v3.js?v=outbase-calendar-formal-v32-1" defer></script>
 <script>
 if(!globalThis.__OUTBASE_FAST_SHELL__){['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js','https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js'].forEach(src=>{const script=document.createElement('script');script.src=src;script.async=true;document.head.appendChild(script);});}
 </script>
 <script>
-if('serviceWorker'in navigator){window.addEventListener('load',async()=>{const reloadKey='outbase-sw-calendar-v3-formal-4';let reloading=false;const storageGet=()=>{try{return sessionStorage.getItem(reloadKey)||'';}catch(_error){return '';}};const storageSet=()=>{try{sessionStorage.setItem(reloadKey,'1');}catch(_error){}};navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading||storageGet()==='1')return;reloading=true;storageSet();location.reload();});try{const registration=await navigator.serviceWorker.register('./service-worker.js?v=outbase-calendar-v3-formal-4');await registration.update();if(registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});}catch(error){console.warn('Service Worker registration failed:',error);}});}
+if('serviceWorker'in navigator){window.addEventListener('load',async()=>{const reloadKey='outbase-sw-calendar-formal-v32-1';let reloading=false;const storageGet=()=>{try{return sessionStorage.getItem(reloadKey)||'';}catch(_error){return '';}};const storageSet=()=>{try{sessionStorage.setItem(reloadKey,'1');}catch(_error){}};navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading||storageGet()==='1')return;reloading=true;storageSet();location.reload();});try{const registration=await navigator.serviceWorker.register('./service-worker.js?v=outbase-calendar-formal-v32-1');await registration.update();if(registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});}catch(error){console.warn('Service Worker registration failed:',error);}});}
 </script>
 <script>(()=>{const lockPortrait=()=>{try{if(screen.orientation?.lock)screen.orientation.lock('portrait').catch(()=>{});}catch(_error){}};addEventListener('load',lockPortrait,{once:true});addEventListener('fullscreenchange',lockPortrait);addEventListener('pointerdown',lockPortrait,{once:true,passive:true});addEventListener('orientationchange',()=>setTimeout(lockPortrait,150));})();</script>
 </body></html>
