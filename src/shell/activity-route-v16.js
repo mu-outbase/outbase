@@ -44,6 +44,41 @@
     return String(p.title || p.memo || p.text || p.note || p.transcript || p.caption || row?.type || '記録').trim().slice(0,90) || '記録';
   };
 
+  const TEMPORARY_DISPLAY_PLACE = Object.freeze({
+    title:'きゃんぷ',
+    place:'ふもとっぱら（仮）'
+  });
+
+  const PREP_CATEGORY_LABEL = Object.freeze({
+    weather:'天気',
+    route:'ルート',
+    gear:'持ち物',
+    meal:'料理',
+    cooking:'料理',
+    shopping:'買い物',
+    pet:'ペット',
+    parking:'駐車場',
+    ticket:'チケット',
+    note:'メモ',
+    memo:'メモ'
+  });
+
+  function displayPlace(item){
+    const stored=String(item?.place||'').trim();
+    if(stored)return stored;
+    if(String(item?.title||'').trim()===TEMPORARY_DISPLAY_PLACE.title){
+      return TEMPORARY_DISPLAY_PLACE.place;
+    }
+    return '場所未設定';
+  }
+
+  function prepMeta(item){
+    if(item?.dueAt)return short(item.dueAt);
+    const label=PREP_CATEGORY_LABEL[String(item?.category||'').toLowerCase()]||'';
+    const title=String(item?.title||'').trim();
+    return label&&label!==title?label:'未完了';
+  }
+
   function state(item){
     if (['active','paused'].includes(item.state)) return {phase:'実行中', title:'今は、残す。', label:'記録を開く', href:item.recordUrl, icon:icons.record, sub:'写真・音声・メモをその場で残します。'};
     if (['organizing','completed','archived'].includes(item.state)) return {phase:'思い出', title:'残したものを振り返る。', label:'記録と思い出を見る', href:'#ob16-memory', icon:icons.photo, sub:'記録・写真・改善点をまとめて確認します。'};
@@ -65,7 +100,7 @@
         <div class="ob16-hero-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(item.legacyDetailUrl)}" aria-label="詳細設定">${icons.settings}</a></div>
         <h1>${esc(item.title||'名称未設定')}</h1>
         <p>${icons.calendar}<span>${esc(range(item))}</span></p>
-        <p>${icons.pin}<span>${esc(item.place||'場所未設定')}</span></p>
+        <p>${icons.pin}<span>${esc(displayPlace(item))}</span></p>
         <div class="ob16-people">${people(item)}</div>
       </div>
     </section>`;
@@ -90,7 +125,7 @@
     const items = (p.items || []).filter(x => !(x.status==='completed' || x.completedAt)).slice(0,4);
     return `<section class="ob16-section-card"><div class="ob16-section-head"><div><small>いま使う</small><h2>準備</h2></div><a href="${esc(item.preparationUrl)}">開く ›</a></div>
       <div class="ob16-prep-summary"><strong>${completed}<i>/ ${total||'—'}</i></strong><div class="ob16-progress"><i style="width:${progress}%"></i></div><b>${progress}%</b><span>${pending}件 未完了</span></div>
-      <div class="ob16-prep-list">${items.length?items.map(x=>`<div><b>${esc(x.title||'準備')}</b><small>${esc(x.category||'未完了')}</small></div>`).join(''):'<p>準備項目はまだありません。</p>'}</div>
+      <div class="ob16-prep-list">${items.length?items.map(x=>`<div><b>${esc(x.title||'準備')}</b><small>${esc(prepMeta(x))}</small></div>`).join(''):'<p>準備項目はまだありません。</p>'}</div>
       <a class="ob16-card-action" href="${esc(item.preparationUrl)}"><span>${icons.prep}</span><span><b>準備リストを開く</b><small>持ち物・天気・料理・買い物</small></span>${icons.arrow}</a>
     </section>`;
   }

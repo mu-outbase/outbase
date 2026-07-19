@@ -1797,3 +1797,37 @@ body.outbaseNorth .ob3-main:has(.ob13-vault){
 .ob16-improve-list{margin-top:11px;display:grid;gap:7px}.ob16-improve-list>div{min-height:48px;padding:8px 10px;display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:8px;border-radius:14px;background:#faf4e7}.ob16-improve-list svg{color:#a87318}.ob16-improve-list b{font-size:9.5px}
 .ob16-not-found{margin:20px 15px;padding:22px;border:1px solid #e6e2da;border-radius:20px;background:#fff}.ob16-activity .ob-copyright-footer{margin:10px auto 0!important;padding:7px 16px 5px!important}.ob16-nav-reserve{height:90px}
 @media(max-width:370px){.ob16-activity{padding-left:10px;padding-right:10px}.ob16-hero-visual{height:156px}.ob16-hero h1{font-size:22px}.ob16-next-card{padding:15px}.ob16-section-card{padding:13px}.ob16-prep-list{grid-template-columns:1fr}.ob16-memory-metrics small{font-size:6.5px}}
+
+
+/* =========================================================
+   OUTBASE Activity detail v16.1 —実機仕上げ
+   - HOMEと同じ既定画像を詳細でも表示
+   - 画像枠内のフォールバック記号を非表示
+   - 短い詳細画面の下余白を圧縮
+   ========================================================= */
+.ob16-cover-media.has-default-cover{
+  position:relative!important;
+  background-image:var(--ob-preview-image,var(--ob-default-cover))!important;
+  background-position:center!important;
+  background-size:cover!important;
+  background-repeat:no-repeat!important;
+}
+.ob16-cover-media .ob7-visual-fallback{
+  display:none!important;
+}
+.ob16-cover-media.has-photo{
+  background-image:var(--ob-preview-image,var(--ob-default-cover))!important;
+}
+.ob16-activity{
+  min-height:0!important;
+}
+body.outbaseNorth .ob3-main:has(.ob16-activity){
+  min-height:0!important;
+  padding-bottom:0!important;
+}
+.ob16-activity > .ob-copyright-footer{
+  margin-top:8px!important;
+}
+.ob16-nav-reserve{
+  height:78px!important;
+}
