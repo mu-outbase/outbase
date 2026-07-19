@@ -112,6 +112,12 @@
       localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
       const planId=legacyPlanId(item);
       if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
+      localStorage.setItem('outbase_pending_activity_context_v1',JSON.stringify({
+        activityId:String(item.id),
+        planId:planId?String(planId):'',
+        source:'activity-detail',
+        savedAt:Date.now()
+      }));
       return true;
     }catch(_error){
       return false;
@@ -126,6 +132,7 @@
         mode:'legacy-shadow',
         current_plan_id:planId||null
       });
+      try{localStorage.removeItem('outbase_pending_activity_context_v1');}catch(_error){}
       return true;
     }catch(_error){
       return false;
@@ -238,8 +245,11 @@
         void persistContext(item);
         return;
       }
-      await activateContext(item);
-      location.assign(link.href);
+      activateLocalContext(item);
+      link.setAttribute('aria-busy','true');
+      link.classList.add('is-launching');
+      void persistContext(item);
+      try{location.assign(link.href);}catch(_error){location.href=link.href;}
     }));
   }
 

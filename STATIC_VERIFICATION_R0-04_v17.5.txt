@@ -1,0 +1,19 @@
+OUTBASE v166.31 R0-04 v17.5 STATIC VERIFICATION
+
+PASS: all included JavaScript files parsed by node --check
+PASS: preparation start action is a native href anchor
+PASS: detailed preparation action is a native href anchor
+PASS: preparation legacy launch has no IndexedDB await before navigation
+PASS: activity-detail legacy launch has no IndexedDB await before navigation
+PASS: activityId and planId are stored synchronously before legacy launch
+PASS: pending activity context is persisted for next page recovery
+PASS: legacy return bridge seeds context from query parameters
+PASS: legacy return bridge retries shadow DB synchronization after modules load
+PASS: return bridge protects active and paused sessions
+PASS: service worker cache name changed to v17.5
+PASS: modified return bridge has independent cache bust through shell version
+PASS: touch-action, pointer-events and z-index protect preparation action taps
+PASS: FIELD03 implementation files are not included as modified source files
+PASS: HOME weather, calendar engine and activity detail visual files are not functionally edited
+
+Android end-to-end verification remains required.

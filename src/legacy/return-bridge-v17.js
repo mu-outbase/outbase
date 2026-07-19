@@ -15,6 +15,38 @@
     vault:'思い出へ戻る'
   });
 
+  function seedContext(){
+    try{
+      if(activityId){
+        localStorage.setItem('outbase_core_activity_id',String(activityId));
+        localStorage.setItem('outbase_primary_activity_id_v2',String(activityId));
+      }
+      if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
+      if(activityId)localStorage.setItem('outbase_pending_activity_context_v1',JSON.stringify({
+        activityId:String(activityId),planId:planId?String(planId):'',source:'legacy-return-bridge',savedAt:Date.now()
+      }));
+      return true;
+    }catch(_error){return false;}
+  }
+
+  function persistContextWhenReady(){
+    if(!activityId)return;
+    let attempts=0;
+    const run=async()=>{
+      attempts+=1;
+      const repo=globalThis.OUTBASE_REPOSITORIES_V160;
+      if(repo?.setCurrentActivity){
+        try{
+          await repo.setCurrentActivity(activityId,{mode:'legacy-shadow',current_plan_id:planId||null});
+          try{localStorage.removeItem('outbase_pending_activity_context_v1');}catch(_error){}
+          return;
+        }catch(_error){}
+      }
+      if(attempts<40)setTimeout(run,250);
+    };
+    run();
+  }
+
   const sessionState=()=>{
     try{
       const value=localStorage.getItem('outbase_record_session_state')||'idle';
@@ -102,6 +134,8 @@
   }
 
   const start=()=>{
+    seedContext();
+    persistContextWhenReady();
     sync();
     setInterval(sync,500);
     addEventListener('storage',event=>{
@@ -121,6 +155,8 @@
     planId,
     targetUrl,
     sessionState,
+    seedContext,
+    persistContextWhenReady,
     sync
   });
 })();

@@ -7,8 +7,9 @@
     'src/app.js','src/outbase-core.js','src/outbase-chappy.js','src/outbase-chappy-ui.js',
     'src/outbase-import.js','src/outbase-memo-ui.js','src/outbase-review-ui.js','src/outbase-flow.js',
     'src/outbase-entry.js','src/outbase-activity.js','src/outbase-navigation-guard.js','src/outbase-scenarios.js',
-    'src/outbase-activity-title-guard.js','src/outbase-compact-ui.js','src/legacy/return-bridge-v17.js'
+    'src/outbase-activity-title-guard.js','src/outbase-compact-ui.js'
   ].map(path=>withVersion(path,version.legacy));
+  legacy.push(withVersion('src/legacy/return-bridge-v17.js',version.shell));
   const data=[
     'src/data/ids.js','src/data/validation.js','src/data/database.js','src/data/repositories.js',
     'src/data/legacy-adapter.js','src/data/migrations.js','src/data/bootstrap.js'

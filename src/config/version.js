@@ -1,13 +1,13 @@
 (() => {
   'use strict';
   const VERSION=Object.freeze({
-    app:'v166.31-r0-preparation-instant-v17.4',
+    app:'v166.31-r0-full-flow-v17.5',
     legacy:'outbase-field03-flow-v171',
     data:'outbase-v160-phase1',
     domain:'outbase-v1663-home-v36-r34',
-    shell:'outbase-v16631-r0-preparation-instant-v174',
+    shell:'outbase-v16631-r0-full-flow-v175',
     design:'outbase-v1663-visual',
-    cache:'outbase-field03-v16631-r0-preparation-instant-v174'
+    cache:'outbase-field03-v16631-r0-full-flow-v175'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();

@@ -2063,11 +2063,15 @@ body.outbaseNorth .ob3-main.ob3-main-preparation{
   text-decoration:line-through;
 }
 .ob17-flow-actions{
+  position:relative;
+  z-index:3;
   margin-top:12px;
   display:grid;
   gap:9px;
+  pointer-events:auto;
 }
-.ob17-flow-actions button{
+.ob17-flow-actions button,
+.ob17-flow-actions a{
   min-height:64px;
   padding:0 13px;
   display:grid;
@@ -2075,12 +2079,20 @@ body.outbaseNorth .ob3-main.ob3-main-preparation{
   align-items:center;
   gap:10px;
   border-radius:18px;
+  color:inherit;
+  text-decoration:none;
   text-align:left;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  pointer-events:auto;
+  cursor:pointer;
 }
-.ob17-flow-actions button>span:first-child{
+.ob17-flow-actions button>span:first-child,
+.ob17-flow-actions a>span:first-child{
   width:38px;height:38px;display:grid;place-items:center;border-radius:12px;
 }
-.ob17-flow-actions button>span:nth-child(2){
+.ob17-flow-actions button>span:nth-child(2),
+.ob17-flow-actions a>span:nth-child(2){
   min-width:0;display:grid;gap:2px;
 }
 .ob17-flow-actions b{font-size:11px}
@@ -2091,6 +2103,12 @@ body.outbaseNorth .ob3-main.ob3-main-preparation{
 }
 .ob17-flow-actions .primary{
   border:0;background:#0d4e38;color:#fff;
+}
+.ob17-flow-actions .is-launching{
+  opacity:.82;
+}
+.ob17-flow-actions [aria-busy="true"]{
+  pointer-events:none;
 }
 .ob17-flow-actions .primary>span:first-child{
   background:rgba(255,255,255,.11);
@@ -2131,6 +2149,7 @@ body.outbaseNorth .ob3-main.ob3-main-preparation{
   content:"";
   display:block;
   height:82px;
+  pointer-events:none;
 }
 @media(max-width:370px){
   .ob17-preparation{padding-left:10px;padding-right:10px}

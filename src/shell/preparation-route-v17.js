@@ -164,21 +164,54 @@
     }
   }
 
-  async function activateContext(item){
+  function activateLocalContext(item){
     if(!item?.id)return false;
     try{
       localStorage.setItem('outbase_core_activity_id',String(item.id));
       localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
       const legacyPlanId=planId(item);
       if(legacyPlanId)localStorage.setItem('outbase_active_plan_id',String(legacyPlanId));
-      await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{
-        mode:'legacy-shadow',
-        current_plan_id:legacyPlanId||null
-      });
+      localStorage.setItem('outbase_pending_activity_context_v1',JSON.stringify({
+        activityId:String(item.id),
+        planId:legacyPlanId?String(legacyPlanId):'',
+        source:'preparation',
+        savedAt:Date.now()
+      }));
       return true;
     }catch(_error){
       return false;
     }
+  }
+
+  async function persistContext(item){
+    if(!item?.id)return false;
+    try{
+      const legacyPlanId=planId(item);
+      await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{
+        mode:'legacy-shadow',
+        current_plan_id:legacyPlanId||null
+      });
+      try{localStorage.removeItem('outbase_pending_activity_context_v1');}catch(_error){}
+      return true;
+    }catch(_error){
+      return false;
+    }
+  }
+
+  function openLegacyNow(item,href,control){
+    const target=String(href||'').trim();
+    if(!target)return false;
+    activateLocalContext(item);
+    control?.setAttribute?.('aria-busy','true');
+    control?.classList?.add?.('is-launching');
+    void persistContext(item);
+    try{location.assign(target);}catch(_error){location.href=target;}
+    setTimeout(()=>{
+      if(!control?.isConnected)return;
+      control.removeAttribute?.('aria-busy');
+      control.classList?.remove?.('is-launching');
+    },1600);
+    return true;
   }
 
   function itemMarkup(item){
@@ -246,16 +279,16 @@
       <div class="ob17-prep-sections">${sectionsMarkup(summary)}</div>
 
       <section class="ob17-flow-actions">
-        <button type="button" class="primary" data-ob17-start data-href="${esc(start)}">
+        <a class="primary" href="${esc(start)}" data-ob17-start>
           <span>${icons.play}</span>
           <span><b>活動を始める</b><small>当日のGPS・写真・音声・メモへ</small></span>
           ${icons.arrow}
-        </button>
-        <button type="button" class="secondary" data-ob17-advanced data-href="${esc(advanced)}">
+        </a>
+        <a class="secondary" href="${esc(advanced)}" data-ob17-advanced>
           <span>${icons.prep}</span>
           <span><b>詳細な準備を開く</b><small>持ち物台帳・料理・買い物など</small></span>
           ${icons.arrow}
-        </button>
+        </a>
       </section>
 
       <button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button>
@@ -352,18 +385,16 @@
       catch(_error){button.disabled=false;}
     }));
 
-    main.querySelector('[data-ob17-start]')?.addEventListener('click',async event=>{
-      const button=event.currentTarget;
-      button.disabled=true;
-      await activateContext(item);
-      location.assign(button.dataset.href);
+    main.querySelector('[data-ob17-start]')?.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      openLegacyNow(item,event.currentTarget.href,event.currentTarget);
     });
 
-    main.querySelector('[data-ob17-advanced]')?.addEventListener('click',async event=>{
-      const button=event.currentTarget;
-      button.disabled=true;
-      await activateContext(item);
-      location.assign(button.dataset.href);
+    main.querySelector('[data-ob17-advanced]')?.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      openLegacyNow(item,event.currentTarget.href,event.currentTarget);
     });
   }
 
