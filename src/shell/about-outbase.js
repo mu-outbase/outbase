@@ -110,17 +110,24 @@
   }
 
   function ensureFooter(){
-    if(document.getElementById(FOOTER_ID))return;
-    const shell=document.querySelector('.ob3-shell');
-    if(!shell)return;
-    const footer=document.createElement('button');
-    footer.id=FOOTER_ID;
-    footer.type='button';
-    footer.className='ob-copyright-footer';
-    footer.textContent='© 2026 OUTBASE';
-    footer.setAttribute('aria-label','このアプリについて');
-    footer.addEventListener('click',open);
-    shell.appendChild(footer);
+    const main=document.querySelector('.ob3-shell .ob3-main')||document.querySelector('.ob3-main');
+    if(!main)return;
+
+    let footer=document.getElementById(FOOTER_ID);
+    if(!footer){
+      footer=document.createElement('button');
+      footer.id=FOOTER_ID;
+      footer.type='button';
+      footer.className='ob-copyright-footer';
+      footer.textContent='© 2026 OUTBASE';
+      footer.setAttribute('aria-label','このアプリについて');
+      footer.addEventListener('click',open);
+    }
+
+    // Place immediately after the current screen content, not at shell bottom.
+    if(footer.parentElement!==main||main.lastElementChild!==footer){
+      main.appendChild(footer);
+    }
   }
 
   function attachToSettings(){
@@ -146,8 +153,13 @@
     ensureFooter();
     attachToSettings();
 
-    const observer=new MutationObserver(()=>ensureFooter());
-    observer.observe(document.body,{childList:true,subtree:true});
+    let queued=false;
+    const observer=new MutationObserver(()=>{
+      if(queued)return;
+      queued=true;
+      requestAnimationFrame(()=>{queued=false;ensureFooter()});
+    });
+    observer.observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
