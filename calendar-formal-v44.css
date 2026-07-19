@@ -1244,3 +1244,29 @@ html.outbaseCalendarEmbedded .modal{
   position:fixed;
   inset:0;
 }
+
+
+/* =========================================================
+   OUTBASE Calendar embedded viewport LOCK v6
+   Measure content, not iframe viewport.
+   ========================================================= */
+html.outbaseCalendarEmbedded,
+html.outbaseCalendarEmbedded body{
+  height:auto!important;
+  min-height:0!important;
+}
+html.outbaseCalendarEmbedded .calendar-shell{
+  height:auto!important;
+  min-height:0!important;
+  padding-top:10px!important;
+  padding-bottom:12px!important;
+}
+html.outbaseCalendarEmbedded .week-view,
+html.outbaseCalendarEmbedded .day-view,
+html.outbaseCalendarEmbedded .list-view,
+html.outbaseCalendarEmbedded .todo-view{
+  min-height:0!important;
+}
+html.outbaseCalendarEmbedded .agenda{
+  margin-bottom:0!important;
+}

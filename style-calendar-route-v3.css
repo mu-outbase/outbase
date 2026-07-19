@@ -454,3 +454,13 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
     letter-spacing:.28em!important;
   }
 }
+
+
+/* =========================================================
+   Calendar parent viewport LOCK v6
+   ========================================================= */
+.ob-calendar-direct iframe{
+  height:420px!important;
+  min-height:0!important;
+  transition:height .12s ease-out;
+}

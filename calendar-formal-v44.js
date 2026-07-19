@@ -132,6 +132,37 @@
     return `${calCount}種・${peopleCount}人`;
   }
 
+  let embeddedHeightObserver=null;
+  let embeddedHeightFrame=0;
+
+  function reportEmbeddedHeight(){
+    if(!document.documentElement.classList.contains('outbaseCalendarEmbedded'))return;
+    cancelAnimationFrame(embeddedHeightFrame);
+    embeddedHeightFrame=requestAnimationFrame(()=>{
+      const shell=$('.calendar-shell');
+      if(!shell)return;
+      const height=Math.ceil(shell.scrollHeight + shell.offsetTop + 2);
+      try{
+        parent.postMessage({
+          type:'OUTBASE_CALENDAR_RESIZE',
+          height
+        },location.origin);
+      }catch(_error){}
+    });
+  }
+
+  function bindEmbeddedHeightObserver(){
+    if(!document.documentElement.classList.contains('outbaseCalendarEmbedded'))return;
+    const shell=$('.calendar-shell');
+    if(!shell||embeddedHeightObserver)return;
+    if('ResizeObserver' in window){
+      embeddedHeightObserver=new ResizeObserver(()=>reportEmbeddedHeight());
+      embeddedHeightObserver.observe(shell);
+    }
+    addEventListener('load',reportEmbeddedHeight,{once:true});
+    document.fonts?.ready?.then(reportEmbeddedHeight).catch(()=>{});
+  }
+
   function render(){
     $('#periodLabel').textContent=state.view==='day'?fmtDate(state.selected):`${state.date.getFullYear()}年${state.date.getMonth()+1}月`;
     $('#selectedLabel').textContent=fmtDate(state.selected);
@@ -140,16 +171,8 @@
     $('#agendaSection').classList.toggle('hidden',state.view==='todo');
     $('#calendarArea').innerHTML=state.view==='month'?renderMonth():state.view==='week'?renderWeek():state.view==='day'?renderDay():state.view==='list'?renderList():renderTodo();
     renderAgenda();renderFilters();bind();writeUiState();
-    if(document.documentElement.classList.contains('outbaseCalendarEmbedded')){
-      requestAnimationFrame(()=>{
-        try{
-          parent.postMessage({
-            type:'OUTBASE_CALENDAR_RESIZE',
-            height:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)
-          },location.origin);
-        }catch(_error){}
-      });
-    }
+    bindEmbeddedHeightObserver();
+    reportEmbeddedHeight();
   }
 
   function renderMonth(){
@@ -194,12 +217,14 @@
     const sheet=$('#modalSheet');
     if(sheet){sheet.style.transform='';sheet.style.transition=''}
     bindSheetSwipe();
+    reportEmbeddedHeight();
   }
   function close(){
     $('#modal').classList.add('hidden');
     const sheet=$('#modalSheet');
     if(sheet){sheet.style.transform='';sheet.style.transition=''}
     state.editing=null;
+    reportEmbeddedHeight();
   }
   function bindSheetSwipe(){
     const sheet=$('#modalSheet');
