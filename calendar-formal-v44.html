@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A3328">
+<title>OUTBASE カレンダー</title>
+<link rel="stylesheet" href="calendar-formal-v44.css?v=outbase-calendar-formal-v44-1">
+</head>
+<body>
+<div class="status-strip"></div>
+
+<header class="home36-topbar">
+  <b>OUTBASE</b>
+  <div>
+    <button id="notificationBtn" class="home36-icon-btn notify" type="button" aria-label="通知">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+    </button>
+    <button id="settingsBtn" class="home36-icon-btn" type="button" aria-label="設定">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.05.05-2.83 2.83-.05-.05A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1.1 1.65V21h-4v-.07A1.8 1.8 0 0 0 8.8 19.3a1.8 1.8 0 0 0-1.98.36l-.05.05-2.83-2.83.05-.05A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.1H3v-4h.07A1.8 1.8 0 0 0 4.7 8.8a1.8 1.8 0 0 0-.36-1.98l-.05-.05 2.83-2.83.05.05A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.1-1.65V3h4v.07A1.8 1.8 0 0 0 15.2 4.7a1.8 1.8 0 0 0 1.98-.36l.05-.05 2.83 2.83-.05.05A1.8 1.8 0 0 0 19.4 9a1.8 1.8 0 0 0 1.65 1.1H21v4h-.07A1.8 1.8 0 0 0 19.4 15Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="calendar-shell">
+  <section class="month-command">
+    <button id="backHomeBtn" class="month-arrow month-home-back" aria-label="ホームへ戻る">‹</button>
+    <button id="prevBtn" class="month-arrow" aria-label="前へ">‹</button>
+    <button id="periodButton" class="period-button" type="button">
+      <small>CALENDAR</small>
+      <strong id="periodLabel"></strong>
+    </button>
+    <button id="nextBtn" class="month-arrow" aria-label="次へ">›</button>
+    <button id="todayBtn" class="month-today" type="button">今日</button>
+    <button id="addEventBtn" class="command-add" aria-label="予定を追加">＋</button>
+  </section>
+
+  <section class="compact-tools">
+    <div class="view-tabs">
+      <button data-view="month" class="active">月</button>
+      <button data-view="week">週</button>
+      <button data-view="day">日</button>
+      <button data-view="list">一覧</button>
+      <button data-view="todo">ToDo</button>
+    </div>
+    <button id="filterBtn" class="filter-summary" type="button">
+      <span>家族・ペット／種類</span><b id="filterCount">全件</b>
+    </button>
+  </section>
+
+  <section id="filterPanel" class="panel filter-drawer hidden"></section>
+  <section id="calendarArea" class="calendar-area" aria-live="polite"></section>
+
+  <section id="agendaSection" class="agenda">
+    <button id="agendaToggle" class="agenda-toggle" type="button" aria-expanded="true">
+      <span><small>選択日</small><strong id="selectedLabel"></strong></span>
+      <span id="agendaSummary" class="agenda-summary"></span>
+      <i>⌃</i>
+    </button>
+    <div id="agendaList" class="agenda-list"></div>
+    <button id="quickAddBtn" class="agenda-add" aria-label="選択日に予定を追加">＋</button>
+  </section>
+</main>
+
+<nav class="home36-bottom-nav">
+  <a href="./?shell=1&view=home" target="_top" data-parent-nav="home">
+    <svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20h-6v-6h-4v6H4Z"/></svg><span>ホーム</span>
+  </a>
+  <a href="./?shell=1&view=search" target="_top" data-parent-nav="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><span>探す</span>
+  </a>
+  <button id="navAdd">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>追加</span>
+  </button>
+  <a href="./?shell=1&view=vault" target="_top" data-parent-nav="vault">
+    <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 5V3h8v2M8 10h8"/></svg><span>保管庫</span>
+  </a>
+</nav>
+
+<div id="modal" class="modal hidden">
+  <div class="sheet" id="modalSheet">
+    <div class="grab"></div>
+    <div class="sheet-head">
+      <div><small id="sheetEyebrow"></small><h2 id="sheetTitle"></h2></div>
+      <button id="closeModal">×</button>
+    </div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<input id="icsFile" type="file" accept=".ics,text/calendar" hidden>
+<input id="csvFile" type="file" accept=".csv,text/csv" hidden>
+<input id="jsonFile" type="file" accept=".json,application/json" hidden>
+<script src="calendar-formal-v44.js?v=outbase-calendar-formal-v44-1"></script>
+</body>
+</html>
