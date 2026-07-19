@@ -6,7 +6,13 @@
   const SHELL_ROUTES=new Set(['home','search','vault','activity','preparation','calendar']);
   const RESERVED=new Set(['shell','view']);
   const SCROLL_KEY='outbaseScrollY';
+  const CONTEXT_KEY='outbase_activity_context_v1';
+  const PENDING_KEY='outbase_pending_activity_context_v1';
 
+  function safeJson(key){
+    try{const value=JSON.parse(localStorage.getItem(key)||'null');return value&&typeof value==='object'?value:{};}
+    catch(_error){return {};}
+  }
   function params(){return new URLSearchParams(location.search);}
   function shellRequested(){return params().get('shell')==='1';}
   function current(){
@@ -14,10 +20,22 @@
     const legacy=query.get('tab')||location.hash.replace('#','')||'plan';
     const shellName=query.get('view');
     const name=shellRequested()&&SHELL_ROUTES.has(shellName)?shellName:(legacyToRoute[legacy]||'home');
+    const stored=safeJson(CONTEXT_KEY);
+    const pending=safeJson(PENDING_KEY);
+    const queryActivity=query.get('activityId')||query.get('returnActivityId')||'';
+    const compatiblePending=!queryActivity||!pending.activityId||String(pending.activityId)===String(queryActivity);
+    const compatibleStored=!queryActivity||!stored.activityId||String(stored.activityId)===String(queryActivity);
+    const fallback=compatiblePending&&pending.activityId?pending:compatibleStored?stored:{};
+    const activityId=queryActivity||fallback.activityId||localStorage.getItem('outbase_core_activity_id')||null;
+    const planId=query.get('planId')||fallback.planId||localStorage.getItem('outbase_active_plan_id')||null;
     return Object.freeze({
       name,legacyTab:legacy,shell:shellRequested(),
-      activityId:query.get('activityId')||localStorage.getItem('outbase_core_activity_id')||null,
-      planId:query.get('planId')||localStorage.getItem('outbase_active_plan_id')||null,
+      activityId,
+      planId,
+      activityType:query.get('activityType')||fallback.activityType||'',
+      activityTitle:query.get('activityTitle')||fallback.activityTitle||'',
+      returnShell:query.get('returnShell')||fallback.returnShell||'',
+      returnActivityId:query.get('returnActivityId')||fallback.returnActivityId||activityId||null,
       sheet:query.get('sheet')||query.get('planSheet')||null,
       month:query.get('month')||null,
       people:query.get('people')||'',

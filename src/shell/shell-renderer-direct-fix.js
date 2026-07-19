@@ -7,16 +7,32 @@
   const searchIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>';
   const plusIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const vaultIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M7 5V3h10v2M8 10h8"/></svg>';
+  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\"','&quot;').replaceAll("'",'&#039;');
 
   const bellIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9Z"/><path d="M10 21h4"/></svg>';
   const settingsIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 15a2 2 0 0 0 .4 2.2l-2.2 2.2A2 2 0 0 0 15 19l-1 2h-4l-1-2a2 2 0 0 0-2.2.4l-2.2-2.2A2 2 0 0 0 5 15l-2-1v-4l2-1a2 2 0 0 0-.4-2.2l2.2-2.2A2 2 0 0 0 9 5l1-2h4l1 2a2 2 0 0 0 2.2-.4l2.2 2.2A2 2 0 0 0 19 9l2 1v4Z"/></svg>';
 
+
+  function headerContext(){
+    const api=globalThis.OUTBASE_ACTIVITY_CONTEXT_V18||globalThis.OUTBASE_ACTIVITY_CONTEXT;
+    return api?.current?.()||{};
+  }
+
+  function contextChipHtml(){
+    const context=headerContext();
+    const title=context.activityTitle||'予定を選ぶ';
+    const meta=context.activityTypeLabel||context.activityType||'主役プラン';
+    return `<button type="button" class="ob18-context-chip ${context.activityId?'':'is-empty'}" data-ob18-plan-switch aria-label="主役プランを切り替える">
+      <span><b data-ob18-plan-title>${esc(title)}</b><small data-ob18-plan-meta>${esc(meta)}</small></span><i aria-hidden="true">⌄</i>
+    </button>`;
+  }
 
   function commonHeaderHtml(){
     return `
       <a href="./?shell=1&view=home" data-ob3-route="home" class="ob-common-header-brand" aria-label="OUTBASEホーム">
         <b>OUTBASE</b>
       </a>
+      ${contextChipHtml()}
       <div class="ob-common-header-actions">
         <button type="button" data-ob36-notify class="ob-common-header-icon notify" aria-label="通知">
           ${bellIcon}

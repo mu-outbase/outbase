@@ -1,0 +1,30 @@
+OUTBASE R1-01 v18.0 STATIC VERIFICATION
+Date: 2026-07-20
+
+PASS
+- JavaScript syntax: all included JS files
+- activity-context-v18 legacy bootstrap before FIELD03 app.js
+- activity-context-v18 shell bootstrap before shell routes
+- URL -> localStorage record target seeding
+- router query / pending / stored context precedence
+- activity detail -> preparation context preservation
+- activity detail -> legacy/FIELD03 native anchor preservation
+- preparation -> FIELD03 record context preservation
+- preparation -> detail context preservation
+- return bridge v18 route preservation
+- common header plan chip presence
+- plan switch module presence
+- service-worker cache list includes all R1 modules
+- version/cache tokens consistent
+- FIELD03 legacy token remains outbase-field03-flow-v171
+- HOME/domain token remains outbase-v1663-home-v36-r34
+
+NOT EXECUTED
+- Android device interaction
+- GPS permission and live tracking
+- Camera/video/microphone permission
+- offline device restart
+- HOME/calendar visual regression on device
+
+RESULT
+Static candidate PASS. Android/R1 completion remains unverified.

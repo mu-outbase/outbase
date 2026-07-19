@@ -79,69 +79,60 @@
     return label&&label!==title?label:'未完了';
   }
 
-  const routeUrl=(name,params={})=>{
-    try{return globalThis.OUTBASE_ROUTER.shellUrl(name,params);}
+  const contextApi=()=>globalThis.OUTBASE_ACTIVITY_CONTEXT_V18||globalThis.OUTBASE_ACTIVITY_CONTEXT;
+  const legacyPlanId=item=>contextApi()?.planIdFrom?.(item)||item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
+  const activityContext=(item,overrides={})=>contextApi()?.fromActivity?.(item,overrides)||{
+    activityId:item?.id||'',planId:legacyPlanId(item)||'',activityType:item?.type||'',activityTitle:item?.title||'',...overrides
+  };
+
+  const routeUrl=(name,item,params={})=>{
+    const context=activityContext(item,params);
+    try{return contextApi()?.shellUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.shellUrl(name,{...context,...params});}
     catch(_error){return `./?shell=1&view=${encodeURIComponent(name)}`;}
   };
 
-  const legacyUrl=(name,params={})=>{
-    try{return globalThis.OUTBASE_ROUTER.legacyUrl(name,params);}
+  const legacyUrl=(name,item,params={})=>{
+    const context=activityContext(item,params);
+    try{return contextApi()?.legacyUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.legacyUrl(name,{...context,...params});}
     catch(_error){return `./?tab=${encodeURIComponent(name)}`;}
   };
 
-  const legacyPlanId=item=>item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
-  const preparationHref=item=>routeUrl('preparation',{activityId:item?.id,planId:legacyPlanId(item)});
-  const startHref=item=>legacyUrl('record',{
-    activityId:item?.id,
-    planId:legacyPlanId(item),
-    sheet:'start',
-    returnShell:'activity',
-    returnActivityId:item?.id
+  const preparationHref=item=>routeUrl('preparation',item);
+  const startHref=item=>legacyUrl('record',item,{
+    sheet:'start',returnShell:'activity',returnActivityId:item?.id
   });
-  const recordHref=item=>legacyUrl('record',{
-    activityId:item?.id,
-    planId:legacyPlanId(item),
-    returnShell:'activity',
-    returnActivityId:item?.id
+  const recordHref=item=>legacyUrl('record',item,{
+    returnShell:'activity',returnActivityId:item?.id
   });
 
-  function activateLocalContext(item){
+  function activateLocalContext(item,{record=false,source='activity-detail'}={}){
     if(!item?.id)return false;
+    const api=contextApi();
+    if(api?.seedLocal){api.seedLocal(activityContext(item),{source,record});return true;}
     try{
       localStorage.setItem('outbase_core_activity_id',String(item.id));
       localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
       const planId=legacyPlanId(item);
       if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
-      localStorage.setItem('outbase_pending_activity_context_v1',JSON.stringify({
-        activityId:String(item.id),
-        planId:planId?String(planId):'',
-        source:'activity-detail',
-        savedAt:Date.now()
-      }));
       return true;
-    }catch(_error){
-      return false;
-    }
+    }catch(_error){return false;}
   }
 
   async function persistContext(item){
     if(!item?.id)return false;
+    const api=contextApi();
+    if(api?.persist)return api.persist(activityContext(item));
     try{
-      const planId=legacyPlanId(item);
-      await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{
-        mode:'legacy-shadow',
-        current_plan_id:planId||null
-      });
-      try{localStorage.removeItem('outbase_pending_activity_context_v1');}catch(_error){}
+      await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{mode:'legacy-shadow',current_plan_id:legacyPlanId(item)||null});
       return true;
-    }catch(_error){
-      return false;
-    }
+    }catch(_error){return false;}
   }
 
-  async function activateContext(item){
-    activateLocalContext(item);
-    return persistContext(item);
+  function activateContext(item,options={}){
+    const api=contextApi();
+    if(api?.activate)return api.activate(item,{source:options.source||'activity-detail',record:options.record,persist:options.persist});
+    activateLocalContext(item,options);
+    return {context:activityContext(item),persisted:persistContext(item)};
   }
 
   function state(item){
@@ -231,25 +222,23 @@
     const item=model?.detail?.activity||null;
     main.querySelector('#outbaseCopyrightFooter')?.addEventListener('click',()=>globalThis.OUTBASE_ABOUT?.open?.());
     main.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',event=>{const target=main.querySelector(a.getAttribute('href'));if(!target)return;event.preventDefault();target.scrollIntoView({behavior:'smooth',block:'start'});}));
-    main.querySelectorAll('[data-ob17-context]').forEach(link=>link.addEventListener('click',async event=>{
+    main.querySelectorAll('[data-ob17-context]').forEach(link=>link.addEventListener('click',event=>{
       if(!item)return;
-      event.preventDefault();
       const mode=link.dataset.ob17Context||'legacy';
       if(mode==='preparation'){
-        activateLocalContext(item);
+        event.preventDefault();
+        activateContext(item,{source:'activity-to-preparation'});
         globalThis.OUTBASE_PREPARATION_ROUTE_V17?.prime?.(item);
-        globalThis.OUTBASE_ROUTER.navigate('preparation',{
-          activityId:item.id,
-          planId:legacyPlanId(item)
+        globalThis.OUTBASE_ROUTER.navigate('preparation',contextApi()?.params?.(activityContext(item))||{
+          activityId:item.id,planId:legacyPlanId(item)
         },{transition:false,skipTransition:true});
-        void persistContext(item);
         return;
       }
-      activateLocalContext(item);
+      const record=String(link.href||'').includes('tab=record');
+      activateContext(item,{source:'activity-to-legacy',record});
       link.setAttribute('aria-busy','true');
       link.classList.add('is-launching');
-      void persistContext(item);
-      try{location.assign(link.href);}catch(_error){location.href=link.href;}
+      // Native anchor navigation remains authoritative for FIELD03/legacy routes.
     }));
   }
 
@@ -262,6 +251,8 @@
       if (main) main.classList.toggle('ob3-main-activity', value?.route?.name==='activity');
       if (value?.route?.name==='activity' && main) {
         main.classList.remove('ob3-main-calendar');
+        const item=value?.detail?.activity||null;
+        if(item)activateContext(item,{source:'activity-render'});
         main.innerHTML = markup(value);
         base.hydrateMedia?.(main);
         bind(main,value);

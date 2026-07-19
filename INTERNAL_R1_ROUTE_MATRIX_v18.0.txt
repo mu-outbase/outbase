@@ -1,0 +1,25 @@
+OUTBASE R1 internal route matrix
+
+Shell
+HOME -> calendar/search/vault/add/current-plan switch
+CALENDAR -> activity detail/current-plan switch
+ACTIVITY -> preparation/record/calendar/current-plan switch
+PREPARATION -> activity detail/record/legacy preparation/current-plan switch
+SEARCH -> current-plan switch
+VAULT -> current-plan switch
+
+Legacy bridge
+record/prep -> returnShell(home/activity/preparation/vault)
+active/paused session -> return disabled
+idle session -> return enabled
+
+Context precedence
+URL activityId -> compatible pending -> compatible stored -> old core key
+URL planId -> compatible pending/stored -> old active plan key
+Different activityId -> do not reuse old title/type
+
+Protected
+FIELD03 internals unchanged
+HOME v36 r34 unchanged
+calendar v44 unchanged
+activity detail v16.3 visual body unchanged

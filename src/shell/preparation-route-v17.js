@@ -46,10 +46,15 @@
     const end=short(item.endAt||item.startAt);
     return start===end?start:`${start}〜${end}`;
   };
-  const planId=item=>item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
+  const contextApi=()=>globalThis.OUTBASE_ACTIVITY_CONTEXT_V18||globalThis.OUTBASE_ACTIVITY_CONTEXT;
+  const planId=item=>contextApi()?.planIdFrom?.(item)||item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
+  const activityContext=(item,overrides={})=>contextApi()?.fromActivity?.(item,overrides)||{
+    activityId:item?.id||'',planId:planId(item)||'',activityType:item?.type||'',activityTitle:item?.title||'',...overrides
+  };
 
-  function legacyUrl(name,params={}){
-    return globalThis.OUTBASE_ROUTER.legacyUrl(name,params);
+  function legacyUrl(name,item,params={}){
+    const context=activityContext(item,params);
+    return contextApi()?.legacyUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.legacyUrl(name,{...context,...params});
   }
 
   function activityPlace(activity){
@@ -164,46 +169,24 @@
     }
   }
 
-  function activateLocalContext(item){
-    if(!item?.id)return false;
+  function activateContext(item,{record=false,source='preparation'}={}){
+    if(!item?.id)return null;
+    const api=contextApi();
+    if(api?.activate)return api.activate(item,{source,record});
     try{
       localStorage.setItem('outbase_core_activity_id',String(item.id));
       localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
       const legacyPlanId=planId(item);
       if(legacyPlanId)localStorage.setItem('outbase_active_plan_id',String(legacyPlanId));
-      localStorage.setItem('outbase_pending_activity_context_v1',JSON.stringify({
-        activityId:String(item.id),
-        planId:legacyPlanId?String(legacyPlanId):'',
-        source:'preparation',
-        savedAt:Date.now()
-      }));
-      return true;
-    }catch(_error){
-      return false;
-    }
+    }catch(_error){}
+    return {context:activityContext(item),persisted:Promise.resolve(false)};
   }
 
-  async function persistContext(item){
-    if(!item?.id)return false;
-    try{
-      const legacyPlanId=planId(item);
-      await globalThis.OUTBASE_REPOSITORIES_V160?.setCurrentActivity?.(item.id,{
-        mode:'legacy-shadow',
-        current_plan_id:legacyPlanId||null
-      });
-      try{localStorage.removeItem('outbase_pending_activity_context_v1');}catch(_error){}
-      return true;
-    }catch(_error){
-      return false;
-    }
-  }
-
-  function prepareLegacyAnchor(item,control){
+  function prepareLegacyAnchor(item,control,{record=false,source='preparation-to-legacy'}={}){
     if(!item?.id||!control?.href)return false;
-    activateLocalContext(item);
+    activateContext(item,{record,source});
     control.setAttribute?.('aria-busy','true');
     control.classList?.add?.('is-launching');
-    void persistContext(item);
     return true;
   }
 
@@ -239,18 +222,11 @@
     const pending=Number(summary.pending||Math.max(0,total-completed));
     const progress=Math.max(0,Math.min(100,Number(summary.progress||0)));
     const legacyPlanId=planId(item);
-    const advanced=legacyUrl('activity',{
-      activityId:item.id,
-      planId:legacyPlanId,
-      returnShell:'preparation',
-      returnActivityId:item.id
+    const advanced=legacyUrl('activity',item,{
+      returnShell:'preparation',returnActivityId:item.id
     });
-    const start=legacyUrl('record',{
-      activityId:item.id,
-      planId:legacyPlanId,
-      sheet:'start',
-      returnShell:'activity',
-      returnActivityId:item.id
+    const start=legacyUrl('record',item,{
+      sheet:'start',returnShell:'activity',returnActivityId:item.id
     });
 
     return `<section class="ob17-preparation" data-ob17-activity-id="${esc(item.id)}">
@@ -291,6 +267,7 @@
   function renderResult(main,result,{preserveScroll=false}={}){
     if(!main||!result)return false;
     const y=preserveScroll?window.scrollY:0;
+    if(result.status==='ready')activateContext(result.item,{source:'preparation-render'});
     main.innerHTML=markup(result);
     bind(main,result);
     if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
@@ -369,7 +346,8 @@
     const item=result.item;
 
     main.querySelector('[data-ob17-detail]')?.addEventListener('click',()=>{
-      globalThis.OUTBASE_ROUTER.navigate('activity',{activityId:item.id,planId:planId(item)},{transition:true});
+      activateContext(item,{source:'preparation-to-detail'});
+      globalThis.OUTBASE_ROUTER.navigate('activity',contextApi()?.params?.(activityContext(item))||{activityId:item.id,planId:planId(item)},{transition:true});
     });
 
     main.querySelectorAll('[data-ob17-prep-toggle]').forEach(button=>button.addEventListener('click',async()=>{
@@ -379,11 +357,11 @@
     }));
 
     main.querySelector('[data-ob17-start]')?.addEventListener('click',event=>{
-      prepareLegacyAnchor(item,event.currentTarget);
+      prepareLegacyAnchor(item,event.currentTarget,{record:true,source:'preparation-to-record'});
     });
 
     main.querySelector('[data-ob17-advanced]')?.addEventListener('click',event=>{
-      prepareLegacyAnchor(item,event.currentTarget);
+      prepareLegacyAnchor(item,event.currentTarget,{record:false,source:'preparation-to-advanced'});
     });
   }
 
