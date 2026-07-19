@@ -4,6 +4,7 @@
   const EVENT_KEY='outbase_calendar_complete_v3_events';
   const TODO_KEY='outbase_calendar_complete_v3_todos';
   const CALENDAR_KEY='outbase_calendar_custom_types_v1';
+  const UI_STATE_KEY='outbase_calendar_ui_state_v1';
   const pad=n=>String(n).padStart(2,'0');
   const key=d=>{const x=new Date(d);return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`};
   const uid=()=>crypto.randomUUID?.()||`ob-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -27,7 +28,50 @@
   const sampleTodos=[
     {id:'todo1',title:'キャンプ食材を確認',due:'2026-07-19',done:false,calendarId:'camp',participants:['むー','リン']}
   ];
-  const state={date:new Date('2026-07-19T12:00'),selected:'2026-07-19',view:'month',filters:new Set(calendars.map(c=>c.id)),people:new Set(people),editing:null};
+  const state={date:new Date(),selected:key(new Date()),view:'month',filters:new Set(calendars.map(c=>c.id)),people:new Set(people),editing:null};
+  function readUiState(){
+    try{
+      const saved=JSON.parse(sessionStorage.getItem(UI_STATE_KEY)||localStorage.getItem(UI_STATE_KEY)||'null');
+      if(!saved||typeof saved!=='object')return;
+      if(saved.month&&/^\d{4}-\d{2}$/.test(saved.month)){
+        const [y,m]=saved.month.split('-').map(Number);
+        state.date=new Date(y,m-1,1,12);
+      }
+      if(saved.selected&&/^\d{4}-\d{2}-\d{2}$/.test(saved.selected))state.selected=saved.selected;
+      if(['month','week','day','list','todo'].includes(saved.view))state.view=saved.view;
+      if(Array.isArray(saved.filters))state.filters=new Set(saved.filters);
+      if(Array.isArray(saved.people))state.people=new Set(saved.people);
+      if(saved.agendaOpen===false)document.addEventListener('DOMContentLoaded',()=>$('#agendaSection')?.classList.add('collapsed'),{once:true});
+    }catch(_error){}
+  }
+  function writeUiState(){
+    const value={
+      month:`${state.date.getFullYear()}-${pad(state.date.getMonth()+1)}`,
+      selected:state.selected,
+      view:state.view,
+      filters:[...state.filters],
+      people:[...state.people],
+      agendaOpen:!$('#agendaSection')?.classList.contains('collapsed')
+    };
+    try{sessionStorage.setItem(UI_STATE_KEY,JSON.stringify(value));localStorage.setItem(UI_STATE_KEY,JSON.stringify(value));}catch(_error){}
+    try{
+      parent?.postMessage?.({type:'OUTBASE_CALENDAR_STATE',value},location.origin);
+    }catch(_error){}
+  }
+  function applyRouteState(){
+    const query=new URLSearchParams(location.search);
+    const month=query.get('month');
+    const selected=query.get('selected');
+    const peopleParam=query.get('people');
+    if(month&&/^\d{4}-\d{2}$/.test(month)){
+      const [y,m]=month.split('-').map(Number);
+      state.date=new Date(y,m-1,1,12);
+    }
+    if(selected&&/^\d{4}-\d{2}-\d{2}$/.test(selected))state.selected=selected;
+    if(peopleParam)state.people=new Set(peopleParam.split(',').filter(Boolean));
+  }
+  readUiState();
+  applyRouteState();
 
   function read(keyName,fallback){try{const v=JSON.parse(localStorage.getItem(keyName)||'null');return Array.isArray(v)?v:fallback}catch(_){return fallback}}
   calendars=read(CALENDAR_KEY,calendars).map((c,i)=>{
@@ -95,7 +139,17 @@
     $$('.view-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));
     $('#agendaSection').classList.toggle('hidden',state.view==='todo');
     $('#calendarArea').innerHTML=state.view==='month'?renderMonth():state.view==='week'?renderWeek():state.view==='day'?renderDay():state.view==='list'?renderList():renderTodo();
-    renderAgenda();renderFilters();bind();
+    renderAgenda();renderFilters();bind();writeUiState();
+    if(document.documentElement.classList.contains('outbaseCalendarEmbedded')){
+      requestAnimationFrame(()=>{
+        try{
+          parent.postMessage({
+            type:'OUTBASE_CALENDAR_RESIZE',
+            height:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)
+          },location.origin);
+        }catch(_error){}
+      });
+    }
   }
 
   function renderMonth(){
@@ -425,7 +479,7 @@
 
   $('#backHomeBtn')?.addEventListener('click',()=>location.href='./?shell=1&view=home');
   $('#notificationBtn')?.addEventListener('click',()=>alert('通知はHOMEの通知センターへ統合予定です。'));
-  $('#agendaToggle')?.addEventListener('click',()=>{const section=$('#agendaSection');const collapsed=section.classList.toggle('collapsed');$('#agendaToggle')?.setAttribute('aria-expanded',String(!collapsed));});
+  $('#agendaToggle')?.addEventListener('click',()=>{const section=$('#agendaSection');const collapsed=section.classList.toggle('collapsed');$('#agendaToggle')?.setAttribute('aria-expanded',String(!collapsed));writeUiState();});
   $('#periodButton')?.addEventListener('click',()=>{const value=prompt('表示する年月を入力してください（例：2026-07）',`${state.date.getFullYear()}-${pad(state.date.getMonth()+1)}`);if(!value||!/^[0-9]{4}-[0-9]{2}$/.test(value))return;const [y,m]=value.split('-').map(Number);state.date=new Date(y,m-1,1,12);state.selected=key(state.date);render();});
   $('#addEventBtn')?.addEventListener('click',()=>openEvent());$('#quickAddBtn')?.addEventListener('click',()=>openEvent());$('#navAdd')?.addEventListener('click',()=>openEvent());$('#settingsBtn')?.addEventListener('click',openSettings);$('#filterBtn')?.addEventListener('click',()=>$('#filterPanel')?.classList.toggle('hidden'));$('#closeModal')?.addEventListener('click',close);$('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal')close()});
   $('#todayBtn')?.addEventListener('click',()=>{state.date=new Date();state.selected=key(new Date());render()});
