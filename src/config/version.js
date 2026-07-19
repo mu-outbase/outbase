@@ -1,13 +1,13 @@
 (() => {
   'use strict';
   const VERSION=Object.freeze({
-    app:'v166.4-calendar-shell-lock',
+    app:'v166.5-common-header-lock',
     legacy:'outbase-field03-compact-2',
     data:'outbase-v160-phase1',
     domain:'outbase-v1663-home-v36-r34',
-    shell:'outbase-v1664-calendar-shell-lock-v2',
+    shell:'outbase-v1665-common-header-lock-v3',
     design:'outbase-v1663-visual',
-    cache:'outbase-field03-v1664-calendar-shell-lock-v2'
+    cache:'outbase-field03-v1665-common-header-lock-v3'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();

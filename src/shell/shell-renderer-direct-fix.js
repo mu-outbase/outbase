@@ -7,6 +7,25 @@
   const plusIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const vaultIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M7 5V3h10v2M8 10h8"/></svg>';
 
+  const bellIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9Z"/><path d="M10 21h4"/></svg>';
+  const settingsIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 15a2 2 0 0 0 .4 2.2l-2.2 2.2A2 2 0 0 0 15 19l-1 2h-4l-1-2a2 2 0 0 0-2.2.4l-2.2-2.2A2 2 0 0 0 5 15l-2-1v-4l2-1a2 2 0 0 0-.4-2.2l2.2-2.2A2 2 0 0 0 9 5l1-2h4l1 2a2 2 0 0 0 2.2-.4l2.2 2.2A2 2 0 0 0 19 9l2 1v4Z"/></svg>';
+
+
+  function commonHeaderHtml(){
+    return `
+      <a href="./?shell=1&view=home" data-ob3-route="home" class="ob-common-header-brand" aria-label="OUTBASEホーム">
+        <b>OUTBASE</b>
+      </a>
+      <div class="ob-common-header-actions">
+        <button type="button" data-ob36-notify class="ob-common-header-icon notify" aria-label="通知">
+          ${bellIcon}
+        </button>
+        <button type="button" data-ob36-settings class="ob-common-header-icon" aria-label="設定">
+          ${settingsIcon}
+        </button>
+      </div>`;
+  }
+
   function navHtml(route){
     const active=name=>route===name?'active':'';
     const current=name=>route===name?'aria-current="page"':'';
@@ -29,7 +48,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-direct3'});
+    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-common-header-v1'});
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];
       if(value)query.set(key,String(value));
@@ -42,6 +61,13 @@
     if(!shell)return;
 
     const route=model?.route?.name||'home';
+
+    const header=shell.querySelector('.ob3-header');
+    if(header){
+      header.classList.add('ob-common-header-lock');
+      header.innerHTML=commonHeaderHtml();
+    }
+
     const nav=shell.querySelector('.ob3-nav');
     if(nav){
       nav.classList.add('ob-nav-five','ob-nav-direct');

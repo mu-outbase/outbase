@@ -160,3 +160,137 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
   border:0;
   background:transparent;
 }
+
+
+/* =========================================================
+   OUTBASE common shell header LOCK
+   One HOME header shared by every route.
+   ========================================================= */
+.ob3-header.ob-common-header-lock{
+  position:sticky!important;
+  top:0!important;
+  z-index:120!important;
+  width:100%!important;
+  min-height:78px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  padding:
+    calc(17px + env(safe-area-inset-top))
+    28px
+    15px!important;
+  border-bottom:1px solid rgba(231,227,219,.92)!important;
+  background:rgba(255,255,255,.96)!important;
+  box-shadow:0 4px 14px rgba(35,42,38,.035)!important;
+  backdrop-filter:blur(14px)!important;
+  -webkit-backdrop-filter:blur(14px)!important;
+}
+.ob-common-header-brand{
+  min-width:0;
+  color:#174d31!important;
+  text-decoration:none!important;
+}
+.ob-common-header-brand b{
+  display:block;
+  color:#174d31!important;
+  font-size:17px!important;
+  line-height:1!important;
+  font-weight:700!important;
+  letter-spacing:.34em!important;
+  white-space:nowrap!important;
+}
+.ob-common-header-actions{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.ob-common-header-icon{
+  position:relative;
+  width:38px!important;
+  height:38px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:12px!important;
+  background:transparent!important;
+  color:#303733!important;
+}
+.ob-common-header-icon svg{
+  width:25px!important;
+  height:25px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:1.65!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+.ob-common-header-icon.notify::after{
+  content:"";
+  position:absolute;
+  right:4px;
+  bottom:4px;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#d39219;
+}
+
+/* =========================================================
+   Bottom navigation equal-width LOCK
+   Fix the right-edge/vault compression.
+   ========================================================= */
+.ob3-nav.ob-nav-direct{
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  width:min(calc(100vw - 28px),402px)!important;
+  box-sizing:border-box!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  justify-items:stretch!important;
+  padding-left:10px!important;
+  padding-right:10px!important;
+  column-gap:0!important;
+}
+.ob3-nav.ob-nav-direct>button{
+  width:100%!important;
+  min-width:0!important;
+  min-height:52px!important;
+  padding:3px 1px!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+}
+.ob3-nav.ob-nav-direct>button:first-child{
+  padding-left:2px!important;
+}
+.ob3-nav.ob-nav-direct>button:last-child{
+  padding-right:2px!important;
+}
+.ob3-nav.ob-nav-direct>button>span:last-child{
+  width:100%!important;
+  min-width:0!important;
+  overflow:visible!important;
+  text-align:center!important;
+  font-size:9px!important;
+  letter-spacing:0!important;
+}
+@media(max-width:370px){
+  .ob3-header.ob-common-header-lock{
+    padding-left:20px!important;
+    padding-right:20px!important;
+  }
+  .ob-common-header-brand b{
+    font-size:16px!important;
+    letter-spacing:.29em!important;
+  }
+  .ob3-nav.ob-nav-direct{
+    width:calc(100vw - 20px)!important;
+    padding-left:7px!important;
+    padding-right:7px!important;
+  }
+  .ob3-nav.ob-nav-direct>button>span:last-child{
+    font-size:8.5px!important;
+  }
+}
