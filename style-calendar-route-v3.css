@@ -1,0 +1,5 @@
+
+html.outbaseCalendarRoute,
+html.outbaseCalendarRoute body{width:100%;min-height:100%;background:#f7f4ec;overflow-x:hidden}
+html.outbaseCalendarRoute #app{min-height:100dvh;padding:0!important;margin:0!important;max-width:none!important;visibility:visible!important}
+.obCalendarRouteFrame{display:block;width:100%;height:100dvh;min-height:100dvh;border:0;background:#f7f4ec}

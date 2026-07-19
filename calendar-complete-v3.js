@@ -108,3 +108,13 @@
   $$('.view-tabs button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});
   render();
 })();
+;(() => {
+  'use strict';
+  document.querySelectorAll('[data-parent-nav]').forEach(link=>{
+    link.addEventListener('click',event=>{
+      if(window.parent===window)return;
+      event.preventDefault();
+      window.parent.postMessage({type:'OUTBASE_CALENDAR_NAVIGATE',name:link.dataset.parentNav},location.origin);
+    });
+  });
+})();
