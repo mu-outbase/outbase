@@ -1295,3 +1295,16 @@ html.outbaseCalendarEmbedded .calendar-shell{
     gap:4px;
   }
 }
+
+
+/* =========================================================
+   Calendar functional LOCK v9
+   ========================================================= */
+.month-arrow:disabled{
+  opacity:.28;
+  pointer-events:none;
+}
+.event-card,
+.todo-card{
+  cursor:pointer;
+}
