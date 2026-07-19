@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A3328">
-<title>OUTBASE Calendar Preview</title>
-<link rel="stylesheet" href="calendar-preview-v25.css?v=20260719-1">
+<title>OUTBASE Calendar Complete Preview</title>
+<link rel="stylesheet" href="calendar-complete-v3.css?v=20260719-1">
 </head>
 <body>
 <div class="status-strip"></div>
@@ -13,46 +13,43 @@
   <div class="brand">OUTBASE</div>
   <div class="header-actions">
     <button id="todayBtn" class="text-btn">今日</button>
-    <button id="settingsBtn" class="icon-btn" aria-label="カレンダー設定">⚙</button>
+    <button id="settingsBtn" class="icon-btn" aria-label="設定">⚙</button>
   </div>
 </header>
 
 <main class="page">
-  <section class="calendar-hero">
+  <section class="hero">
     <div>
       <small>CALENDAR</small>
-      <h1 id="monthLabel"></h1>
+      <h1 id="periodLabel"></h1>
     </div>
-    <button id="addBtn" class="hero-add" aria-label="予定を追加">＋</button>
+    <button id="addEventBtn" class="hero-add" aria-label="予定を追加">＋</button>
   </section>
 
-  <section class="calendar-toolbar">
-    <div class="view-tabs" role="tablist">
+  <section class="toolbar">
+    <div class="view-tabs">
       <button data-view="month" class="active">月</button>
       <button data-view="week">週</button>
       <button data-view="day">日</button>
       <button data-view="list">一覧</button>
+      <button data-view="todo">ToDo</button>
     </div>
     <div class="nav-row">
       <div class="period-nav">
-        <button id="prevBtn" aria-label="前へ">‹</button>
-        <button id="nextBtn" aria-label="次へ">›</button>
+        <button id="prevBtn">‹</button>
+        <button id="nextBtn">›</button>
       </div>
-      <button id="filterBtn" class="filter-btn">絞り込み</button>
+      <button id="filterBtn">絞り込み</button>
     </div>
   </section>
 
-  <section id="filterPanel" class="filter-panel hidden"></section>
-
+  <section id="filterPanel" class="panel hidden"></section>
   <section id="calendarArea" aria-live="polite"></section>
 
-  <section class="agenda">
+  <section id="agendaSection" class="agenda">
     <div class="section-title">
-      <div>
-        <small>選択日</small>
-        <h2 id="selectedLabel"></h2>
-      </div>
-      <button id="quickAddBtn" aria-label="選択日に追加">＋</button>
+      <div><small>選択日</small><h2 id="selectedLabel"></h2></div>
+      <button id="quickAddBtn">＋</button>
     </div>
     <div id="agendaList"></div>
   </section>
@@ -65,18 +62,20 @@
   <a href="./?shell=1&view=vault">▤<span>保管庫</span></a>
 </nav>
 
-<div id="modal" class="modal hidden" aria-hidden="true">
-  <div class="sheet" role="dialog" aria-modal="true">
+<div id="modal" class="modal hidden">
+  <div class="sheet">
     <div class="grab"></div>
     <div class="sheet-head">
-      <div><small id="sheetEyebrow">予定</small><h2 id="sheetTitle">予定を追加</h2></div>
-      <button id="closeModal" aria-label="閉じる">×</button>
+      <div><small id="sheetEyebrow"></small><h2 id="sheetTitle"></h2></div>
+      <button id="closeModal">×</button>
     </div>
     <div id="sheetBody"></div>
   </div>
 </div>
 
 <input id="icsFile" type="file" accept=".ics,text/calendar" hidden>
-<script src="calendar-preview-v25.js?v=20260719-1"></script>
+<input id="csvFile" type="file" accept=".csv,text/csv" hidden>
+<input id="jsonFile" type="file" accept=".json,application/json" hidden>
+<script src="calendar-complete-v3.js?v=20260719-1"></script>
 </body>
 </html>
