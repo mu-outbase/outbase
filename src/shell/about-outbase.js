@@ -24,58 +24,60 @@
         <div class="ob-about-backdrop" data-about-close></div>
         <section class="ob-about-sheet" role="dialog" aria-modal="true" aria-labelledby="obAboutTitle">
           <div class="ob-about-grab" aria-hidden="true"></div>
+
           <header class="ob-about-head">
-            <div>
-              <small>ABOUT</small>
+            <div class="ob-about-title-copy">
+              <small>OUTBASE</small>
               <h2 id="obAboutTitle">このアプリについて</h2>
+              <p>アプリ情報・権利・外部サービス</p>
             </div>
             <button type="button" aria-label="閉じる" data-about-close>×</button>
           </header>
 
           <div class="ob-about-body">
-            <section class="ob-about-brand">
-              <b>OUTBASE</b>
-              <span>バージョン：${esc(version())}</span>
+            <section class="ob-about-brand ob-home-card">
+              <div class="ob-about-brand-top">
+                <b>OUTBASE</b>
+                <span>バージョン ${esc(version())}</span>
+              </div>
               <p>© 2026 OUTBASE. All rights reserved.</p>
             </section>
 
-            <details open>
-              <summary>著作権</summary>
+            <details class="ob-about-section ob-home-card" open>
+              <summary>
+                <span><small>RIGHTS</small><b>著作権</b></span>
+              </summary>
               <div>
                 <p>本アプリの独自プログラム、デザイン、ロゴおよび独自コンテンツの無断転載・複製を禁じます。</p>
-                <p>個人名は表示しません。</p>
               </div>
             </details>
 
-            <details>
-              <summary>外部サービス・データ提供元</summary>
+            <details class="ob-about-section ob-home-card">
+              <summary>
+                <span><small>SERVICES</small><b>外部サービス・データ提供元</b></span>
+              </summary>
               <div>
                 <p>地図、天気、外部リンクなど、提供元が画面付近での表示を求めるものは、該当画面のクレジット表示を優先します。</p>
-                <p>この一覧へ集約できる提供元情報は、今後の外部参照監査に合わせて追加します。</p>
+                <p>一覧へ集約できる提供元情報は、外部参照監査に合わせて追加します。</p>
               </div>
             </details>
 
-            <details>
-              <summary>オープンソースライブラリ</summary>
+            <details class="ob-about-section ob-home-card">
+              <summary>
+                <span><small>LICENSES</small><b>オープンソースライブラリ</b></span>
+              </summary>
               <div class="ob-about-license-list">
-                <article>
-                  <b>SheetJS Community Edition</b>
-                  <span>Excel・表計算データ処理</span>
-                </article>
-                <article>
-                  <b>PDF.js</b>
-                  <span>PDF表示・解析</span>
-                </article>
-                <article>
-                  <b>Tesseract.js</b>
-                  <span>文字認識処理</span>
-                </article>
+                <article><b>SheetJS Community Edition</b><span>Excel・表計算データ処理</span></article>
+                <article><b>PDF.js</b><span>PDF表示・解析</span></article>
+                <article><b>Tesseract.js</b><span>文字認識処理</span></article>
                 <p>各ライブラリの著作権およびライセンスは、それぞれの権利者に帰属します。</p>
               </div>
             </details>
 
-            <details>
-              <summary>プライバシー・利用条件</summary>
+            <details class="ob-about-section ob-home-card">
+              <summary>
+                <span><small>POLICY</small><b>プライバシー・利用条件</b></span>
+              </summary>
               <div>
                 <p>プライバシーポリシーと利用規約は、一般公開・配布前に正式版を掲載します。</p>
               </div>
@@ -134,5 +136,5 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 
-  globalThis.OUTBASE_ABOUT=Object.freeze({open,close,version:'about-v2-shell-owned-footer'});
+  globalThis.OUTBASE_ABOUT=Object.freeze({open,close,version:'about-v3-home-visual-lock'});
 })();

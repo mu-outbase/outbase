@@ -396,3 +396,61 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
     font-size:8.2px!important;
   }
 }
+
+
+/* =========================================================
+   OUTBASE HOME visual LOCK v5
+   Compact common header + compact copyright
+   ========================================================= */
+.ob3-header.ob-common-header-lock{
+  height:calc(64px + env(safe-area-inset-top))!important;
+  min-height:calc(64px + env(safe-area-inset-top))!important;
+  max-height:calc(64px + env(safe-area-inset-top))!important;
+  padding:
+    env(safe-area-inset-top)
+    24px
+    0!important;
+  box-sizing:border-box!important;
+  gap:12px!important;
+}
+.ob-common-header-brand b{
+  font-size:16px!important;
+  letter-spacing:.31em!important;
+}
+.ob-common-header-actions{
+  gap:7px!important;
+}
+.ob-common-header-icon{
+  width:34px!important;
+  height:34px!important;
+  border-radius:11px!important;
+}
+.ob-common-header-icon svg{
+  width:23px!important;
+  height:23px!important;
+}
+.ob-common-header-icon.notify::after{
+  right:3px!important;
+  bottom:3px!important;
+  width:5px!important;
+  height:5px!important;
+}
+
+/* Copyright should read as a quiet footer, not a separate section. */
+.ob3-main .ob-copyright-footer{
+  margin:7px auto 1px!important;
+  padding:4px 16px 3px!important;
+  font-size:9.5px!important;
+  line-height:1.25!important;
+}
+
+@media(max-width:370px){
+  .ob3-header.ob-common-header-lock{
+    padding-left:20px!important;
+    padding-right:20px!important;
+  }
+  .ob-common-header-brand b{
+    font-size:15.5px!important;
+    letter-spacing:.28em!important;
+  }
+}
