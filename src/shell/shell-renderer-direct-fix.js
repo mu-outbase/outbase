@@ -73,12 +73,11 @@
   }
 
   async function mountPreparationShell(root,options={}){
-    const modelApi=shellModelApi();
-    if(!modelApi?.build)throw new Error('OUTBASE shell model is not ready');
-    const model=await modelApi.build(options);
-    const shell=ensureShellSkeleton(root,model?.route?.name||'preparation');
+    const route=globalThis.OUTBASE_ROUTER?.current?.()||{name:'preparation',activityId:null};
+    const model=Object.freeze({route,online:navigator.onLine,fastPreparationShell:true});
+    const shell=ensureShellSkeleton(root,route?.name||'preparation');
     if(!shell)throw new Error('OUTBASE preparation shell is not ready');
-    shell.dataset.ob6Route=model?.route?.name||'preparation';
+    shell.dataset.ob6Route=route?.name||'preparation';
     const main=shell.querySelector('.ob3-main');
     if(main)main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
     apply(root,model);

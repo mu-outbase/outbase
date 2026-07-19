@@ -1,0 +1,316 @@
+{
+  "release": "v166.31-r0-preparation-fast-v17.3",
+  "file_count": 62,
+  "files": [
+    {
+      "path": "README_HOMEデザイン完全統一_v14.txt",
+      "size": 1485,
+      "sha256": "4951f2470d9c2fa8f9f015a1bb69a6bcc24a9eb1cd321da34379644e90377bfa"
+    },
+    {
+      "path": "README_HOMEデザイン統一_v5.txt",
+      "size": 1400,
+      "sha256": "d03281b9e75c54644509a8ca65c5799f519060acd3daac457ca62a2776e46497"
+    },
+    {
+      "path": "README_HOME情報階層統合_v15.txt",
+      "size": 1930,
+      "sha256": "20e553d05116082773449eb0a858a31decc39e254d0e85dc670c1e288eb86dc2"
+    },
+    {
+      "path": "README_OUTBASE一本線統合_v17.txt",
+      "size": 2147,
+      "sha256": "d11bfb6957a8051455ca271afac7a71ff0557a77f3e46ab9127c1fd946a7cde9"
+    },
+    {
+      "path": "README_PhaseE_E01_全画面導線監査_v17.1.txt",
+      "size": 2088,
+      "sha256": "009e91253d6d1c28cabbe7cdade18bf0a9eb675066456be89ea920c6b992828c"
+    },
+    {
+      "path": "README_R0-01_準備白画面修正_v17.2.txt",
+      "size": 1327,
+      "sha256": "c5f41a331638a796c959173744a39f65a38db3777aa848f6db5f2a704e8708de"
+    },
+    {
+      "path": "README_R0-02_準備表示高速化_v17.3.txt",
+      "size": 1716,
+      "sha256": "66f6d245f145e049a326a2295eba44e32b86fbbb8f1d2d5da6374a14f438ccfd"
+    },
+    {
+      "path": "README_v15.1_画像なし予定_保管庫下余白.txt",
+      "size": 1274,
+      "sha256": "0d1ec115da55021195ac4f05f8c2baf0113b8fd992070564deb99cc677698868"
+    },
+    {
+      "path": "README_v3.1_fix1.txt",
+      "size": 693,
+      "sha256": "e46875dd096493e0d38f49fc1969b99bc8116b07373cc904dc45ad54f11d144b"
+    },
+    {
+      "path": "README_v3.2_完全キャッシュ切替.txt",
+      "size": 993,
+      "sha256": "7461f6f9fc076c542213eda2d906c16c059619724200f3157ae2439f8402ebe9"
+    },
+    {
+      "path": "README_v3.3_ジョルテ密度反映.txt",
+      "size": 835,
+      "sha256": "0ab41ccdace875505cb7d790ba5c9639f3ca4204e74f5cbf10efae4f2462fc3d"
+    },
+    {
+      "path": "README_v4.1_日付左上LOCK_予定追加再設計.txt",
+      "size": 871,
+      "sha256": "e671c83f653565479a2536546266837580567080effcb9c2c806d69569121c61"
+    },
+    {
+      "path": "README_v4.2_HOMEバー_日付操作_簡単追加.txt",
+      "size": 944,
+      "sha256": "bbf644f25f66264c1f7214f26b387a5aae4c31e212e118e266f02c9131f33dd1"
+    },
+    {
+      "path": "README_v4.3_HOME36実寸統一_予定追加再構成.txt",
+      "size": 1007,
+      "sha256": "0f8a1c507738ef56d63db26dc9e93348b88e1a2bd28fcc5433412958a970c3a7"
+    },
+    {
+      "path": "README_v4.4_選択日展開_種類色削除_下スワイプ閉じる.txt",
+      "size": 750,
+      "sha256": "e91eeddaeb4c604a24088eb1f975dea84bd74c57c164f2806de9aafb4bbfcb62"
+    },
+    {
+      "path": "README_v4_ジョルテ型月表示エンジン.txt",
+      "size": 1030,
+      "sha256": "49341c11e7458d05af8b84cff30543d68a916ff6783d0bbf2d85377db562105c"
+    },
+    {
+      "path": "README_このアプリについて_著作権_外部参照_個人名なし.txt",
+      "size": 961,
+      "sha256": "e919d88521a622973b4b61cafd4a5e7d721703629acfbcef40aecc48022a9da8"
+    },
+    {
+      "path": "README_カレンダーHOME戻るボタン削除_v8.txt",
+      "size": 1399,
+      "sha256": "3415246b516f8b21acdcb528bcc4bfcc429ff34e8c87d091c36223e15c46a618"
+    },
+    {
+      "path": "README_カレンダーv4.4_本体共通シェル統合.txt",
+      "size": 1128,
+      "sha256": "01413071d670c747ad7d72a3d7144f84a1e226d0e02651aa4c9d4991bcbaead1"
+    },
+    {
+      "path": "README_カレンダー左右スワイプ_今日初期選択_HOME背景統一_v10.txt",
+      "size": 1822,
+      "sha256": "21aa13111c887075f365aeef88cd0101269c2b6cebc525b22e53a331472c1238"
+    },
+    {
+      "path": "README_カレンダー機能仕上げLOCK_v9.txt",
+      "size": 2043,
+      "sha256": "b3655f5933995f403ec08781dcba1f87349a768285770e68ad7edb469e4f7586"
+    },
+    {
+      "path": "README_カレンダー表示高LOCK_v6.txt",
+      "size": 1630,
+      "sha256": "8264133e87c590f7bdc17e8cea2fc83a48c49afd472f21f070aef0d286da0330"
+    },
+    {
+      "path": "README_カレンダー高さ優先度修正_v7.txt",
+      "size": 1440,
+      "sha256": "a021cf3d9e82994c2740dca114ce3051be7b026a2a67fe1d6586ca373cb8cf71"
+    },
+    {
+      "path": "README_下バー点滅停止_5項目固定.txt",
+      "size": 940,
+      "sha256": "9ca805759eafc4e32bb5176fe762e7fc96b3c8e52a3e9729ffbd852f2f9c6118"
+    },
+    {
+      "path": "README_予定詳細_準備主役_v16.txt",
+      "size": 270,
+      "sha256": "859f0cf078e601340c4d9690a7c3d48664e743741cd1948b58f4bd5ee963be16"
+    },
+    {
+      "path": "README_予定詳細実機仕上げ_v16.1.txt",
+      "size": 1569,
+      "sha256": "93ad3787281e39204e1d96898df65feaefb7be003e5e2df38c6aaec32fcc1376"
+    },
+    {
+      "path": "README_予定詳細最終余白画像高さ_v16.2.txt",
+      "size": 1614,
+      "sha256": "b9c7f7bff3ca8e778bbf4e99526ddc167060a141cbb8551d9d4291e1964a2eab"
+    },
+    {
+      "path": "README_予定詳細高精細画像_v16.3.txt",
+      "size": 1635,
+      "sha256": "0790abea71cde7d0351cf99a1453d983cf42bb219d53529538d8eb3a9207c426"
+    },
+    {
+      "path": "README_保管庫正式3面_v13.txt",
+      "size": 1261,
+      "sha256": "e8ec07e6fe4a101d4d71ffd07bf9faefda5e464642e2b5335299bf4b7173ceac"
+    },
+    {
+      "path": "README_共通シェルLOCK_v4_二重ヘッダー_Copyright_保管庫幅.txt",
+      "size": 1513,
+      "sha256": "f19247538e0174d64a75757cb7ba3a8f1d2adc3e4e917f34385223fbdc7c453c"
+    },
+    {
+      "path": "README_共通ヘッダーLOCK_下バー均等化.txt",
+      "size": 1236,
+      "sha256": "2b3d0821eb208801bf4a8b46e8b2549f25c7557755251367771c5f19d1a21a06"
+    },
+    {
+      "path": "README_実機で変わらなかった根本原因_版番号経路修正.txt",
+      "size": 1383,
+      "sha256": "9428ea27ce9f420cba6574af1e0f3597dd3a119314e917201fcdb19fba75bfbd"
+    },
+    {
+      "path": "README_探す画面本番入口_v11.txt",
+      "size": 1696,
+      "sha256": "073da47e5ee1ee2cee0011acdd12c4df5d35bde6957ce6a7a9cb64b18c75b263"
+    },
+    {
+      "path": "README_旧カレンダーキャッシュ完全停止_空白修正.txt",
+      "size": 944,
+      "sha256": "7718c6a23e92479419b5de0527dcceb4c8f2c5d5e9159e5a4f3b808173e7b212"
+    },
+    {
+      "path": "README_本体描画元特定_カレンダーv44強制統合_下バー5項目.txt",
+      "size": 1070,
+      "sha256": "cec1339ec3d5bd68f342687fe5a2cc69c043470f249c3997e2cc6c03aa9f25e3"
+    },
+    {
+      "path": "README_本体統合.txt",
+      "size": 575,
+      "sha256": "4add66762e260126e89a2831a6825ef81470b00b54d98a42f0fef1cc3d2e5474"
+    },
+    {
+      "path": "README_本体読み込み順へ正式統合.txt",
+      "size": 893,
+      "sha256": "93adecefed397f1fe5fb22873fb6ada3f6f1f3e20d27035c744d62a2b0c31d86"
+    },
+    {
+      "path": "README_正式統合_v3.1.txt",
+      "size": 757,
+      "sha256": "3a42fc02d5654467c70ba4342460156f7c7b9a25fd07e81fa209cde91e628fd1"
+    },
+    {
+      "path": "README_統合修正版.txt",
+      "size": 538,
+      "sha256": "8729c29d26d4144705543df0f68e296b8e745045e11a6e6f12a2fdccd55b2ec4"
+    },
+    {
+      "path": "README_追加メニューv12.1.txt",
+      "size": 549,
+      "sha256": "69beeec0d47de54018c0784cccb4cfc203ecc42427c73f941f3882c7d3ebbb07"
+    },
+    {
+      "path": "README_追加メニュー正式化_v12.txt",
+      "size": 1418,
+      "sha256": "285ca3f8578f23a674efebaec00fc226f6d5bc3b98605e89ebf4319534f10e53"
+    },
+    {
+      "path": "README_通常起動を新HOMEシェルへ統一_FIELD03保護.txt",
+      "size": 846,
+      "sha256": "7be06d5ea762317ed8dff3525bcd0d53a670027f9ad82e4bc3132fe0842708c4"
+    },
+    {
+      "path": "STATIC_VERIFICATION_R0-02_v17.3.txt",
+      "size": 1598,
+      "sha256": "8ca5fba0359c74d48a7854aaf1adcdecfc4841dc1a7046ba47ded3d55872cdd8"
+    },
+    {
+      "path": "calendar-formal-v44.css",
+      "size": 38881,
+      "sha256": "84bc05a7e7a424e7bc5811ef71468d4bbf961045b94e79f4e8a0a9b08fd8d99c"
+    },
+    {
+      "path": "calendar-formal-v44.html",
+      "size": 4626,
+      "sha256": "be7b395201d229a3251f2565e9461789cdbbb3c07c2a58aa8cb4a9d821471a00"
+    },
+    {
+      "path": "calendar-formal-v44.js",
+      "size": 40897,
+      "sha256": "e4770b90cc2169ee18766696a69e9e71a18231f3ed46734a7ca875cd0aefb791"
+    },
+    {
+      "path": "index.html",
+      "size": 7144,
+      "sha256": "1afaa9df55db53fdd228540963121dbb6b3469d5acd63402c96bae03aadd15f9"
+    },
+    {
+      "path": "service-worker.js",
+      "size": 6982,
+      "sha256": "eb01e45f1983393d99db0b775fea3165f50bdfdf6ad5387dbda748b523b9ffb2"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size": 2344,
+      "sha256": "54b5500915e52d079231152cce7968a31de4edd84eb7c9360d9ae6b5f8d03546"
+    },
+    {
+      "path": "src/config/version.js",
+      "size": 413,
+      "sha256": "cdf12a4d09ea319ff683ca9af708b750218f325b6e3721cb0a06b3681961d114"
+    },
+    {
+      "path": "src/legacy/return-bridge-v17.js",
+      "size": 3450,
+      "sha256": "149b8360fdb5935ea191f7a5720b77f9bb42b9464a3c63c8f370dba30a7b4d88"
+    },
+    {
+      "path": "src/router.js",
+      "size": 4978,
+      "sha256": "2531b12379216cce527c86dc6582831e7345570e58c6cbbb9824bf96ced6fa7d"
+    },
+    {
+      "path": "src/shell/about-outbase.js",
+      "size": 5628,
+      "sha256": "2116c54fb8e0d2d0c30d7e926c61e4336f291ca3a2525c1f334022aa6c49df0c"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size": 13928,
+      "sha256": "526f661aa9d7bb607f6696cf93f48e4618b4f6eed94eaba67c187d432f9f78e3"
+    },
+    {
+      "path": "src/shell/add-menu-v12.js",
+      "size": 5273,
+      "sha256": "279ae6359c8c6888dc6b1828e2f266f5a1f2a9dcfe18c56d645a677de7a11c91"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size": 1547,
+      "sha256": "1aba9cac72036fcf894e499b39dd7bd0107a768e7ad475e1373377240398a48a"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size": 13071,
+      "sha256": "b03fb5d6128a486030b2221e06037ae2be213a06f7103f3aef9b16fa8b63dde5"
+    },
+    {
+      "path": "src/shell/search-route-v11.js",
+      "size": 15392,
+      "sha256": "186426419db8cc4b57b6b5de9492b498f963ec75f561cb532f5cc976d73cc3fe"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size": 8431,
+      "sha256": "757b7749e35049281d9079e27d69b8e0630d2688d995dc4d97a914b9d18f8214"
+    },
+    {
+      "path": "src/shell/vault-route-v13.js",
+      "size": 16542,
+      "sha256": "c26943e5ddffb0ac1573eb929fcaa85a235ee99d9d018359a5cb2d945e3a3847"
+    },
+    {
+      "path": "style-about-outbase.css",
+      "size": 4568,
+      "sha256": "62ccf4c8b982d47adf56af0d47298304688cf4bffe37883d2435ecfd3a3aa85d"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size": 65490,
+      "sha256": "132a16a7ab5d96dd104d29e24d42b7964e5322b3deeccec0a4d39009a9caba27"
+    }
+  ]
+}

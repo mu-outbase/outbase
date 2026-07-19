@@ -25,16 +25,12 @@
   };
 
   const categoryIcon=Object.freeze({
-    weather:'☀',
-    route:'↗',
-    gear:'▦',
-    meal:'⌁',
-    shopping:'✓',
-    pet:'●',
-    parking:'P',
-    ticket:'券',
-    note:'…'
+    weather:'☀',route:'↗',gear:'▦',meal:'⌁',shopping:'✓',pet:'●',
+    parking:'P',ticket:'券',note:'…'
   });
+  const cache=new Map();
+  const baselineJobs=new Map();
+  const CACHE_TTL_MS=30000;
 
   const date=value=>{
     const d=new Date(value||'');
@@ -56,6 +52,86 @@
     return globalThis.OUTBASE_ROUTER.legacyUrl(name,params);
   }
 
+  function location(activity){
+    const meta=activity?.metadata||{};
+    const plan=meta.legacy_plan||{};
+    const core=meta.legacy_core_activity||{};
+    return String(plan.location||plan.placeName||core.location||meta.location||'').trim();
+  }
+
+  function sections(items,domain){
+    const output=[];
+    for(const item of items||[]){
+      const key=item.category||'note';
+      let group=output.find(section=>section.key===key);
+      if(!group){
+        group={key,label:domain.CATEGORY_LABELS[key]||item.title||'準備',items:[]};
+        output.push(group);
+      }
+      group.items.push(item);
+    }
+    return output;
+  }
+
+  function cached(activityId){
+    const value=cache.get(activityId);
+    if(!value||Date.now()-value.createdAt>=CACHE_TTL_MS)return null;
+    return value.result;
+  }
+
+  async function loadFast(activityId,{force=false}={}){
+    if(!activityId)return {status:'missing'};
+    if(!force){
+      const value=cached(activityId);
+      if(value)return value;
+    }
+    try{
+      const repos=globalThis.OUTBASE_REPOSITORIES_V160;
+      const utils=globalThis.OUTBASE_DOMAIN_UTILS_V162;
+      const domain=globalThis.OUTBASE_PREPARATION_DOMAIN_V162;
+      if(!repos||!utils||!domain)throw new Error('preparation_dependencies_not_ready');
+
+      const [rawActivity,calendarRows,currentItems]=await Promise.all([
+        repos.activities.get(activityId),
+        repos.calendarEntries.byIndex('activity_id',activityId),
+        domain.items(activityId)
+      ]);
+      if(!rawActivity||rawActivity.deleted_at)return {status:'not_found'};
+
+      const activity=utils.publicActivity(rawActivity);
+      const calendar=(calendarRows||[])
+        .filter(row=>!row.deleted_at)
+        .sort((a,b)=>Number(new Date(a.start_at||0))-Number(new Date(b.start_at||0)));
+      const first=calendar[0]||null;
+      const item=Object.freeze({
+        ...activity,
+        startAt:activity.startAt||utils.iso(first?.start_at),
+        endAt:activity.endAt||utils.iso(first?.end_at||first?.start_at),
+        place:location(activity)
+      });
+      const effective=currentItems.length?currentItems:domain.baselineFor(activity);
+      const completed=effective.filter(row=>row.status==='completed'||row.completedAt).length;
+      const summary=Object.freeze({
+        activity:item,
+        items:Object.freeze([...effective]),
+        sections:Object.freeze(sections(effective,domain).map(section=>Object.freeze({
+          ...section,items:Object.freeze([...section.items])
+        }))),
+        total:effective.length,
+        completed,
+        pending:Math.max(0,effective.length-completed),
+        progress:effective.length?Math.round(completed/effective.length*100):0,
+        persisted:currentItems.length>0,
+        generatedAt:new Date().toISOString()
+      });
+      const result=Object.freeze({status:'ready',summary,item});
+      cache.set(activityId,{createdAt:Date.now(),result});
+      return result;
+    }catch(error){
+      return {status:'error',error};
+    }
+  }
+
   async function activateContext(item){
     if(!item?.id)return false;
     try{
@@ -73,34 +149,19 @@
     }
   }
 
-  async function load(activityId){
-    if(!activityId)return {status:'missing'};
-    try{
-      await globalThis.OUTBASE_PREPARATION_DOMAIN_V162?.ensureBaseline?.(activityId);
-      const [summary,detail]=await Promise.all([
-        globalThis.OUTBASE_PREPARATION_SCREEN_MODEL_V162.build(activityId),
-        globalThis.OUTBASE_ACTIVITY_DETAIL_SCREEN_MODEL_V165.build(activityId)
-      ]);
-      if(!summary||detail?.status!=='ready'||!detail?.activity)return {status:'not_found'};
-      return {status:'ready',summary,item:detail.activity};
-    }catch(error){
-      return {status:'error',error};
-    }
-  }
-
   function itemMarkup(item){
     const done=item.status==='completed'||Boolean(item.completedAt);
     const enabled=Boolean(item.id);
     return `<button type="button" class="ob17-prep-item ${done?'done':''}" data-ob17-prep-toggle="${esc(item.id||'')}" ${enabled?'':'disabled'}>
       <span class="ob17-check">${done?icons.check:''}</span>
-      <span class="ob17-prep-copy"><b>${esc(item.title||'準備')}</b><small>${done?'完了':'未完了'}</small></span>
+      <span class="ob17-prep-copy"><b>${esc(item.title||'準備')}</b><small>${done?'完了':enabled?'未完了':'準備中'}</small></span>
     </button>`;
   }
 
   function sectionsMarkup(summary){
-    const sections=summary?.sections||[];
-    if(!sections.length)return '<p class="ob17-empty">準備項目はまだありません。</p>';
-    return sections.map(section=>`
+    const rows=summary?.sections||[];
+    if(!rows.length)return '<p class="ob17-empty">準備項目はまだありません。</p>';
+    return rows.map(section=>`
       <section class="ob17-prep-section">
         <header><span>${esc(categoryIcon[section.key]||'•')}</span><h2>${esc(section.label||'準備')}</h2></header>
         <div>${(section.items||[]).map(itemMarkup).join('')}</div>
@@ -169,12 +230,33 @@
     </section>`;
   }
 
+  function persistBaseline(main,activityId){
+    if(!activityId||baselineJobs.has(activityId))return;
+    const domain=globalThis.OUTBASE_PREPARATION_DOMAIN_V162;
+    if(!domain?.ensureBaseline)return;
+    const job=Promise.resolve()
+      .then(()=>domain.ensureBaseline(activityId))
+      .then(async result=>{
+        cache.delete(activityId);
+        if(result?.status!=='ready'||!main?.isConnected)return;
+        const current=main.querySelector('.ob17-preparation')?.dataset?.ob17ActivityId||'';
+        if(current!==String(activityId))return;
+        const refreshed=await loadFast(activityId,{force:true});
+        main.innerHTML=markup(refreshed);
+        bind(main,refreshed);
+      })
+      .catch(()=>{})
+      .finally(()=>baselineJobs.delete(activityId));
+    baselineJobs.set(activityId,job);
+  }
+
   async function rerender(main,activityId,{preserveScroll=true}={}){
     const y=preserveScroll?window.scrollY:0;
     main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
-    const result=await load(activityId);
+    const result=await loadFast(activityId);
     main.innerHTML=markup(result);
     bind(main,result);
+    if(result.status==='ready'&&!result.summary.persisted)setTimeout(()=>persistBaseline(main,activityId),0);
     if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
   }
 
@@ -189,6 +271,7 @@
       status:done?'pending':'completed',
       completed_at:done?null:new Date().toISOString()
     });
+    cache.delete(result.item.id);
     globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.(`activity:${result.item.id}`);
     await rerender(main,result.item.id);
   }
