@@ -804,3 +804,155 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
   .ob-search-result{grid-template-columns:36px minmax(0,1fr) 16px}
   .ob-search-result-meta{display:none}
 }
+
+
+/* =========================================================
+   OUTBASE global Add menu v12
+   PLAN / START / RECORD / ITEM
+   ========================================================= */
+.ob12-add-sheet{
+  max-height:min(82dvh,690px)!important;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom))!important;
+  background:#fbfaf7!important;
+}
+.ob12-add-head{
+  align-items:flex-start!important;
+  margin-bottom:12px!important;
+}
+.ob12-add-head>div>small{
+  display:block;
+  margin-bottom:2px;
+  color:#878d89;
+  font-size:8.5px;
+  font-weight:800;
+  letter-spacing:.17em;
+}
+.ob12-add-head h2{
+  margin:0!important;
+  color:#171b19!important;
+  font-size:25px!important;
+  line-height:1.2!important;
+}
+.ob12-add-head p{
+  margin:4px 0 0;
+  color:#6b716d;
+  font-size:10px;
+}
+.ob12-add-head>button{
+  flex:0 0 auto;
+  width:38px!important;
+  height:38px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #e6e2da!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  color:#252b27!important;
+  font-size:22px!important;
+}
+
+.ob12-add-actions{
+  display:grid;
+  gap:8px;
+}
+.ob12-add-actions>button{
+  min-height:76px;
+  padding:11px 12px;
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) 18px;
+  align-items:center;
+  gap:11px;
+  border:1px solid #e4e1da;
+  border-radius:18px;
+  background:#fff;
+  color:#171b19;
+  text-align:left;
+  box-shadow:0 5px 15px rgba(35,42,38,.035);
+}
+.ob12-add-actions>button>svg{
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:#7a817c;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.ob12-add-icon{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+}
+.ob12-add-icon svg{
+  width:22px;
+  height:22px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.75;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.ob12-add-actions>button>span:nth-child(2){
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+.ob12-add-actions small{
+  color:#8a8f8c;
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.ob12-add-actions b{
+  color:#171b19;
+  font-size:13px;
+  line-height:1.35;
+}
+.ob12-add-actions em{
+  overflow:hidden;
+  color:#747a76;
+  font-size:9.5px;
+  font-style:normal;
+  line-height:1.35;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.ob12-add-actions .tone-plan .ob12-add-icon{
+  color:#a87318;
+  background:#faf3e4;
+}
+.ob12-add-actions .tone-start .ob12-add-icon{
+  color:#174d31;
+  background:#edf4ef;
+}
+.ob12-add-actions .tone-record .ob12-add-icon{
+  color:#3f7080;
+  background:#edf5f7;
+}
+.ob12-add-actions .tone-gear .ob12-add-icon{
+  color:#55764a;
+  background:#eff4ec;
+}
+
+@media(max-width:370px){
+  .ob12-add-sheet{
+    max-height:84dvh!important;
+  }
+  .ob12-add-actions>button{
+    min-height:71px;
+    grid-template-columns:39px minmax(0,1fr) 16px;
+    padding:10px;
+  }
+  .ob12-add-icon{
+    width:39px;
+    height:39px;
+  }
+  .ob12-add-actions em{
+    font-size:9px;
+  }
+}
