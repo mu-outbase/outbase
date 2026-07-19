@@ -1868,3 +1868,27 @@ body.outbaseNorth .ob3-shell[data-ob6-route="activity"]{
     height:136px!important;
   }
 }
+
+
+/* =========================================================
+   OUTBASE Activity detail v16.3 —詳細画像高精細化LOCK
+   - 詳細だけ高精細CC0画像を優先
+   - 通信不可時は既存のローカル画像へ自動フォールバック
+   - 実写真がある予定は実写真を最優先
+   ========================================================= */
+.ob16-cover-media.has-default-cover:not(.has-photo){
+  background-image:
+    linear-gradient(180deg,rgba(250,248,241,.03),rgba(5,42,29,.08)),
+    url("https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Fuji_Kawaguchi_452.JPG/1280px-Fuji_Kawaguchi_452.JPG"),
+    var(--ob-default-cover)!important;
+  background-size:cover,cover,cover!important;
+  background-position:center 42%,center 42%,center 46%!important;
+  background-repeat:no-repeat!important;
+  filter:saturate(1.035) contrast(1.03)!important;
+}
+.ob16-cover-media.has-photo{
+  background-image:var(--ob-preview-image,var(--ob-default-cover))!important;
+  background-size:cover!important;
+  background-position:center!important;
+  filter:none!important;
+}

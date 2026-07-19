@@ -56,9 +56,10 @@
               <summary>
                 <span><small>SERVICES</small><b>外部サービス・データ提供元</b></span>
               </summary>
-              <div>
-                <p>地図、天気、外部リンクなど、提供元が画面付近での表示を求めるものは、該当画面のクレジット表示を優先します。</p>
-                <p>一覧へ集約できる提供元情報は、外部参照監査に合わせて追加します。</p>
+              <div class="ob-about-license-list">
+                <article><b>Open-Meteo</b><span>天気予報データ</span></article>
+                <article><b>Wikimedia Commons</b><span>既定の詳細風景画像・CC0</span></article>
+                <p>地図、外部リンクなど、提供元が画面付近での表示を求めるものは、該当画面のクレジット表示を優先します。</p>
               </div>
             </details>
 
@@ -136,5 +137,5 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 
-  globalThis.OUTBASE_ABOUT=Object.freeze({open,close,version:'about-v3-home-visual-lock'});
+  globalThis.OUTBASE_ABOUT=Object.freeze({open,close,version:'about-v4-external-source-lock'});
 })();
