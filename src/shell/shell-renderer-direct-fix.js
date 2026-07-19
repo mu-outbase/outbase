@@ -57,6 +57,34 @@
     return `./calendar-formal-v44.html?${query.toString()}`;
   }
 
+
+  function shellModelApi(){
+    return globalThis.OUTBASE_SHELL_MODEL_V166||
+      globalThis.OUTBASE_SHELL_MODEL_V165||
+      globalThis.OUTBASE_SHELL_MODEL_V164;
+  }
+
+  function ensureShellSkeleton(root,route='preparation'){
+    let shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
+    if(shell)return shell;
+    if(!root)return null;
+    root.innerHTML=`<div class="ob3-shell ob6-north" data-ob6-route="${route}"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>`;
+    return root.querySelector?.(':scope > .ob3-shell')||root.querySelector?.('.ob3-shell');
+  }
+
+  async function mountPreparationShell(root,options={}){
+    const modelApi=shellModelApi();
+    if(!modelApi?.build)throw new Error('OUTBASE shell model is not ready');
+    const model=await modelApi.build(options);
+    const shell=ensureShellSkeleton(root,model?.route?.name||'preparation');
+    if(!shell)throw new Error('OUTBASE preparation shell is not ready');
+    shell.dataset.ob6Route=model?.route?.name||'preparation';
+    const main=shell.querySelector('.ob3-main');
+    if(main)main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
+    apply(root,model);
+    return model;
+  }
+
   function ensureCopyright(main){
     if(!main)return;
 
@@ -130,6 +158,8 @@
       ...base,
       __directFix:true,
       async mount(root,options={}){
+        const requested=globalThis.OUTBASE_ROUTER?.current?.();
+        if(requested?.name==='preparation')return mountPreparationShell(root,options);
         const model=await base.mount(root,options);
         apply(root,model);
         return model;

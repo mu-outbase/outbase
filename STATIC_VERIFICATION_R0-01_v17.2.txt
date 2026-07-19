@@ -1,0 +1,36 @@
+OUTBASE v166.31 / R0-01 準備白画面修正 v17.2 静的検証
+
+対象ファイル数（検証ファイル作成前）：60
+JavaScript構文検査：OK（14ファイル）
+空ファイル検査：OK
+UTF-8読込検査：OK
+
+再現原因確認：OK
+・共通shell-rendererのbody()は preparation を分岐せずHOMEへフォールスルー
+・preparationルートではHOMEモデルがない
+・preparation-route-v17.jsは base.mount()完了後に描画するため、その前段例外で到達不能
+
+修正経路検査：OK
+・preparationルートで旧base.mountを実行しない
+・共通シェルを安全に確保
+・準備読込表示を生成
+・preparation-route-v17.jsへ引き渡し
+
+Nodeモック回帰テスト：PASS
+・旧base.mount呼出し 0回
+・route preparation 維持
+・共通ヘッダー表示
+・下ナビ5項目表示
+・予定名表示
+・活動開始表示
+・準備項目表示
+・準備画面class付与
+
+保護領域のコード変更：なし
+・FIELD03 legacy版番号 outbase-field03-flow-v171 を維持
+・HOME v36 r34 domain版番号を維持
+・カレンダー本体v44を維持
+
+GitHub main：未変更
+Android実機：未確認
+R0判定：一本線再確認待ち
