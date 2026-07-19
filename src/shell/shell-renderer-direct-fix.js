@@ -48,7 +48,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-common-header-v1'});
+    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-common-shell-v2'});
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];
       if(value)query.set(key,String(value));
@@ -56,29 +56,61 @@
     return `./calendar-formal-v44.html?${query.toString()}`;
   }
 
+  function ensureCopyright(main){
+    if(!main)return;
+
+    main.querySelectorAll('#outbaseCopyrightFooter').forEach((node,index)=>{
+      if(index>0)node.remove();
+    });
+
+    let footer=main.querySelector('#outbaseCopyrightFooter');
+    if(!footer){
+      footer=document.createElement('button');
+      footer.id='outbaseCopyrightFooter';
+      footer.type='button';
+      footer.className='ob-copyright-footer';
+      footer.textContent='© 2026 OUTBASE';
+      footer.setAttribute('aria-label','このアプリについて');
+      footer.addEventListener('click',()=>globalThis.OUTBASE_ABOUT?.open?.());
+    }
+
+    const reserve=main.querySelector('.ob36-nav-reserve');
+    if(reserve){
+      if(footer.nextElementSibling!==reserve)main.insertBefore(footer,reserve);
+    }else if(main.lastElementChild!==footer){
+      main.appendChild(footer);
+    }
+  }
+
   function apply(root,model){
     const shell=root?.querySelector?.('.ob3-shell');
     if(!shell)return;
 
     const route=model?.route?.name||'home';
-
     const header=shell.querySelector('.ob3-header');
+    const main=shell.querySelector('.ob3-main');
+    const nav=shell.querySelector('.ob3-nav');
+
     if(header){
-      header.classList.add('ob-common-header-lock');
+      header.className='ob3-header ob-common-header-lock';
       header.innerHTML=commonHeaderHtml();
     }
 
-    const nav=shell.querySelector('.ob3-nav');
-    if(nav){
-      nav.classList.add('ob-nav-five','ob-nav-direct');
-      nav.innerHTML=navHtml(route);
-    }
+    if(main){
+      // HOME previously rendered its own OUTBASE topbar inside the page.
+      // The shared shell header is now the only header.
+      main.querySelectorAll('.ob36-topbar').forEach(node=>node.remove());
 
-    if(route==='calendar'){
-      const main=shell.querySelector('.ob3-main');
-      if(main){
+      if(route==='calendar'){
         main.innerHTML=`<section class="ob-calendar-direct" aria-label="カレンダー"><iframe id="outbaseIntegratedCalendar" title="OUTBASE カレンダー" src="${calendarUrl(model.route)}" loading="eager"></iframe></section>`;
       }
+
+      ensureCopyright(main);
+    }
+
+    if(nav){
+      nav.className='ob3-nav ob36-nav ob-nav-five ob-nav-direct';
+      nav.innerHTML=navHtml(route);
     }
   }
 
@@ -107,7 +139,7 @@
       if(event.data?.type!=='OUTBASE_CALENDAR_RESIZE')return;
       const frame=document.getElementById('outbaseIntegratedCalendar');
       if(!frame)return;
-      frame.style.height=`${Math.max(760,Number(event.data.height)||0)}px`;
+      frame.style.height=`${Math.max(420,Number(event.data.height)||0)}px`;
     });
   }
 

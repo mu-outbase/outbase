@@ -294,3 +294,105 @@ html.outbaseCalendarIntegrated .ob-calendar-integrated iframe{
     font-size:8.5px!important;
   }
 }
+
+
+/* =========================================================
+   OUTBASE common shell LOCK v4 — FINAL AUTHORITY
+   ========================================================= */
+
+/* HOME must never show its old page-local header. */
+.ob3-main > .ob36-topbar,
+.ob3-main .ob36-topbar{
+  display:none!important;
+}
+
+/* Exactly one shared shell header. */
+.ob3-header.ob-common-header-lock{
+  position:sticky!important;
+  top:0!important;
+  z-index:140!important;
+  min-height:78px!important;
+  margin:0!important;
+}
+
+/* Five equal destinations, including the right-edge Vault. */
+.ob3-nav.ob-nav-direct{
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  display:grid!important;
+  grid-template-columns:repeat(5,1fr)!important;
+  grid-auto-columns:1fr!important;
+  width:min(calc(100vw - 32px),398px)!important;
+  min-height:68px!important;
+  padding:
+    7px
+    14px
+    calc(7px + env(safe-area-inset-bottom))!important;
+  column-gap:0!important;
+  overflow:visible!important;
+  box-sizing:border-box!important;
+}
+.ob3-nav.ob-nav-direct > button{
+  position:relative!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:52px!important;
+  margin:0!important;
+  padding:2px 2px!important;
+  transform:none!important;
+  overflow:visible!important;
+  box-sizing:border-box!important;
+}
+.ob3-nav.ob-nav-direct > button:first-child,
+.ob3-nav.ob-nav-direct > button:last-child{
+  padding-inline:4px!important;
+}
+.ob3-nav.ob-nav-direct > button > span:last-child{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:visible!important;
+  white-space:nowrap!important;
+  text-align:center!important;
+  font-size:8.8px!important;
+  line-height:1.1!important;
+  letter-spacing:0!important;
+}
+
+/* Copyright is shell-owned and is inserted before HOME's nav reserve. */
+.ob3-main .ob-copyright-footer{
+  display:block!important;
+  width:100%!important;
+  margin:18px auto 8px!important;
+  padding:10px 16px 8px!important;
+  border:0!important;
+  background:transparent!important;
+  color:#858b87!important;
+  font-size:10px!important;
+  line-height:1.4!important;
+  letter-spacing:.04em!important;
+  text-align:center!important;
+}
+
+/* The iframe height is controlled by the calendar's resize message. */
+.ob-calendar-direct iframe{
+  display:block!important;
+  width:100%!important;
+  height:720px;
+  min-height:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+
+@media(max-width:370px){
+  .ob3-nav.ob-nav-direct{
+    width:calc(100vw - 20px)!important;
+    padding-left:11px!important;
+    padding-right:11px!important;
+  }
+  .ob3-nav.ob-nav-direct > button > span:last-child{
+    font-size:8.2px!important;
+  }
+}
