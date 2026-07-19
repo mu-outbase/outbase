@@ -835,9 +835,6 @@ body{background:var(--paper)}
 .month-command{
   grid-template-columns:38px 38px minmax(0,1fr) 38px 44px 44px !important;
 }
-.month-home-back{
-  background:#fbfaf7;
-}
 .month-today{
   height:38px;border:1px solid var(--line);border-radius:12px;
   background:#fff;color:var(--green);font-weight:900;font-size:12px;
@@ -1282,4 +1279,19 @@ html.outbaseCalendarEmbedded body{
 }
 html.outbaseCalendarEmbedded .calendar-shell{
   overflow:visible!important;
+}
+
+
+/* =========================================================
+   Calendar HOME-back removal LOCK v8
+   The calendar toolbar has no route-to-HOME button.
+   ========================================================= */
+.month-command{
+  grid-template-columns:38px minmax(0,1fr) 38px 44px 44px!important;
+}
+@media(max-width:560px){
+  .month-command{
+    grid-template-columns:34px minmax(0,1fr) 34px 40px 40px!important;
+    gap:4px;
+  }
 }

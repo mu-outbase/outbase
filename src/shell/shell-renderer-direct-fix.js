@@ -49,7 +49,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-height-authority-v1'});
+    const query=new URLSearchParams({embedded:'1',source:'shell-renderer-fix',release:'formal-v44-back-remove-v1'});
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];
       if(value)query.set(key,String(value));
