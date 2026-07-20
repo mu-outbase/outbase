@@ -3,7 +3,7 @@
   const listeners=new Set();
   const legacyToRoute=Object.freeze({plan:'home',search:'search',prep:'activity',record:'record',memory:'vault'});
   const routeToLegacy=Object.freeze({home:'plan',search:'search',activity:'prep',preparation:'prep',record:'record',calendar:'plan',vault:'memory'});
-  const SHELL_ROUTES=new Set(['home','search','vault','activity','preparation','calendar']);
+  const SHELL_ROUTES=new Set(['home','search','vault','activity','preparation','record','calendar']);
   const RESERVED=new Set(['shell','view']);
   const SCROLL_KEY='outbaseScrollY';
   const CONTEXT_KEY='outbase_activity_context_v1';

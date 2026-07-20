@@ -1,0 +1,31 @@
+OUTBASE v19.0 static verification
+================================
+
+PASS
+----
+- node --check: ZIP内の全JavaScript
+- index.html: Python HTMLParserで解析
+- style-calendar-route-v3.css: 開閉括弧数一致
+- router: recordがSHELL_ROUTESに含まれる
+- module manifest: execution-route-v19.jsがshell読込対象
+- service worker: execution-route-v19.jsがCORE_ASSETSに含まれる
+- preparation route: 活動開始がshell recordへnavigate
+- activity route: 活動開始／記録導線がshell recordへnavigate
+- execution route: 実予定のactivity detailを読み込む
+- execution route: browser back + direct-open fallbackを実装
+- execution route: pageshow時のaria-busy／is-launching解除を実装
+- version/cache: v19.0識別子へ更新
+- old FIELD03 legacy version: outbase-field03-flow-v171を維持
+
+NOT TESTED
+----------
+- Android実機表示
+- Androidブラウザ履歴
+- 端末位置情報許可／拒否
+- PWA更新反映
+- Codexで移植するGPS・地図・メディア・IndexedDB記録中核
+
+LIMITATION
+----------
+新実行画面のタイマー状態は画面設計確認用でsessionStorageのみ。
+本記録データを作成せず、旧FIELD03の記録状態にも影響しない。

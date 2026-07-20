@@ -123,10 +123,10 @@
   };
 
   const preparationHref=item=>routeUrl('preparation',item,{returnShell:'activity',returnActivityId:item?.id});
-  const startHref=item=>legacyUrl('record',item,{
-    sheet:'start',returnShell:'activity',returnActivityId:item?.id
+  const startHref=item=>routeUrl('record',item,{
+    returnShell:'activity',returnActivityId:item?.id
   });
-  const recordHref=item=>legacyUrl('record',item,{
+  const recordHref=item=>routeUrl('record',item,{
     returnShell:'activity',returnActivityId:item?.id
   });
 
@@ -161,7 +161,7 @@
   }
 
   function state(item){
-    if (['active','paused'].includes(item.state)) return {phase:'実行中', title:'今は、残す。', label:'記録を開く', href:recordHref(item), context:true, icon:icons.record, sub:'写真・音声・メモをその場で残します。'};
+    if (['active','paused'].includes(item.state)) return {phase:'実行中', title:'今は、残す。', label:'記録を開く', href:recordHref(item), context:true, shell:'record', icon:icons.record, sub:'写真・音声・メモをその場で残します。'};
     if (['organizing','completed','archived'].includes(item.state)) return {phase:'思い出', title:'残したものを振り返る。', label:'記録と思い出を見る', href:'#ob16-memory', context:false, icon:icons.photo, sub:'記録・写真・改善点をまとめて確認します。'};
     return {phase:item.stateLabel || '準備中', title:'次にやることを、迷わない。', label:'準備を進める', href:preparationHref(item), context:true, shell:'preparation', icon:icons.prep, sub:'持ち物・天気・料理・買い物を確認します。'};
   }
@@ -192,13 +192,13 @@
     const planned=!['active','paused','organizing','completed','archived'].includes(item.state);
     const primaryAttr=s.context?` data-ob17-context="${s.shell||'legacy'}"`:'';
     const first=planned
-      ?`<a href="${esc(startHref(item))}" data-ob17-context="legacy">${icons.photo}<span>活動開始</span></a>`
+      ?`<a href="${esc(startHref(item))}" data-ob17-context="record">${icons.photo}<span>活動開始</span></a>`
       :`<a href="${esc(preparationHref(item))}" data-ob17-context="preparation">${icons.prep}<span>準備</span></a>`;
     return `<section class="ob16-next-card"><small>今やること</small><h2>${esc(s.title)}</h2><p>${esc(s.sub)}</p>
       <a class="ob16-primary-action" href="${esc(s.href)}"${primaryAttr}><span>${s.icon}</span><b>${esc(s.label)}</b>${icons.arrow}</a>
       <div class="ob16-secondary-actions">
         ${first}
-        <a href="${esc(recordHref(item))}" data-ob17-context="legacy">${icons.record}<span>記録</span></a>
+        <a href="${esc(recordHref(item))}" data-ob17-context="record">${icons.record}<span>記録</span></a>
         <a href="${esc(item.calendarUrl)}">${icons.calendar}<span>カレンダー</span></a>
       </div>
     </section>`;
@@ -218,7 +218,7 @@
 
   function memory(item){
     const records = (item.records || []).slice(0,3);
-    return `<section class="ob16-section-card" id="ob16-memory"><div class="ob16-section-head"><div><small>残したもの</small><h2>記録・思い出</h2></div><a href="${esc(recordHref(item))}" data-ob17-context="legacy">記録を開く ›</a></div>
+    return `<section class="ob16-section-card" id="ob16-memory"><div class="ob16-section-head"><div><small>残したもの</small><h2>記録・思い出</h2></div><a href="${esc(recordHref(item))}" data-ob17-context="record">記録を開く ›</a></div>
       <div class="ob16-memory-metrics">
         <div>${icons.record}<small>記録</small><b>${Number(item.recordCount||0)}</b></div>
         <div>${icons.photo}<small>写真・動画</small><b>${Number(item.media?.types?.photo||0)+Number(item.media?.types?.video||0)}</b></div>
@@ -226,7 +226,7 @@
         <div>${icons.cook}<small>献立</small><b>${Number(item.mealCount||0)}</b></div>
       </div>
       <div class="ob16-record-list">${records.length?records.map(r=>`<article><span>${icons.record}</span><div><small>${esc(short(r.occurredAt))}</small><b>${esc(recordLabel(r))}</b></div></article>`).join(''):'<p>記録はまだありません。</p>'}</div>
-      <a class="ob16-card-action" href="${esc(recordHref(item))}" data-ob17-context="legacy"><span>${icons.record}</span><span><b>記録を残す・見る</b><small>写真・動画・音声・メモ</small></span>${icons.arrow}</a>
+      <a class="ob16-card-action" href="${esc(recordHref(item))}" data-ob17-context="record"><span>${icons.record}</span><span><b>記録を残す・見る</b><small>写真・動画・音声・メモ</small></span>${icons.arrow}</a>
     </section>`;
   }
 
@@ -261,11 +261,19 @@
         },{transition:false,skipTransition:true});
         return;
       }
-      const record=String(link.href||'').includes('tab=record');
-      activateContext(item,{source:'activity-to-legacy',record});
+      if(mode==='record'){
+        event.preventDefault();
+        const context=activityContext(item,{returnShell:'activity',returnActivityId:item.id});
+        activateContext(item,{source:'activity-to-execution',record:false});
+        globalThis.OUTBASE_ROUTER.navigate('record',contextApi()?.params?.(context)||{
+          activityId:item.id,planId:legacyPlanId(item),returnShell:'activity',returnActivityId:item.id
+        },{transition:false,skipTransition:true});
+        return;
+      }
+      activateContext(item,{source:'activity-to-legacy',record:false});
       link.setAttribute('aria-busy','true');
       link.classList.add('is-launching');
-      // Native anchor navigation remains authoritative for FIELD03/legacy routes.
+      // Native anchor navigation remains authoritative for remaining legacy settings.
     }));
   }
 

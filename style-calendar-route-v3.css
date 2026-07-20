@@ -2716,3 +2716,130 @@ body.outbaseNorth .ob3-main.ob3-main-preparation{
   .ob17-prep-heading h1{font-size:17.5px}
   .ob18-context-chip{max-width:145px}
 }
+
+/* =========================================================
+   OUTBASE R3 v19.0 — New Execution Shell
+   FIELD03 UI is frozen; this screen fixes the current visual grammar first.
+   ========================================================= */
+.ob3-main.ob3-main-record{
+  padding:0!important;
+  background:
+    radial-gradient(circle at 88% 4%,rgba(214,173,78,.10),transparent 24%),
+    linear-gradient(180deg,#fbfaf7 0%,#f8f6f0 100%);
+}
+.ob19-execution{
+  --ob19-green:#15573d;
+  --ob19-deep:#0d3d2f;
+  --ob19-gold:#d2a23c;
+  --ob19-ink:#171b19;
+  --ob19-muted:#6e746f;
+  --ob19-line:#e6e2da;
+  width:min(100%,760px);
+  margin:0 auto;
+  padding:15px 15px calc(108px + env(safe-area-inset-bottom));
+  color:var(--ob19-ink);
+}
+.ob19-execution svg{
+  width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
+.ob19-route-head{
+  min-height:46px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.ob19-back{
+  min-height:42px;padding:0 6px 0 0;display:inline-flex;align-items:center;gap:6px;
+  border:0;background:transparent;color:var(--ob19-green);font-size:12px;font-weight:820;
+}
+.ob19-back svg{width:20px;height:20px}
+.ob19-route-label{
+  padding:6px 10px;border-radius:999px;background:#edf3e8;color:#5e7e24;font-size:8px;font-weight:850;
+}
+.ob19-overview,
+.ob19-map-card,
+.ob19-session,
+.ob19-recording,
+.ob19-save{
+  border:1px solid var(--ob19-line)!important;
+  border-radius:22px!important;
+  background:rgba(255,255,255,.97)!important;
+  box-shadow:0 10px 26px rgba(35,42,38,.07)!important;
+}
+.ob19-overview{padding:15px}
+.ob19-overview-main{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;align-items:center}
+.ob19-overview-icon{
+  width:48px;height:48px;display:grid;place-items:center;border-radius:17px;
+  background:linear-gradient(145deg,#edf4e9,#f8faf5);color:var(--ob19-green);box-shadow:inset 0 0 0 1px #e4eadf;
+}
+.ob19-overview-icon svg{width:24px;height:24px}
+.ob19-overview-main small,
+.ob19-card-head small{display:block;color:#8a8e8b;font-size:8px;font-weight:850;letter-spacing:.16em}
+.ob19-overview-main h1{margin:2px 0 4px;font-size:20px;line-height:1.1;font-weight:830}
+.ob19-overview-main p{margin:1px 0;color:#686e69;font-size:10px;line-height:1.35}
+.ob19-engine-state{
+  margin-top:12px;padding:10px 11px;display:grid;grid-template-columns:9px minmax(0,1fr);gap:9px;align-items:start;
+  border-radius:15px;background:#f8f5ec;border:1px solid #eee5cf;
+}
+.ob19-engine-state>i{width:9px;height:9px;margin-top:3px;border-radius:50%;background:var(--ob19-gold);box-shadow:0 0 0 4px rgba(210,162,60,.13)}
+.ob19-engine-state b{display:block;font-size:10px;font-weight:800}
+.ob19-engine-state small{display:block;margin-top:2px;color:#7a7569;font-size:8px;line-height:1.35}
+.ob19-map-card{margin-top:11px;padding:13px}
+.ob19-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ob19-card-head h2{margin:2px 0 0;font-size:15px;font-weight:820}
+.ob19-card-head>span{max-width:48%;padding:5px 7px;border-radius:999px;background:#f2f1ed;color:#737975;font-size:7.5px;font-weight:760;text-align:right}
+.ob19-card-head>span.ready{background:#edf5ef;color:var(--ob19-green)}
+.ob19-map-stage{
+  position:relative;height:255px;margin-top:11px;overflow:hidden;border-radius:18px;border:1px solid #dfe3dc;
+  background:linear-gradient(145deg,#f1f0ea 0%,#ecebe5 100%);
+}
+.ob19-map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(104,116,108,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(104,116,108,.08) 1px,transparent 1px);background-size:34px 34px;transform:rotate(-8deg) scale(1.2)}
+.ob19-map-road{position:absolute;display:block;border-radius:999px;background:#fff;box-shadow:0 0 0 1px #d8d7d0}
+.ob19-map-road.r1{width:390px;height:26px;left:-70px;top:112px;transform:rotate(-18deg)}
+.ob19-map-road.r2{width:310px;height:18px;right:-95px;top:78px;transform:rotate(48deg)}
+.ob19-map-park{position:absolute;width:108px;height:78px;right:34px;bottom:35px;border-radius:20px;background:#dbe7ce;transform:rotate(-7deg)}
+.ob19-map-dot{position:absolute;left:48%;top:51%;width:20px;height:20px;border:5px solid #fff;border-radius:50%;background:#2f78d7;box-shadow:0 0 0 7px rgba(47,120,215,.18),0 4px 12px rgba(31,65,110,.25)}
+.ob19-map-stage p{position:absolute;left:10px;bottom:10px;margin:0;padding:6px 8px;border-radius:10px;background:rgba(22,41,32,.82);color:#fff;font-size:7.5px;font-weight:720;letter-spacing:.02em}
+.ob19-locate{
+  width:100%;min-height:54px;margin-top:10px;padding:7px 9px;display:grid;grid-template-columns:36px minmax(0,1fr) 18px;gap:9px;align-items:center;
+  border:1px solid #e4e2da;border-radius:16px;background:#fbfaf7;color:var(--ob19-green);text-align:left;
+}
+.ob19-locate>svg:first-child{width:36px;height:36px;padding:9px;border-radius:13px;background:#edf3e8}
+.ob19-locate span b{display:block;font-size:10.5px;font-weight:800}
+.ob19-locate span small{display:block;margin-top:2px;color:#717772;font-size:8px}
+.ob19-locate.is-loading{opacity:.65}
+.ob19-session{margin-top:11px;padding:13px}
+.ob19-metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ob19-metrics>div{padding:11px;border:1px solid #e5e3dc;border-radius:16px;background:#faf9f6}
+.ob19-metrics small{display:block;color:#787e79;font-size:8px;font-weight:720}
+.ob19-metrics b{display:block;margin-top:4px;color:var(--ob19-deep);font-size:22px;font-weight:770;letter-spacing:.04em}
+.ob19-metrics b i{font-size:9px;font-style:normal;font-weight:720}
+.ob19-controls{margin-top:10px;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:9px}
+.ob19-control{min-height:58px;padding:0 13px;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:17px;font-size:11px;font-weight:820}
+.ob19-control.primary{border:1px solid #0e5a3e;background:var(--ob19-green);color:#fff;box-shadow:0 8px 18px rgba(21,87,61,.18)}
+.ob19-control.secondary{border:1px solid #ddd9cf;background:#fff;color:#565c57}
+.ob19-control:disabled{opacity:.38}
+.ob19-control-note{margin:9px 2px 0;color:#858a86;font-size:7.5px;line-height:1.45}
+.ob19-recording{margin-top:11px;padding:13px}
+.ob19-quick-grid{margin-top:11px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ob19-quick{min-height:82px;padding:9px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #e3e1da;border-radius:16px;background:#fbfaf7;color:var(--ob19-deep)}
+.ob19-quick>span{width:34px;height:34px;display:grid;place-items:center;border-radius:13px;background:#eef3e9;color:var(--ob19-green)}
+.ob19-quick>span svg{width:18px;height:18px}
+.ob19-quick b{font-size:9.5px;font-weight:810}
+.ob19-quick small{color:#7d827e;font-size:7px}
+.ob19-quick.is-selected{transform:scale(.97);background:#edf5ef}
+.ob19-inline-notice{min-height:32px;margin:10px 0 0;padding:8px 9px;border-radius:12px;background:#f7f4ec;color:#7b7567;font-size:7.5px;line-height:1.4}
+.ob19-save{margin-top:11px;padding:11px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:9px;align-items:center}
+.ob19-save>span{width:38px;height:38px;display:grid;place-items:center;border-radius:14px;background:#edf3e8;color:var(--ob19-green)}
+.ob19-save b{display:block;font-size:10px;font-weight:800}
+.ob19-save small{display:block;margin-top:2px;color:#777d78;font-size:7.5px;line-height:1.35}
+.ob19-save em{padding:5px 7px;border-radius:999px;background:#f0efeb;color:#777b77;font-size:7px;font-style:normal;font-weight:800}
+.ob19-detail-button{width:100%;min-height:54px;margin-top:11px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border:1px solid #d9ded8;border-radius:17px;background:#fff;color:var(--ob19-green);font-size:10.5px;font-weight:820;box-shadow:0 7px 18px rgba(35,42,38,.05)}
+.ob19-error{margin-top:12px;padding:20px}.ob19-error h1{margin:0;font-size:20px}.ob19-error p{color:#707671}.ob19-error button{min-height:44px;padding:0 14px;border:0;border-radius:14px;background:var(--ob19-green);color:#fff;font-weight:800}
+.ob19-execution>.ob-copyright-footer,.ob3-main.ob3-main-record>.ob-copyright-footer{display:none!important}
+
+@media(max-width:380px){
+  .ob19-execution{padding-left:13px;padding-right:13px}
+  .ob19-map-stage{height:235px}
+  .ob19-quick-grid{gap:6px}
+  .ob19-quick{min-height:78px}
+  .ob19-overview-main h1{font-size:18px}
+}

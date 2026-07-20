@@ -58,6 +58,11 @@
     return contextApi()?.legacyUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.legacyUrl(name,{...context,...params});
   }
 
+  function routeUrl(name,item,params={}){
+    const context=activityContext(item,params);
+    return contextApi()?.shellUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.shellUrl(name,{...context,...params});
+  }
+
   function activityPlace(activity){
     const meta=activity?.metadata||{};
     const plan=meta.legacy_plan||{};
@@ -251,8 +256,8 @@
     const advanced=legacyUrl('activity',item,{
       returnShell:'preparation',returnActivityId:item.id
     });
-    const start=legacyUrl('record',item,{
-      sheet:'start',returnShell:'activity',returnActivityId:item.id
+    const start=routeUrl('record',item,{
+      returnShell:'preparation',returnActivityId:item.id
     });
 
     return `<section class="ob17-preparation" data-ob17-activity-id="${esc(item.id)}">
@@ -384,7 +389,12 @@
     }));
 
     main.querySelector('[data-ob17-start]')?.addEventListener('click',event=>{
-      prepareLegacyAnchor(item,event.currentTarget,{record:true,source:'preparation-to-record'});
+      event.preventDefault();
+      activateContext(item,{record:false,source:'preparation-to-execution'});
+      const context=activityContext(item,{returnShell:'preparation',returnActivityId:item.id});
+      globalThis.OUTBASE_ROUTER.navigate('record',contextApi()?.params?.(context)||{
+        activityId:item.id,planId:planId(item),returnShell:'preparation',returnActivityId:item.id
+      },{transition:false,skipTransition:true});
     });
 
     main.querySelector('[data-ob17-advanced]')?.addEventListener('click',event=>{

@@ -1,0 +1,98 @@
+{
+  "release": "OUTBASE v19.0 / R3-01 新実行画面統合",
+  "base": "GitHub main v18.3",
+  "generated_at_utc": "2026-07-20T02:07:48.989064+00:00",
+  "file_count": 18,
+  "files": [
+    {
+      "path": "README_R3-01_新実行画面統合_v19.0.txt",
+      "size_bytes": 2836,
+      "sha256": "a36a6f9ba0b20510a4b3379763d53df10a6b599f2b52f511dd2fc2935cd78cb7"
+    },
+    {
+      "path": "STATIC_VERIFICATION_R3-01_v19.0.txt",
+      "size_bytes": 1224,
+      "sha256": "b02cfed6a19a73945c2628873bc64ea744938557e3554a1c469e808769c2477f"
+    },
+    {
+      "path": "index.html",
+      "size_bytes": 7136,
+      "sha256": "8bb886d1dfa8a5d02c7cf008faffd92c065bc098645efae27df3365107cd321b"
+    },
+    {
+      "path": "service-worker.js",
+      "size_bytes": 7330,
+      "sha256": "75778e1b1d2fcf36e321a5d1a1415dda65b5793d7bb89d4b33ac7371731e0df6"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size_bytes": 2656,
+      "sha256": "bb25858149a8826350d6d87293894fa08fefc5e048e7df1b8be3646e3b7c6c9f"
+    },
+    {
+      "path": "src/config/version.js",
+      "size_bytes": 421,
+      "sha256": "6bc2ab4874991690d8b7ce9264ff1e2c0a04d6ee8447b5bc6a4db0fc2c04202c"
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size_bytes": 10363,
+      "sha256": "f775a0caf2fb09a4269c29b07c34de3504485e39dd0821a791707f1f8b76e7f8"
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size_bytes": 5498,
+      "sha256": "a7c5de5cdedffafb69de7c069182f462a55158e9edcc2abc5837aba20a6ab205"
+    },
+    {
+      "path": "src/router.js",
+      "size_bytes": 6147,
+      "sha256": "84f1b4d206cc245327fde0e25e0c37b2f1bebab24ba49369b08592185ff5613c"
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size_bytes": 1530,
+      "sha256": "41fce9a15ee4a65068d623b0e505ef7359acfaf3173b8015f5b3e1bd4a68900e"
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size_bytes": 2456,
+      "sha256": "afa1f69538d2cf9081398c6ff390a771da9aab6e9a28cd53baa65ab30e68a4f6"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size_bytes": 17829,
+      "sha256": "94c303dcddb19247a202efd3f45bbbee2a111675e88cabf936c54590ef0816ad"
+    },
+    {
+      "path": "src/shell/execution-route-v19.js",
+      "size_bytes": 18088,
+      "sha256": "e84b5ff936741cc75c24049ab495100b928771b43a582bd1d117b9782f8acee2"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size_bytes": 2589,
+      "sha256": "9aa457065f53f9fd3b8aeacd9c7749ed505b606e72aa3b37f687c670f0f0da1a"
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size_bytes": 9251,
+      "sha256": "4860290fc40e1c50082ff00fde665ba05de4ab2ab41dd79524d98c54566edf35"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size_bytes": 18713,
+      "sha256": "8e62427a9b431ab5c1cb3c7dd849996ba66b6d488d199f4365c96b85b813d69e"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size_bytes": 9491,
+      "sha256": "084bd247477431df15e42ebeaf75f47c413144bb8bf511b132d31dc427315687"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size_bytes": 87577,
+      "sha256": "a2388aa9a11c30027ff4616417c0e71d6ab2e5932cc343944517585c44067ec3"
+    }
+  ]
+}
