@@ -1,0 +1,26 @@
+OUTBASE R3-07 / v22.2 STATIC AND RUNTIME-MOCK VERIFICATION
+
+PASS JavaScript syntax: all included src/**/*.js
+PASS JavaScript syntax: service-worker.js
+PASS index.html parse
+PASS style-route-unification-v22.css brace balance
+PASS version/cache identifiers: v22.2 / v222
+PASS add-menu modal selection uses close({historyBack:false})
+PASS add-menu target replaces modal history entry
+PASS router route history removes outbaseModal
+PASS router prevents duplicate same-URL push
+PASS explicit returnShell is used by new-route back action
+PASS new route paints provisional UI before asynchronous payload resolution
+PASS route payload cache avoids repeated HOME/plan scans
+PASS detailed preparation no longer blocks on ensureBaseline before first display
+PASS search/vault activity links warm activity detail cache
+PASS HOME v36 r34 identifiers preserved
+PASS FIELD03 legacy identifier preserved
+PASS no GitHub write performed
+
+Runtime mock results:
+- navigation-v22.2: PASS
+- prefetch-v22.2: PASS
+- immediate-route-v22.2: PASS
+
+Android device: NOT TESTED

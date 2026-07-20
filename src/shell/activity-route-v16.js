@@ -262,6 +262,11 @@
     }));
   }
 
+  function routeLoadingMarkup(route={}){
+    const title=route.activityTitle||'予定を読み込んでいます';
+    return `<section class="ob16-activity ob16-loading-page"><section class="ob20-plan-card ob36-card ob20-loading-card"><div class="ob20-plan-copy"><small>予定詳細</small><h1>${esc(title)}</h1><p>内容を読み込んでいます。</p><div class="ob20-skeleton wide"></div><div class="ob20-skeleton"></div></div></section><section class="ob16-section-card ob36-card"><div class="ob20-skeleton wide"></div><div class="ob20-skeleton"></div><div class="ob20-skeleton"></div></section></section>`;
+  }
+
   const renderer = Object.freeze({
     ...base,
     __activityV16:true,
@@ -269,12 +274,16 @@
       const requested=globalThis.OUTBASE_ROUTER?.current?.()||{};
       const primed=requested.name==='activity'?cached(requested.activityId):null;
       const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
-      if(primed&&beforeMain){
+      if(beforeMain){
         beforeMain.classList.add('ob3-main-activity');
         beforeMain.classList.remove('ob3-main-calendar','ob3-main-preparation');
-        beforeMain.innerHTML=markup(primed);
-        base.hydrateMedia?.(beforeMain);
-        bind(beforeMain,primed);
+        if(primed){
+          beforeMain.innerHTML=markup(primed);
+          base.hydrateMedia?.(beforeMain);
+          bind(beforeMain,primed);
+        }else{
+          beforeMain.innerHTML=routeLoadingMarkup(requested);
+        }
       }
 
       const value = await base.mount(root,options);

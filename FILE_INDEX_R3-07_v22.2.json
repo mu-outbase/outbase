@@ -1,0 +1,164 @@
+{
+  "release": "v22.2",
+  "track": "R3-07",
+  "title": "追加遷移・戻る履歴・表示待ち修正",
+  "github_main_changed": false,
+  "android_tested": false,
+  "files": [
+    {
+      "path": "OUTBASE_v21.0_リンク監査一覧.csv",
+      "size": 2218,
+      "sha256": "720b2aa5e685a2f0851d881759ba7afc312382b1e469a4f410e0c41fec5baa86"
+    },
+    {
+      "path": "OUTBASE_v21.0_全ルート監査_正式構成LOCK.md",
+      "size": 3751,
+      "sha256": "b4e2c19c015c4c0dae01e9ee83f2d49faf498003ddf74ca0d6eb92deb1125f7f"
+    },
+    {
+      "path": "README_R3-07_追加遷移履歴高速化_v22.2.txt",
+      "size": 3260,
+      "sha256": "8a716894abf8bc08ef9b681f95818aa61f51bd2e8e70b91be001383859f5ca80"
+    },
+    {
+      "path": "STATIC_VERIFICATION_R3-07_v22.2.txt",
+      "size": 1048,
+      "sha256": "8e9114441d1dd53b69f5eedf0681a232a903b60516a1555a7f7213d8fc57f94b"
+    },
+    {
+      "path": "calendar-formal-v44.css",
+      "size": 42797,
+      "sha256": "96b0051ce1098ec9b49e9c6d4ad12ee742ce0364f37e78a89995f2db4f7469e4"
+    },
+    {
+      "path": "calendar-formal-v44.html",
+      "size": 4624,
+      "sha256": "c395f644ea458ffe6520d17c14d4e80901d6b96d0ef32fae7f6b9df72e5a53b5"
+    },
+    {
+      "path": "calendar-formal-v44.js",
+      "size": 40897,
+      "sha256": "e4770b90cc2169ee18766696a69e9e71a18231f3ed46734a7ca875cd0aefb791"
+    },
+    {
+      "path": "index.html",
+      "size": 7342,
+      "sha256": "ee8e727706ab3442d7b5d6c6d9f8ab6361c54f5dcd3cf81e2721b2ea327024e1"
+    },
+    {
+      "path": "service-worker.js",
+      "size": 7920,
+      "sha256": "99f0dd1797c70e2b1184b65936089ee1416bcbee322b45af08d7b8626c45b948"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size": 2795,
+      "sha256": "9810aac6bc8af1e5caa43a30d170943aa4b36d1ef359d681158799b74c574ed0"
+    },
+    {
+      "path": "src/config/version.js",
+      "size": 448,
+      "sha256": "1d630d5891c2d4144556d3a8517a42ad0cb544be9115d6df9423fc96da252efc"
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size": 10363,
+      "sha256": "f775a0caf2fb09a4269c29b07c34de3504485e39dd0821a791707f1f8b76e7f8"
+    },
+    {
+      "path": "src/domain/activity/activity-detail-domain.js",
+      "size": 5121,
+      "sha256": "b1ea6fb54c2a1e564f9587b9df487bb6d35dbfbfe4591ccdb5d81269f98693a7"
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size": 5498,
+      "sha256": "a7c5de5cdedffafb69de7c069182f462a55158e9edcc2abc5837aba20a6ab205"
+    },
+    {
+      "path": "src/router.js",
+      "size": 6834,
+      "sha256": "7f86d4896ce60d0c561a82ef55673359960fc90b80fcade8853128b0baa59589"
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size": 1530,
+      "sha256": "41fce9a15ee4a65068d623b0e505ef7359acfaf3173b8015f5b3e1bd4a68900e"
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size": 2456,
+      "sha256": "afa1f69538d2cf9081398c6ff390a771da9aab6e9a28cd53baa65ab30e68a4f6"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size": 17083,
+      "sha256": "adcde1b9644eabc70c8c0adc4032d690f531f1db6f65bc4dd5fc53fc85b4e75a"
+    },
+    {
+      "path": "src/shell/add-menu-v12.js",
+      "size": 4294,
+      "sha256": "776c2adc9a0d4ca0955bb76cf7220b78236e133704a2889c6e64d79875e3c2cb"
+    },
+    {
+      "path": "src/shell/execution-route-v19.js",
+      "size": 20133,
+      "sha256": "88403697dda9a51380e6104f0fb259edb9182c89572c5a0f9cbf378b39da2abe"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size": 2589,
+      "sha256": "9aa457065f53f9fd3b8aeacd9c7749ed505b606e72aa3b37f687c670f0f0da1a"
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size": 9251,
+      "sha256": "4860290fc40e1c50082ff00fde665ba05de4ab2ab41dd79524d98c54566edf35"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size": 18328,
+      "sha256": "94d8a4365a629b1571090c7cd17096d030cbbaa36baaf53eeac3783bd732f40e"
+    },
+    {
+      "path": "src/shell/route-unification-v22.js",
+      "size": 50832,
+      "sha256": "a342d851f7e7690823254e84719bbcf9f60728eb8361bd045d7ebf7ed6ad682b"
+    },
+    {
+      "path": "src/shell/search-route-v11.js",
+      "size": 17057,
+      "sha256": "b5280954767514c98928778112224e80abb71c5a7795abd9392218c4f31c85c7"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size": 8567,
+      "sha256": "6fc0de88d47e5280240a1d8bafdf442911ab806028672bd39645297cd5d959cd"
+    },
+    {
+      "path": "src/shell/ui-system-v21.js",
+      "size": 10957,
+      "sha256": "61b4aae72557837d519e0386fd57326c98a751490b93750035f4922ef3393899"
+    },
+    {
+      "path": "src/shell/vault-route-v13.js",
+      "size": 15966,
+      "sha256": "5e706da364e8df9345dbaec05400a819898241970685993b65529e0e10883072"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size": 98872,
+      "sha256": "33ce9b4b5dcf8074e081eba29501c13da8379fccb78ea125ee6b01db4e794625"
+    },
+    {
+      "path": "style-route-unification-v22.css",
+      "size": 10012,
+      "sha256": "286a04ae5609bae03cad9f728507c45b0c6e06a513decfb9206be237d420a1fe"
+    },
+    {
+      "path": "style-ui-system-v21.css",
+      "size": 21213,
+      "sha256": "630c771271386478a151b42bebe6169cfb1f77798cf61bf1787af1f3a9f0e122"
+    }
+  ]
+}

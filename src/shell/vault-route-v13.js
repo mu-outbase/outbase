@@ -23,6 +23,9 @@
   const ui=globalThis.OUTBASE_UI_V21;
   if(!ui)throw new Error('OUTBASE UI v21 is not ready');
   const icons=ui.icons;
+  const VAULT_CACHE_TTL_MS=45000;
+  let vaultCache=null;
+  let vaultJob=null;
 
   const routeUrl=(name,params={})=>{
     try{return globalThis.OUTBASE_ROUTER.shellUrl(name,params);}
@@ -105,11 +108,12 @@
     async build(options={}){
       const value=await modelBase.build(options);
       if(value?.route?.name!=='vault')return value;
-      const vaultV15=await globalThis.OUTBASE_VAULT_SCREEN_MODEL_V162.build({
-        activityLimit:60,
-        recordLimit:80,
-        assetLimit:120
-      });
+      let vaultV15;
+      if(vaultCache&&Date.now()-vaultCache.createdAt<VAULT_CACHE_TTL_MS)vaultV15=vaultCache.value;
+      else{
+        if(!vaultJob)vaultJob=Promise.resolve(globalThis.OUTBASE_VAULT_SCREEN_MODEL_V162.build({activityLimit:40,recordLimit:50,assetLimit:80})).then(result=>{vaultCache={value:result,createdAt:Date.now()};return result;}).finally(()=>{vaultJob=null;});
+        vaultV15=await vaultJob;
+      }
       return Object.freeze({...value,vaultV15});
     }
   });
@@ -340,6 +344,16 @@
       globalThis.OUTBASE_ABOUT?.open?.();
     });
 
+    const warmActivity=id=>{
+      if(!id)return;
+      const modelApi=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
+      Promise.resolve(modelApi?.preload?.('activity',{activityId:id})).then(payload=>{if(payload?.detail)globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.prime?.(payload);}).catch(()=>{});
+    };
+    root.addEventListener('pointerdown',event=>{const link=event.target.closest?.('[data-ob5-activity-id]');warmActivity(link?.dataset?.ob5ActivityId);},{passive:true});
+    const warmVisible=()=>root.querySelectorAll('[data-ob5-activity-id]').forEach((link,index)=>{if(index<5)warmActivity(link.dataset.ob5ActivityId);});
+    if(typeof requestIdleCallback==='function')requestIdleCallback(warmVisible,{timeout:900});else setTimeout(warmVisible,80);
+    const prefetch=globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.prefetch;if(prefetch){const run=()=>prefetch(['assets']);if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:1000});else setTimeout(run,120);}
+
     apply(active);
   }
 
@@ -347,6 +361,9 @@
     ...rendererBase,
     __vaultV15:true,
     async mount(root,options={}){
+      const requested=globalThis.OUTBASE_ROUTER?.current?.();
+      const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
+      if(requested?.name==='vault'&&beforeMain){beforeMain.classList.remove('ob3-main-calendar');beforeMain.innerHTML='<section class="ob15-vault"><header class="ob13-vault-hero"><h1>保管庫</h1><p>保存した内容を読み込んでいます。</p></header><section class="ob13-vault-panel"><div class="ob22-loading-inline"><span></span><b>思い出と持ち物を読み込んでいます</b></div></section></section>';}
       const value=await rendererBase.mount(root,options);
       if(value?.route?.name==='vault'){
         const main=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
@@ -369,5 +386,6 @@
   globalThis.OUTBASE_SHELL_RENDERER_V166=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;
+  globalThis.OUTBASE_VAULT_ROUTE_V13=Object.freeze({invalidate(){vaultCache=null;vaultJob=null;},preload(){return model.build({});}});
 
 })();

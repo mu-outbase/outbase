@@ -34,6 +34,9 @@
   const ui=globalThis.OUTBASE_UI_V21;
   if(!ui)throw new Error('OUTBASE UI v21 is not ready');
   const icons=ui.icons;
+  const SEARCH_CACHE_TTL_MS=60000;
+  let searchCache=null;
+  let searchJob=null;
 
   const routeUrl=(name,params={})=>{
     try{return globalThis.OUTBASE_ROUTER.shellUrl(name,params);}
@@ -58,18 +61,20 @@
     return `${dateLabel(start)}〜${dateLabel(end)}`;
   };
 
-  async function buildSearchPayload(){
+  async function buildSearchPayload({force=false}={}){
+    if(!force&&searchCache&&Date.now()-searchCache.createdAt<SEARCH_CACHE_TTL_MS)return searchCache.value;
+    if(!force&&searchJob)return searchJob;
     const homeApi=globalThis.OUTBASE_HOME_SCREEN_MODEL_V164;
     const vaultApi=globalThis.OUTBASE_VAULT_SCREEN_MODEL_V162;
-    const [home,vault]=await Promise.all([
+    searchJob=Promise.all([
       homeApi?.build?.().catch?.(()=>null)??null,
-      vaultApi?.build?.({activityLimit:30,recordLimit:20,assetLimit:30}).catch?.(()=>null)??null
-    ]);
-    return Object.freeze({
+      vaultApi?.build?.({activityLimit:24,recordLimit:16,assetLimit:24}).catch?.(()=>null)??null
+    ]).then(([home,vault])=>Object.freeze({
       plans:Array.isArray(home?.next)?home.next.slice(0,24):[],
-      activities:Array.isArray(vault?.activities)?vault.activities.slice(0,30):[],
-      assets:Array.isArray(vault?.assets)?vault.assets.slice(0,30):[]
-    });
+      activities:Array.isArray(vault?.activities)?vault.activities.slice(0,24):[],
+      assets:Array.isArray(vault?.assets)?vault.assets.slice(0,24):[]
+    })).then(value=>{searchCache={value,createdAt:Date.now()};return value;}).finally(()=>{searchJob=null;});
+    return searchJob;
   }
 
   const model=Object.freeze({
@@ -86,6 +91,7 @@
   function normalizeRows(search){
     const plans=(search?.plans||[]).map(item=>({
       key:`plan:${item.id||item.title}`,
+      activityId:item.id||'',
       kind:'plan',
       kindLabel:'予定',
       title:item.title||'名称未設定の予定',
@@ -99,6 +105,7 @@
 
     const activities=(search?.activities||[]).map(item=>({
       key:`memory:${item.id||item.title}`,
+      activityId:item.id||'',
       kind:'memory',
       kindLabel:'思い出',
       title:item.title||'名称未設定の活動',
@@ -129,7 +136,7 @@
   }
 
   function resultMarkup(row){
-    return `<a class="ob-search-result tone-${esc(row.kind)}" href="${esc(row.href)}">
+    return `<a class="ob-search-result tone-${esc(row.kind)}" href="${esc(row.href)}"${row.activityId?` data-ob-search-activity-id="${esc(row.activityId)}"`:''}>
       <span class="ob-search-result-icon">${resultIcon(row.kind)}</span>
       <span class="ob-search-result-copy">
         <small>${esc(row.kindLabel)}</small>
@@ -161,7 +168,7 @@
   }
 
   function planPreview(row){
-    return `<a class="ob15-search-plan cover-${planCover(row)}" href="${esc(row.href)}">
+    return `<a class="ob15-search-plan cover-${planCover(row)}" href="${esc(row.href)}"${row.activityId?` data-ob-search-activity-id="${esc(row.activityId)}"`:''}>
       <span class="ob15-search-plan-cover">
         <i>${esc(row.typeLabel)}</i>
       </span>
@@ -174,7 +181,7 @@
   }
 
   function memoryPreview(row){
-    return `<a class="ob15-search-memory" href="${esc(row.href)}">
+    return `<a class="ob15-search-memory" href="${esc(row.href)}"${row.activityId?` data-ob-search-activity-id="${esc(row.activityId)}"`:''}>
       <span>${icons.memory}</span>
       <span><small>${esc(row.meta||'思い出')}</small><b>${esc(row.title)}</b><em>${esc(row.sub)}</em></span>
       ${icons.arrow}
@@ -360,12 +367,22 @@
     }));
 
     root.querySelector('[data-search-place]')?.addEventListener('click',()=>{
-      globalThis.OUTBASE_ROUTER?.navigate?.('places',{}, {transition:false,skipTransition:true});
+      globalThis.OUTBASE_ROUTER?.navigate?.('places',{returnShell:'search'}, {transition:false,skipTransition:true});
     });
 
     root.querySelector('#outbaseCopyrightFooter')?.addEventListener('click',()=>{
       globalThis.OUTBASE_ABOUT?.open?.();
     });
+
+    const warmActivity=id=>{
+      if(!id)return;
+      const modelApi=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
+      Promise.resolve(modelApi?.preload?.('activity',{activityId:id})).then(payload=>{if(payload?.detail)globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.prime?.(payload);}).catch(()=>{});
+    };
+    root.addEventListener('pointerdown',event=>warmActivity(event.target.closest?.('[data-ob-search-activity-id]')?.dataset?.obSearchActivityId),{passive:true});
+    const warmVisible=()=>root.querySelectorAll('[data-ob-search-activity-id]').forEach((link,index)=>{if(index<5)warmActivity(link.dataset.obSearchActivityId);});
+    if(typeof requestIdleCallback==='function')requestIdleCallback(warmVisible,{timeout:900});else setTimeout(warmVisible,80);
+    const prefetch=globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.prefetch;if(prefetch){const run=()=>prefetch(['places','assets']);if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:1000});else setTimeout(run,120);}
 
     render();
   }
@@ -374,6 +391,9 @@
     ...rendererBase,
     __searchV15:true,
     async mount(root,options={}){
+      const requested=globalThis.OUTBASE_ROUTER?.current?.();
+      const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
+      if(requested?.name==='search'&&beforeMain){beforeMain.classList.remove('ob3-main-calendar');beforeMain.innerHTML='<section class="ob-search-v11 ob15-search"><header class="ob-search-hero"><h1>探す</h1><p>予定、思い出、持ち物を読み込んでいます。</p></header><section class="ob22-card"><div class="ob22-loading-inline"><span></span><b>検索できる内容を準備しています</b></div></section></section>';}
       const value=await rendererBase.mount(root,options);
       if(value?.route?.name==='search'){
         const shell=root?.querySelector?.('.ob3-shell');
@@ -397,4 +417,5 @@
   globalThis.OUTBASE_SHELL_RENDERER_V166=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;
+  globalThis.OUTBASE_SEARCH_ROUTE_V11=Object.freeze({invalidate(){searchCache=null;searchJob=null;},preload(){return buildSearchPayload();}});
 })();

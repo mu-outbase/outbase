@@ -39,11 +39,14 @@
     node.textContent=String(message||'');node.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.classList.remove('show'),1600);
   }
   function invalidate(activityId=''){
+    clearPayloadCache();
     const shell=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
     shell?.invalidate?.('home');shell?.invalidate?.('vault');shell?.invalidate?.('calendar');
     if(activityId)shell?.invalidate?.(`activity:${activityId}`);
     globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(activityId);
     globalThis.OUTBASE_PREPARATION_ROUTE_V17?.invalidate?.(activityId);
+    globalThis.OUTBASE_SEARCH_ROUTE_V11?.invalidate?.();
+    globalThis.OUTBASE_VAULT_ROUTE_V13?.invalidate?.();
   }
   function activate(item,source='route-unification-v22'){
     if(!item?.id)return;
@@ -51,63 +54,139 @@
     if(api?.activate){api.activate(item,{source,record:false});return;}
     try{localStorage.setItem('outbase_core_activity_id',String(item.id));localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));}catch(_error){}
   }
-  function backOr(name='home',values={}){
-    if(history.state?.outbaseShell&&history.length>1){router.back();return;}
-    router.navigate(name,values,{replace:true,transition:false,skipTransition:true});
+  const PAYLOAD_TTL_MS=60000;
+  const payloadCache=new Map();
+  const payloadJobs=new Map();
+
+  function routeKey(route={}){
+    const query=routeValues(route);
+    return [route.name||'',currentActivityId(route),query.assetId||'',query.mode||'',query.target||''].join(':');
+  }
+  function cachePayload(route,payload){payloadCache.set(routeKey(route),{payload,createdAt:Date.now()});return payload;}
+  function cachedPayload(route){const entry=payloadCache.get(routeKey(route));if(!entry||Date.now()-entry.createdAt>PAYLOAD_TTL_MS){if(entry)payloadCache.delete(routeKey(route));return null;}return entry.payload;}
+  function clearPayloadCache(){payloadCache.clear();payloadJobs.clear();}
+  function currentContextItem(route={}){
+    const query=routeValues(route);const context=contextApi()?.current?.()||{};const id=currentActivityId(route);
+    if(!id&&!query.title&&!route.activityTitle)return null;
+    return Object.freeze({
+      id:id||'',
+      title:query.title||route.activityTitle||context.activityTitle||'選択中の活動',
+      type:query.activityType||route.activityType||context.activityType||'other',
+      typeLabel:typeLabel(query.activityType||route.activityType||context.activityType||'other'),
+      state:'planned',startAt:null,endAt:null,legacyPlanId:route.planId||context.planId||null,
+      place:query.place||''
+    });
+  }
+  function uniqueActivities(...groups){
+    const map=new Map();
+    groups.flatMap(group=>safeArray(group)).forEach(item=>{if(item?.id&&!map.has(String(item.id)))map.set(String(item.id),item);});
+    return [...map.values()];
+  }
+  async function homeRows(){
+    let payload=null;
+    try{payload=await modelBase.preload?.('home');}catch(_error){}
+    let home=payload?.home||null;
+    if(!home){try{home=await globalThis.OUTBASE_HOME_SCREEN_MODEL_V164?.build?.();}catch(_error){}}
+    return uniqueActivities(home?.current,home?.next,home?.recent);
+  }
+  async function vaultRows(){
+    let payload=null;
+    try{payload=await modelBase.preload?.('vault');}catch(_error){}
+    const vault=payload?.vault||payload?.vaultV15||null;
+    return uniqueActivities(vault?.activities);
+  }
+  function returnRoute(route,defaultName='home'){
+    const query=routeValues(route);const allowed=new Set(['home','calendar','search','vault','activity','preparation','record','places','assets','plan-editor','preparation-detail','start','memo']);
+    const name=allowed.has(query.returnShell)&&query.returnShell!==route.name?query.returnShell:defaultName;
+    const activityId=query.returnActivityId||query.originActivityId||currentActivityId(route)||'';
+    const values=activityId&&['activity','preparation','record'].includes(name)?{activityId,planId:route.planId||''}:{};
+    return {name,values};
+  }
+  function backOr(route,defaultName='home',values={}){
+    const target=returnRoute(route,defaultName);
+    router.navigate(target.name,{...target.values,...values},{replace:true,transition:false,skipTransition:true});
   }
 
   async function planEditorPayload(route){
-    const id=currentActivityId(route);
-    const raw=id?await repos().activities.get(id):null;
-    const activity=id?await plans().get(id):null;
-    const calendar=id?await repos().calendarEntries.byIndex('activity_id',id):[];
+    const id=routeValues(route).activityId||'';
+    if(!id)return {raw:null,activity:null,calendar:[]};
+    const [raw,activity,calendar]=await Promise.all([
+      repos().activities.get(id),plans().get(id),repos().calendarEntries.byIndex('activity_id',id)
+    ]);
     return {raw,activity,calendar:safeArray(calendar).filter(row=>!row.deleted_at).sort((a,b)=>String(a.start_at||'').localeCompare(String(b.start_at||'')))};
   }
   async function preparationPayload(route){
     const id=currentActivityId(route);
     if(!id)return {status:'missing'};
-    try{await prepDomain()?.ensureBaseline?.(id);}catch(_error){}
-    const result=await globalThis.OUTBASE_PREPARATION_ROUTE_V17?.loadFast?.(id,{force:true});
+    const api=globalThis.OUTBASE_PREPARATION_ROUTE_V17;
+    const warm=api?.cached?.(id);if(warm)return warm;
+    const result=await api?.loadFast?.(id,{force:false});
+    if(result?.status==='ready'&&!result.summary?.persisted){
+      setTimeout(()=>prepDomain()?.ensureBaseline?.(id).then(()=>{payloadCache.delete(routeKey(route));api?.invalidate?.(id);}).catch(()=>{}),0);
+    }
     return result||{status:'missing'};
   }
   async function startPayload(){
-    const rows=await plans().list({states:['candidate','planned','preparing','active','paused'],limit:60});
+    let rows=(await homeRows()).filter(item=>['candidate','planned','preparing','active','paused'].includes(item.state));
+    if(!rows.length){try{rows=await plans().list({states:['candidate','planned','preparing','active','paused'],limit:60});}catch(_error){rows=[];}}
     return {rows:safeArray(rows)};
   }
   async function memoPayload(){
-    const rows=await plans().list({includeDeleted:false,limit:100});
-    return {rows:safeArray(rows).filter(item=>!['archived'].includes(item.state))};
+    let rows=uniqueActivities(await homeRows(),await vaultRows()).filter(item=>item.state!=='archived');
+    if(!rows.length){try{rows=await plans().list({includeDeleted:false,limit:100});}catch(_error){rows=[];}}
+    return {rows:safeArray(rows).filter(item=>item.state!=='archived')};
   }
   async function placesPayload(){
-    const [placeRows,activityRows]=await Promise.all([repos().places.all(),plans().list({includeDeleted:false,limit:200})]);
-    return {places:safeArray(placeRows).filter(row=>!row.deleted_at),activities:safeArray(activityRows)};
+    const [placeRows,homeActivityRows,vaultActivityRows]=await Promise.all([repos().places.all(),homeRows(),vaultRows()]);
+    return {places:safeArray(placeRows).filter(row=>!row.deleted_at),activities:uniqueActivities(homeActivityRows,vaultActivityRows)};
   }
   async function assetsPayload(route){
     const rows=safeArray(await repos().assets.all()).filter(row=>!row.deleted_at);
     const id=routeValues(route).assetId||'';
     return {rows,selected:id?rows.find(row=>String(row.id)===String(id))||null:null};
   }
-  async function buildPayload(route){
-    try{
-      if(route.name==='plan-editor')return await planEditorPayload(route);
-      if(route.name==='preparation-detail')return await preparationPayload(route);
-      if(route.name==='start')return await startPayload(route);
-      if(route.name==='memo')return await memoPayload(route);
-      if(route.name==='places')return await placesPayload(route);
-      if(route.name==='assets')return await assetsPayload(route);
-      return {};
-    }catch(error){return {status:'error',error};}
+  async function loadPayload(route){
+    if(route.name==='plan-editor')return planEditorPayload(route);
+    if(route.name==='preparation-detail')return preparationPayload(route);
+    if(route.name==='start')return startPayload(route);
+    if(route.name==='memo')return memoPayload(route);
+    if(route.name==='places')return placesPayload(route);
+    if(route.name==='assets')return assetsPayload(route);
+    return {};
   }
+  async function buildPayload(route,{force=false}={}){
+    if(!force){const cached=cachedPayload(route);if(cached)return cached;const job=payloadJobs.get(routeKey(route));if(job)return job;}
+    const job=Promise.resolve().then(()=>loadPayload(route)).then(payload=>cachePayload(route,payload)).catch(error=>({status:'error',error})).finally(()=>payloadJobs.delete(routeKey(route)));
+    payloadJobs.set(routeKey(route),job);return job;
+  }
+  function prefetch(names=[]){
+    const current=router.current();
+    return Promise.allSettled(safeArray(names).map(name=>buildPayload({...current,name,query:{...routeValues(current)}})));
+  }
+  function provisionalPayload(route){
+    const cached=cachedPayload(route);if(cached)return cached;
+    const item=currentContextItem(route);
+    if(route.name==='plan-editor')return {raw:null,activity:routeValues(route).activityId?item:null,calendar:[]};
+    if(route.name==='preparation-detail'){
+      const warm=item?.id?globalThis.OUTBASE_PREPARATION_ROUTE_V17?.cached?.(item.id):null;if(warm)return warm;
+      return {status:'loading',item,summary:{activity:item,items:[],sections:[],total:0,completed:0,pending:0,progress:0,persisted:false}};
+    }
+    if(route.name==='start'||route.name==='memo')return {rows:item?[item]:[]};
+    if(route.name==='places')return {places:[],activities:item?[item]:[]};
+    if(route.name==='assets')return {rows:[],selected:null};
+    return {};
+  }
+  function provisionalValue(route){return Object.freeze({version:'v22.2',route,online:navigator.onLine,routePayload:provisionalPayload(route),provisional:true});}
 
   const model=Object.freeze({
     ...modelBase,
     __routeUnificationV22:true,
+    __routeUnificationV222:true,
     async build(options={}){
-      const value=await modelBase.build(options);
-      const route=value?.route||router.current();
-      if(!ROUTES.has(route?.name))return value;
-      const routePayload=await buildPayload(route);
-      return Object.freeze({...value,route,routePayload});
+      const route=router.current();
+      if(!ROUTES.has(route?.name))return modelBase.build(options);
+      const routePayload=await buildPayload(route,{force:Boolean(options.force)});
+      return Object.freeze({version:'v22.2',route,online:navigator.onLine,routePayload});
     }
   });
 
@@ -147,6 +226,10 @@
   function prepItemMarkup(item){const done=item.status==='completed'||Boolean(item.completedAt);return `<button type="button" class="ob22-prep-row ${done?'done':''}" data-ob22-prep-toggle="${esc(item.id||'')}"><span class="check">${done?icons.check:''}</span><span><b>${esc(item.title||'準備')}</b><small>${done?'完了':esc(prepDomain()?.CATEGORY_LABELS?.[item.category]||'未完了')}</small></span>${icons.arrow}</button>`;}
   function preparationMarkup(value){
     const result=value.routePayload||{};
+    if(result.status==='loading'){
+      const item=result.item||result.summary?.activity||currentContextItem(value.route)||{};
+      return `<section class="ob22-page ob22-prep-detail" data-ob22-route-page="preparation-detail">${routeHead('詳細な準備','準備へ')}<section class="ob22-card ob22-page-title"><span>${icons.prep}</span><div><small>${esc(typeLabel(item.type))}</small><h1>${esc(item.title||'準備')}</h1><p>準備項目を読み込んでいます。</p></div></section><section class="ob22-card ob22-list-card"><div class="ob22-loading-inline"><span></span><b>準備リストを読み込んでいます</b></div></section></section>`;
+    }
     if(result.status!=='ready')return `<section class="ob22-page">${routeHead('詳細な準備','準備へ')}${emptyCard('準備を開けませんでした','対象の予定を選び直してください。')}</section>`;
     const summary=result.summary||{};const item=result.item||summary.activity;const sections=safeArray(summary.sections);
     return `<section class="ob22-page ob22-prep-detail" data-ob22-route-page="preparation-detail" data-ob22-activity-id="${esc(item.id)}">
@@ -283,8 +366,9 @@
 
   function bind(main,value){
     main.querySelectorAll('[data-ob22-back]').forEach(button=>button.addEventListener('click',()=>{
-      const name=value.route.name==='preparation-detail'?'preparation':value.route.name==='places'?'search':value.route.name==='assets'?'vault':value.route.name==='plan-editor'&&value.routePayload?.activity?'activity':'home';
-      const values=currentActivityId(value.route)?{activityId:currentActivityId(value.route)}:{};backOr(name,values);
+      const defaultName=value.route.name==='preparation-detail'?'preparation':value.route.name==='places'?'search':value.route.name==='assets'?'vault':value.route.name==='plan-editor'&&value.routePayload?.activity?'activity':'home';
+      const values=currentActivityId(value.route)?{activityId:currentActivityId(value.route),planId:value.route.planId||''}:{};
+      backOr(value.route,defaultName,values);
     }));
     main.querySelector('[data-ob22-plan-form]')?.addEventListener('submit',event=>{event.preventDefault();event.currentTarget.querySelector('[type="submit"]').disabled=true;savePlan(event.currentTarget,value).catch(error=>{console.error(error);toast('予定を保存できませんでした');event.currentTarget.querySelector('[type="submit"]').disabled=false;});});
     main.querySelector('[data-ob22-plan-delete]')?.addEventListener('click',()=>deletePlan(value).catch(()=>toast('予定を削除できませんでした')));
@@ -295,10 +379,10 @@
     main.querySelector('[data-ob22-memo-form]')?.addEventListener('submit',event=>{event.preventDefault();saveMemo(event.currentTarget,value).catch(()=>toast('保存できませんでした'));});
     const search=main.querySelector('[data-ob22-place-search]');const filterPlaces=()=>{const q=text(search?.value).toLowerCase();let count=0;main.querySelectorAll('[data-ob22-place-row]').forEach(row=>{const visible=!q||String(row.dataset.ob22PlaceText||'').includes(q);row.hidden=!visible;if(visible)count++;});const node=main.querySelector('[data-ob22-place-count]');if(node)node.textContent=`${count}件`;};
     search?.addEventListener('input',filterPlaces);main.querySelector('[data-ob22-place-clear]')?.addEventListener('click',()=>{if(search){search.value='';filterPlaces();search.focus();}});
-    main.querySelectorAll('[data-ob22-place-plan]').forEach(button=>button.addEventListener('click',()=>router.navigate('plan-editor',{place:button.dataset.ob22PlacePlan||''})));
+    main.querySelectorAll('[data-ob22-place-plan]').forEach(button=>button.addEventListener('click',()=>router.navigate('plan-editor',valuesWithReturn({place:button.dataset.ob22PlacePlan||''},value.route))));
     main.querySelector('[data-ob22-place-add]')?.addEventListener('submit',event=>{event.preventDefault();addPlace(event.currentTarget).catch(()=>toast('場所を登録できませんでした'));});
-    main.querySelector('[data-ob22-asset-add]')?.addEventListener('click',()=>router.navigate('assets',{mode:'add'}));
-    main.querySelectorAll('[data-ob22-asset-edit]').forEach(button=>button.addEventListener('click',()=>router.navigate('assets',{assetId:button.dataset.ob22AssetEdit}))); 
+    main.querySelector('[data-ob22-asset-add]')?.addEventListener('click',()=>router.navigate('assets',valuesWithReturn({mode:'add'},value.route)));
+    main.querySelectorAll('[data-ob22-asset-edit]').forEach(button=>button.addEventListener('click',()=>router.navigate('assets',valuesWithReturn({assetId:button.dataset.ob22AssetEdit},value.route)))); 
     main.querySelector('[data-ob22-assets-list]')?.addEventListener('click',()=>router.navigate('assets',{}, {replace:true}));
     main.querySelector('[data-ob22-asset-form]')?.addEventListener('submit',event=>{event.preventDefault();saveAsset(event.currentTarget).catch(()=>toast('持ち物を保存できませんでした'));});
     main.querySelector('[data-ob22-asset-delete]')?.addEventListener('click',()=>deleteAsset(value).catch(()=>toast('削除できませんでした')));
@@ -324,8 +408,22 @@
     return `<section class="ob22-page"><div class="ob22-card ob22-loading"><span></span><b>${esc(labels[routeName]||'画面を読み込んでいます')}</b></div></section>`;
   }
 
+  function captureFormState(main){
+    const rows=[];
+    main?.querySelectorAll?.('input[name],select[name],textarea[name]').forEach((node,index)=>rows.push({index,name:node.name,type:node.type||node.tagName,value:node.value,checked:Boolean(node.checked)}));
+    const active=document.activeElement;const focus=active&&main?.contains?.(active)?{name:active.name||'',index:[...main.querySelectorAll('input,select,textarea,button')].indexOf(active)}:null;
+    return {rows,focus,scrollY:Number(window.scrollY)||0};
+  }
+  function restoreFormState(main,state){
+    if(!main||!state)return;
+    const pools={};main.querySelectorAll('input[name],select[name],textarea[name]').forEach(node=>{(pools[node.name]||(pools[node.name]=[])).push(node);});
+    state.rows.forEach(entry=>{const node=(pools[entry.name]||[]).shift();if(!node)return;if(['checkbox','radio'].includes(node.type))node.checked=entry.checked;else node.value=entry.value;});
+    requestAnimationFrame(()=>{window.scrollTo(0,state.scrollY||0);if(state.focus){const controls=[...main.querySelectorAll('input,select,textarea,button')];const node=(state.focus.name&&main.querySelector(`[name="${CSS.escape(state.focus.name)}"]`))||controls[state.focus.index];node?.focus?.({preventScroll:true});}});
+  }
+  function sameRequestedRoute(a,b){return a?.name===b?.name&&String(a?.activityId||'')===String(b?.activityId||'')&&String(routeValues(a).assetId||'')===String(routeValues(b).assetId||'')&&String(routeValues(a).mode||'')===String(routeValues(b).mode||'')&&String(routeValues(a).target||'')===String(routeValues(b).target||'');}
+
   function routeFailureMarkup(error){
-    console.error('[OUTBASE route unification v22.1]',error);
+    console.error('[OUTBASE route unification v22.2]',error);
     return `<section class="ob22-page">${routeHead('OUTBASE','戻る')}${emptyCard('画面を開けませんでした','保存済みデータは削除されていません。前の画面へ戻って、もう一度開いてください。')}</section>`;
   }
 
@@ -333,31 +431,37 @@
     ...rendererBase,
     __routeUnificationV22:true,
     __routeUnificationV221:true,
+    __routeUnificationV222:true,
     async mount(root,options={}){
       const requested=router.current();
       if(!ROUTES.has(requested?.name))return rendererBase.mount(root,options);
 
       const shell=ensureRouteShell(root,requested.name);
       const main=shell?.querySelector?.('.ob3-main');
-      if(!shell||!main)throw new Error('OUTBASE v22.1 route shell is not ready');
+      if(!shell||!main)throw new Error('OUTBASE v22.2 route shell is not ready');
 
       shell.dataset.ob6Route=requested.name;
       main.className='ob3-main ob3-main-ob22';
-      main.innerHTML=loadingMarkup(requested.name);
+      const immediate=provisionalValue(requested);
+      main.innerHTML=pageMarkup(immediate)||loadingMarkup(requested.name);
+      bind(main,immediate);
       try{rendererBase.updateNav?.(root,Object.freeze({route:requested,online:navigator.onLine,routeUnificationLoading:true}));}catch(_error){}
-      globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-loading');
+      globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-immediate');
 
       let value;
       try{
         value=await model.build(options);
-        if(router.current()?.name!==requested.name)return value;
+        if(!sameRequestedRoute(router.current(),requested))return value;
+        const formState=captureFormState(main);
         main.className='ob3-main ob3-main-ob22';
-        main.innerHTML=pageMarkup(value)||routeFailureMarkup(new Error(`OUTBASE v22.1 empty markup: ${requested.name}`));
+        main.innerHTML=pageMarkup(value)||routeFailureMarkup(new Error(`OUTBASE v22.2 empty markup: ${requested.name}`));
         bind(main,value);
+        restoreFormState(main,formState);
         rendererBase.updateNav?.(root,value);
         globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-render');
         return value;
       }catch(error){
+        if(!sameRequestedRoute(router.current(),requested))return Object.freeze({route:requested,online:navigator.onLine,routePayload:{status:'error',error}});
         main.className='ob3-main ob3-main-ob22';
         main.innerHTML=routeFailureMarkup(error);
         const fallback=Object.freeze({route:requested,online:navigator.onLine,routePayload:{status:'error',error}});
@@ -370,37 +474,54 @@
     updateNav(root,value){rendererBase.updateNav?.(root,value);}
   });
 
+  function valuesWithReturn(values={},current=router.current()){
+    return {
+      ...values,
+      returnShell:current?.name||'home',
+      returnActivityId:current?.activityId||undefined,
+      originActivityId:current?.activityId||undefined
+    };
+  }
+
   function mapLegacyUrl(url){
     const tab=url.searchParams.get('tab')||'';const sheet=url.searchParams.get('sheet')||url.searchParams.get('planSheet')||'';const current=router.current();const activityId=url.searchParams.get('activityId')||url.searchParams.get('returnActivityId')||currentActivityId(current);const planId=url.searchParams.get('planId')||current.planId||'';
-    if(tab==='plan'&&sheet==='add')return {name:'plan-editor',values:{}};
-    if(tab==='record'&&sheet==='start')return {name:'start',values:{activityId,planId}};
-    if(tab==='record'&&sheet==='memo')return {name:'memo',values:{activityId,planId,target:localStorage.getItem('outbase_record_target')==='次回改善'?'improvement':'memo'}};
-    if(tab==='prep'&&(url.searchParams.has('outbaseAdd')||url.searchParams.has('outbaseVault')))return {name:'assets',values:{assetId:url.searchParams.get('gearId')||'',mode:url.searchParams.has('outbaseAdd')?'add':''}};
-    if(tab==='prep')return {name:'preparation-detail',values:{activityId,planId}};
-    if(tab==='search')return {name:'places',values:{}};
+    if(tab==='plan'&&sheet==='add')return {name:'plan-editor',values:valuesWithReturn({},current)};
+    if(tab==='record'&&sheet==='start')return {name:'start',values:valuesWithReturn({activityId,planId},current)};
+    if(tab==='record'&&sheet==='memo')return {name:'memo',values:valuesWithReturn({activityId,planId,target:localStorage.getItem('outbase_record_target')==='次回改善'?'improvement':'memo'},current)};
+    if(tab==='prep'&&(url.searchParams.has('outbaseAdd')||url.searchParams.has('outbaseVault')))return {name:'assets',values:valuesWithReturn({assetId:url.searchParams.get('gearId')||'',mode:url.searchParams.has('outbaseAdd')?'add':''},current)};
+    if(tab==='prep')return {name:'preparation-detail',values:valuesWithReturn({activityId,planId},current)};
+    if(tab==='search')return {name:'places',values:valuesWithReturn({},current)};
     if(tab==='memory')return {name:'vault',values:{}};
-    if(tab==='plan')return activityId?{name:'plan-editor',values:{activityId,planId}}:{name:'home',values:{}};
+    if(tab==='plan')return activityId?{name:'plan-editor',values:valuesWithReturn({activityId,planId},current)}:{name:'home',values:{}};
     if(tab==='record'){
       const state=localStorage.getItem('outbase_record_session_state')||'idle';
       if(['active','paused'].includes(state))return null;
-      return {name:'record',values:{activityId,planId}};
+      return {name:'record',values:{activityId,planId,returnShell:current.name||'home',returnActivityId:current.activityId||activityId}};
     }
     return null;
   }
 
   function routeForControl(control){
+    const current=router.current();
     const action=control?.dataset?.ob3Action||control?.dataset?.ob12Action||'';
-    if(action==='plan-add')return {name:'plan-editor',values:{}};
-    if(action==='start')return {name:'start',values:{activityId:currentActivityId(router.current())}};
-    if(action==='memo')return {name:'memo',values:{activityId:currentActivityId(router.current())}};
-    if(action==='gear-add')return {name:'assets',values:{mode:'add'}};
+    if(action==='plan-add')return {name:'plan-editor',values:valuesWithReturn({},current)};
+    if(action==='start')return {name:'start',values:valuesWithReturn({activityId:currentActivityId(current)},current)};
+    if(action==='memo')return {name:'memo',values:valuesWithReturn({activityId:currentActivityId(current)},current)};
+    if(action==='gear-add')return {name:'assets',values:valuesWithReturn({mode:'add'},current)};
     const quick=control?.dataset?.ob36Quick||'';
-    if(quick==='prep')return {name:'preparation',values:{activityId:currentActivityId(router.current())}};
-    if(quick==='walk-kota')return {name:'start',values:{title:'コタ通常散歩',activityType:'walk'}};
-    if(quick==='memo')return {name:'memo',values:{activityId:currentActivityId(router.current())}};
-    if(quick==='improvement-memo')return {name:'memo',values:{activityId:currentActivityId(router.current()),target:'improvement'}};
-    if(quick==='plan-add')return {name:'plan-editor',values:{}};
+    if(quick==='prep')return {name:'preparation',values:{activityId:currentActivityId(current)}};
+    if(quick==='walk-kota')return {name:'start',values:valuesWithReturn({title:'コタ通常散歩',activityType:'walk'},current)};
+    if(quick==='memo')return {name:'memo',values:valuesWithReturn({activityId:currentActivityId(current)},current)};
+    if(quick==='improvement-memo')return {name:'memo',values:valuesWithReturn({activityId:currentActivityId(current),target:'improvement'},current)};
+    if(quick==='plan-add')return {name:'plan-editor',values:valuesWithReturn({},current)};
     return null;
+  }
+
+  function closeCentralWithoutBack(){
+    const stack=globalThis.OUTBASE_MODAL_STACK_V164;const hadCentral=stack?.top?.()?.id==='central';
+    document.getElementById('outbaseShellModal')?.replaceChildren();
+    if(hadCentral)stack.close?.({historyBack:false});
+    return Boolean(hadCentral);
   }
 
   function intercept(event){
@@ -408,7 +529,7 @@
     if(!router.shellRequested?.()&&!document.body.classList.contains('outbaseShellPreview'))return;
     const control=event.target.closest?.('[data-ob3-action],[data-ob12-action],[data-ob36-quick]');
     const mappedControl=routeForControl(control);
-    if(mappedControl){event.preventDefault();event.stopImmediatePropagation();document.getElementById('outbaseShellModal')?.replaceChildren();router.navigate(mappedControl.name,mappedControl.values,{transition:false,skipTransition:true});return;}
+    if(mappedControl){event.preventDefault();event.stopImmediatePropagation();const replace=closeCentralWithoutBack();router.navigate(mappedControl.name,mappedControl.values,{replace,transition:false,skipTransition:true});return;}
     const anchor=event.target.closest?.('a[href]');if(!anchor||anchor.target==='_blank'||anchor.hasAttribute('download'))return;
     let url;try{url=new URL(anchor.href,location.href);}catch(_error){return;}if(url.origin!==location.origin||!url.searchParams.has('tab'))return;
     const mapped=mapLegacyUrl(url);if(!mapped)return;event.preventDefault();event.stopImmediatePropagation();router.navigate(mapped.name,mapped.values,{transition:false,skipTransition:true});
@@ -418,5 +539,5 @@
 
   globalThis.OUTBASE_SHELL_MODEL_V166=model;globalThis.OUTBASE_SHELL_MODEL_V165=model;globalThis.OUTBASE_SHELL_MODEL_V164=model;
   globalThis.OUTBASE_SHELL_RENDERER_V166=renderer;globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;
-  globalThis.OUTBASE_ROUTE_UNIFICATION_V22=Object.freeze({version:'v22.1',routes:Object.freeze([...ROUTES]),mapLegacyUrl,routeForControl});
+  globalThis.OUTBASE_ROUTE_UNIFICATION_V22=Object.freeze({version:'v22.2',routes:Object.freeze([...ROUTES]),mapLegacyUrl,routeForControl,prefetch,clearPayloadCache,returnRoute});
 })();

@@ -96,11 +96,20 @@
     }catch(_error){return commit();}
   }
 
+  function absoluteUrl(value){try{return new URL(value,location.href).href;}catch(_error){return String(value||'');}}
+  function routeHistoryState(name,scroll=0){const currentState={...(history.state||{})};delete currentState.outbaseModal;return {...currentState,outbaseShell:true,route:name,[SCROLL_KEY]:scroll};}
   function navigate(name,values={},options={}){
     const url=shellUrl(name,values);
+    const nextHref=absoluteUrl(url);
+    const currentHref=absoluteUrl(location.href);
     return transition(()=>{
+      if(nextHref===currentHref){
+        const state=routeHistoryState(name,options.preserveScroll?savedScrollY()||viewportScrollY():0);
+        history.replaceState(state,'',url);
+        return notify(options.preserveScroll?'same-preserve':'same');
+      }
       if(options.replace){
-        const state={...(history.state||{}),outbaseShell:true,route:name,[SCROLL_KEY]:options.preserveScroll?savedScrollY()||viewportScrollY():0};
+        const state=routeHistoryState(name,options.preserveScroll?savedScrollY()||viewportScrollY():0);
         history.replaceState(state,'',url);
         return notify(options.preserveScroll?'replace-preserve':'replace');
       }

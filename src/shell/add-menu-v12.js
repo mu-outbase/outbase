@@ -59,6 +59,11 @@
     showCentral(){
       const host=document.getElementById('outbaseShellModal');
       if(host)host.innerHTML=addSheetMarkup();
+      const prefetch=globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.prefetch;
+      if(prefetch){
+        const run=()=>prefetch(['start','memo','assets']);
+        if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:700});else setTimeout(run,0);
+      }
     }
   });
 
@@ -66,10 +71,22 @@
   globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;
 
-  function closeCentral(){
+  function closeCentralForNavigation(){
     renderer.hideCentral?.();
     const stack=globalThis.OUTBASE_MODAL_STACK_V164;
-    if(stack?.top?.()?.id==='central')stack.close?.();
+    const hadCentral=stack?.top?.()?.id==='central';
+    if(hadCentral)stack.close?.({historyBack:false});
+    return Boolean(hadCentral);
+  }
+
+  function returnValues(route,values={}){
+    const current=globalThis.OUTBASE_ROUTER?.current?.()||{};
+    return {
+      ...values,
+      returnShell:current.name||'home',
+      returnActivityId:current.activityId||undefined,
+      originActivityId:current.activityId||undefined
+    };
   }
 
   document.addEventListener('click',event=>{
@@ -77,9 +94,11 @@
     if(!button)return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    closeCentral();
-    const values=button.dataset.ob22Mode?{mode:button.dataset.ob22Mode}:{};
-    globalThis.OUTBASE_ROUTER?.navigate?.(button.dataset.ob22Route||'home',values,{transition:false,skipTransition:true});
+    const route=button.dataset.ob22Route||'home';
+    const baseValues=button.dataset.ob22Mode?{mode:button.dataset.ob22Mode}:{};
+    const values=returnValues(route,baseValues);
+    const replace=closeCentralForNavigation();
+    globalThis.OUTBASE_ROUTER?.navigate?.(route,values,{replace,transition:false,skipTransition:true});
   },true);
 
   const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
