@@ -1,0 +1,10 @@
+OUTBASE R1-03 v18.2 static verification
+
+- JavaScript syntax: PASS
+- Real-data-only HOME override loaded after base model: PASS
+- Sample rows excluded: PASS
+- demoPreview disabled: PASS
+- Service worker cache asset included: PASS
+- Version/cache identifiers bumped: PASS
+- ZIP integrity: checked after packaging
+- Android device: NOT TESTED
