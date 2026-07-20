@@ -1,0 +1,86 @@
+{
+  "version": "v18.3",
+  "fileCount": 16,
+  "files": [
+    {
+      "path": "README_R1-04_HOME当日予定復旧_v18.3.txt",
+      "size": 790,
+      "sha256": "c3b406735a34402683a9421d6b4aa08cf6bb54d22b2e651d78d2c8e4bee59a14"
+    },
+    {
+      "path": "index.html",
+      "size": 7152,
+      "sha256": "447550d1c8755615ac5be5655d2aac533e52862f4f45f63c7fa6f29a77ed04cd"
+    },
+    {
+      "path": "service-worker.js",
+      "size": 7296,
+      "sha256": "89bb14512f1234a9108663b53154a302aa7e8b9761cf4442ad6926131443d55f"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size": 2621,
+      "sha256": "d91b0329373c18bb96328910f242acf73265a258b9ab9b8e47290317561f592d"
+    },
+    {
+      "path": "src/config/version.js",
+      "size": 427,
+      "sha256": "261481e8f02189e1dafbf92a60675b6ee7457eaa0944b8f7a92ad68ad75ce4c9"
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size": 10363,
+      "sha256": "f775a0caf2fb09a4269c29b07c34de3504485e39dd0821a791707f1f8b76e7f8"
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size": 5498,
+      "sha256": "a7c5de5cdedffafb69de7c069182f462a55158e9edcc2abc5837aba20a6ab205"
+    },
+    {
+      "path": "src/router.js",
+      "size": 6138,
+      "sha256": "e939147dee130b855e64331390a7c4a21793fc401fc76658e8068ae65fa60813"
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size": 1530,
+      "sha256": "41fce9a15ee4a65068d623b0e505ef7359acfaf3173b8015f5b3e1bd4a68900e"
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size": 2456,
+      "sha256": "afa1f69538d2cf9081398c6ff390a771da9aab6e9a28cd53baa65ab30e68a4f6"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size": 17388,
+      "sha256": "9adfe10788b8cce96046fb5d20aa2eeaaaf5baf85816b8e6da3f3c823ec78bda"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size": 2589,
+      "sha256": "9aa457065f53f9fd3b8aeacd9c7749ed505b606e72aa3b37f687c670f0f0da1a"
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size": 9251,
+      "sha256": "4860290fc40e1c50082ff00fde665ba05de4ab2ab41dd79524d98c54566edf35"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size": 18169,
+      "sha256": "20e7e4c552222e9500e5c7f5d3ab18e4628fea18776dbdb8d96a6676b7706f8f"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size": 9491,
+      "sha256": "084bd247477431df15e42ebeaf75f47c413144bb8bf511b132d31dc427315687"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size": 79187,
+      "sha256": "5af4191331a54cbb7fc46afa9027d0c35334400c54c6bf9ef8a0cec72e0f009a"
+    }
+  ]
+}

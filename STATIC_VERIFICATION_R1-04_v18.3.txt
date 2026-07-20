@@ -1,0 +1,13 @@
+OUTBASE v18.3 static verification
+
+PASS: all bundled JavaScript files pass node --check
+PASS: current-day all-day plan remains visible after its start time
+PASS: multi-day plan that started earlier remains visible while its period overlaps today
+PASS: ended plan is excluded
+PASS: out-of-range future plan is excluded
+PASS: sample plans remain disabled
+PASS: version, index cache-busters, and service-worker cache use v18.3 identifiers
+PASS: service worker pre-caches the v18.3 plan-screen-model URL
+PASS: ZIP integrity test passed
+
+Android actual-device behavior is not claimed by this file.
