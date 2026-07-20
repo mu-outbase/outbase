@@ -310,27 +310,65 @@
     __executionV19:true,
     async mount(root,options={}){
       const requested=globalThis.OUTBASE_ROUTER?.current?.()||{};
-      if(requested.name!=='record')clearTimer();
-      const primed=requested.name==='record'?cached(requested.activityId):null;
-      const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
-      if(primed&&beforeMain){
-        beforeMain.classList.add('ob3-main-record');
-        beforeMain.classList.remove('ob3-main-calendar','ob3-main-preparation','ob3-main-activity');
-        rerender(beforeMain,primed,requested,{preserveScroll:false});
+      if(requested.name!=='record'){
+        clearTimer();
+        return base.mount(root,options);
       }
 
-      const value=await base.mount(root,options);
-      const main=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
-      const active=value?.route?.name==='record';
-      if(main)main.classList.toggle('ob3-main-record',active);
-      if(active&&main){
+      /*
+       * The base renderer has no record body. Calling base.mount() for record
+       * falls through to HOME with no home payload and can abort before the
+       * execution renderer gets a chance to draw. Build the shell model and
+       * skeleton directly for record, then let the shared header/nav wrapper
+       * decorate it before mounting the execution body.
+       */
+      let value;
+      try{
+        const shellModel=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
+        if(!shellModel?.build)throw new Error('OUTBASE shell model is not ready');
+        value=await shellModel.build(options);
+
+        let shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
+        if(!shell){
+          root.innerHTML='<div class="ob3-shell ob6-north" data-ob6-route="record"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>';
+          shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
+        }
+        if(!shell)throw new Error('OUTBASE execution shell is not ready');
+        shell.dataset.ob6Route='record';
+
+        base.updateNetwork?.(shell,value.online);
+        base.updateNav?.(root,value);
+
+        const main=shell.querySelector?.('.ob3-main');
+        if(!main)throw new Error('OUTBASE execution main is not ready');
+        main.classList.add('ob3-main-record');
         main.classList.remove('ob3-main-calendar','ob3-main-preparation','ob3-main-activity');
         clearLegacyLaunchState(main);
-        const result=cached(value.route.activityId)||primed||await loadFast(value.route.activityId);
+
+        const primed=cached(requested.activityId);
+        const result=primed||await loadFast(requested.activityId);
         if(result.status==='ready')activateContext(result.item,'execution-render');
-        rerender(main,result,value.route,{preserveScroll:false});
+        rerender(main,result,requested,{preserveScroll:false});
+        globalThis.OUTBASE_THEME_V166?.sync?.('execution-render');
+        return value;
+      }catch(error){
+        console.error('[OUTBASE execution mount]',error);
+        let shell=root?.querySelector?.('.ob3-shell');
+        if(!shell){
+          root.innerHTML='<div class="ob3-shell ob6-north" data-ob6-route="record"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>';
+          shell=root?.querySelector?.('.ob3-shell');
+        }
+        const main=shell?.querySelector?.('.ob3-main');
+        if(main){
+          main.classList.add('ob3-main-record');
+          main.innerHTML='<section class="ob19-execution"><div class="ob19-error ob36-card"><h1>実行画面を開けませんでした</h1><p>白画面にせず、準備画面へ戻れるようにしました。</p><button type="button" data-ob19-recover>準備へ戻る</button></div></section>';
+          main.querySelector?.('[data-ob19-recover]')?.addEventListener('click',()=>{
+            const values={activityId:requested.activityId||'',planId:requested.planId||'',returnShell:'activity',returnActivityId:requested.activityId||''};
+            globalThis.OUTBASE_ROUTER?.navigate?.('preparation',values,{replace:true,transition:false,skipTransition:true});
+          });
+        }
+        return value||Object.freeze({route:requested,online:navigator.onLine,executionError:true});
       }
-      return value;
     },
     updateNav(root,value){base.updateNav?.(root,value);}
   });

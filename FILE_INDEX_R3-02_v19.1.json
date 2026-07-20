@@ -1,0 +1,77 @@
+{
+  "release": "OUTBASE v19.1 R3-02",
+  "files": [
+    {
+      "path": "README_R3-02_新実行画面白画面修正_v19.1.txt",
+      "size": 1153
+    },
+    {
+      "path": "STATIC_VERIFICATION_R3-02_v19.1.txt",
+      "size": 525
+    },
+    {
+      "path": "index.html",
+      "size": 7136
+    },
+    {
+      "path": "service-worker.js",
+      "size": 7330
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size": 2656
+    },
+    {
+      "path": "src/config/version.js",
+      "size": 421
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size": 10363
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size": 5498
+    },
+    {
+      "path": "src/router.js",
+      "size": 6147
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size": 1530
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size": 2456
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size": 17829
+    },
+    {
+      "path": "src/shell/execution-route-v19.js",
+      "size": 20391
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size": 2589
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size": 9251
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size": 18713
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size": 9491
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size": 87577
+    }
+  ]
+}

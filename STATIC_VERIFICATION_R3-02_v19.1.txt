@@ -1,0 +1,15 @@
+OUTBASE v19.1 static verification
+
+実施済み:
+- 全収録JavaScript node --check
+- index.html HTMLParser
+- CSS波括弧数一致
+- ZIP整合性 unzip -t
+- Nodeモックで record ルートが base.mount() を呼ばず、新実行画面HTMLを描画することを確認
+- recordエラー時の準備復帰フォールバックを静的確認
+- v19.1 version / cache識別子を静的確認
+
+未実施:
+- Android実機描画
+- 実端末での戻る／再遷移
+- GPS・メディア・IndexedDB中核移植（Codex工程）
