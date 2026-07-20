@@ -12,7 +12,7 @@
 
   function location(activity){
     const meta=activity?.metadata||{};const plan=meta.legacy_plan||{};const core=meta.legacy_core_activity||{};
-    return String(plan.location||plan.placeName||core.location||meta.location||'').trim();
+    return String(plan.location||plan.placeName||core.location||meta.location||meta.placeName||'').trim();
   }
 
   function recordView(row){
@@ -53,6 +53,7 @@
     const improvementRows=sortDesc(clean(improvements),'updated_at');
     const recordRows=sortDesc(clean(records),'occurred_at').slice(0,Math.max(1,Number(recordLimit)||40)).map(recordView);
     const mediaInfo=mediaSummary(media);
+    const planId=activity.legacyPlanId||null;
 
     const view=Object.freeze({
       ...activity,
@@ -74,9 +75,9 @@
       assets:Object.freeze(linkedAssets),mealCount:clean(meals).length,shoppingListCount:clean(shoppingLists).length,
       homeUrl:globalThis.OUTBASE_ROUTER.shellUrl('home'),
       calendarUrl:globalThis.OUTBASE_ROUTER.shellUrl('calendar',{month:(utils().iso(activity.startAt)||'').slice(0,7)}),
-      preparationUrl:plans().legacyUrl(activity,'preparation'),
-      recordUrl:globalThis.OUTBASE_ROUTER.legacyUrl('record',{activityId:activity.id,planId:activity.legacyPlanId||null}),
-      legacyDetailUrl:plans().legacyUrl(activity,'detail')
+      preparationUrl:globalThis.OUTBASE_ROUTER.shellUrl('preparation',{activityId:activity.id,planId}),
+      recordUrl:globalThis.OUTBASE_ROUTER.shellUrl('record',{activityId:activity.id,planId}),
+      legacyDetailUrl:globalThis.OUTBASE_ROUTER.shellUrl('plan-editor',{activityId:activity.id,planId,mode:'edit'})
     });
 
     return Object.freeze({status:'ready',activity:view,blobReads:0,generatedAt:new Date().toISOString()});

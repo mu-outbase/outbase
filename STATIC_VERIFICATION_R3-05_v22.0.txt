@@ -1,0 +1,59 @@
+OUTBASE R3-05 v22.0 STATIC VERIFICATION
+実施日：2026-07-20
+
+【実施済み】
+1. JavaScript構文確認
+   node --check：収録全JS PASS
+
+2. HTML構文読込
+   index.html：PASS
+   calendar-formal-v44.html：PASS
+
+3. CSS括弧整合
+   style-calendar-route-v3.css：PASS
+   style-ui-system-v21.css：PASS
+   style-route-unification-v22.css：PASS
+   calendar-formal-v44.css：PASS
+
+4. 新ルート登録
+   plan-editor / preparation-detail / start / memo / places / assets
+   router・manifest登録：PASS
+
+5. 通常導線の静的確認
+   追加メニュー4項目：新ルート
+   予定詳細の設定：plan-editor
+   詳細な準備：preparation-detail
+   場所検索：places
+   持ち物：assets
+   activity-detail-domainの準備／記録／編集URL：shellルート
+   PASS
+
+6. 旧URL変換ガード
+   plan / record / prep / search / memory の旧tab値を新ルートへ変換
+   active／paused記録セッションはFIELD03を保護
+   PASS
+
+7. 新画面のVM読込
+   route-unification-v22.js API生成：PASS
+   旧tab=prep+gear → assets変換：PASS
+   plan-editor HTML生成：PASS
+
+8. FIELD03保護
+   src/app.jsを成果物に含めない
+   FIELD03のlegacy version識別子を維持
+   PASS
+
+9. Service Worker
+   v22キャッシュ名
+   新JS／新CSS収録
+   domainキャッシュ更新
+   PASS
+
+【未確認】
+・Android実機での全リンク一巡
+・Androidでの予定／準備／メモ／場所／持ち物保存
+・ブラウザ履歴の全パターン
+・FIELD03記録中からの復帰
+・GPS、写真、動画、音声、ピン等の新実行画面接続
+
+静的確認はAndroid実機確認の代わりではない。

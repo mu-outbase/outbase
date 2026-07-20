@@ -34,7 +34,7 @@
     uiModule,
     ...[
       'src/shell/legacy-adapter.js','src/shell/modal-stack.js','src/shell/shell-model.js',
-      'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/shell/execution-route-v19.js','src/shell/plan-switch-v18.js','src/shell/navigation-audit-v17.js','src/shell/bootstrap.js'
+      'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/shell/execution-route-v19.js','src/shell/route-unification-v22.js','src/shell/plan-switch-v18.js','src/shell/navigation-audit-v17.js','src/shell/bootstrap.js'
     ].map(path=>withVersion(path,version.shell))
   ];
   globalThis.OUTBASE_MODULE_MANIFEST=Object.freeze({

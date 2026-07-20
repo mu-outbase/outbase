@@ -106,12 +106,6 @@
     catch(_error){return `./?shell=1&view=${encodeURIComponent(name)}`;}
   };
 
-  const legacyUrl=(name,item,params={})=>{
-    const context=activityContext(item,params);
-    try{return contextApi()?.legacyUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.legacyUrl(name,{...context,...params});}
-    catch(_error){return `./?tab=${encodeURIComponent(name)}`;}
-  };
-
   const preparationHref=item=>routeUrl('preparation',item,{returnShell:'activity',returnActivityId:item?.id});
   const startHref=item=>routeUrl('record',item,{
     returnShell:'activity',returnActivityId:item?.id
@@ -168,7 +162,7 @@
     return `<section class="ob16-hero ob20-plan-card ob36-card">
       <div class="ob20-plan-thumb">${visual}</div>
       <div class="ob20-plan-copy">
-        <div class="ob20-plan-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(item.legacyDetailUrl)}" data-ob17-context="legacy" aria-label="詳細設定">${icons.settings}</a></div>
+        <div class="ob20-plan-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(routeUrl('plan-editor',item,{mode:'edit'}))}" aria-label="予定を編集">${icons.settings}</a></div>
         <h1>${esc(item.title||'名称未設定')}</h1>
         <p>${icons.calendar}<span>${esc(range(item))}</span></p>
         <p>${icons.pin}<span>${esc(displayPlace(item))}</span></p>
@@ -189,7 +183,7 @@
       <div class="ob16-secondary-actions">
         ${first}
         <a href="${esc(recordHref(item))}" data-ob17-context="record">${icons.record}<span>記録</span></a>
-        <a href="${esc(item.calendarUrl)}">${icons.calendar}<span>カレンダー</span></a>
+        <a href="${esc(routeUrl('calendar',item,{month:(item.startAt||'').slice(0,7)}))}">${icons.calendar}<span>カレンダー</span></a>
       </div>
     </section>`;
   }

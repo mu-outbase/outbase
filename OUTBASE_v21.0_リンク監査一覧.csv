@@ -1,0 +1,21 @@
+﻿入口,現行URL／方式,現行到達先,判定,正式対応
+通常起動,URL指定なし,新シェル HOME,正式,維持
+下バー：ホーム,shell view=home,新シェル HOME,正式,維持
+下バー：カレンダー,shell view=calendar,新シェル内iframe calendar-formal-v44,暫定正式,親シェルとの契約を固定
+下バー：探す,shell view=search,新シェル 探す,正式,維持
+下バー：保管庫,shell view=vault,新シェル 保管庫,正式,維持
+予定カード／カレンダー予定,shell view=activity,新シェル 予定詳細,正式,維持
+予定詳細：準備,shell view=preparation,新シェル 簡易準備,正式,維持
+予定詳細：活動開始／記録,shell view=record,新シェル 新実行画面,暫定,FIELD03中核移植後に正式化
+予定詳細：設定,legacyDetailUrl,旧FIELD03系詳細,旧導線,通常導線から撤去
+簡易準備：詳細な準備,legacy tab=prep,旧詳細準備,旧導線,新シェル詳細準備へ置換
+追加：予定を追加,legacy tab=plan&planSheet=add,旧予定追加シート,旧導線,新シェル予定編集シートを新設
+追加：活動を始める,legacy tab=record&sheet=start,旧FIELD03開始シート,旧導線,新シェル開始フローへ置換
+追加：記録を残す,legacy tab=record&sheet=memo,旧FIELD03メモ,旧導線,新シェル共通メモシートへ置換
+追加：持ち物を登録,legacy tab=prep&outbaseAdd=gear,旧準備内ギア管理,旧導線,新シェル保管庫・持ち物編集へ置換
+探す：キャンプ場・場所,legacy openSearch,旧検索画面,旧導線,新シェル場所検索を新設
+探す：予定／思い出,shell activity/vault/calendar,新シェル,正式,維持
+探す：持ち物,shell vault?vaultTab=asset,保管庫の持ち物タブ,表示は新,持ち物詳細の旧遷移を置換
+保管庫：活動／記録,shell view=activity,新シェル 予定・活動詳細,正式,維持
+保管庫：持ち物,legacy tab=prep&outbaseVault=gear,旧準備内ギア管理,旧導線,新シェル持ち物詳細・編集へ置換
+旧FIELD03から戻る,return-bridge → shell,固定戻るボタン,橋渡し,新画面完成後は緊急退避専用

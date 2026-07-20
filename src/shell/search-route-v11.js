@@ -41,6 +41,7 @@
   };
 
   const vaultUrl=tab=>routeUrl('vault',{vaultTab:tab});
+  const assetsUrl=(id='')=>routeUrl('assets',id?{assetId:id}:{});
 
   const dateLabel=value=>{
     if(!value)return '';
@@ -114,7 +115,7 @@
       title:item.name||item.title||'名称未設定',
       sub:item.category||item.type||item.role||'持ち物',
       meta:item.quantity?`数量 ${item.quantity}`:'',
-      href:vaultUrl('asset'),
+      href:assetsUrl(item.id),
       text:lower([item.name,item.title,item.category,item.type,item.role,item.memo].join(' '))
     }));
 
@@ -221,7 +222,7 @@
       <section class="ob15-search-group">
         <div class="ob15-search-group-head">
           <h2>登録した持ち物</h2>
-          <a href="${esc(vaultUrl('asset'))}">保管庫 <span>›</span></a>
+          <a href="${esc(assetsUrl())}">持ち物 <span>›</span></a>
         </div>
         <div class="ob15-search-asset-grid">
           ${assets.length?assets.map(assetPreview).join(''):emptyPreview('持ち物')}
@@ -359,7 +360,7 @@
     }));
 
     root.querySelector('[data-search-place]')?.addEventListener('click',()=>{
-      (globalThis.OUTBASE_LEGACY_UI_V165||globalThis.OUTBASE_LEGACY_UI_V164)?.openSearch?.();
+      globalThis.OUTBASE_ROUTER?.navigate?.('places',{}, {transition:false,skipTransition:true});
     });
 
     root.querySelector('#outbaseCopyrightFooter')?.addEventListener('click',()=>{

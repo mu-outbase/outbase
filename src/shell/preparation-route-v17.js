@@ -44,11 +44,6 @@
     activityId:item?.id||'',planId:planId(item)||'',activityType:item?.type||'',activityTitle:item?.title||'',...overrides
   };
 
-  function legacyUrl(name,item,params={}){
-    const context=activityContext(item,params);
-    return contextApi()?.legacyUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.legacyUrl(name,{...context,...params});
-  }
-
   function routeUrl(name,item,params={}){
     const context=activityContext(item,params);
     return contextApi()?.shellUrl?.(name,context,params)||globalThis.OUTBASE_ROUTER.shellUrl(name,{...context,...params});
@@ -204,14 +199,6 @@
     globalThis.OUTBASE_ROUTER.navigate('activity',values,{transition:false,skipTransition:true});
   }
 
-  function prepareLegacyAnchor(item,control,{record=false,source='preparation-to-legacy'}={}){
-    if(!item?.id||!control?.href)return false;
-    activateContext(item,{record,source});
-    control.setAttribute?.('aria-busy','true');
-    control.classList?.add?.('is-launching');
-    return true;
-  }
-
   function itemMarkup(item){
     const done=item.status==='completed'||Boolean(item.completedAt);
     const enabled=Boolean(item.id);
@@ -244,7 +231,7 @@
     const pending=Number(summary.pending||Math.max(0,total-completed));
     const progress=Math.max(0,Math.min(100,Number(summary.progress||0)));
     const type=contextApi()?.typeLabel?.(item.type||item.activityType||'')||item.typeLabel||'予定';
-    const advanced=legacyUrl('activity',item,{returnShell:'preparation',returnActivityId:item.id});
+    const advanced=routeUrl('preparation-detail',item,{returnShell:'preparation',returnActivityId:item.id});
     const start=routeUrl('record',item,{returnShell:'preparation',returnActivityId:item.id});
 
     return `<section class="ob17-preparation ob20-page" data-ob17-activity-id="${esc(item.id)}">
@@ -386,7 +373,12 @@
     });
 
     main.querySelector('[data-ob17-advanced]')?.addEventListener('click',event=>{
-      prepareLegacyAnchor(item,event.currentTarget,{record:false,source:'preparation-to-advanced'});
+      event.preventDefault();
+      activateContext(item,{record:false,source:'preparation-to-detail'});
+      const context=activityContext(item,{returnShell:'preparation',returnActivityId:item.id});
+      globalThis.OUTBASE_ROUTER.navigate('preparation-detail',contextApi()?.params?.(context)||{
+        activityId:item.id,planId:planId(item),returnShell:'preparation',returnActivityId:item.id
+      },{transition:false,skipTransition:true});
     });
   }
 

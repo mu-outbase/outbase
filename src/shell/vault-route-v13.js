@@ -32,13 +32,7 @@
   const activityUrl=id=>routeUrl('activity',{activityId:id});
 
   function legacyGearUrl(id=''){
-    const next=new URL(location.href);
-    next.search='';
-    next.hash='';
-    next.searchParams.set('tab','prep');
-    next.searchParams.set('outbaseVault','gear');
-    if(id)next.searchParams.set('gearId',id);
-    return next.href;
+    return routeUrl('assets',id?{assetId:id}:{});
   }
 
   const dateObject=value=>{
@@ -376,58 +370,4 @@
   globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;
 
-  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-
-  async function waitFor(selector,timeout=5000){
-    const started=Date.now();
-    while(Date.now()-started<timeout){
-      const node=document.querySelector(selector);
-      if(node)return node;
-      await delay(80);
-    }
-    return null;
-  }
-
-  async function openLegacyGear(){
-    const query=new URLSearchParams(location.search);
-    if(query.get('outbaseVault')!=='gear')return;
-
-    const gearId=query.get('gearId')||'';
-    const clean=()=>{
-      const next=new URL(location.href);
-      next.searchParams.delete('outbaseVault');
-      next.searchParams.delete('gearId');
-      history.replaceState(history.state,'',next.href);
-    };
-
-    try{
-      const manager=await waitFor('[data-open-gear-manager]');
-      if(!manager){clean();return;}
-      manager.click();
-
-      const gearTab=await waitFor('[data-library-tab="gear"]');
-      gearTab?.click();
-
-      const itemsTab=await waitFor('[data-library-gear-view="items"]');
-      itemsTab?.click();
-
-      if(gearId){
-        const edit=await waitFor(
-          `[data-library-edit="gear"][data-library-id="${CSS.escape(gearId)}"]`,
-          2500
-        );
-        edit?.click();
-      }
-
-      clean();
-    }catch(_error){
-      clean();
-    }
-  }
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',openLegacyGear,{once:true});
-  }else{
-    openLegacyGear();
-  }
 })();
