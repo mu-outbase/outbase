@@ -67,7 +67,7 @@
     const meta=activity?.metadata||{};
     const plan=meta.legacy_plan||{};
     const core=meta.legacy_core_activity||{};
-    return String(plan.location||plan.placeName||core.location||meta.location||'').trim();
+    return String(activity?.place||activity?.placeName||plan.location||plan.placeName||core.location||meta.location||'').trim()||'場所未設定';
   }
 
   function sections(items,domain){
@@ -244,7 +244,7 @@
   function markup(result){
     if(result.status!=='ready'){
       const message=result.status==='missing'?'対象の予定が選ばれていません。':result.status==='error'?'準備を読み込めませんでした。':'予定が見つかりません。';
-      return `<section class="ob17-preparation"><div class="ob17-error"><h1>準備</h1><p>${esc(message)}</p><button type="button" data-ob17-home>ホームへ戻る</button></div></section>`;
+      return `<section class="ob17-preparation ob20-page"><div class="ob17-error ob36-card"><h1>準備</h1><p>${esc(message)}</p><button type="button" data-ob17-home>ホームへ戻る</button></div></section>`;
     }
 
     const {summary,item}=result;
@@ -253,27 +253,23 @@
     const pending=Number(summary.pending||Math.max(0,total-completed));
     const progress=Math.max(0,Math.min(100,Number(summary.progress||0)));
     const type=contextApi()?.typeLabel?.(item.type||item.activityType||'')||item.typeLabel||'予定';
-    const advanced=legacyUrl('activity',item,{
-      returnShell:'preparation',returnActivityId:item.id
-    });
-    const start=routeUrl('record',item,{
-      returnShell:'preparation',returnActivityId:item.id
-    });
+    const advanced=legacyUrl('activity',item,{returnShell:'preparation',returnActivityId:item.id});
+    const start=routeUrl('record',item,{returnShell:'preparation',returnActivityId:item.id});
 
-    return `<section class="ob17-preparation" data-ob17-activity-id="${esc(item.id)}">
-      <div class="ob17-route-head">
+    return `<section class="ob17-preparation ob20-page" data-ob17-activity-id="${esc(item.id)}">
+      <div class="ob17-route-head ob20-route-head">
         <button type="button" class="ob17-back" data-ob17-detail>${icons.back}<span>予定詳細へ</span></button>
         <span class="ob17-route-label">準備</span>
       </div>
 
-      <section class="ob17-prep-hero ob36-card">
+      <section class="ob17-prep-hero ob20-plan-card ob36-card">
         <div class="ob17-prep-heading">
           <span class="ob17-prep-heading-icon">${icons.prep}</span>
           <div>
-            <small>PREPARATION</small>
+            <small>準備</small>
             <h1>${esc(item.title||'予定')}</h1>
             <p>${esc(type)}・${esc(range(item))}</p>
-            <p>${esc(item.place||'場所未設定')}</p>
+            <p>${esc(activityPlace(item))}</p>
           </div>
           <em>${pending?`${pending}件 未完了`:'準備完了'}</em>
         </div>
@@ -286,10 +282,10 @@
 
       <div class="ob17-prep-sections">${sectionsMarkup(summary)}</div>
 
-      <section class="ob17-flow-actions">
+      <section class="ob17-flow-actions ob20-flow-card ob36-card">
         <a class="primary" href="${esc(start)}" data-ob17-start>
           <span>${icons.play}</span>
-          <span><b>活動を始める</b><small>GPS・写真・音声・メモへ</small></span>
+          <span><b>活動を始める</b><small>現在地・写真・音声・メモ</small></span>
           ${icons.arrow}
         </a>
         <a class="secondary" href="${esc(advanced)}" data-ob17-advanced>
@@ -304,7 +300,7 @@
   function renderResult(main,result,{preserveScroll=false}={}){
     if(!main||!result)return false;
     const y=preserveScroll?window.scrollY:0;
-    if(result.status==='ready'){activateContext(result.item,{source:'preparation-render'});warmDetail(result.item);}
+    if(result.status==='ready'){activateContext(result.item,{source:'preparation-render'});warmDetail(result.item);globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(result.item);}
     main.innerHTML=markup(result);
     bind(main,result);
     if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
@@ -391,6 +387,7 @@
     main.querySelector('[data-ob17-start]')?.addEventListener('click',event=>{
       event.preventDefault();
       activateContext(item,{record:false,source:'preparation-to-execution'});
+      globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(item);
       const context=activityContext(item,{returnShell:'preparation',returnActivityId:item.id});
       globalThis.OUTBASE_ROUTER.navigate('record',contextApi()?.params?.(context)||{
         activityId:item.id,planId:planId(item),returnShell:'preparation',returnActivityId:item.id

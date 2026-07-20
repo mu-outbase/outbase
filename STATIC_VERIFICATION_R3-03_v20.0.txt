@@ -1,0 +1,18 @@
+OUTBASE v20.0 static verification
+
+PASS
+- src配下の収録JavaScriptを node --check
+- service-worker.jsを node --check
+- index.htmlをPython HTMLParserで解析
+- style-calendar-route-v3.css の波括弧数一致
+- Activity detail Node mock: ob20-plan-cardと実予定名を描画
+- Preparation Node mock: ob20-plan-card、実場所、準備項目を描画
+- Execution Node mock: recordルートから実予定名を描画
+- 実行画面に即時loadingMarkupとexecutionImmediate経路が存在
+- Activity / PreparationからExecution primeを呼び出す
+- v20.0 version / cache識別子を静的確認
+
+LIMITATION
+- Android実機では未確認
+- Chromium headlessで静的プレビュー撮影を試行したが、コンテナのDBus/NETLINK権限制約で画像生成できなかった
+- GPS連続記録、メディア保存、IndexedDB活動復元はこの版では未接続

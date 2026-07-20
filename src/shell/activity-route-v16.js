@@ -175,10 +175,10 @@
   function hero(item){
     const visual = base.activityVisual ? base.activityVisual(item,{className:'ob16-cover-media',label:false}) : '';
     const s = state(item);
-    return `<section class="ob16-hero">
-      <div class="ob16-hero-visual">${visual}</div>
-      <div class="ob16-hero-copy">
-        <div class="ob16-hero-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(item.legacyDetailUrl)}" data-ob17-context="legacy" aria-label="詳細設定">${icons.settings}</a></div>
+    return `<section class="ob16-hero ob20-plan-card ob36-card">
+      <div class="ob20-plan-thumb">${visual}</div>
+      <div class="ob20-plan-copy">
+        <div class="ob20-plan-top"><span>${esc(item.typeLabel||'活動')}</span><span>${esc(s.phase)}</span><a href="${esc(item.legacyDetailUrl)}" data-ob17-context="legacy" aria-label="詳細設定">${icons.settings}</a></div>
         <h1>${esc(item.title||'名称未設定')}</h1>
         <p>${icons.calendar}<span>${esc(range(item))}</span></p>
         <p>${icons.pin}<span>${esc(displayPlace(item))}</span></p>
@@ -194,7 +194,7 @@
     const first=planned
       ?`<a href="${esc(startHref(item))}" data-ob17-context="record">${icons.photo}<span>活動開始</span></a>`
       :`<a href="${esc(preparationHref(item))}" data-ob17-context="preparation">${icons.prep}<span>準備</span></a>`;
-    return `<section class="ob16-next-card"><small>今やること</small><h2>${esc(s.title)}</h2><p>${esc(s.sub)}</p>
+    return `<section class="ob16-next-card ob20-action-card ob36-card"><small>今やること</small><h2>${esc(s.title)}</h2><p>${esc(s.sub)}</p>
       <a class="ob16-primary-action" href="${esc(s.href)}"${primaryAttr}><span>${s.icon}</span><b>${esc(s.label)}</b>${icons.arrow}</a>
       <div class="ob16-secondary-actions">
         ${first}
@@ -265,6 +265,7 @@
         event.preventDefault();
         const context=activityContext(item,{returnShell:'activity',returnActivityId:item.id});
         activateContext(item,{source:'activity-to-execution',record:false});
+        globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(item);
         globalThis.OUTBASE_ROUTER.navigate('record',contextApi()?.params?.(context)||{
           activityId:item.id,planId:legacyPlanId(item),returnShell:'activity',returnActivityId:item.id
         },{transition:false,skipTransition:true});
@@ -298,7 +299,7 @@
       if (value?.route?.name==='activity' && main) {
         main.classList.remove('ob3-main-calendar','ob3-main-preparation');
         const item=value?.detail?.activity||null;
-        if(item){activateContext(item,{source:'activity-render'});prime(value);}
+        if(item){activateContext(item,{source:'activity-render'});prime(value);globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(item);}
         main.innerHTML = markup(value);
         base.hydrateMedia?.(main);
         bind(main,value);

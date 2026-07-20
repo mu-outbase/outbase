@@ -1,0 +1,95 @@
+{
+  "release": "OUTBASE v20.0 R3-03",
+  "files": [
+    {
+      "path": "README_R3-03_HOME統一3画面再設計_v20.0.txt",
+      "size": 1985,
+      "sha256": "8ba39e5503ef24b36f788a433678002cf1e0cd747ba752c374f0ecba878410cf"
+    },
+    {
+      "path": "STATIC_VERIFICATION_R3-03_v20.0.txt",
+      "size": 885,
+      "sha256": "2b069fc37b0030449a274b8259b50b45448de38f09e825c9484842a7fc16c509"
+    },
+    {
+      "path": "index.html",
+      "size": 7152,
+      "sha256": "05e71a52beedb2aaaa326687c30194299d9d41f3f77d1b0412f4fe374ede1045"
+    },
+    {
+      "path": "service-worker.js",
+      "size": 7376,
+      "sha256": "aab2ce932247f9cf447f9a79da75fa6008fe93343d7750caed74f356393dda45"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size": 2656,
+      "sha256": "bb25858149a8826350d6d87293894fa08fefc5e048e7df1b8be3646e3b7c6c9f"
+    },
+    {
+      "path": "src/config/version.js",
+      "size": 427,
+      "sha256": "fe0a062accba7ba0542c7a5c78808d12da310046d05787e542b077d3c1b32470"
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size": 10363,
+      "sha256": "f775a0caf2fb09a4269c29b07c34de3504485e39dd0821a791707f1f8b76e7f8"
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size": 5498,
+      "sha256": "a7c5de5cdedffafb69de7c069182f462a55158e9edcc2abc5837aba20a6ab205"
+    },
+    {
+      "path": "src/router.js",
+      "size": 6147,
+      "sha256": "84f1b4d206cc245327fde0e25e0c37b2f1bebab24ba49369b08592185ff5613c"
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size": 1530,
+      "sha256": "41fce9a15ee4a65068d623b0e505ef7359acfaf3173b8015f5b3e1bd4a68900e"
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size": 2456,
+      "sha256": "afa1f69538d2cf9081398c6ff390a771da9aab6e9a28cd53baa65ab30e68a4f6"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size": 17997,
+      "sha256": "759e548e3d1b5a68c7575b2fd7e9fa1fd399bedc1a4e39245a15e651a5e8e606"
+    },
+    {
+      "path": "src/shell/execution-route-v19.js",
+      "size": 21443,
+      "sha256": "958ec8af40858382e909592237f358cba4d719ae46f4b2587b5d85398872f4f1"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size": 2589,
+      "sha256": "9aa457065f53f9fd3b8aeacd9c7749ed505b606e72aa3b37f687c670f0f0da1a"
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size": 9251,
+      "sha256": "4860290fc40e1c50082ff00fde665ba05de4ab2ab41dd79524d98c54566edf35"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size": 18942,
+      "sha256": "5b0fd7a67f079c3571ffa720d2fa3544e97e11aa77bd82ba5aa600603bd9a95d"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size": 9491,
+      "sha256": "084bd247477431df15e42ebeaf75f47c413144bb8bf511b132d31dc427315687"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size": 98872,
+      "sha256": "33ce9b4b5dcf8074e081eba29501c13da8379fccb78ea125ee6b01db4e794625"
+    }
+  ]
+}

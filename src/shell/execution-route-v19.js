@@ -51,6 +51,10 @@
     const end=short(item.endAt||item.startAt);
     return start===end?start:`${start}〜${end}`;
   };
+  function activityPlace(item){
+    return String(item?.place||item?.placeName||item?.metadata?.place||item?.metadata?.legacy_plan?.place||'').trim()||'場所未設定';
+  }
+
   const contextApi=()=>globalThis.OUTBASE_ACTIVITY_CONTEXT_V18||globalThis.OUTBASE_ACTIVITY_CONTEXT;
   const planId=item=>contextApi()?.planIdFrom?.(item)||item?.legacyPlanId||item?.metadata?.legacy_plan?.id||null;
   const activityContext=(item,overrides={})=>contextApi()?.fromActivity?.(item,overrides)||{
@@ -101,6 +105,13 @@
     return entry.value;
   }
 
+  function prime(item){
+    if(!item?.id)return null;
+    const value=Object.freeze({status:'ready',item,detail:{status:'ready',activity:item}});
+    cache.set(String(item.id),{createdAt:Date.now(),value});
+    return value;
+  }
+
   async function loadFast(activityId,{force=false}={}){
     if(!activityId)return {status:'missing'};
     if(!force){const value=cached(activityId);if(value)return value;}
@@ -138,13 +149,24 @@
   }
   function controlIcon(mode){return mode==='active'?icons.pause:icons.play;}
 
+  function loadingMarkup(route){
+    const title=route?.activityTitle||'予定を読み込んでいます';
+    const type=contextApi()?.typeLabel?.(route?.activityType||'')||route?.activityType||'活動';
+    return `<section class="ob19-execution ob20-page ob20-loading-page">
+      <div class="ob19-route-head ob20-route-head"><button type="button" class="ob19-back" data-ob19-loading-back>${icons.back}<span>準備へ</span></button><span class="ob19-route-label">実行</span></div>
+      <section class="ob20-plan-card ob36-card ob20-loading-card"><span class="ob19-overview-icon">${icons.play}</span><div><small>${esc(type)}</small><h1>${esc(title)}</h1><p>実行画面を準備しています。</p></div></section>
+      <section class="ob20-session-card ob36-card"><div class="ob20-skeleton wide"></div><div class="ob20-skeleton"></div><div class="ob20-skeleton"></div></section>
+      <section class="ob19-map-card ob36-card"><div class="ob20-skeleton map"></div></section>
+    </section>`;
+  }
+
   function mapMarkup(state){
     const position=state.position;
     const label=position?`現在地取得済み ±${Math.round(Number(position.accuracy||0))||'—'}m`:'現在地はまだ取得していません';
-    const coordinates=position?`${Number(position.lat).toFixed(5)}, ${Number(position.lng).toFixed(5)}`:'GPS・軌跡・場所記録';
+    const coordinates=position?`${Number(position.lat).toFixed(5)}, ${Number(position.lng).toFixed(5)}`:'現在地を取得すると、ここに表示します';
     return `<section class="ob19-map-card ob36-card">
-      <div class="ob19-card-head"><div><small>LIVE MAP</small><h2>現在地と記録</h2></div><span class="${position?'ready':''}">${esc(label)}</span></div>
-      <div class="ob19-map-stage" aria-label="新しい実行画面の地図領域">
+      <div class="ob19-card-head"><div><small>現在地</small><h2>地図と場所の記録</h2></div><span class="${position?'ready':''}">${esc(label)}</span></div>
+      <div class="ob19-map-stage" aria-label="実行画面の地図領域">
         <div class="ob19-map-grid"></div><span class="ob19-map-road r1"></span><span class="ob19-map-road r2"></span><span class="ob19-map-park"></span><i class="ob19-map-dot"></i>
         <p>${esc(coordinates)}</p>
       </div>
@@ -159,37 +181,37 @@
   function markup(result,route){
     if(result.status!=='ready'){
       const message=result.status==='missing'?'対象の予定が選ばれていません。':result.status==='error'?'実行画面を読み込めませんでした。':'予定が見つかりません。';
-      return `<section class="ob19-execution"><div class="ob19-error ob36-card"><h1>実行</h1><p>${esc(message)}</p><button type="button" data-ob19-home>ホームへ戻る</button></div></section>`;
+      return `<section class="ob19-execution ob20-page"><div class="ob19-error ob36-card"><h1>実行</h1><p>${esc(message)}</p><button type="button" data-ob19-home>ホームへ戻る</button></div></section>`;
     }
     const item=result.item;
     const state=uiState(item.id);
     const type=contextApi()?.typeLabel?.(item.type||'')||item.typeLabel||'活動';
     const returnLabel=route?.returnShell==='activity'?'予定詳細へ':'準備へ';
-    const engineReady=false;
-    return `<section class="ob19-execution" data-ob19-activity-id="${esc(item.id)}">
-      <div class="ob19-route-head">
+    return `<section class="ob19-execution ob20-page" data-ob19-activity-id="${esc(item.id)}">
+      <div class="ob19-route-head ob20-route-head">
         <button type="button" class="ob19-back" data-ob19-back>${icons.back}<span>${esc(returnLabel)}</span></button>
         <span class="ob19-route-label">実行</span>
       </div>
 
-      <section class="ob19-overview ob36-card">
-        <div class="ob19-overview-main"><span class="ob19-overview-icon">${icons.play}</span><div><small>ACTIVITY</small><h1>${esc(item.title||'予定')}</h1><p>${esc(type)}・${esc(range(item))}</p><p>${esc(item.place||'場所未設定')}</p></div></div>
-        <div class="ob19-engine-state"><i></i><span><b>${engineReady?'記録基盤 接続済み':'新実行画面を準備中'}</b><small>${engineReady?'GPSと保存を利用できます':'FIELD03の記録中核はCodex工程で接続します'}</small></span></div>
+      <section class="ob19-overview ob20-plan-card ob36-card">
+        <span class="ob19-overview-icon">${icons.play}</span>
+        <div class="ob19-overview-main"><div><small>${esc(type)}</small><h1>${esc(item.title||'予定')}</h1><p>${esc(range(item))}</p><p>${esc(activityPlace(item))}</p></div></div>
+        <span class="ob20-status-pill">${esc(modeText(state.mode))}</span>
       </section>
 
-      ${mapMarkup(state)}
-
-      <section class="ob19-session ob36-card">
+      <section class="ob19-session ob20-session-card ob36-card">
+        <div class="ob19-card-head"><div><small>活動時間</small><h2>今の記録</h2></div><span>${esc(modeText(state.mode))}</span></div>
         <div class="ob19-metrics"><div><small>経過時間</small><b data-ob19-elapsed>${formatElapsed(currentElapsed(state))}</b></div><div><small>距離</small><b>0.00 <i>km</i></b></div></div>
         <div class="ob19-controls">
           <button type="button" class="ob19-control primary" data-ob19-control>${controlIcon(state.mode)}<span>${esc(controlText(state.mode))}</span></button>
           <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)?'':'disabled'}>${icons.stop}<span>終了</span></button>
         </div>
-        <p class="ob19-control-note">この版の開始・停止は画面操作確認用です。GPS軌跡と本保存にはまだ接続しません。</p>
       </section>
 
+      ${mapMarkup(state)}
+
       <section class="ob19-recording ob36-card">
-        <div class="ob19-card-head"><div><small>QUICK RECORD</small><h2>今これを残す</h2></div><span>予定：${esc(item.title||'活動')}</span></div>
+        <div class="ob19-card-head"><div><small>クイック記録</small><h2>今これを残す</h2></div><span>${esc(item.title||'活動')}</span></div>
         <div class="ob19-quick-grid">
           ${actionButton('photo','写真','位置と時刻',icons.photo)}
           ${actionButton('video','動画','その場の様子',icons.video)}
@@ -198,11 +220,11 @@
           ${actionButton('pin','場所ピン','あとで見返す',icons.pin)}
           ${actionButton('parking','駐車位置','車へ戻る',icons.parking)}
         </div>
-        <p class="ob19-inline-notice" data-ob19-notice>写真・動画・音声・メモ・ピンは、Codexで記録エンジンを移植した時に一括接続します。</p>
+        <p class="ob19-inline-notice" data-ob19-notice>この確認版では、写真・音声などはまだ保存されません。</p>
       </section>
 
       <section class="ob19-save ob36-card">
-        <span>${icons.cloud}</span><div><b>端末保存・オフライン復元</b><small>保存構造を保護したまま新画面へ移植予定</small></div><em>未接続</em>
+        <span>${icons.cloud}</span><div><b>端末保存とオフライン復元</b><small>記録中核の接続後に有効になります</small></div><em>準備中</em>
       </section>
 
       <button type="button" class="ob19-detail-button" data-ob19-detail><span>予定詳細を見る</span>${icons.arrow}</button>
@@ -315,53 +337,45 @@
         return base.mount(root,options);
       }
 
-      /*
-       * The base renderer has no record body. Calling base.mount() for record
-       * falls through to HOME with no home payload and can abort before the
-       * execution renderer gets a chance to draw. Build the shell model and
-       * skeleton directly for record, then let the shared header/nav wrapper
-       * decorate it before mounting the execution body.
-       */
       let value;
-      try{
-        const shellModel=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
-        if(!shellModel?.build)throw new Error('OUTBASE shell model is not ready');
-        value=await shellModel.build(options);
-
-        let shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
-        if(!shell){
-          root.innerHTML='<div class="ob3-shell ob6-north" data-ob6-route="record"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>';
-          shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
-        }
-        if(!shell)throw new Error('OUTBASE execution shell is not ready');
-        shell.dataset.ob6Route='record';
-
-        base.updateNetwork?.(shell,value.online);
-        base.updateNav?.(root,value);
-
-        const main=shell.querySelector?.('.ob3-main');
-        if(!main)throw new Error('OUTBASE execution main is not ready');
+      let result;
+      let shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
+      if(!shell){
+        root.innerHTML='<div class="ob3-shell ob6-north" data-ob6-route="record"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>';
+        shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
+      }
+      const main=shell?.querySelector?.('.ob3-main');
+      if(shell)shell.dataset.ob6Route='record';
+      if(main){
         main.classList.add('ob3-main-record');
         main.classList.remove('ob3-main-calendar','ob3-main-preparation','ob3-main-activity');
         clearLegacyLaunchState(main);
-
         const primed=cached(requested.activityId);
-        const result=primed||await loadFast(requested.activityId);
-        if(result.status==='ready')activateContext(result.item,'execution-render');
-        rerender(main,result,requested,{preserveScroll:false});
+        if(primed)rerender(main,primed,requested,{preserveScroll:false});
+        else{
+          main.innerHTML=loadingMarkup(requested);
+          main.querySelector?.('[data-ob19-loading-back]')?.addEventListener('click',()=>globalThis.OUTBASE_ROUTER?.back?.());
+        }
+      }
+      try{base.updateNav?.(root,Object.freeze({route:requested,online:navigator.onLine,executionImmediate:true}));}catch(_error){}
+      globalThis.OUTBASE_THEME_V166?.sync?.('execution-immediate');
+
+      try{
+        const shellModel=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
+        const primed=cached(requested.activityId);
+        const modelPromise=shellModel?.build?Promise.resolve(shellModel.build(options)):Promise.resolve(Object.freeze({route:requested,online:navigator.onLine}));
+        const resultPromise=primed?Promise.resolve(primed):loadFast(requested.activityId);
+        [value,result]=await Promise.all([modelPromise,resultPromise]);
+        base.updateNetwork?.(shell,value?.online);
+        base.updateNav?.(root,value||Object.freeze({route:requested,online:navigator.onLine}));
+        if(result?.status==='ready')activateContext(result.item,'execution-render');
+        if(main&&globalThis.OUTBASE_ROUTER?.current?.().name==='record')rerender(main,result||{status:'error'},requested,{preserveScroll:false});
         globalThis.OUTBASE_THEME_V166?.sync?.('execution-render');
         return value;
       }catch(error){
         console.error('[OUTBASE execution mount]',error);
-        let shell=root?.querySelector?.('.ob3-shell');
-        if(!shell){
-          root.innerHTML='<div class="ob3-shell ob6-north" data-ob6-route="record"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>';
-          shell=root?.querySelector?.('.ob3-shell');
-        }
-        const main=shell?.querySelector?.('.ob3-main');
         if(main){
-          main.classList.add('ob3-main-record');
-          main.innerHTML='<section class="ob19-execution"><div class="ob19-error ob36-card"><h1>実行画面を開けませんでした</h1><p>白画面にせず、準備画面へ戻れるようにしました。</p><button type="button" data-ob19-recover>準備へ戻る</button></div></section>';
+          main.innerHTML='<section class="ob19-execution ob20-page"><div class="ob19-error ob36-card"><h1>実行画面を開けませんでした</h1><p>準備画面へ戻って、もう一度開いてください。</p><button type="button" data-ob19-recover>準備へ戻る</button></div></section>';
           main.querySelector?.('[data-ob19-recover]')?.addEventListener('click',()=>{
             const values={activityId:requested.activityId||'',planId:requested.planId||'',returnShell:'activity',returnActivityId:requested.activityId||''};
             globalThis.OUTBASE_ROUTER?.navigate?.('preparation',values,{replace:true,transition:false,skipTransition:true});
@@ -374,7 +388,7 @@
   });
 
   globalThis.OUTBASE_EXECUTION_ROUTE_V19=Object.freeze({
-    loadFast,cached,invalidate(activityId){cache.delete(String(activityId||''));},uiState,writeUiState,UI_STATE_KEY
+    loadFast,cached,prime,invalidate(activityId){cache.delete(String(activityId||''));},uiState,writeUiState,UI_STATE_KEY
   });
   globalThis.OUTBASE_SHELL_RENDERER_V166=renderer;
   globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;
