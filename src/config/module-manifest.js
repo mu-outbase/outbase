@@ -4,8 +4,10 @@
   if(!version)throw new Error('OUTBASE_VERSION is not ready');
   const withVersion=(path,value)=>`${path}?v=${encodeURIComponent(value)}`;
   const contextModule=withVersion('src/context/activity-context-v18.js',version.shell);
+  const uiModule=withVersion('src/shell/ui-system-v21.js',version.shell);
   const legacy=[
     contextModule,
+    uiModule,
     ...[
       'src/app.js','src/outbase-core.js','src/outbase-chappy.js','src/outbase-chappy-ui.js',
       'src/outbase-import.js','src/outbase-memo-ui.js','src/outbase-review-ui.js','src/outbase-flow.js',
@@ -29,6 +31,7 @@
   ].map(path=>withVersion(path,version.domain));
   const shell=[
     contextModule,
+    uiModule,
     ...[
       'src/shell/legacy-adapter.js','src/shell/modal-stack.js','src/shell/shell-model.js',
       'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/shell/execution-route-v19.js','src/shell/plan-switch-v18.js','src/shell/navigation-audit-v17.js','src/shell/bootstrap.js'

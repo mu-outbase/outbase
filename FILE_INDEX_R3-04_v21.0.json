@@ -1,0 +1,140 @@
+{
+  "release": "OUTBASE v166.31 R3-04 全画面HOME統一 v21.0",
+  "base_github_main": "v166.31-r3-home-unified-flow-v20.0",
+  "generated_at": "2026-07-20",
+  "github_write": false,
+  "android_verified": false,
+  "field03_core_modified": false,
+  "files": [
+    {
+      "path": "README_R3-04_全画面HOME統一_v21.0.txt",
+      "size_bytes": 3077,
+      "sha256": "2e5a17133e668b908825c8e52216864a1dffdce40059235d7704979c405d1820"
+    },
+    {
+      "path": "STATIC_VERIFICATION_R3-04_v21.0.txt",
+      "size_bytes": 2116,
+      "sha256": "780b68a48ff26a11e81df67d8454f96d6cc9e08031164041d22692e39d568dad"
+    },
+    {
+      "path": "calendar-formal-v44.css",
+      "size_bytes": 42797,
+      "sha256": "96b0051ce1098ec9b49e9c6d4ad12ee742ce0364f37e78a89995f2db4f7469e4"
+    },
+    {
+      "path": "calendar-formal-v44.html",
+      "size_bytes": 4622,
+      "sha256": "39456f70ef7a428a80c4b0399193be706e8a6c332236e28e1e206e9c5ea63dea"
+    },
+    {
+      "path": "calendar-formal-v44.js",
+      "size_bytes": 40897,
+      "sha256": "e4770b90cc2169ee18766696a69e9e71a18231f3ed46734a7ca875cd0aefb791"
+    },
+    {
+      "path": "index.html",
+      "size_bytes": 7252,
+      "sha256": "49e0e7cfc1b69f49a519414a21fc2c7f45b00f7517008830f7e3adadff6e2dd5"
+    },
+    {
+      "path": "service-worker.js",
+      "size_bytes": 7535,
+      "sha256": "b7f72f73b9393cc91c7a053ac03bdb77026648d936d93b1782db8697654a1602"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size_bytes": 2758,
+      "sha256": "d17fbb3fa9b78f82272cf990cdb65078fd24b4bc38e9ed4c8968fa687d566827"
+    },
+    {
+      "path": "src/config/version.js",
+      "size_bytes": 443,
+      "sha256": "1a21149d690ef4d45ecd7beb0d11f80a5584f90e7c77c083836d42e7cf13c353"
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size_bytes": 10363,
+      "sha256": "f775a0caf2fb09a4269c29b07c34de3504485e39dd0821a791707f1f8b76e7f8"
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size_bytes": 5498,
+      "sha256": "a7c5de5cdedffafb69de7c069182f462a55158e9edcc2abc5837aba20a6ab205"
+    },
+    {
+      "path": "src/router.js",
+      "size_bytes": 6147,
+      "sha256": "84f1b4d206cc245327fde0e25e0c37b2f1bebab24ba49369b08592185ff5613c"
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size_bytes": 1530,
+      "sha256": "41fce9a15ee4a65068d623b0e505ef7359acfaf3173b8015f5b3e1bd4a68900e"
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size_bytes": 2456,
+      "sha256": "afa1f69538d2cf9081398c6ff390a771da9aab6e9a28cd53baa65ab30e68a4f6"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size_bytes": 16604,
+      "sha256": "da7b6f1c894ca8a896ab4ee7ceacec3889d8f00655ecc149b5e6380ca44a571d"
+    },
+    {
+      "path": "src/shell/add-menu-v12.js",
+      "size_bytes": 4730,
+      "sha256": "45fdb2f42fdf7c9b49417ed6ad67b4b41cdd7352a732169b44dc465d08c6e283"
+    },
+    {
+      "path": "src/shell/execution-route-v19.js",
+      "size_bytes": 20133,
+      "sha256": "88403697dda9a51380e6104f0fb259edb9182c89572c5a0f9cbf378b39da2abe"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size_bytes": 2589,
+      "sha256": "9aa457065f53f9fd3b8aeacd9c7749ed505b606e72aa3b37f687c670f0f0da1a"
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size_bytes": 9251,
+      "sha256": "4860290fc40e1c50082ff00fde665ba05de4ab2ab41dd79524d98c54566edf35"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size_bytes": 18497,
+      "sha256": "796dc275a924df02459fe8d8365c6b281c5920b51837d6960351bd69665ea387"
+    },
+    {
+      "path": "src/shell/search-route-v11.js",
+      "size_bytes": 14528,
+      "sha256": "d814bf5801c08a5051323b501f19f5dfbdb98a2c85529dec56fcbc2b753a6069"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size_bytes": 8567,
+      "sha256": "6fc0de88d47e5280240a1d8bafdf442911ab806028672bd39645297cd5d959cd"
+    },
+    {
+      "path": "src/shell/ui-system-v21.js",
+      "size_bytes": 10957,
+      "sha256": "61b4aae72557837d519e0386fd57326c98a751490b93750035f4922ef3393899"
+    },
+    {
+      "path": "src/shell/vault-route-v13.js",
+      "size_bytes": 15483,
+      "sha256": "1c88a1586c263179bcaf5f9d63e595cd8b5e738afb876b37df2168c1a302476d"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size_bytes": 98872,
+      "sha256": "33ce9b4b5dcf8074e081eba29501c13da8379fccb78ea125ee6b01db4e794625"
+    },
+    {
+      "path": "style-ui-system-v21.css",
+      "size_bytes": 21213,
+      "sha256": "630c771271386478a151b42bebe6169cfb1f77798cf61bf1787af1f3a9f0e122"
+    }
+  ]
+}

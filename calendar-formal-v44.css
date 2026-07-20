@@ -1330,3 +1330,83 @@ html.outbaseCalendarEmbedded #calendarArea.month-swipe-right{
   transform:translateX(10px);
   opacity:.84;
 }
+
+/* =========================================================
+   OUTBASE v21.0 — calendar aligned with HOME master
+   ========================================================= */
+:root{
+  --green:#174d31;
+  --green2:#174d31;
+  --gold:#c99528;
+  --paper:#fbfaf7;
+  --card:#fff;
+  --line:#e6e2da;
+  --line2:#eeeae2;
+  --muted:#6d746f;
+  --soft:#edf4ee;
+  --shadow:0 10px 26px rgba(35,42,38,.07);
+}
+html,body{background:var(--paper)!important;color:#171b19!important}
+.calendar-shell{background:var(--paper)!important;padding-bottom:calc(112px + env(safe-area-inset-bottom))!important}
+.month-command{gap:8px!important;align-items:center!important}
+.period-button{min-width:0!important;text-align:left!important}
+.period-button small{display:none!important}
+.period-button strong{font-size:28px!important;line-height:1.05!important;color:var(--green)!important;letter-spacing:-.025em!important}
+.month-arrow,.month-today,.command-add{
+  border:1px solid var(--line)!important;
+  border-radius:16px!important;
+  background:#fff!important;
+  color:var(--green)!important;
+  box-shadow:none!important;
+}
+.command-add{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+.compact-tools{gap:8px!important}
+.view-tabs{gap:7px!important}
+.view-tabs button{
+  min-height:44px!important;
+  padding:8px 5px!important;
+  border:1px solid var(--line)!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  color:#4f5852!important;
+  font-weight:800!important;
+}
+.view-tabs button.active{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 6px 15px rgba(23,77,49,.14)!important}
+.filter-summary{border:1px solid var(--line)!important;border-radius:16px!important;background:#fff!important;color:#4f5852!important}
+.calendar-card,.week-view,.day-view,.list-view,.todo-view,.panel,.agenda{
+  border-color:var(--line)!important;
+  border-radius:22px!important;
+  background:#fff!important;
+  box-shadow:var(--shadow)!important;
+}
+.weekdays span{background:#fbfaf7!important;color:#707873!important;border-color:var(--line)!important}
+.day-cell{background:#fff!important;color:var(--green)!important;border-color:var(--line2)!important}
+.day-cell.selected{outline:2px solid var(--gold)!important}
+.day-cell.today strong{background:var(--green)!important;color:#fff!important}
+.segment,.mini-event{border:0!important;border-radius:7px!important}
+.agenda{overflow:hidden!important}
+.agenda-toggle{background:#fff!important;color:#171b19!important}
+.agenda-add{background:var(--green)!important;color:#fff!important;border-radius:16px!important}
+.modal{background:rgba(20,33,27,.30)!important;backdrop-filter:blur(4px)!important}
+.sheet{
+  border:1px solid rgba(255,255,255,.72)!important;
+  border-radius:28px 28px 0 0!important;
+  background:#fff!important;
+  color:#171b19!important;
+  box-shadow:0 -18px 48px rgba(20,32,26,.18)!important;
+}
+.sheet-head small{display:none!important}
+.sheet-head h2{font-size:25px!important;color:#171b19!important;letter-spacing:-.02em!important}
+.sheet input,.sheet textarea,.sheet select{border-color:var(--line)!important;border-radius:15px!important;background:#fbfaf7!important;color:#171b19!important}
+.sheet .primary{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+.home36-topbar svg,.home36-bottom-nav svg,.month-command svg,.sheet svg{
+  fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important
+}
+html.outbaseCalendarEmbedded .home36-topbar,
+html.outbaseCalendarEmbedded .home36-bottom-nav,
+html.outbaseCalendarEmbedded .status-strip{display:none!important}
+html.outbaseCalendarEmbedded .calendar-shell{padding-top:14px!important}
+@media(max-width:560px){
+  .period-button strong{font-size:26px!important}
+  .view-tabs button{font-size:13px!important}
+}

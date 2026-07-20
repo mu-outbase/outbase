@@ -8,19 +8,9 @@
   const esc = value => String(value ?? '')
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-
-  const icons = {
-    calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
-    pin:'<svg viewBox="0 0 24 24"><path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg>',
-    prep:'<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8.5 10h7M8.5 14h7M8.5 18h4"/></svg>',
-    record:'<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>',
-    photo:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m5 18 5-5 3 3 2-2 4 4"/></svg>',
-    gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
-    cook:'<svg viewBox="0 0 24 24"><path d="M5 10h14l-1 8H6l-1-8Z"/><path d="M8 10V8a4 4 0 0 1 8 0v2M3 12h2M19 12h2"/></svg>',
-    improve:'<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3Z"/><path d="M9 20h6M9.5 11.5l1.5 1.5 3.5-4"/></svg>',
-    settings:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 15a2 2 0 0 0 .4 2.2l-2.2 2.2A2 2 0 0 0 15 19l-1 2h-4l-1-2a2 2 0 0 0-2.2.4l-2.2-2.2A2 2 0 0 0 5 15l-2-1v-4l2-1a2 2 0 0 0-.4-2.2l2.2-2.2A2 2 0 0 0 9 5l1-2h4l1 2a2 2 0 0 0 2.2-.4l2.2 2.2A2 2 0 0 0 19 9l2 1v4Z"/></svg>',
-    arrow:'<svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>'
-  };
+  const ui=globalThis.OUTBASE_UI_V21;
+  if(!ui)throw new Error('OUTBASE UI v21 is not ready');
+  const icons=ui.icons;
 
   const date = value => {
     const d = new Date(value || '');
@@ -192,7 +182,7 @@
     const planned=!['active','paused','organizing','completed','archived'].includes(item.state);
     const primaryAttr=s.context?` data-ob17-context="${s.shell||'legacy'}"`:'';
     const first=planned
-      ?`<a href="${esc(startHref(item))}" data-ob17-context="record">${icons.photo}<span>活動開始</span></a>`
+      ?`<a href="${esc(startHref(item))}" data-ob17-context="record">${icons.play}<span>活動開始</span></a>`
       :`<a href="${esc(preparationHref(item))}" data-ob17-context="preparation">${icons.prep}<span>準備</span></a>`;
     return `<section class="ob16-next-card ob20-action-card ob36-card"><small>今やること</small><h2>${esc(s.title)}</h2><p>${esc(s.sub)}</p>
       <a class="ob16-primary-action" href="${esc(s.href)}"${primaryAttr}><span>${s.icon}</span><b>${esc(s.label)}</b>${icons.arrow}</a>

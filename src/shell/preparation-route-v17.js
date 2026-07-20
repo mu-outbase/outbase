@@ -15,19 +15,10 @@
     .replaceAll('>','&gt;')
     .replaceAll('"','&quot;')
     .replaceAll("'",'&#039;');
-
-  const icons={
-    back:'<svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>',
-    check:'<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>',
-    play:'<svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg>',
-    arrow:'<svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>',
-    prep:'<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8.5 10h7M8.5 14h7M8.5 18h4"/></svg>'
-  };
-
-  const categoryIcon=Object.freeze({
-    weather:'☀',route:'↗',gear:'▦',meal:'⌁',shopping:'✓',pet:'●',
-    parking:'P',ticket:'券',note:'…'
-  });
+  const ui=globalThis.OUTBASE_UI_V21;
+  if(!ui)throw new Error('OUTBASE UI v21 is not ready');
+  const icons=ui.icons;
+  const categoryIcon=ui.categoryIcons;
   const cache=new Map();
   const baselineJobs=new Map();
   const CACHE_TTL_MS=30000;
@@ -235,7 +226,7 @@
     if(!rows.length)return '<p class="ob17-empty">準備項目はまだありません。</p>';
     return rows.map(section=>`
       <section class="ob17-prep-section">
-        <header><span>${esc(categoryIcon[section.key]||'•')}</span><h2>${esc(section.label||'準備')}</h2></header>
+        <header><span>${categoryIcon[section.key]||icons.record}</span><h2>${esc(section.label||'準備')}</h2></header>
         <div>${(section.items||[]).map(itemMarkup).join('')}</div>
       </section>
     `).join('');

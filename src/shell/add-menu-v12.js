@@ -8,14 +8,9 @@
 
   if(!rendererBase)throw new Error('OUTBASE add menu renderer is not ready');
   if(rendererBase.__addMenuV12)return;
-
-  const icons={
-    calendar:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
-    play:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>',
-    memo:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>',
-    gear:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
-    arrow:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>'
-  };
+  const ui=globalThis.OUTBASE_UI_V21;
+  if(!ui)throw new Error('OUTBASE UI v21 is not ready');
+  const icons=ui.icons;
 
   function addSheetMarkup(){
     return `<div class="ob3-backdrop ob12-add-backdrop" data-ob3-backdrop>
@@ -30,15 +25,15 @@
         </div>
 
         <div class="ob12-add-actions">
-          <button type="button" class="tone-plan" data-ob3-action="plan-add">
-            <span class="ob12-add-icon">${icons.calendar}</span>
-            <span><b>予定を追加</b><em>これからの予定をカレンダーへ</em></span>
-            ${icons.arrow}
-          </button>
-
           <button type="button" class="tone-start" data-ob3-action="start">
             <span class="ob12-add-icon">${icons.play}</span>
             <span><b>活動を始める</b><em>散歩・キャンプ・ドライブを記録開始</em></span>
+            ${icons.arrow}
+          </button>
+
+          <button type="button" class="tone-plan" data-ob3-action="plan-add">
+            <span class="ob12-add-icon">${icons.calendar}</span>
+            <span><b>予定を追加</b><em>これからの予定をカレンダーへ</em></span>
             ${icons.arrow}
           </button>
 

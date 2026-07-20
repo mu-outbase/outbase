@@ -1,0 +1,58 @@
+OUTBASE R3-04 v21.0 STATIC VERIFICATION
+実施日：2026-07-20
+
+【実施済み】
+1. JavaScript構文確認
+   node --check：19ファイル PASS
+
+2. HTML構文読込
+   index.html：PASS
+   calendar-formal-v44.html：PASS
+
+3. CSS括弧整合
+   style-calendar-route-v3.css：826 / 826 PASS
+   style-ui-system-v21.css：142 / 142 PASS
+   calendar-formal-v44.css：463 / 463 PASS
+
+4. 静的仕様アサーション
+   31 / 31 PASS
+   ・v21.0版番号／シェル／キャッシュ
+   ・共通UIモジュールのmanifest登録
+   ・共通UI CSSが最終読込
+   ・Service Workerへの新CSS／JS登録
+   ・カレンダーv21キャッシュ識別子
+   ・FIELD03のtab=record保護
+   ・src/app.jsを成果物に含めないこと
+   ・共通アイコン参照の不足なし
+   ・旧準備／記録シートへのアイコンブリッジ
+   ・活動開始が再生アイコンを使用
+   ・追加メニューの先頭が「活動を始める」
+   ・追加／探す／保管庫／予定詳細／準備／実行／旧準備／旧シート／準備フロー／旧下バーのCSS対象
+   ・カレンダー日付数字の左上配置を上書きしていないこと
+
+5. Node VMラッパー読込確認
+   ・ui-system-v21.js
+   ・shell-renderer-direct-fix.js
+   ・search-route-v11.js
+   ・add-menu-v12.js
+   ・vault-route-v13.js
+   ・activity-route-v16.js
+   ・preparation-route-v17.js
+   ・execution-route-v19.js
+   全て LOAD PASS
+
+6. 追加メニュー生成確認
+   ・共通SVGアイコンが出力される
+   ・「活動を始める」が「予定を追加」より前
+   PASS
+
+7. ZIP整合性
+   unzip -t：作成後確認
+
+【未確認】
+・Android実機表示
+・実ブラウザでの全ページスクリーンショット
+・実端末でのシート開閉、スクロール、下バー重なり
+・旧FIELD03の機能同等性（FIELD03自体は今回未変更）
+
+コンテナにはGitHubリポジトリ全体がなく、パッチ対象外の依存ファイルを含む完全実行環境を再現できないため、実ブラウザの全画面確認は実施していない。
