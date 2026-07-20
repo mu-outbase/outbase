@@ -1,0 +1,160 @@
+{
+  "release": "v22.1",
+  "files": [
+    {
+      "path": "OUTBASE_v21.0_リンク監査一覧.csv",
+      "size": 2218,
+      "sha256": "720b2aa5e685a2f0851d881759ba7afc312382b1e469a4f410e0c41fec5baa86"
+    },
+    {
+      "path": "OUTBASE_v21.0_全ルート監査_正式構成LOCK.md",
+      "size": 3751,
+      "sha256": "b4e2c19c015c4c0dae01e9ee83f2d49faf498003ddf74ca0d6eb92deb1125f7f"
+    },
+    {
+      "path": "README_R3-06_新規ルート白画面修正_v22.1.txt",
+      "size": 2112,
+      "sha256": "bc10b01550f114eaed83058eb5ec192181098e88ca733c9e1eeb656872dab7f2"
+    },
+    {
+      "path": "STATIC_VERIFICATION_R3-06_v22.1.txt",
+      "size": 851,
+      "sha256": "5c98492d355117fd01fa8047a40ab2c21feff748ccd8a522e7f6fec65ff513c0"
+    },
+    {
+      "path": "calendar-formal-v44.css",
+      "size": 42797,
+      "sha256": "96b0051ce1098ec9b49e9c6d4ad12ee742ce0364f37e78a89995f2db4f7469e4"
+    },
+    {
+      "path": "calendar-formal-v44.html",
+      "size": 4624,
+      "sha256": "c395f644ea458ffe6520d17c14d4e80901d6b96d0ef32fae7f6b9df72e5a53b5"
+    },
+    {
+      "path": "calendar-formal-v44.js",
+      "size": 40897,
+      "sha256": "e4770b90cc2169ee18766696a69e9e71a18231f3ed46734a7ca875cd0aefb791"
+    },
+    {
+      "path": "index.html",
+      "size": 7342,
+      "sha256": "f7a0f48abe0d920b2f31d5c02f77fb5e6da3b3124bf9f6af330d20d583fa2e64"
+    },
+    {
+      "path": "service-worker.js",
+      "size": 7920,
+      "sha256": "b613810c1d06d405500d5ca3fd6bd94bf8009931b856c1b9cffb4ecbf61b583a"
+    },
+    {
+      "path": "src/config/module-manifest.js",
+      "size": 2795,
+      "sha256": "9810aac6bc8af1e5caa43a30d170943aa4b36d1ef359d681158799b74c574ed0"
+    },
+    {
+      "path": "src/config/version.js",
+      "size": 448,
+      "sha256": "84cb25c6d3a50d9d52a6345f34a9cd4f14873592cf092fddad833e403dacc0c0"
+    },
+    {
+      "path": "src/context/activity-context-v18.js",
+      "size": 10363,
+      "sha256": "f775a0caf2fb09a4269c29b07c34de3504485e39dd0821a791707f1f8b76e7f8"
+    },
+    {
+      "path": "src/domain/activity/activity-detail-domain.js",
+      "size": 5121,
+      "sha256": "b1ea6fb54c2a1e564f9587b9df487bb6d35dbfbfe4591ccdb5d81269f98693a7"
+    },
+    {
+      "path": "src/legacy/return-bridge-v18.js",
+      "size": 5498,
+      "sha256": "a7c5de5cdedffafb69de7c069182f462a55158e9edcc2abc5837aba20a6ab205"
+    },
+    {
+      "path": "src/router.js",
+      "size": 6215,
+      "sha256": "aebff7ca25610ef6c4b843b682969b3394b00ff1af42cba03292750cda5505ff"
+    },
+    {
+      "path": "src/screens/home/home-real-data-only-v18.js",
+      "size": 1530,
+      "sha256": "41fce9a15ee4a65068d623b0e505ef7359acfaf3173b8015f5b3e1bd4a68900e"
+    },
+    {
+      "path": "src/screens/plan/plan-screen-model.js",
+      "size": 2456,
+      "sha256": "afa1f69538d2cf9081398c6ff390a771da9aab6e9a28cd53baa65ab30e68a4f6"
+    },
+    {
+      "path": "src/shell/activity-route-v16.js",
+      "size": 16358,
+      "sha256": "ff29601835613c62761f4448342573dd51506456348ded3e0a4e7cff26f31c9b"
+    },
+    {
+      "path": "src/shell/add-menu-v12.js",
+      "size": 3519,
+      "sha256": "386cf62422c515633939dd036efb0baa4c89292a5fbc7ba895b749ce6074e2d3"
+    },
+    {
+      "path": "src/shell/execution-route-v19.js",
+      "size": 20133,
+      "sha256": "88403697dda9a51380e6104f0fb259edb9182c89572c5a0f9cbf378b39da2abe"
+    },
+    {
+      "path": "src/shell/navigation-audit-v17.js",
+      "size": 2589,
+      "sha256": "9aa457065f53f9fd3b8aeacd9c7749ed505b606e72aa3b37f687c670f0f0da1a"
+    },
+    {
+      "path": "src/shell/plan-switch-v18.js",
+      "size": 9251,
+      "sha256": "4860290fc40e1c50082ff00fde665ba05de4ab2ab41dd79524d98c54566edf35"
+    },
+    {
+      "path": "src/shell/preparation-route-v17.js",
+      "size": 18328,
+      "sha256": "94d8a4365a629b1571090c7cd17096d030cbbaa36baaf53eeac3783bd732f40e"
+    },
+    {
+      "path": "src/shell/route-unification-v22.js",
+      "size": 41980,
+      "sha256": "0eff33ee110e586375e0fee181ec1c447037b15e634a31a38ca7084736738959"
+    },
+    {
+      "path": "src/shell/search-route-v11.js",
+      "size": 14593,
+      "sha256": "b387755216ce71ac6ea1bc1031ee5584054ca4159cf61bdf72fe3d4b4196b446"
+    },
+    {
+      "path": "src/shell/shell-renderer-direct-fix.js",
+      "size": 8567,
+      "sha256": "6fc0de88d47e5280240a1d8bafdf442911ab806028672bd39645297cd5d959cd"
+    },
+    {
+      "path": "src/shell/ui-system-v21.js",
+      "size": 10957,
+      "sha256": "61b4aae72557837d519e0386fd57326c98a751490b93750035f4922ef3393899"
+    },
+    {
+      "path": "src/shell/vault-route-v13.js",
+      "size": 13863,
+      "sha256": "68b9a9e012c8bcdb2ec80ff7ad7ced853db69260092acfa42bc79fd5bdc21055"
+    },
+    {
+      "path": "style-calendar-route-v3.css",
+      "size": 98872,
+      "sha256": "33ce9b4b5dcf8074e081eba29501c13da8379fccb78ea125ee6b01db4e794625"
+    },
+    {
+      "path": "style-route-unification-v22.css",
+      "size": 8993,
+      "sha256": "cb5a8224fad54518862fe7b5aff2d329da62e4da704bbdcb320c4431c98d8fab"
+    },
+    {
+      "path": "style-ui-system-v21.css",
+      "size": 21213,
+      "sha256": "630c771271386478a151b42bebe6169cfb1f77798cf61bf1787af1f3a9f0e122"
+    }
+  ]
+}

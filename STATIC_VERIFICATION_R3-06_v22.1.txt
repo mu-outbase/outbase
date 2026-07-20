@@ -1,0 +1,23 @@
+OUTBASE R3-06 / v22.1 STATIC VERIFICATION
+
+PASS JavaScript syntax: all included src/**/*.js
+PASS service-worker.js syntax
+PASS index.html parse
+PASS calendar-formal-v44.html parse
+PASS CSS brace balance: 4 files
+PASS custom route renderer bypasses legacy renderer mount
+PASS custom route shell skeleton is created before async load
+PASS loading UI is rendered before data load
+PASS visible error UI replaces blank-screen failure
+PASS route runtime mock: plan-editor
+PASS route runtime mock: preparation-detail
+PASS route runtime mock: start
+PASS route runtime mock: memo
+PASS route runtime mock: places
+PASS route runtime mock: assets
+PASS standard route remains delegated to existing renderer
+PASS duplicate plan memo field removed
+PASS version/cache identifiers bumped to v22.1
+
+Android device verification: NOT RUN
+GitHub main write: NOT PERFORMED

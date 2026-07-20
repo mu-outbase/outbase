@@ -304,14 +304,68 @@
     main.querySelector('[data-ob22-asset-delete]')?.addEventListener('click',()=>deleteAsset(value).catch(()=>toast('削除できませんでした')));
   }
 
+  function ensureRouteShell(root,routeName='home'){
+    let shell=root?.querySelector?.(':scope > .ob3-shell')||root?.querySelector?.('.ob3-shell');
+    if(shell)return shell;
+    if(!root)return null;
+    root.innerHTML=`<div class="ob3-shell ob6-north" data-ob6-route="${esc(routeName)}"><header class="ob3-header"></header><main class="ob3-main"></main><nav class="ob3-nav"></nav><div id="outbaseShellModal"></div></div>`;
+    return root.querySelector?.(':scope > .ob3-shell')||root.querySelector?.('.ob3-shell');
+  }
+
+  function loadingMarkup(routeName){
+    const labels={
+      'plan-editor':'予定を読み込んでいます',
+      'preparation-detail':'詳細な準備を読み込んでいます',
+      start:'活動開始を準備しています',
+      memo:'記録画面を準備しています',
+      places:'場所を読み込んでいます',
+      assets:'持ち物を読み込んでいます'
+    };
+    return `<section class="ob22-page"><div class="ob22-card ob22-loading"><span></span><b>${esc(labels[routeName]||'画面を読み込んでいます')}</b></div></section>`;
+  }
+
+  function routeFailureMarkup(error){
+    console.error('[OUTBASE route unification v22.1]',error);
+    return `<section class="ob22-page">${routeHead('OUTBASE','戻る')}${emptyCard('画面を開けませんでした','保存済みデータは削除されていません。前の画面へ戻って、もう一度開いてください。')}</section>`;
+  }
+
   const renderer=Object.freeze({
     ...rendererBase,
     __routeUnificationV22:true,
+    __routeUnificationV221:true,
     async mount(root,options={}){
-      const value=await rendererBase.mount(root,options);
-      if(!ROUTES.has(value?.route?.name))return value;
-      const shell=root?.querySelector?.('.ob3-shell');const main=shell?.querySelector?.('.ob3-main');if(!main)return value;
-      main.className='ob3-main ob3-main-ob22';main.innerHTML=pageMarkup(value);bind(main,value);rendererBase.updateNav?.(root,value);globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22');return value;
+      const requested=router.current();
+      if(!ROUTES.has(requested?.name))return rendererBase.mount(root,options);
+
+      const shell=ensureRouteShell(root,requested.name);
+      const main=shell?.querySelector?.('.ob3-main');
+      if(!shell||!main)throw new Error('OUTBASE v22.1 route shell is not ready');
+
+      shell.dataset.ob6Route=requested.name;
+      main.className='ob3-main ob3-main-ob22';
+      main.innerHTML=loadingMarkup(requested.name);
+      try{rendererBase.updateNav?.(root,Object.freeze({route:requested,online:navigator.onLine,routeUnificationLoading:true}));}catch(_error){}
+      globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-loading');
+
+      let value;
+      try{
+        value=await model.build(options);
+        if(router.current()?.name!==requested.name)return value;
+        main.className='ob3-main ob3-main-ob22';
+        main.innerHTML=pageMarkup(value)||routeFailureMarkup(new Error(`OUTBASE v22.1 empty markup: ${requested.name}`));
+        bind(main,value);
+        rendererBase.updateNav?.(root,value);
+        globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-render');
+        return value;
+      }catch(error){
+        main.className='ob3-main ob3-main-ob22';
+        main.innerHTML=routeFailureMarkup(error);
+        const fallback=Object.freeze({route:requested,online:navigator.onLine,routePayload:{status:'error',error}});
+        bind(main,fallback);
+        try{rendererBase.updateNav?.(root,fallback);}catch(_error){}
+        globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-error');
+        return fallback;
+      }
     },
     updateNav(root,value){rendererBase.updateNav?.(root,value);}
   });
@@ -364,5 +418,5 @@
 
   globalThis.OUTBASE_SHELL_MODEL_V166=model;globalThis.OUTBASE_SHELL_MODEL_V165=model;globalThis.OUTBASE_SHELL_MODEL_V164=model;
   globalThis.OUTBASE_SHELL_RENDERER_V166=renderer;globalThis.OUTBASE_SHELL_RENDERER_V165=renderer;globalThis.OUTBASE_SHELL_RENDERER_V164=renderer;
-  globalThis.OUTBASE_ROUTE_UNIFICATION_V22=Object.freeze({version:'v22.0',routes:Object.freeze([...ROUTES]),mapLegacyUrl,routeForControl});
+  globalThis.OUTBASE_ROUTE_UNIFICATION_V22=Object.freeze({version:'v22.1',routes:Object.freeze([...ROUTES]),mapLegacyUrl,routeForControl});
 })();
