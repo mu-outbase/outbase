@@ -655,12 +655,12 @@
     persistRecordState();
     return true;
   }
-  function discardCurrentSession(){
+  async function discardCurrentSession(){
     const records=currentSessionRecords();
     const recordIds=new Set(records.map(r=>r.id));
+    await globalThis.OUTBASE_DB_ACCESSOR_V1.removeMany('fieldRecords',[...recordIds],{source:'FIELD03-discard-session'});
     savedRecords=savedRecords.filter(r=>!recordIds.has(r.id));
     recordCount=Math.max(0,recordCount-records.length);
-    records.forEach(r=>deleteRecordDB(r.id));
     const pinIds=new Set(currentSessionPins().map(pin=>pin.id));
     savedPins=savedPins.filter(pin=>!pinIds.has(pin.id)||pin.category==='parking');
     clearRecoverableSession();
@@ -1384,38 +1384,44 @@
   }
 
   function openRecordDB(){
-    return new Promise((resolve,reject)=>{
-      if(!('indexedDB' in window)){reject(new Error('IndexedDB unavailable'));return;}
-      const req=indexedDB.open('outbase_db',10);
-      req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('fieldRecords')) db.createObjectStore('fieldRecords',{keyPath:'id'});};
-      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    const accessor=globalThis.OUTBASE_DB_ACCESSOR_V1;
+    if(!accessor){
+      return Promise.reject(new Error('OUTBASE outbase_db accessor is unavailable.'));
+    }
+    return accessor.open({
+      requiredStores:['fieldRecords'],
+      source:'FIELD03'
     });
   }
   async function putRecordDB(record,blob){
-    try{const db=await openRecordDB();await new Promise((resolve,reject)=>{const tx=db.transaction('fieldRecords','readwrite');tx.objectStore('fieldRecords').put({...record,blob:blob||null});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}catch(_e){}
+    const accessor=globalThis.OUTBASE_DB_ACCESSOR_V1;
+    if(!accessor)throw new Error('OUTBASE outbase_db accessor is unavailable.');
+    return accessor.put('fieldRecords',{...record,blob:blob||null},{source:'FIELD03-save'});
   }
   async function deleteRecordDB(id){
-    try{const db=await openRecordDB();await new Promise((resolve,reject)=>{const tx=db.transaction('fieldRecords','readwrite');tx.objectStore('fieldRecords').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();}catch(_e){}
+    const accessor=globalThis.OUTBASE_DB_ACCESSOR_V1;
+    if(!accessor)throw new Error('OUTBASE outbase_db accessor is unavailable.');
+    return accessor.remove('fieldRecords',id,{source:'FIELD03-delete'});
   }
   async function updateRecordLocationDB(id,location){
+    const db=await openRecordDB();
     try{
-      const db=await openRecordDB();
       await new Promise((resolve,reject)=>{
         const tx=db.transaction('fieldRecords','readwrite'),store=tx.objectStore('fieldRecords'),req=store.get(id);
         req.onsuccess=()=>{const row=req.result;if(row) store.put({...row,location});};
         req.onerror=()=>reject(req.error);
-        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
       });
-      db.close();
-    }catch(_e){}
+    }finally{db.close();}
   }
-  function saveRecord(kind,data={},location=locationSnapshot(),blob=null){
+  async function saveRecord(kind,data={},location=locationSnapshot(),blob=null){
     const createdAt=Number(data.createdAt||Date.now());
     const resolvedLocation=location&&location.lat!=null?location:locationSnapshot(createdAt);
     const explicitSession=Object.prototype.hasOwnProperty.call(data,'sessionId')?data.sessionId:(recordSessionState==='idle'?null:currentSessionId);
     const record={...data,id:data.id||newId(kind),kind,createdAt,target:recordTarget,sessionState:recordSessionState,sessionId:explicitSession,location:resolvedLocation};
+    await putRecordDB(record,blob);
     const i=savedRecords.findIndex(x=>x.id===record.id);if(i>=0) savedRecords[i]=record;else savedRecords.push(record);
-    recordCount+=i>=0?0:1;persistRecordState();putRecordDB(record,blob);return record;
+    recordCount+=i>=0?0:1;persistRecordState();return record;
   }
   function showSpeechReview(record){
     let box=document.getElementById('speechReview');if(box) box.remove();
@@ -1423,13 +1429,25 @@
     box.innerHTML=`<div><small>文字起こしを保存しました</small><p></p></div><button data-speech-edit>修正</button><button data-speech-cancel>取消</button>`;
     box.querySelector('p').textContent=record.text;document.body.appendChild(box);requestAnimationFrame(()=>box.classList.add('show'));
     box.querySelector('[data-speech-edit]').addEventListener('click',()=>{editingRecordId=record.id;memoDraft=record.text;recordSheet='memo';box.remove();render();});
-    box.querySelector('[data-speech-cancel]').addEventListener('click',()=>{savedRecords=savedRecords.filter(x=>x.id!==record.id);recordCount=Math.max(0,recordCount-1);persistRecordState();deleteRecordDB(record.id);box.remove();showRecordToast('文字起こしを取り消しました');});
+    box.querySelector('[data-speech-cancel]').addEventListener('click',async()=>{
+      try{
+        await deleteRecordDB(record.id);
+        savedRecords=savedRecords.filter(x=>x.id!==record.id);recordCount=Math.max(0,recordCount-1);persistRecordState();box.remove();showRecordToast('文字起こしを取り消しました');
+      }catch(error){showRecordToast(`保存領域から削除できませんでした: ${error?.message||error}`);}
+    });
     clearTimeout(showSpeechReview.timer);showSpeechReview.timer=setTimeout(()=>box.remove(),7000);
   }
   function openCapture(kind){
     const captureLocation=locationSnapshot();
     const input=document.createElement('input');input.type='file';input.accept=kind==='photo'?'image/*':'video/*';input.capture='environment';
-    input.addEventListener('change',()=>{if(input.files&&input.files.length){const file=input.files[0];saveRecord(kind,{name:file.name,type:file.type,size:file.size},captureLocation,file);showRecordToast(`${kind==='photo'?'写真':'動画'}を位置つきで保存しました`);}},{once:true});input.click();
+    input.addEventListener('change',async()=>{
+      if(!(input.files&&input.files.length))return;
+      const file=input.files[0];
+      try{
+        await saveRecord(kind,{name:file.name,type:file.type,size:file.size},captureLocation,file);
+        showRecordToast(`${kind==='photo'?'写真':'動画'}を位置つきで保存しました`);
+      }catch(error){showRecordToast(`保存できませんでした: ${error?.message||error}`);}
+    },{once:true});input.click();
   }
   function speechOverlay(show,text='',status='長押し中はリアルタイム表示'){
     const box=document.getElementById('speechLive'),copy=document.getElementById('speechLiveText');if(!box||!copy) return;
@@ -1442,7 +1460,7 @@
     const rec=new Recognition();speechRecognition=rec;rec.lang='ja-JP';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
     rec.onresult=e=>{let finalText='',interim='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal) finalText+=t;else interim+=t;}speechTranscript=(finalText+interim).trim();speechOverlay(true,speechTranscript||'話してください…');};
     rec.onerror=e=>{if(e.error!=='aborted') showRecordToast(e.error==='not-allowed'?'マイクの使用を許可してください':'音声を確認できませんでした');};
-    rec.onend=()=>{const text=speechTranscript.trim();speechActive=false;if(speechButton){speechButton.classList.remove('holding');const small=speechButton.querySelector('small');if(small) small.textContent='長押しで文字起こし';}speechButton=null;speechRecognition=null;speechOverlay(false);if(text){const record=saveRecord('speech',{text},speechStartLocation);showSpeechReview(record);}else showRecordToast('音声は保存されませんでした');};
+    rec.onend=async()=>{const text=speechTranscript.trim();speechActive=false;if(speechButton){speechButton.classList.remove('holding');const small=speechButton.querySelector('small');if(small) small.textContent='長押しで文字起こし';}speechButton=null;speechRecognition=null;speechOverlay(false);if(text){try{const record=await saveRecord('speech',{text},speechStartLocation);showSpeechReview(record);}catch(error){showRecordToast(`文字起こしを保存できませんでした: ${error?.message||error}`);}}else showRecordToast('音声は保存されませんでした');};
     try{rec.start();}catch(_e){speechActive=false;el.classList.remove('holding');speechOverlay(false);}
   }
   function stopSpeechHold(){clearTimeout(speechHoldTimer);speechHoldTimer=null;if(speechActive&&speechRecognition){try{speechRecognition.stop();}catch(_e){}}}
@@ -1461,7 +1479,7 @@
     const small=el.querySelector('small');if(small) small.textContent='話している内容を整理中';
     rec.onresult=e=>{let finalText='',interim='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal) finalText+=t;else interim+=t;}text=(finalText+interim).trim();const summary=document.getElementById('parkingAutoSummary');if(summary) summary.textContent=text||'話してください…';};
     rec.onerror=e=>{if(e.error!=='aborted') showRecordToast(e.error==='not-allowed'?'マイクの使用を許可してください':'音声を確認できませんでした');};
-    rec.onend=()=>{parkingSpeechActive=false;parkingSpeechRecognition=null;el.classList.remove('holding');if(text){refreshParkingAssist(pin,text);saveRecord('speech',{text,linkedPinId:pin.id,parkingAssist:true,keepWithParking:true,sessionId:null},locationSnapshot());render();setTimeout(()=>showRecordToast(`駐車情報を「${parkingSummary(pin)}」として整理しました`),0);}else{if(small) small.textContent='階・色・柱・番号を自動整理';showRecordToast('音声は保存されませんでした');}};
+    rec.onend=async()=>{parkingSpeechActive=false;parkingSpeechRecognition=null;el.classList.remove('holding');if(text){try{await saveRecord('speech',{text,linkedPinId:pin.id,parkingAssist:true,keepWithParking:true,sessionId:null},locationSnapshot());refreshParkingAssist(pin,text);render();setTimeout(()=>showRecordToast(`駐車情報を「${parkingSummary(pin)}」として整理しました`),0);}catch(error){showRecordToast(`駐車情報を保存できませんでした: ${error?.message||error}`);}}else{if(small) small.textContent='階・色・柱・番号を自動整理';showRecordToast('音声は保存されませんでした');}};
     try{rec.start();}catch(_e){parkingSpeechActive=false;el.classList.remove('holding');}
   }
   function stopParkingSpeechHold(){clearTimeout(parkingSpeechHoldTimer);parkingSpeechHoldTimer=null;if(parkingSpeechActive&&parkingSpeechRecognition){try{parkingSpeechRecognition.stop();}catch(_e){}}}
@@ -1476,7 +1494,7 @@
   }
   function captureParkingPhoto(){
     const pin=currentPendingPin();if(!pin) return;const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';
-    input.addEventListener('change',async()=>{if(!(input.files&&input.files.length)) return;const file=input.files[0],loc=locationSnapshot();const rec=saveRecord('photo',{name:file.name,type:file.type,size:file.size,linkedPinId:pin.id,parkingAssist:true,keepWithParking:true,sessionId:null},loc,file);pin.parking=pin.parking||{};pin.parking.photoRecordId=rec.id;pin.parking.photoName=file.name;pin.parking.photoSavedAt=Date.now();pin.parking.ocrState='reading';refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast('写真を保存しました。表示の文字を自動で読んでいます'),0);const text=await extractParkingPhotoText(file);pin.parking.ocrState=text?'done':'unreadable';if(text){pin.parking.ocrText=text;const parsed=parseParkingText(text);pin.parking={...pin.parking,...Object.fromEntries(Object.entries(parsed).filter(([,v])=>v))};pin.note=pin.note||text;}refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast(text?`写真から「${parkingSummary(pin)}」を自動補完しました`:'文字を読めませんでしたが、写真は保存済みです'),0);},{once:true});input.click();
+    input.addEventListener('change',async()=>{if(!(input.files&&input.files.length)) return;const file=input.files[0],loc=locationSnapshot();let rec;try{rec=await saveRecord('photo',{name:file.name,type:file.type,size:file.size,linkedPinId:pin.id,parkingAssist:true,keepWithParking:true,sessionId:null},loc,file);}catch(error){showRecordToast(`写真を保存できませんでした: ${error?.message||error}`);return;}pin.parking=pin.parking||{};pin.parking.photoRecordId=rec.id;pin.parking.photoName=file.name;pin.parking.photoSavedAt=Date.now();pin.parking.ocrState='reading';refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast('写真を保存しました。表示の文字を自動で読んでいます'),0);const text=await extractParkingPhotoText(file);pin.parking.ocrState=text?'done':'unreadable';if(text){pin.parking.ocrText=text;const parsed=parseParkingText(text);pin.parking={...pin.parking,...Object.fromEntries(Object.entries(parsed).filter(([,v])=>v))};pin.note=pin.note||text;}refreshParkingAssist(pin);persistRecordState();render();setTimeout(()=>showRecordToast(text?`写真から「${parkingSummary(pin)}」を自動補完しました`:'文字を読めませんでしたが、写真は保存済みです'),0);},{once:true});input.click();
   }
   async function showParkingPhoto(pin){
     const id=pin?.parking?.photoRecordId;if(!id){showRecordToast('駐車場の写真はまだありません');return;}
@@ -1546,7 +1564,7 @@
       const resolved=nearestTrackPosition(Number(record.createdAt||Date.now()));
       if(!resolved) continue;
       record.location={lat:resolved.lat,lng:resolved.lng,accuracy:resolved.accuracy||null,time:resolved.time||record.createdAt,pending:false,source:'auto'};
-      updateRecordLocationDB(record.id,record.location);changed=true;
+      updateRecordLocationDB(record.id,record.location).catch(error=>showRecordToast(`位置情報を保存できませんでした: ${error?.message||error}`));changed=true;
     }
     if(changed) persistRecordState();
   }
@@ -1589,11 +1607,11 @@
     gpsStatus='現在地を確認しています';lastOneShotRequestAt=Date.now();updateMetrics();
     navigator.geolocation.getCurrentPosition(p=>{onPosition(p);if(centerAfter){mapFollow=true;mapCenter={lat:currentPosition.lat,lng:currentPosition.lng};renderLiveMap();showRecordToast('現在地を中央に表示しました');}},e=>{onPositionError(e);showRecordToast('位置情報を許可してください');},{enableHighAccuracy:true,maximumAge:0,timeout:12000});
   }
-  function addCurrentPin(){
+  async function addCurrentPin(){
     const createdAt=Date.now(),loc=locationSnapshot(createdAt),parkingOnly=recordSessionState==='idle';
     const pin={id:newId('pin'),lat:loc.lat,lng:loc.lng,accuracy:loc.accuracy,time:createdAt,category:parkingOnly?'parking':'unclassified',label:parkingOnly?'駐車場':'未分類の場所',note:'',parking:{},sessionId:parkingOnly?null:currentSessionId,locationSource:loc.lat!=null?'auto':'pending-auto'};
     savedPins.push(pin);pendingPinId=pin.id;if(parkingOnly) activeParkingId=pin.id;
-    saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:'',parking:{},createdAt,sessionId:pin.sessionId,keepWithParking:parkingOnly},loc);
+    await saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:'',parking:{},createdAt,sessionId:pin.sessionId,keepWithParking:parkingOnly},loc);
     persistRecordState();recordSheet='pin';render();
     setTimeout(()=>showRecordToast(parkingOnly?'駐車位置を保存しました':'場所を保存しました'),0);
     if(loc.lat==null&&navigator.geolocation){
@@ -1829,7 +1847,10 @@
     document.querySelectorAll('[data-open-parking-recall]').forEach(el=>el.addEventListener('click',()=>{recordSheet='parking-recall';render();}));
     document.querySelectorAll('[data-resume-session]').forEach(el=>el.addEventListener('click',()=>{if(restoreRecoverableSession()){render();keepScreenAwake();setTimeout(()=>showRecordToast('直前の散歩を再開しました'),0);}}));
     document.querySelectorAll('[data-discard-session-request]').forEach(el=>el.addEventListener('click',()=>{recordSheet='discard-confirm';render();}));
-    document.querySelectorAll('[data-discard-session-confirm]').forEach(el=>el.addEventListener('click',()=>{discardCurrentSession();render();setTimeout(()=>showRecordToast('この散歩を破棄しました'),0);}));
+    document.querySelectorAll('[data-discard-session-confirm]').forEach(el=>el.addEventListener('click',async()=>{
+      try{await discardCurrentSession();render();setTimeout(()=>showRecordToast('この散歩を破棄しました'),0);}
+      catch(error){showRecordToast(`保存領域から削除できませんでした: ${error?.message||error}`);}
+    }));
     document.querySelectorAll('[data-parking-speech]').forEach(el=>{el.addEventListener('pointerdown',e=>{e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_e){}clearTimeout(parkingSpeechHoldTimer);parkingSpeechHoldTimer=setTimeout(()=>beginParkingSpeechHold(el),280);});el.addEventListener('pointerup',e=>{e.preventDefault();stopParkingSpeechHold();if(!parkingSpeechActive&&!parkingSpeechRecognition) showRecordToast('駐車情報は長押しで話してください');});el.addEventListener('pointercancel',stopParkingSpeechHold);});
     document.querySelectorAll('[data-parking-photo]').forEach(el=>el.addEventListener('click',captureParkingPhoto));
     document.querySelectorAll('[data-parking-action]').forEach(el=>el.addEventListener('click',()=>{const pin=activeParking();if(!pin) return;const action=el.dataset.parkingAction;if(action==='map'){active='record';recordSheet='';mapFollow=false;mapCenter={lat:pin.lat??mapCenter.lat,lng:pin.lng??mapCenter.lng};render();setTimeout(()=>showRecordToast('駐車位置を地図中央に表示しました'),0);}else if(action==='route'){if(pin.lat==null){showRecordToast('駐車位置を自動補完中です');return;}window.open(`https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}&travelmode=walking`,'_blank','noopener');}else if(action==='photo') showParkingPhoto(pin);else if(action==='note'){showRecordToast(pin.parking?.speechText||pin.note||'音声・メモはありません');}else if(action==='arrived'){pin.clearedAt=Date.now();activeParkingId='';persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast('駐車位置の常時表示を終了しました'),0);}}));
@@ -1844,7 +1865,7 @@
         el.addEventListener('pointerup',e=>{e.preventDefault();stopSpeechHold();if(!speechActive&&!speechRecognition) showRecordToast('「話す」は長押ししてください');});
         el.addEventListener('pointercancel',stopSpeechHold);return;
       }
-      el.addEventListener('click',()=>{
+      el.addEventListener('click',async()=>{
         if(action==='session'){
           let toast='';
           if(recordSessionState==='idle'){
@@ -1878,14 +1899,29 @@
           persistRecordState();render();if(recordSessionState==='active') keepScreenAwake();setTimeout(()=>showRecordToast(toast),0);
         }else if(action==='map-mode'){mapMode=(mapMode+1)%2;persistRecordState();render();}
         else if(action==='current') centerMapOnCurrent();
-        else if(action==='pin') addCurrentPin();
+        else if(action==='pin'){
+          try{await addCurrentPin();}
+          catch(error){showRecordToast(`場所を保存できませんでした: ${error?.message||error}`);}
+        }
         else if(action==='photo'||action==='video') openCapture(action);
         else if(action==='memo'){memoDraft='';editingRecordId=null;recordSheet='memo';render();}
         else if(action==='google-map'){const p=currentPosition||mapCenter;window.open(`https://www.google.com/maps?q=${p.lat},${p.lng}`,'_blank','noopener');}
       });
     });
-    const saveMemo=document.querySelector('[data-save-memo]');if(saveMemo) saveMemo.addEventListener('click',()=>{const text=document.getElementById('recordMemo').value.trim();if(!text){showRecordToast('メモを入力してください');return;}const loc=locationSnapshot();if(editingRecordId){const old=savedRecords.find(x=>x.id===editingRecordId);const record=saveRecord(old?.kind||'speech',{...(old||{}),id:editingRecordId,text},old?.location||loc);editingRecordId=null;memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast('文字起こしを更新しました'),0);}else{saveRecord('memo',{text},loc);memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast('メモを位置つきで保存しました'),0);}});
-    const savePin=document.querySelector('[data-save-pin-detail]');if(savePin) savePin.addEventListener('click',()=>{const pin=savedPins.find(x=>x.id===pendingPinId)||savedPins[savedPins.length-1];if(!pin) return;const selected=document.querySelector('[data-pin-category].selected');pin.category=selected?selected.dataset.pinCategory:(pin.category||'unclassified');const names={water:'水飲み場',toilet:'トイレ',parking:'駐車場',vending:'自販機',bench:'ベンチ',shade:'日陰・休憩',entrance:'出入口',caution:'注意場所',other:'その他',unclassified:'未分類の場所'};pin.label=names[pin.category]||'未分類の場所';pin.note=(document.getElementById('pinNote')?.value||'').trim();pin.parking=pin.category==='parking'?{...(pin.parking||{}),floor:(document.getElementById('parkingFloor')?.value||pin.parking?.floor||'').trim(),area:(document.getElementById('parkingArea')?.value||pin.parking?.area||'').trim(),number:(document.getElementById('parkingNumber')?.value||pin.parking?.number||'').trim()}:{};if(pin.category==='parking'){activeParkingId=pin.id;pin.sessionId=null;}const loc={lat:pin.lat,lng:pin.lng,accuracy:pin.accuracy,time:pin.time,pending:pin.lat==null};saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:pin.note,parking:pin.parking,sessionId:pin.category==='parking'?null:pin.sessionId,keepWithParking:pin.category==='parking'},loc);persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast(`${pin.label}として保存しました`),0);});
+    const saveMemo=document.querySelector('[data-save-memo]');if(saveMemo) saveMemo.addEventListener('click',async()=>{
+      const text=document.getElementById('recordMemo').value.trim();if(!text){showRecordToast('メモを入力してください');return;}
+      const loc=locationSnapshot();
+      try{
+        if(editingRecordId){const old=savedRecords.find(x=>x.id===editingRecordId);await saveRecord(old?.kind||'speech',{...(old||{}),id:editingRecordId,text},old?.location||loc);}
+        else await saveRecord('memo',{text},loc);
+        const updated=Boolean(editingRecordId);editingRecordId=null;memoDraft='';recordSheet='';render();setTimeout(()=>showRecordToast(updated?'文字起こしを更新しました':'メモを位置つきで保存しました'),0);
+      }catch(error){showRecordToast(`メモを保存できませんでした: ${error?.message||error}`);}
+    });
+    const savePin=document.querySelector('[data-save-pin-detail]');if(savePin) savePin.addEventListener('click',async()=>{
+      const pin=savedPins.find(x=>x.id===pendingPinId)||savedPins[savedPins.length-1];if(!pin) return;const selected=document.querySelector('[data-pin-category].selected');pin.category=selected?selected.dataset.pinCategory:(pin.category||'unclassified');const names={water:'水飲み場',toilet:'トイレ',parking:'駐車場',vending:'自販機',bench:'ベンチ',shade:'日陰・休憩',entrance:'出入口',caution:'注意場所',other:'その他',unclassified:'未分類の場所'};pin.label=names[pin.category]||'未分類の場所';pin.note=(document.getElementById('pinNote')?.value||'').trim();pin.parking=pin.category==='parking'?{...(pin.parking||{}),floor:(document.getElementById('parkingFloor')?.value||pin.parking?.floor||'').trim(),area:(document.getElementById('parkingArea')?.value||pin.parking?.area||'').trim(),number:(document.getElementById('parkingNumber')?.value||pin.parking?.number||'').trim()}:{};if(pin.category==='parking'){activeParkingId=pin.id;pin.sessionId=null;}const loc={lat:pin.lat,lng:pin.lng,accuracy:pin.accuracy,time:pin.time,pending:pin.lat==null};
+      try{await saveRecord('pin',{id:pin.id,category:pin.category,label:pin.label,note:pin.note,parking:pin.parking,sessionId:pin.category==='parking'?null:pin.sessionId,keepWithParking:pin.category==='parking'},loc);persistRecordState();recordSheet='';render();setTimeout(()=>showRecordToast(`${pin.label}として保存しました`),0);}
+      catch(error){showRecordToast(`場所を保存できませんでした: ${error?.message||error}`);}
+    });
     const finish=document.querySelector('[data-finish-session]');if(finish) finish.addEventListener('click',()=>{
       const finishedElapsed=elapsedNow();
       const finishedDistance=sessionDistanceKm();
@@ -2418,11 +2454,9 @@
   }
 
   const openDb=()=>new Promise((resolve,reject)=>{
-    if(!('indexedDB' in window)){resolve(null);return;}
-    const req=indexedDB.open(DB_NAME);
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
-    req.onupgradeneeded=()=>resolve(req.result);
+    const accessor=globalThis.OUTBASE_DB_ACCESSOR_V1;
+    if(!accessor){reject(new Error('OUTBASE outbase_db accessor is unavailable.'));return;}
+    accessor.openExisting({requiredStores:[],source:'FIELD03-legacy-backup'}).then(resolve,reject);
   });
 
   async function collectIndexedDb(){
@@ -2467,28 +2501,16 @@
   async function exportBackup(){
     try{
       toast('全データをまとめています');
-      const now=new Date();
-      const stamp=now.toISOString().slice(0,16).replace(/[-:T]/g,'');
-      const payload={
-        format:'OUTBASE_COMPLETE_BACKUP',
-        version:'OUTBASE_FIELD03_INTEGRATED_STABLE1',
-        exportedAt:now.toISOString(),
-        localStorage:collectLocalStorage(),
-        indexedDB:await collectIndexedDb()
-      };
-      const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;
-      a.download=`OUTBASE_COMPLETE_BACKUP_${stamp}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),1500);
-      toast('写真・音声を含む全体バックアップを書き出しました');
+      const exporter=globalThis.OUTBASE_STORAGE_EXPORT_V1;
+      if(!exporter)throw new Error('OUTBASE non-destructive exporter is unavailable.');
+      await exporter.download({includeCacheStorage:true,verifyUnchanged:true});
+      toast('全保存領域の非破壊exportを書き出しました');
     }catch(error){
       console.error(error);
-      alert('バックアップを作成できませんでした。');
+      const failures=Array.isArray(error?.failures)
+        ? `\n${error.failures.map(item=>`${item.target}: ${item.error}`).join('\n')}`
+        : '';
+      alert(`非破壊exportを作成できませんでした。${failures}`);
     }
   }
 

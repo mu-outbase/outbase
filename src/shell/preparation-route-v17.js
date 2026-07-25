@@ -20,7 +20,6 @@
   const icons=ui.icons;
   const categoryIcon=ui.categoryIcons;
   const cache=new Map();
-  const baselineJobs=new Map();
   const CACHE_TTL_MS=30000;
   const DETAIL_ORIGIN_KEY='outbase_preparation_origin_v1';
 
@@ -165,12 +164,6 @@
     if(!item?.id)return null;
     const api=contextApi();
     if(api?.activate)return api.activate(item,{source,record});
-    try{
-      localStorage.setItem('outbase_core_activity_id',String(item.id));
-      localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
-      const legacyPlanId=planId(item);
-      if(legacyPlanId)localStorage.setItem('outbase_active_plan_id',String(legacyPlanId));
-    }catch(_error){}
     return {context:activityContext(item),persisted:Promise.resolve(false)};
   }
 
@@ -278,7 +271,7 @@
   function renderResult(main,result,{preserveScroll=false}={}){
     if(!main||!result)return false;
     const y=preserveScroll?window.scrollY:0;
-    if(result.status==='ready'){activateContext(result.item,{source:'preparation-render'});warmDetail(result.item);globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(result.item);}
+    if(result.status==='ready'){warmDetail(result.item);globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(result.item);}
     main.innerHTML=markup(result);
     bind(main,result);
     if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
@@ -296,37 +289,25 @@
         .then(result=>{
           if(!isCurrentPreparation(main,activityId))return;
           renderResult(main,result);
-          if(result.status==='ready'&&!result.summary.persisted)setTimeout(()=>persistBaseline(main,activityId),0);
+          globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
+            writeAttempted:false,
+            source:'preparation-route-v17',
+            operation:'baselinePersistence'
+          });
         })
         .catch(()=>{});
     });
-  }
-
-  function persistBaseline(main,activityId){
-    if(!activityId||baselineJobs.has(activityId))return;
-    const domain=globalThis.OUTBASE_PREPARATION_DOMAIN_V162;
-    if(!domain?.ensureBaseline)return;
-    const job=Promise.resolve()
-      .then(()=>domain.ensureBaseline(activityId))
-      .then(async result=>{
-        cache.delete(activityId);
-        if(result?.status!=='ready'||!main?.isConnected)return;
-        const current=main.querySelector('.ob17-preparation')?.dataset?.ob17ActivityId||'';
-        if(current!==String(activityId))return;
-        const refreshed=await loadFast(activityId,{force:true});
-        main.innerHTML=markup(refreshed);
-        bind(main,refreshed);
-      })
-      .catch(()=>{})
-      .finally(()=>baselineJobs.delete(activityId));
-    baselineJobs.set(activityId,job);
   }
 
   async function rerender(main,activityId,{preserveScroll=true,showLoading=true}={}){
     if(showLoading)main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
     const result=await loadFast(activityId);
     renderResult(main,result,{preserveScroll});
-    if(result.status==='ready'&&!result.summary.persisted)setTimeout(()=>persistBaseline(main,activityId),0);
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
+      writeAttempted:false,
+      source:'preparation-route-v17-rerender',
+      operation:'baselinePersistence'
+    });
     return result;
   }
 

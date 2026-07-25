@@ -52,7 +52,7 @@
     if(!item?.id)return;
     const api=contextApi();
     if(api?.activate){api.activate(item,{source,record:false});return;}
-    try{localStorage.setItem('outbase_core_activity_id',String(item.id));localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));}catch(_error){}
+    return {context:item,persisted:Promise.resolve(false)};
   }
   const PAYLOAD_TTL_MS=60000;
   const payloadCache=new Map();
@@ -121,9 +121,11 @@
     const api=globalThis.OUTBASE_PREPARATION_ROUTE_V17;
     const warm=api?.cached?.(id);if(warm)return warm;
     const result=await api?.loadFast?.(id,{force:false});
-    if(result?.status==='ready'&&!result.summary?.persisted){
-      setTimeout(()=>prepDomain()?.ensureBaseline?.(id).then(()=>{payloadCache.delete(routeKey(route));api?.invalidate?.(id);}).catch(()=>{}),0);
-    }
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
+      writeAttempted:false,
+      source:'route-unification-v22',
+      operation:'baselinePersistence'
+    });
     return result||{status:'missing'};
   }
   async function startPayload(){
@@ -354,11 +356,14 @@
   }
   async function saveMemo(form,value){
     const fd=new FormData(form);let activityId=text(fd.get('activityId'));const title=text(fd.get('title'));const body=text(fd.get('body'));if(!body)return;const target=form.dataset.ob22Target||'memo';
-    let item=activityId?await plans().get(activityId):null;
-    if(!item){const now=new Date();const saved=await repos().activities.save({title:title||'メモ',type:'other',state:'organizing',start_at:now.toISOString(),end_at:now.toISOString(),timezone:'Asia/Tokyo',visibility:'private',metadata:{location:'',source:'shell-route-unification-v22'},source:'shell-route-unification-v22'});activityId=saved.id;item=await plans().get(activityId);}
-    if(target==='improvement')await repos().improvementItems.save({activity_id:activityId,title:title||body.slice(0,40),summary:body,status:'open',payload:{text:body},source:'shell-route-unification-v22'});
-    else await repos().records.save({activity_id:activityId,type:'note',occurred_at:new Date().toISOString(),visibility:'private',payload:{title:title||body.slice(0,40),text:body,memo:body},source:'shell-route-unification-v22'});
-    activate(item||{id:activityId,title:title||'メモ',type:'other'},'memo-save');invalidate(activityId);toast(target==='improvement'?'改善メモを保存しました':'メモを保存しました');router.navigate('activity',{activityId},{replace:true,transition:false,skipTransition:true});
+    const result=await globalThis.OUTBASE_SAFE_MEMO_V1.save({activityId,title,body,target});
+    if(result.item){
+      activate(result.item,'memo-save');invalidate(result.activityId);toast(target==='improvement'?'改善メモを保存しました':'メモを保存しました');router.navigate('activity',{activityId:result.activityId},{replace:true,transition:false,skipTransition:true});
+      return;
+    }
+    invalidate();toast(target==='improvement'?'未分類の改善メモを保存しました':'未分類メモを保存しました');router.navigate('home',{},{
+      replace:true,transition:false,skipTransition:true
+    });
   }
   async function addPlace(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;await repos().places.save({name,memo:text(fd.get('memo')),status:'active',source:'shell-route-unification-v22'});toast('場所を登録しました');router.navigate('places',{}, {replace:true,preserveScroll:true});}
   async function saveAsset(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;const id=form.dataset.ob22AssetId||'';const current=id?await repos().assets.get(id):null;await repos().assets.save({...current,name,asset_type:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')||1),storage:text(fd.get('storage')),memo:text(fd.get('memo')),status:current?.status||'active',payload:{...(current?.payload||{}),category:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')||1),storage:text(fd.get('storage')),memo:text(fd.get('memo'))},source:current?.source||'shell-route-unification-v22'});invalidate();toast(id?'持ち物を更新しました':'持ち物を登録しました');router.navigate('assets',{}, {replace:true});}

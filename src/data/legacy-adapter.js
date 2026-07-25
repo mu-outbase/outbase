@@ -21,20 +21,12 @@
   }
 
   function openLegacyDb(){
-    return new Promise((resolve,reject)=>{
-      if(!('indexedDB' in globalThis)){resolve(null);return;}
-      let missingDatabase=false;
-      const request=indexedDB.open(LEGACY_DB_NAME);
-      request.onupgradeneeded=()=>{
-        /* Read-only adapter: abort instead of creating an empty legacy DB. */
-        missingDatabase=true;
-        request.transaction?.abort();
-      };
-      request.onsuccess=()=>resolve(request.result);
-      request.onerror=()=>{
-        if(missingDatabase&&request.error?.name==='AbortError'){resolve(null);return;}
-        reject(request.error||new Error('Unable to open legacy OUTBASE database'));
-      };
+    if(!('indexedDB' in globalThis))return Promise.resolve(null);
+    const accessor=globalThis.OUTBASE_DB_ACCESSOR_V1;
+    if(!accessor)return Promise.reject(new Error('OUTBASE outbase_db accessor is unavailable.'));
+    return accessor.openExisting({
+      requiredStores:[],
+      source:'legacy-read-only-adapter'
     });
   }
 

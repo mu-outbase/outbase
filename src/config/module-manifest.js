@@ -5,7 +5,13 @@
   const withVersion=(path,value)=>`${path}?v=${encodeURIComponent(value)}`;
   const contextModule=withVersion('src/context/activity-context-v18.js',version.shell);
   const uiModule=withVersion('src/shell/ui-system-v21.js',version.shell);
+  const storage=[
+    'src/storage/persistence-guard.js',
+    'src/storage/outbase-db-accessor.js',
+    'src/storage/non-destructive-export.js'
+  ].map(path=>withVersion(path,version.storage));
   const legacy=[
+    ...storage,
     contextModule,
     uiModule,
     ...[
@@ -18,8 +24,9 @@
   ];
   const data=[
     'src/data/ids.js','src/data/validation.js','src/data/database.js','src/data/repositories.js',
-    'src/data/legacy-adapter.js','src/data/migrations.js','src/data/bootstrap.js'
+    'src/data/safe-memo.js','src/data/legacy-adapter.js','src/data/migrations.js','src/data/bootstrap.js'
   ].map(path=>withVersion(path,version.data));
+  data.unshift(...storage);
   const domain=[
     'src/domain/shared/read-utils.js','src/domain/plans/plan-domain.js','src/domain/preparation/preparation-domain.js',
     'src/domain/vault/vault-domain.js','src/screens/plan/plan-screen-model.js',

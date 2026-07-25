@@ -273,19 +273,12 @@
   const ready=new Promise(resolve=>{readyResolve=resolve;});
 
   async function init(){
-    if(!('indexedDB'in globalThis)){readyResolve({status:'memory-only'});return;}
-    try{
-      await ensureDefaults();
-      await migrateLegacy();
-      state.calendars=(await all('calendars')).filter(x=>!x.deleted_at);
-      if(state.filters.size===0)state.calendars.filter(x=>x.visible!==false).forEach(x=>state.filters.add(x.id));
-      state.entries=(await all('entries')).filter(x=>!x.deleted_at);
-      state.todos=(await all('todos')).filter(x=>!x.deleted_at);
-      readyResolve({status:'ready'});
-    }catch(error){
-      console.error('[OUTBASE Calendar v2] data init failed',error);
-      readyResolve({status:'failed',error:String(error?.message||error)});
-    }
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
+      writeAttempted:false,
+      source:'calendar-v2-init',
+      operation:'ensureDefaults/migrateLegacy'
+    });
+    readyResolve({status:'disabled_by_default',persistentWrite:false});
   }
   globalThis.OUTBASE_CALENDAR_V2=Object.freeze({version:VERSION,ready,refresh,openEditor,exportData,generateWidgetSnapshot,mountRoute,db:{open:openDb,all,put,remove}});
   init();

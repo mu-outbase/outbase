@@ -2,23 +2,19 @@
   'use strict';
 
   const VERSION='1.0.0';
-  const DB_NAME='outbase_db';
   const STORE_NAME='coreImportBlobs';
 
   const api=()=>globalThis.OUTBASE_CORE||null;
   const now=()=>new Date().toISOString();
 
   function openDb(){
-    return new Promise((resolve,reject)=>{
-      const request=indexedDB.open(DB_NAME,11);
-      request.onupgradeneeded=()=>{
-        const db=request.result;
-        if(!db.objectStoreNames.contains(STORE_NAME)){
-          db.createObjectStore(STORE_NAME,{keyPath:'blobId'});
-        }
-      };
-      request.onsuccess=()=>resolve(request.result);
-      request.onerror=()=>reject(request.error);
+    const accessor=globalThis.OUTBASE_DB_ACCESSOR_V1;
+    if(!accessor){
+      return Promise.reject(new Error('OUTBASE outbase_db accessor is unavailable.'));
+    }
+    return accessor.open({
+      requiredStores:[STORE_NAME],
+      source:'legacy-import'
     });
   }
 

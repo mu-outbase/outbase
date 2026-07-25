@@ -355,7 +355,6 @@
         [value,result]=await Promise.all([modelPromise,resultPromise]);
         base.updateNetwork?.(shell,value?.online);
         base.updateNav?.(root,value||Object.freeze({route:requested,online:navigator.onLine}));
-        if(result?.status==='ready')activateContext(result.item,'execution-render');
         if(main&&globalThis.OUTBASE_ROUTER?.current?.().name==='record')rerender(main,result||{status:'error'},requested,{preserveScroll:false});
         globalThis.OUTBASE_THEME_V166?.sync?.('execution-render');
         return value;

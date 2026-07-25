@@ -136,22 +136,28 @@
     writeJson(CONTEXT_KEY,context);
     writeJson(PENDING_KEY,context);
     safeSet(SOURCE_KEY,context.source||'local');
-    safeSet('outbase_core_activity_id',context.activityId);
-    safeSet('outbase_primary_activity_id_v2',context.activityId);
-    safeSet(ACTIVITY_KEY,context.activityId);
-
-    if(context.planId){
-      safeSet('outbase_active_plan_id',context.planId);
-      safeSet('outbase_active_plan_id_v1',context.planId);
-      safeSet(PLAN_KEY,context.planId);
-    }
-    if(context.activityType)safeSet(TYPE_KEY,context.activityType);
-
-    const query=new URLSearchParams(location.search);
-    const recordMode=options.record===true||query.get('tab')==='record';
-    if(recordMode){
-      const target=context.activityTitle||context.activityTypeLabel||'活動';
-      if(target)safeSet('outbase_record_target',target);
+    const writeLegacyIds=options.writeLegacyIds===true||
+      globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.enabled?.('legacyIdWrite')===true;
+    if(writeLegacyIds){
+      globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('legacyIdWrite',{
+        explicit:options.writeLegacyIds===true,
+        source:options.source||'activity-context-v18'
+      });
+      safeSet('outbase_core_activity_id',context.activityId);
+      safeSet('outbase_primary_activity_id_v2',context.activityId);
+      safeSet(ACTIVITY_KEY,context.activityId);
+      if(context.planId){
+        safeSet('outbase_active_plan_id',context.planId);
+        safeSet('outbase_active_plan_id_v1',context.planId);
+        safeSet(PLAN_KEY,context.planId);
+      }
+      if(context.activityType)safeSet(TYPE_KEY,context.activityType);
+      const query=new URLSearchParams(location.search);
+      const recordMode=options.record===true||query.get('tab')==='record';
+      if(recordMode){
+        const target=context.activityTitle||context.activityTypeLabel||'活動';
+        if(target)safeSet('outbase_record_target',target);
+      }
     }
 
     if(context.returnShell){
@@ -190,7 +196,7 @@
   function activate(input={},options={}){
     const base=input?.id||input?.metadata?fromActivity(input,options):normalize({...input,...options},current());
     const context=seedLocal(base,{source:options.source||base.source||'activate',record:options.record,reason:options.reason||'activate'});
-    const persisted=options.persist===false?Promise.resolve(false):persist(context);
+    const persisted=options.persist===true?persist(context):Promise.resolve(false);
     return Object.freeze({context,persisted});
   }
 
@@ -243,5 +249,9 @@
   });
   globalThis.OUTBASE_ACTIVITY_CONTEXT_V18=api;
   globalThis.OUTBASE_ACTIVITY_CONTEXT=api;
-  syncFromUrl();
+  globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
+    writeAttempted:false,
+    source:'activity-context-v18',
+    operation:'syncFromUrl'
+  });
 })();
