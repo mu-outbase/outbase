@@ -37,14 +37,7 @@
       contextApi.seedLocal(value,{source:'legacy-return-bridge-v18',record:query.get('tab')==='record'});
       return true;
     }
-    try{
-      if(activityId){
-        localStorage.setItem('outbase_core_activity_id',String(activityId));
-        localStorage.setItem('outbase_primary_activity_id_v2',String(activityId));
-      }
-      if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
-      return true;
-    }catch(_error){return false;}
+    return false;
   }
 
   function persistContextWhenReady(){
@@ -131,8 +124,6 @@
   }
 
   const start=()=>{
-    seedContext();
-    persistContextWhenReady();
     sync();
     setInterval(sync,500);
     addEventListener('storage',event=>{if(event.key==='outbase_record_session_state')sync();});

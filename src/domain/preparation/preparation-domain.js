@@ -50,7 +50,11 @@
     });
   }
 
-  async function ensureBaseline(activityId,{actorId=null}={}){
+  async function ensureBaseline(activityId,{actorId=null,explicit=false}={}){
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('baselinePersistence',{
+      explicit,
+      source:'preparation-domain-v162'
+    });
     if(utils().legacySessionActive())return Object.freeze({status:'deferred_active_session',created:0,activityId});
     const activity=await plans().get(activityId);
     if(!activity)return Object.freeze({status:'activity_not_found',created:0,activityId});

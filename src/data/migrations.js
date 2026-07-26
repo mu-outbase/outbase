@@ -323,7 +323,11 @@
     return result;
   }
 
-  async function run({force=false}={}){
+  async function run({force=false,explicit=false}={}){
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('shadowMigration',{
+      explicit,
+      source:'v160-shadow-migration'
+    });
     const runtime=legacy().currentRuntime();
     if(['active','paused'].includes(runtime.session_state)){
       return {migration_id:MIGRATION_ID,status:'deferred_active_session',cutover:false,legacy_data_untouched:true};

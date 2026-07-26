@@ -4,7 +4,11 @@
   async function start(options={}){
     try{
       await globalThis.OUTBASE_DB_V160.open();
-      const result=await globalThis.OUTBASE_MIGRATIONS_V160.run(options);
+      const guard=globalThis.OUTBASE_PERSISTENCE_GUARD_V1;
+      const runMigration=options.runMigration===true||guard?.enabled?.('shadowMigration')===true;
+      const result=runMigration
+        ? await globalThis.OUTBASE_MIGRATIONS_V160.run({...options,explicit:options.runMigration===true})
+        : {migration_id:'v160_phase1_legacy_shadow',status:'disabled_by_default',cutover:false,legacy_data_untouched:true};
       const report=await globalThis.OUTBASE_DB_V160.schemaReport();
       const detail={...result,database:report,cutover:false,legacy_data_untouched:true};
       globalThis.dispatchEvent(new CustomEvent('outbase:data-v160-ready',{detail}));
@@ -23,7 +27,7 @@
   }
 
   const ready=new Promise(resolve=>{
-    const run=()=>start().then(resolve);
+    const run=()=>start({runMigration:false}).then(resolve);
     if('requestIdleCallback' in globalThis)requestIdleCallback(run,{timeout:2500});
     else setTimeout(run,0);
   });
@@ -39,7 +43,7 @@
 
   globalThis.OUTBASE_DATA_V160=Object.freeze({
     ready,
-    runMigration:options=>start(options),
+    runMigration:options=>start({...options,runMigration:true}),
     exportReport,
     rollback:()=>globalThis.OUTBASE_MIGRATIONS_V160.rollback(),
     repositories:globalThis.OUTBASE_REPOSITORIES_V160,

@@ -118,13 +118,7 @@
     if(!item?.id)return false;
     const api=contextApi();
     if(api?.seedLocal){api.seedLocal(activityContext(item),{source,record});return true;}
-    try{
-      localStorage.setItem('outbase_core_activity_id',String(item.id));
-      localStorage.setItem('outbase_primary_activity_id_v2',String(item.id));
-      const planId=legacyPlanId(item);
-      if(planId)localStorage.setItem('outbase_active_plan_id',String(planId));
-      return true;
-    }catch(_error){return false;}
+    return false;
   }
 
   async function persistContext(item){
@@ -292,7 +286,7 @@
       if (value?.route?.name==='activity' && main) {
         main.classList.remove('ob3-main-calendar','ob3-main-preparation');
         const item=value?.detail?.activity||null;
-        if(item){activateContext(item,{source:'activity-render'});prime(value);globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(item);}
+        if(item){prime(value);globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(item);}
         main.innerHTML = markup(value);
         base.hydrateMedia?.(main);
         bind(main,value);
