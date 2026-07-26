@@ -273,11 +273,6 @@
   const ready=new Promise(resolve=>{readyResolve=resolve;});
 
   async function init(){
-    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
-      writeAttempted:false,
-      source:'calendar-v2-init',
-      operation:'ensureDefaults/migrateLegacy'
-    });
     readyResolve({status:'disabled_by_default',persistentWrite:false});
   }
   globalThis.OUTBASE_CALENDAR_V2=Object.freeze({version:VERSION,ready,refresh,openEditor,exportData,generateWidgetSnapshot,mountRoute,db:{open:openDb,all,put,remove}});

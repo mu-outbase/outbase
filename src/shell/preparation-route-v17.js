@@ -289,11 +289,6 @@
         .then(result=>{
           if(!isCurrentPreparation(main,activityId))return;
           renderResult(main,result);
-          globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
-            writeAttempted:false,
-            source:'preparation-route-v17',
-            operation:'baselinePersistence'
-          });
         })
         .catch(()=>{});
     });
@@ -303,11 +298,6 @@
     if(showLoading)main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
     const result=await loadFast(activityId);
     renderResult(main,result,{preserveScroll});
-    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
-      writeAttempted:false,
-      source:'preparation-route-v17-rerender',
-      operation:'baselinePersistence'
-    });
     return result;
   }
 

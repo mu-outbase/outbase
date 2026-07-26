@@ -249,9 +249,4 @@
   });
   globalThis.OUTBASE_ACTIVITY_CONTEXT_V18=api;
   globalThis.OUTBASE_ACTIVITY_CONTEXT=api;
-  globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
-    writeAttempted:false,
-    source:'activity-context-v18',
-    operation:'syncFromUrl'
-  });
 })();

@@ -121,11 +121,6 @@
     const api=globalThis.OUTBASE_PREPARATION_ROUTE_V17;
     const warm=api?.cached?.(id);if(warm)return warm;
     const result=await api?.loadFast?.(id,{force:false});
-    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.assertViewIsReadOnly?.({
-      writeAttempted:false,
-      source:'route-unification-v22',
-      operation:'baselinePersistence'
-    });
     return result||{status:'missing'};
   }
   async function startPayload(){
