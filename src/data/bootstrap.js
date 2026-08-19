@@ -3,7 +3,7 @@
 
   async function start(options={}){
     try{
-      await globalThis.OUTBASE_DB_V160.open();
+      await globalThis.OUTBASE_DB_V160.openExisting();
       const guard=globalThis.OUTBASE_PERSISTENCE_GUARD_V1;
       const runMigration=options.runMigration===true||guard?.enabled?.('shadowMigration')===true;
       const result=runMigration
@@ -43,6 +43,9 @@
 
   globalThis.OUTBASE_DATA_V160=Object.freeze({
     ready,
+    initialize:options=>globalThis.OUTBASE_DB_V160.createOrUpgrade({
+      explicit:options?.explicit===true
+    }),
     runMigration:options=>start({...options,runMigration:true}),
     exportReport,
     rollback:()=>globalThis.OUTBASE_MIGRATIONS_V160.rollback(),

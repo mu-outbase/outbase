@@ -405,7 +405,7 @@
 
   window.addEventListener('DOMContentLoaded',queueMount);
   window.addEventListener('hashchange',queueMount);
-  window.addEventListener('popstate',queueMount);
+  globalThis.OUTBASE_ROUTER.subscribePop(queueMount);
   new MutationObserver(queueMount).observe(document.documentElement,{childList:true,subtree:true});
   window.OUTBASE_FLOW={open:openFlow,close:closeFlow,reload:()=>{state=loadState();render();}};
 })();

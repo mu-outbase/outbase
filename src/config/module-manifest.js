@@ -8,7 +8,9 @@
   const storage=[
     'src/storage/persistence-guard.js',
     'src/storage/outbase-db-accessor.js',
-    'src/storage/non-destructive-export.js'
+    'src/storage/non-destructive-export.js',
+    'src/storage/explicit-maintenance.js',
+    'src/storage/isolated-archive-verifier.js'
   ].map(path=>withVersion(path,version.storage));
   const legacy=[
     ...storage,
@@ -23,7 +25,7 @@
     withVersion('src/legacy/return-bridge-v18.js',version.shell)
   ];
   const data=[
-    'src/data/ids.js','src/data/validation.js','src/data/database.js','src/data/repositories.js',
+    'src/data/ids.js','src/data/contracts.js','src/data/validation.js','src/data/database.js','src/data/repositories.js',
     'src/data/safe-memo.js','src/data/legacy-adapter.js','src/data/migrations.js','src/data/bootstrap.js'
   ].map(path=>withVersion(path,version.data));
   data.unshift(...storage);

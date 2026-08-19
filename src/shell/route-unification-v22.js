@@ -253,10 +253,11 @@
 
   function memoMarkup(value){
     const rows=safeArray(value.routePayload?.rows);const route=value.route;const query=routeValues(route);const current=currentActivityId(route);const target=query.target||'memo';
+    const requestId=globalThis.OUTBASE_IDS?.ulid?.()||`memo-request-${Date.now()}`;
     return `<section class="ob22-page ob22-memo" data-ob22-route-page="memo">
       ${routeHead(target==='improvement'?'改善メモ':'記録を残す','閉じる')}
       <section class="ob22-card ob22-page-title"><span>${target==='improvement'?icons.improve:icons.memo}</span><div><small>${target==='improvement'?'次回へつなぐ':'クイック記録'}</small><h1>${target==='improvement'?'改善メモを残す':'メモを残す'}</h1><p>旧FIELD03を開かず、選んだ活動へ直接保存します。</p></div></section>
-      <form class="ob22-card ob22-form" data-ob22-memo-form data-ob22-target="${esc(target)}">
+      <form class="ob22-card ob22-form" data-ob22-memo-form data-ob22-target="${esc(target)}" data-ob22-request-id="${esc(requestId)}">
         <label class="wide"><span>記録先</span><select name="activityId"><option value="">活動を選ばず保存</option>${rows.map(item=>`<option value="${esc(item.id)}"${String(item.id)===String(current)?' selected':''}>${esc(item.title)}｜${esc(activityRange(item))}</option>`).join('')}</select></label>
         <label class="wide"><span>見出し</span><input name="title" maxlength="90" placeholder="あとで見つけやすい名前"></label>
         <label class="wide"><span>内容</span><textarea name="body" rows="8" required placeholder="今の気づき、確認したいこと、次回の改善など"></textarea></label>
@@ -351,7 +352,16 @@
   }
   async function saveMemo(form,value){
     const fd=new FormData(form);let activityId=text(fd.get('activityId'));const title=text(fd.get('title'));const body=text(fd.get('body'));if(!body)return;const target=form.dataset.ob22Target||'memo';
-    const result=await globalThis.OUTBASE_SAFE_MEMO_V1.save({activityId,title,body,target});
+    const displayedActivityId=activityId;
+    const result=await globalThis.OUTBASE_SAFE_MEMO_V1.save({
+      activityId,
+      displayActivityId:displayedActivityId,
+      title,
+      body,
+      target,
+      kind:activityId?'activity':'quick',
+      requestId:form.dataset.ob22RequestId||''
+    });
     if(result.item){
       activate(result.item,'memo-save');invalidate(result.activityId);toast(target==='improvement'?'改善メモを保存しました':'メモを保存しました');router.navigate('activity',{activityId:result.activityId},{replace:true,transition:false,skipTransition:true});
       return;
@@ -412,13 +422,13 @@
     const rows=[];
     main?.querySelectorAll?.('input[name],select[name],textarea[name]').forEach((node,index)=>rows.push({index,name:node.name,type:node.type||node.tagName,value:node.value,checked:Boolean(node.checked)}));
     const active=document.activeElement;const focus=active&&main?.contains?.(active)?{name:active.name||'',index:[...main.querySelectorAll('input,select,textarea,button')].indexOf(active)}:null;
-    return {rows,focus,scrollY:Number(window.scrollY)||0};
+    return {rows,focus};
   }
   function restoreFormState(main,state){
     if(!main||!state)return;
     const pools={};main.querySelectorAll('input[name],select[name],textarea[name]').forEach(node=>{(pools[node.name]||(pools[node.name]=[])).push(node);});
     state.rows.forEach(entry=>{const node=(pools[entry.name]||[]).shift();if(!node)return;if(['checkbox','radio'].includes(node.type))node.checked=entry.checked;else node.value=entry.value;});
-    requestAnimationFrame(()=>{window.scrollTo(0,state.scrollY||0);if(state.focus){const controls=[...main.querySelectorAll('input,select,textarea,button')];const node=(state.focus.name&&main.querySelector(`[name="${CSS.escape(state.focus.name)}"]`))||controls[state.focus.index];node?.focus?.({preventScroll:true});}});
+    requestAnimationFrame(()=>{if(state.focus){const controls=[...main.querySelectorAll('input,select,textarea,button')];const node=(state.focus.name&&main.querySelector(`[name="${CSS.escape(state.focus.name)}"]`))||controls[state.focus.index];node?.focus?.({preventScroll:true});}});
   }
   function sameRequestedRoute(a,b){return a?.name===b?.name&&String(a?.activityId||'')===String(b?.activityId||'')&&String(routeValues(a).assetId||'')===String(routeValues(b).assetId||'')&&String(routeValues(a).mode||'')===String(routeValues(b).mode||'')&&String(routeValues(a).target||'')===String(routeValues(b).target||'');}
 

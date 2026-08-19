@@ -37,7 +37,7 @@
     if(event.defaultPrevented||event.button>0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
     const link=event.target.closest?.('a[href]');
     if(!link||link.target==='_blank'||link.hasAttribute('download'))return;
-    if(link.matches('[data-ob5-nav],[data-ob3-route],[data-ob17-context],[data-ob18-plan-switch]'))return;
+    if(link.matches('[data-ob5-nav],[data-ob3-route],[data-ob17-context],[data-ob17-start],[data-ob17-advanced],[data-ob18-plan-switch]'))return;
 
     let url;
     try{url=new URL(link.href,location.href);}catch(_error){return;}

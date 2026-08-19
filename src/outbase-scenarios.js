@@ -760,7 +760,7 @@
   window.addEventListener('DOMContentLoaded',queueMount);
   window.addEventListener('pageshow',queueMount);
   window.addEventListener('hashchange',queueMount);
-  window.addEventListener('popstate',queueMount);
+  globalThis.OUTBASE_ROUTER.subscribePop(queueMount);
   window.addEventListener('beforeunload',saveCurrentRuntime);
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='hidden')saveCurrentRuntime();

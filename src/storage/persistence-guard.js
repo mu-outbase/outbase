@@ -5,7 +5,15 @@
   const DEFAULT_FLAGS=Object.freeze({
     shadowMigration:false,
     baselinePersistence:false,
-    legacyIdWrite:false
+    legacyIdWrite:false,
+    navigationContract:false,
+    contextPersistence:false,
+    storySchemaInit:false,
+    domainContracts:false,
+    legacyCleanup:false,
+    legacyCoreMigration:false,
+    isolatedArchiveValidation:false,
+    productionRestore:false
   });
 
   class PersistenceGuardError extends Error{

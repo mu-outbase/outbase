@@ -124,7 +124,7 @@
   function openAddFromRoute(){
     const query=new URLSearchParams(location.search);
     if(query.get('openAdd')!=='1')return;
-    const clean=()=>{const next=new URL(location.href);next.searchParams.delete('openAdd');history.replaceState(history.state,'',next.href);};
+    const clean=()=>{const next=new URL(location.href);next.searchParams.delete('openAdd');globalThis.OUTBASE_ROUTER.history.replace(globalThis.OUTBASE_ROUTER.history.state(),next.href);};
     let tries=0;
     const attempt=()=>{
       tries++;

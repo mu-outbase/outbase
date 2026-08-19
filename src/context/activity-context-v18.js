@@ -19,6 +19,16 @@
 
   const text=value=>String(value??'').trim();
   const now=()=>Date.now();
+  let runtimeContext=null;
+
+  class CurrentContextError extends Error{
+    constructor(code,message,detail={}){
+      super(message);
+      this.name='CurrentContextError';
+      this.code=code;
+      this.detail=Object.freeze({...detail});
+    }
+  }
 
   function safeGet(key,fallback=''){
     try{return localStorage.getItem(key)??fallback;}catch(_error){return fallback;}
@@ -115,12 +125,23 @@
 
   function stored(){return normalize(readJson(CONTEXT_KEY,{})||{});}
   function pending(){return normalize(readJson(PENDING_KEY,{})||{});}
+  function legacyFallback(){
+    const runtime=globalThis.OUTBASE_LEGACY_ADAPTER_V160?.currentRuntime?.();
+    if(!runtime)return {};
+    return {
+      activityId:text(runtime.current_activity_id),
+      planId:text(runtime.current_plan_id),
+      source:'legacy-readonly-fallback'
+    };
+  }
   function current(){
-    const base=stored();
-    const pendingValue=pending();
-    const pendingCompatible=pendingValue.activityId&&(!base.activityId||pendingValue.activityId===base.activityId);
-    const fallback=pendingCompatible?normalize(pendingValue,base):base;
-    return normalize(queryContext(),fallback);
+    if(!runtimeContext){
+      const recovered=stored();
+      runtimeContext=normalize(recovered.activityId?recovered:legacyFallback());
+    }
+    const fromUrl=queryContext();
+    const hasUrlContext=Boolean(fromUrl.activityId||fromUrl.planId||fromUrl.activityType||fromUrl.activityTitle);
+    return normalize(hasUrlContext?fromUrl:{},runtimeContext);
   }
 
   function dispatch(context,reason='changed'){
@@ -132,54 +153,46 @@
   function seedLocal(input={},options={}){
     const context=normalize({...input,source:options.source||input.source||'local',savedAt:now()},current());
     if(!context.activityId)return context;
-
-    writeJson(CONTEXT_KEY,context);
-    writeJson(PENDING_KEY,context);
-    safeSet(SOURCE_KEY,context.source||'local');
-    const writeLegacyIds=options.writeLegacyIds===true||
-      globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.enabled?.('legacyIdWrite')===true;
-    if(writeLegacyIds){
-      globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('legacyIdWrite',{
-        explicit:options.writeLegacyIds===true,
-        source:options.source||'activity-context-v18'
-      });
-      safeSet('outbase_core_activity_id',context.activityId);
-      safeSet('outbase_primary_activity_id_v2',context.activityId);
-      safeSet(ACTIVITY_KEY,context.activityId);
-      if(context.planId){
-        safeSet('outbase_active_plan_id',context.planId);
-        safeSet('outbase_active_plan_id_v1',context.planId);
-        safeSet(PLAN_KEY,context.planId);
-      }
-      if(context.activityType)safeSet(TYPE_KEY,context.activityType);
-      const query=new URLSearchParams(location.search);
-      const recordMode=options.record===true||query.get('tab')==='record';
-      if(recordMode){
-        const target=context.activityTitle||context.activityTypeLabel||'活動';
-        if(target)safeSet('outbase_record_target',target);
-      }
-    }
-
-    if(context.returnShell){
-      writeJson(RETURN_KEY,{
-        returnShell:context.returnShell,
-        activityId:context.returnActivityId||context.activityId,
-        planId:context.planId,
-        savedAt:now()
-      });
-    }
-
+    runtimeContext=context;
+    if(options.persistRecovery===true)saveRecovery(context,{explicit:true});
     dispatch(context,options.reason||'seed-local');
+    return context;
+  }
+
+  function saveRecovery(input=current(),{explicit=false}={}){
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('contextPersistence',{
+      explicit,
+      source:'activity-context-recovery'
+    });
+    const context=normalize({...input,savedAt:now()},runtimeContext||{});
+    if(!context.activityId)throw new CurrentContextError(
+      'context_activity_required',
+      'CurrentContext recovery requires an activityId.',
+      {source:context.source}
+    );
+    if(!writeJson(CONTEXT_KEY,context))throw new CurrentContextError(
+      'context_recovery_write_failed',
+      'CurrentContext recovery could not be written.',
+      {key:CONTEXT_KEY}
+    );
+    safeSet(SOURCE_KEY,context.source||'explicit-recovery');
     return context;
   }
 
   async function persist(input={}){
     const context=normalize(input,current());
-    if(!context.activityId)return false;
+    if(!context.activityId)throw new CurrentContextError(
+      'context_activity_required',
+      'CurrentContext persistence requires an activityId.'
+    );
     const repo=globalThis.OUTBASE_REPOSITORIES_V160;
-    if(!repo?.setCurrentActivity)return false;
+    if(!repo?.setCurrentActivity)throw new CurrentContextError(
+      'context_repository_unavailable',
+      'CurrentContext repository is unavailable.'
+    );
     try{
       await repo.setCurrentActivity(context.activityId,{
+        explicit:true,
         mode:'legacy-shadow',
         current_plan_id:context.planId||null,
         activity_type:context.activityType||null,
@@ -190,7 +203,13 @@
       if(text(pendingValue.activityId)===context.activityId)safeSet(PENDING_KEY,'');
       dispatch(context,'persisted');
       return true;
-    }catch(_error){return false;}
+    }catch(error){
+      throw new CurrentContextError(
+        'context_persistence_failed',
+        'CurrentContext could not be persisted.',
+        {activityId:context.activityId,error:String(error?.message||error)}
+      );
+    }
   }
 
   function activate(input={},options={}){
@@ -244,7 +263,7 @@
 
   const api=Object.freeze({
     VERSION,CONTEXT_KEY,PENDING_KEY,RETURN_KEY,TYPE_LABELS,
-    normalize,fromActivity,queryContext,stored,pending,current,seedLocal,persist,activate,params,
+    CurrentContextError,normalize,fromActivity,queryContext,stored,pending,current,seedLocal,saveRecovery,persist,activate,params,
     shellUrl,legacyUrl,returnContext,syncFromUrl,planIdFrom,typeFrom,titleFrom,typeLabel
   });
   globalThis.OUTBASE_ACTIVITY_CONTEXT_V18=api;
