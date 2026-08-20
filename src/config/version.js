@@ -1,14 +1,14 @@
 (() => {
   'use strict';
   const VERSION=Object.freeze({
-    app:'v166.31-r3-route-cutover-fix-v22.2',
-    legacy:'outbase-field03-flow-v171',
-    data:'outbase-v160-phase1',
-    domain:'outbase-v16631-route-cutover-fix-v222-domain',
-    shell:'outbase-v16631-r3-route-cutover-fix-v222',
+    app:'outbase-r1-gate2-contract-boundary-v1',
+    legacy:'outbase-r1-gate2-contract-boundary-v1-legacy',
+    data:'outbase-r1-gate2-contract-boundary-v1-data',
+    domain:'outbase-r1-gate2-contract-boundary-v1-domain',
+    shell:'outbase-r1-gate2-contract-boundary-v1-shell',
     design:'outbase-v16631-home-master-ui-v222',
-    cache:'outbase-field03-v16631-r3-route-cutover-fix-v222',
-    storage:'outbase-r1-storage-safety-gate1'
+    cache:'outbase-r1-gate2-contract-boundary-v1',
+    storage:'outbase-r1-gate2-contract-boundary-v1-storage'
   });
   globalThis.OUTBASE_VERSION=VERSION;
 })();

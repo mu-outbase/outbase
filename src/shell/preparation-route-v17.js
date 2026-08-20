@@ -284,14 +284,16 @@
   }
 
   function refreshAfterPaint(main,activityId){
-    requestAnimationFrame(()=>{
+    return new Promise(resolve=>requestAnimationFrame(()=>{
       Promise.resolve(loadFast(activityId,{force:true}))
         .then(result=>{
-          if(!isCurrentPreparation(main,activityId))return;
+          if(!isCurrentPreparation(main,activityId))return null;
           renderResult(main,result);
+          return result;
         })
-        .catch(()=>{});
-    });
+        .then(resolve)
+        .catch(()=>resolve(null));
+    }));
   }
 
   async function rerender(main,activityId,{preserveScroll=true,showLoading=true}={}){
@@ -375,10 +377,10 @@
         const ready=cached(value.route.activityId)||primed;
         if(ready){
           renderResult(main,ready);
-          refreshAfterPaint(main,value.route.activityId);
+          await refreshAfterPaint(main,value.route.activityId);
         }else{
           main.innerHTML='<section class="ob17-preparation"><div class="ob17-loading">準備を読み込んでいます。</div></section>';
-          void rerender(main,value.route.activityId,{preserveScroll:false,showLoading:false});
+          await rerender(main,value.route.activityId,{preserveScroll:false,showLoading:false});
         }
       }
       return value;

@@ -73,6 +73,11 @@
     return row?get(row.id):null;
   }
 
+  async function children(parentActivityId){
+    const rows=await repos().activities.children(parentActivityId);
+    return Promise.all(rows.map(row=>get(row.id)));
+  }
+
   async function current(){
     const context=await repos().runtimeContext();
     const id=context?.current_activity_id||utils().activeActivityId();
@@ -94,5 +99,7 @@
     return router?.legacyUrl?.('home',{activityId:activity?.id,planId})||'?tab=plan';
   }
 
-  globalThis.OUTBASE_PLAN_DOMAIN_V162=Object.freeze({list,get,byLegacyPlanId,current,now,upcoming,legacyUrl});
+  globalThis.OUTBASE_PLAN_DOMAIN_V162=Object.freeze({
+    list,get,byLegacyPlanId,children,current,now,upcoming,legacyUrl
+  });
 })();

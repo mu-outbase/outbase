@@ -4,6 +4,96 @@
   const db=()=>globalThis.OUTBASE_DB_V160;
   const ids=()=>globalThis.OUTBASE_IDS;
   const validation=()=>globalThis.OUTBASE_VALIDATION;
+  const REFERENCE_RULES=Object.freeze({
+    activities:Object.freeze([
+      Object.freeze({field:'parent_activity_id',store:'activities',nullable:true})
+    ]),
+    activity_participants:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities'}),
+      Object.freeze({field:'participant_id',storeFrom:value=>
+        value.participant_type==='pet'?'pets':'members'})
+    ]),
+    activity_transitions:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities'})
+    ]),
+    calendar_entries:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities'})
+    ]),
+    preparation_items:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities'})
+    ]),
+    records:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ]),
+    media:Object.freeze([
+      Object.freeze({field:'record_id',store:'records',nullable:true}),
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ]),
+    gps_chunks:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ]),
+    routes:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ]),
+    route_points:Object.freeze([
+      Object.freeze({field:'route_id',store:'routes'}),
+      Object.freeze({field:'place_id',store:'places',nullable:true})
+    ]),
+    activity_assets:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities'}),
+      Object.freeze({field:'asset_id',store:'assets'})
+    ]),
+    meals:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ]),
+    meal_items:Object.freeze([
+      Object.freeze({field:'meal_id',store:'meals'})
+    ]),
+    shopping_lists:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ]),
+    shopping_items:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true}),
+      Object.freeze({field:'shopping_list_id',store:'shopping_lists'})
+    ]),
+    reviews:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities'})
+    ]),
+    improvement_items:Object.freeze([
+      Object.freeze({field:'activity_id',store:'activities',nullable:true})
+    ])
+  });
+
+  async function validateReferences(storeName,value,{batchIds=new Map()}={}){
+    const issues=[];
+    for(const rule of REFERENCE_RULES[storeName]||[]){
+      const id=value?.[rule.field];
+      if(id===null||id===undefined||id===''){
+        if(rule.nullable)continue;
+        issues.push({field:rule.field,code:'required_reference',message:`${rule.field} is required`});
+        continue;
+      }
+      const targetStore=rule.storeFrom?.(value)||rule.store;
+      if(storeName==='activities'&&rule.field==='parent_activity_id'&&String(id)===String(value.id)){
+        issues.push({field:rule.field,code:'self_reference',message:'activity cannot be its own parent'});
+        continue;
+      }
+      const inBatch=batchIds.get(targetStore)?.has(String(id))===true;
+      const target=inBatch?{id}:await db().get(targetStore,id);
+      if(!target||target.deleted_at)issues.push({
+        field:rule.field,
+        code:'reference_not_found',
+        message:`${targetStore}/${id} does not exist`,
+        targetStore,
+        targetId:String(id)
+      });
+    }
+    if(issues.length){
+      const ErrorType=validation().EntityValidationError;
+      throw new ErrorType(storeName,issues,value);
+    }
+    return value;
+  }
 
   class Repository{
     constructor(storeName,normalizer=null){this.storeName=storeName;this.normalizer=normalizer;}
@@ -23,23 +113,20 @@
     }
     normalize(input,defaults={}){
       if(this.normalizer)return this.normalizer(input,defaults);
-      const now=ids().nowIso();
-      return {
-        ...input,
-        id:input.id||ids().ulid(),
-        schema_version:Number(input.schema_version||1),
-        created_at:input.created_at||now,
-        updated_at:input.updated_at||now,
-        deleted_at:input.deleted_at||null
-      };
+      return validation().normalize(this.storeName,input,defaults);
     }
     async save(input,defaults={}){
       const value=this.normalize({...input,updated_at:ids().nowIso()},defaults);
+      validation().assertEntity(this.storeName,value);
+      await validateReferences(this.storeName,value);
       await db().put(this.storeName,value);
       return value;
     }
     async saveMany(inputs,defaults={}){
       const values=(inputs||[]).map(item=>this.normalize({...item,updated_at:ids().nowIso()},defaults));
+      const batchIds=new Map([[this.storeName,new Set(values.map(value=>String(value.id)))]]);
+      values.forEach(value=>validation().assertEntity(this.storeName,value));
+      await Promise.all(values.map(value=>validateReferences(this.storeName,value,{batchIds})));
       await db().bulkPut(this.storeName,values);
       return values;
     }
@@ -57,6 +144,8 @@
         created_at:current?.created_at||input.created_at,
         updated_at:ids().nowIso()
       },defaults);
+      validation().assertEntity(this.storeName,value);
+      await validateReferences(this.storeName,value);
       await db().put(this.storeName,value);
       return value;
     }
@@ -72,6 +161,18 @@
     async active(householdId){
       const rows=await this.byIndex('household_id',householdId);
       return rows.filter(row=>!row.deleted_at&&['active','paused'].includes(row.state));
+    }
+    async children(parentActivityId){
+      if(!parentActivityId)return [];
+      try{
+        const rows=await this.byIndex('parent_activity_id',parentActivityId);
+        return rows.filter(row=>!row.deleted_at);
+      }catch(error){
+        if(error?.name!=='NotFoundError')throw error;
+        return (await this.all()).filter(row=>
+          !row.deleted_at&&String(row.parent_activity_id||'')===String(parentActivityId)
+        );
+      }
     }
   }
 
@@ -116,6 +217,10 @@
 
   async function runtimeContext(){return repositories.appMeta.get('runtime_context');}
   async function setCurrentActivity(activityId,extra={}){
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('contextPersistence',{
+      explicit:extra.explicit===true,
+      source:'repository-set-current-activity'
+    });
     const current=await runtimeContext();
     return repositories.appMeta.save({
       ...current,

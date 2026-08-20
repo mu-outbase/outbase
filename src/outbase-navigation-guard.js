@@ -1,8 +1,6 @@
 (() => {
   'use strict';
 
-  const STATE_FLAG = 'outbaseNavigation';
-  const STATE_DEPTH = 'overlayDepth';
   const CONTROL_SELECTOR = 'button,[role="button"]';
   const ROOT_SELECTOR = [
     'dialog',
@@ -21,9 +19,8 @@
     '[class*="editor"]'
   ].join(',');
 
-  let applyingPopState = false;
-  let synchronizingProgrammaticClose = false;
   let syncTimer = 0;
+  let observedDepth = 0;
 
   function visible(element) {
     if (!element || !element.isConnected) return false;
@@ -95,45 +92,9 @@
     });
   }
 
-  function stateDepth(state = history.state) {
-    if (!state || state[STATE_FLAG] !== true) return 0;
-    const value = Number(state[STATE_DEPTH] || 0);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
-  }
-
-  function replaceState(depth) {
-    history.replaceState({
-      ...(history.state || {}),
-      [STATE_FLAG]: true,
-      [STATE_DEPTH]: Math.max(0, depth)
-    }, '', location.href);
-  }
-
-  function pushState(depth) {
-    history.pushState({
-      ...(history.state || {}),
-      [STATE_FLAG]: true,
-      [STATE_DEPTH]: Math.max(0, depth)
-    }, '', location.href);
-  }
-
   function syncHistoryWithDom() {
-    if (applyingPopState || synchronizingProgrammaticClose) return;
-
-    const actualDepth = openLayers().length;
-    const currentDepth = stateDepth();
-
-    if (actualDepth > currentDepth) {
-      for (let depth = currentDepth + 1; depth <= actualDepth; depth += 1) {
-        pushState(depth);
-      }
-      return;
-    }
-
-    if (actualDepth < currentDepth) {
-      synchronizingProgrammaticClose = true;
-      history.go(actualDepth - currentDepth);
-    }
+    observedDepth = openLayers().length;
+    return observedDepth;
   }
 
   function scheduleSync() {
@@ -141,43 +102,7 @@
     syncTimer = window.setTimeout(syncHistoryWithDom, 40);
   }
 
-  function closeUntilDepth(targetDepth) {
-    const layers = openLayers();
-    if (layers.length <= targetDepth) {
-      applyingPopState = false;
-      scheduleSync();
-      return;
-    }
-
-    const top = layers[layers.length - 1];
-    if (!top?.button) {
-      applyingPopState = false;
-      replaceState(layers.length);
-      return;
-    }
-
-    top.button.click();
-    window.setTimeout(() => closeUntilDepth(targetDepth), 0);
-  }
-
-  window.addEventListener('popstate', event => {
-    if (synchronizingProgrammaticClose) {
-      synchronizingProgrammaticClose = false;
-      scheduleSync();
-      return;
-    }
-
-    const layers = openLayers();
-    if (!layers.length) return;
-
-    const targetDepth = stateDepth(event.state);
-    applyingPopState = true;
-    closeUntilDepth(targetDepth);
-  });
-
   window.addEventListener('DOMContentLoaded', () => {
-    replaceState(0);
-
     const observer = new MutationObserver(scheduleSync);
     observer.observe(document.documentElement, {
       subtree: true,

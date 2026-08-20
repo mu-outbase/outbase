@@ -21,7 +21,7 @@
   }
   async function notify(reason){const value=await snapshot();for(const listener of listeners){try{listener(value,reason);}catch(error){console.error('[OUTBASE state listener]',error);}}globalThis.dispatchEvent(new CustomEvent('outbase:state-change',{detail:{value,reason}}));return value;}
   function subscribe(listener){if(typeof listener!=='function')throw new TypeError('listener must be a function');listeners.add(listener);return()=>listeners.delete(listener);}
-  addEventListener('online',()=>notify('online'));addEventListener('offline',()=>notify('offline'));addEventListener('popstate',()=>notify('navigation'));addEventListener('hashchange',()=>notify('navigation'));
+  addEventListener('online',()=>notify('online'));addEventListener('offline',()=>notify('offline'));globalThis.OUTBASE_ROUTER?.subscribePop?.(()=>notify('navigation'));addEventListener('hashchange',()=>notify('navigation'));
   addEventListener('storage',event=>{if(event.key?.startsWith('outbase_'))notify('storage');});
   addEventListener('outbase:data-v160-ready',()=>notify('data-ready'));addEventListener('outbase:phase2b-ready',()=>notify('phase2b-ready'));addEventListener('outbase:phase4-ready',()=>notify('phase4-ready'));
   document.addEventListener('visibilitychange',()=>notify('visibility'));

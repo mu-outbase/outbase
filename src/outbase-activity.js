@@ -335,7 +335,7 @@
     setInterval(()=>{ensureRecoverable();mount();},15000);
   });
   window.addEventListener('hashchange',mount);
-  window.addEventListener('popstate',mount);
+  globalThis.OUTBASE_ROUTER.subscribePop(mount);
   window.addEventListener('beforeunload',ensureRecoverable);
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='hidden')ensureRecoverable();

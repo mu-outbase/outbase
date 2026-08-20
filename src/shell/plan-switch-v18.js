@@ -148,7 +148,10 @@
     if(route.name==='activity'||route.name==='preparation'){
       const values=api?.params?.(context)||{activityId:item.id,planId:item.legacyPlanId||null};
       if(modals?.top?.()?.id===modalId){
-        addEventListener('popstate',()=>router.navigate(route.name,values,{replace:true,transition:false,skipTransition:true}),{once:true});
+        const unsubscribe=router.subscribePop(()=>{
+          unsubscribe();
+          router.navigate(route.name,values,{replace:true,transition:false,skipTransition:true});
+        });
         close({historyBack:true});
       }else{
         close({historyBack:false});

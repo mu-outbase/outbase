@@ -219,15 +219,7 @@
   async function ensureSessionActivity(context,sessionMap,sessionId,target,createdAt){
     const key=sessionKey(sessionId,target,createdAt);
     if(sessionMap.has(key))return sessionMap.get(key);
-    const type=activityType(target);
-    const row=await repo().activities.upsertByLegacyRef(`session:${key}`,{
-      household_id:context.household.id,type,title:safeTitle(target,type==='walk'?'散歩':'記録'),state:'organizing',
-      start_at:createdAt?iso(createdAt):null,visibility:'private',source:'legacy-record-session',
-      schema_version:SCHEMA_VERSION,created_by:context.member.id,updated_by:context.member.id
-    });
-    await ensureActivityOwnership(context,row.id,null);
-    sessionMap.set(key,row.id);
-    return row.id;
+    return null;
   }
 
   async function migrateRecords(context,sessionMap){
@@ -242,7 +234,9 @@
       delete payload.hasBlob;delete payload.blobType;delete payload.blobSize;
       const row=await repo().records.upsertByLegacyRef(`record:${legacyId}`,{
         household_id:context.household.id,activity_id:activityId,type:recordType(item.kind),occurred_at:iso(item.createdAt||Date.now()),
-        actor_id:context.member.id,visibility:'private',payload,source:'legacy-field03',schema_version:SCHEMA_VERSION,
+        actor_id:context.member.id,visibility:'private',
+        payload:{...payload,classification:activityId?'linked':'unclassified'},
+        source:'legacy-field03',schema_version:SCHEMA_VERSION,
         created_by:context.member.id,updated_by:context.member.id
       });
       migrated.push(row);
@@ -362,7 +356,9 @@
       });
       const currentActivityId=runtime.current_activity_id?activityMap.get(String(runtime.current_activity_id)):null;
       const currentPlanActivityId=runtime.current_plan_id?planMap.get(String(runtime.current_plan_id)):null;
-      await repo().setCurrentActivity(currentActivityId||currentPlanActivityId||null,{mode:'legacy-shadow',legacy_runtime:runtime});
+      await repo().setCurrentActivity(currentActivityId||currentPlanActivityId||null,{
+        explicit:true,mode:'legacy-shadow',legacy_runtime:runtime
+      });
       return {
         migration_id:MIGRATION_ID,status,verification,cutover:false,legacy_data_untouched:true,
         counts:{records:records.length,assets:assets.length,plans:planMap.size,gps_chunks:gpsChunk?1:0}
@@ -384,7 +380,7 @@
     await repo().appMeta.save({
       id:'migration_status',migration_id:MIGRATION_ID,status:'rolled_back',mode:'legacy',updated_at:now,schema_version:SCHEMA_VERSION
     });
-    await repo().setCurrentActivity(null,{mode:'legacy'});
+    await repo().setCurrentActivity(null,{explicit:true,mode:'legacy'});
     return {status:'rolled_back',mode:'legacy',cutover:false,legacy_data_untouched:true};
   }
 

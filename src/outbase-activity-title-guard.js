@@ -138,7 +138,7 @@
   window.addEventListener('DOMContentLoaded',run);
   window.addEventListener('pageshow',run);
   window.addEventListener('hashchange',run);
-  window.addEventListener('popstate',run);
+  globalThis.OUTBASE_ROUTER.subscribePop(run);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')run();});
   globalThis.addEventListener('outbase:core-ready',run);
   globalThis.addEventListener('outbase:activity-refresh',run);

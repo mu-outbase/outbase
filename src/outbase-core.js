@@ -753,7 +753,11 @@
     return list(KEYS.activities).find(item=>item.legacySessionId===sessionId)||null;
   }
 
-  function migrateLegacy(){
+  function migrateLegacy({explicit=false}={}){
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('legacyCoreMigration',{
+      explicit,
+      source:'outbase-core-migrate-legacy'
+    });
     const migrations=read(KEYS.migrations,{});
     if(migrations.legacyPhase1?.completed)return clone(migrations.legacyPhase1);
 
@@ -806,41 +810,21 @@
     });
 
     const legacyEvents=read('outbase_activity_events_v1',[]);
-    const sessionIds=[...new Set(legacyEvents.map(item=>item.sessionId).filter(Boolean))];
-    sessionIds.forEach(sessionId=>{
-      const first=[...legacyEvents]
-        .filter(item=>item.sessionId===sessionId)
-        .sort((a,b)=>new Date(a.time)-new Date(b.time))[0];
-      const existing=findActivityByLegacySession(sessionId);
-      if(!existing){
-        upsertActivity({
-          activityId:`legacy_activity_${sessionId}`,
-          activityType:first?.target||'unspecified',
-          title:first?.target||'記録',
-          state:'inactive',
-          currentPhase:'整理',
-          startedAt:first?.time||null,
-          source:'legacy',
-          legacySessionId:sessionId
-        });
-        counts.activities++;
-      }
-    });
-
     legacyEvents.forEach(item=>{
+      const existing=item.sessionId?findActivityByLegacySession(item.sessionId):null;
       appendEvent({
         eventId:`legacy_activity_event_${item.id||uid('legacy')}`,
         eventType:item.type||'activity_event',
         observedAt:item.time,
         source:'legacy-activity',
         sessionId:item.sessionId||null,
-        activityId:item.sessionId?`legacy_activity_${item.sessionId}`:null,
+        activityId:existing?.activityId||null,
         payload:item,
         legacyRef:item.id||null
       });
       counts.events++;
-      if(item.phase&&item.sessionId){
-        setLifecycle(`legacy_activity_${item.sessionId}`,item.phase,item.source||'legacy',{
+      if(item.phase&&existing?.activityId){
+        setLifecycle(existing.activityId,item.phase,item.source||'legacy',{
           observedAt:item.time,
           reason:item.type,
           evidence:[item.id||null].filter(Boolean)
@@ -851,20 +835,9 @@
 
     const legacyLifecycle=read('outbase_activity_lifecycle_v1',{});
     Object.entries(legacyLifecycle).forEach(([sessionId,item])=>{
-      const activityId=`legacy_activity_${sessionId}`;
-      if(!findActivityByLegacySession(sessionId)){
-        upsertActivity({
-          activityId,
-          activityType:'unspecified',
-          title:'記録',
-          state:'inactive',
-          currentPhase:item.phase||'整理',
-          source:'legacy',
-          legacySessionId:sessionId
-        });
-        counts.activities++;
-      }
-      setLifecycle(activityId,item.phase||'整理',item.source||'legacy',{
+      const existing=findActivityByLegacySession(sessionId);
+      if(!existing?.activityId)return;
+      setLifecycle(existing.activityId,item.phase||'整理',item.source||'legacy',{
         observedAt:item.updatedAt?new Date(item.updatedAt).toISOString():now(),
         reason:'legacy-lifecycle'
       });
@@ -1075,8 +1048,17 @@
     },null,2);
   }
 
-  ensureMeta();
-  const migration=migrateLegacy();
+  const migration={completed:false,status:'disabled_by_default',persistentWrite:false};
+
+  function initialize({explicit=false,runMigration=false}={}){
+    globalThis.OUTBASE_PERSISTENCE_GUARD_V1?.requireExplicit?.('legacyCoreMigration',{
+      explicit,
+      source:'outbase-core-initialize'
+    });
+    const meta=ensureMeta();
+    const migrationResult=runMigration?migrateLegacy({explicit:true}):migration;
+    return Object.freeze({meta,migration:migrationResult});
+  }
 
   globalThis.OUTBASE_CORE=Object.freeze({
     VERSION,
@@ -1107,7 +1089,8 @@
     snapshot,
     stats,
     exportJson,
-    migrateLegacy
+    migrateLegacy,
+    initialize
   });
 
   globalThis.dispatchEvent(new CustomEvent('outbase:core-ready',{

@@ -493,7 +493,7 @@
 
   window.addEventListener('DOMContentLoaded',queueMount);
   window.addEventListener('hashchange',queueMount);
-  window.addEventListener('popstate',queueMount);
+  globalThis.OUTBASE_ROUTER.subscribePop(queueMount);
   globalThis.addEventListener('outbase:core-ready',queueMount);
   globalThis.addEventListener('outbase:entry-refresh',queueMount);
 

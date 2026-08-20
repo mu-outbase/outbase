@@ -48,8 +48,10 @@
     return Object.freeze({
       id:row.id,
       type:text(row.type,'other'),
+      subtype:text(row.subtype)||null,
       title:text(row.title,'名称未設定の活動'),
       state:text(row.state,'candidate'),
+      parentActivityId:text(row.parent_activity_id)||null,
       startAt:iso(row.start_at),
       endAt:iso(row.end_at),
       timezone:text(row.timezone,'Asia/Tokyo'),

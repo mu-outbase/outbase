@@ -405,11 +405,16 @@
     document.body.classList.remove('outbaseShellPreview');globalThis.OUTBASE_THEME_V166?.sync?.('shell-fallback');root?.remove();root=null;mounted=false;
     globalThis.dispatchEvent?.(new CustomEvent('outbase:v166-fallback',{detail:{reason,snapshot:snapshot()}}));globalThis.dispatchEvent?.(new CustomEvent('outbase:v165-fallback',{detail:{reason,snapshot:snapshot()}}));return {status:'fallback',reason};
   }
-  function currentScrollY(){const number=Number(globalThis.scrollY??document.scrollingElement?.scrollTop??0);return Number.isFinite(number)&&number>0?Math.round(number):0;}
+  function currentScrollY(){return router.viewportScrollY?.()||0;}
   function routeScrollTarget(reason,before){if(reason==='popstate'||reason==='replace-preserve')return router.savedScrollY?.()||0;if(['initial','push','replace'].includes(reason))return 0;return before;}
   function applyScroll(top){
     const value=Math.max(0,Number(top)||0);
-    return new Promise(resolve=>{const run=()=>{const scroller=document.scrollingElement||document.documentElement||document.body;if(scroller)scroller.scrollTop=value;if(typeof globalThis.scrollTo==='function')globalThis.scrollTo(0,value);resolve(value);};if(typeof globalThis.requestAnimationFrame==='function')globalThis.requestAnimationFrame(run);else setTimeout(run,0);});
+    return new Promise(resolve=>{
+      const run=()=>{router.applyScrollY?.(value);resolve(value);};
+      if(typeof globalThis.requestAnimationFrame==='function'){
+        globalThis.requestAnimationFrame(()=>globalThis.requestAnimationFrame(run));
+      }else setTimeout(run,0);
+    });
   }
   async function performRender(reason){if(!mounted||!root)return;const before=currentScrollY();const force=reason==='data-change';await renderer.mount(root,{force});await applyScroll(routeScrollTarget(reason,before));}
   function render(reason='refresh'){

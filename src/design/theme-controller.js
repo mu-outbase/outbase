@@ -50,7 +50,7 @@
     document.addEventListener('click',()=>schedule('click'));
     document.addEventListener('submit',()=>schedule('submit'));
     addEventListener('pageshow',()=>sync('pageshow'));
-    addEventListener('popstate',()=>sync('popstate'));
+    globalThis.OUTBASE_ROUTER.subscribePop(()=>sync('popstate'));
     addEventListener('storage',event=>{if(event.key==='outbase_record_session_state')sync('storage');});
     addEventListener('online',()=>sync('online'));
     addEventListener('offline',()=>sync('offline'));

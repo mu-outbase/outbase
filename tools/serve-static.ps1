@@ -23,12 +23,13 @@ try {
     while ($true) {
         $client = $listener.AcceptTcpClient()
         $stream = $null
-        $reader = $null
         try {
             $stream = $client.GetStream()
-            $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::ASCII, $false, 1024, $true)
-            $requestLine = $reader.ReadLine()
-            while ($reader.ReadLine()) { }
+            $stream.ReadTimeout = 5000
+            $requestBuffer = [byte[]]::new(16384)
+            $requestLength = $stream.Read($requestBuffer, 0, $requestBuffer.Length)
+            $requestText = [System.Text.Encoding]::ASCII.GetString($requestBuffer, 0, $requestLength)
+            $requestLine = ($requestText -split "`r?`n", 2)[0]
             $parts = $requestLine -split ' '
             $requestTarget = $parts[1]
             $uri = [System.Uri]::new("http://127.0.0.1$requestTarget")
@@ -70,7 +71,6 @@ try {
             }
         }
         finally {
-            if ($null -ne $reader) { $reader.Dispose() }
             if ($null -ne $stream) { $stream.Dispose() }
             $client.Dispose()
         }

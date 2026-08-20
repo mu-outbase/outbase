@@ -1647,7 +1647,7 @@
     });
     document.querySelectorAll('[data-open-plan-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();recordSheet='';prepSheet='';prepModuleId='';planSheet='switcher';render();}));
     document.querySelectorAll('[data-switch-active-plan]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activePlanId=el.dataset.switchActivePlan||'none';persistPlans();blockUnderlyingNavigation(250);planSheet='';render();}));
-    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library10a`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-tab-from-switcher]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();blockUnderlyingNavigation(250);planSheet='';active=el.dataset.tabFromSwitcher||'plan';globalThis.OUTBASE_ROUTER.history.replace(null,`?tab=${active}&v=clean-v6-library10a`);render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-id]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();selectedPlanId=el.dataset.planId;planDraft=null;planSheet='detail';render();}));
     document.querySelectorAll('[data-open-plan-add]').forEach(el=>el.addEventListener('click',()=>{openPlanEditor(null);render();}));
     document.querySelectorAll('[data-open-plan-list]').forEach(el=>el.addEventListener('click',()=>{planSheet='list';render();}));
@@ -1662,8 +1662,8 @@
     }
     document.querySelectorAll('[data-plan-edit]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planEdit);if(!p)return;openPlanEditor(p);render();}));
     document.querySelectorAll('[data-plan-set-active]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planSetActive;persistPlans();planSheet='';render();}));
-    document.querySelectorAll('[data-plan-prepare]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planPrepare;persistPlans();planSheet='';active='prep';history.replaceState(null,'',`?tab=prep&v=clean-v6-plan012`);render();window.scrollTo({top:0,behavior:'instant'});}));
-    document.querySelectorAll('[data-plan-record]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planRecord);if(!p)return;activePlanId=p.id;recordTarget=p.title;localStorage.setItem('outbase_record_target',recordTarget);persistPlans();planSheet='';active='record';history.replaceState(null,'',`?tab=record&v=clean-v6-plan012`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-plan-prepare]').forEach(el=>el.addEventListener('click',()=>{activePlanId=el.dataset.planPrepare;persistPlans();planSheet='';active='prep';globalThis.OUTBASE_ROUTER.history.replace(null,'?tab=prep&v=clean-v6-plan012');render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('[data-plan-record]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planRecord);if(!p)return;activePlanId=p.id;recordTarget=p.title;localStorage.setItem('outbase_record_target',recordTarget);persistPlans();planSheet='';active='record';globalThis.OUTBASE_ROUTER.history.replace(null,'?tab=record&v=clean-v6-plan012');render();window.scrollTo({top:0,behavior:'instant'});}));
     document.querySelectorAll('[data-plan-delete]').forEach(el=>el.addEventListener('click',()=>{const p=planForId(el.dataset.planDelete);if(!p)return;if(!confirm(`「${p.title}」を削除しますか？`))return;plans=plans.filter(x=>x.id!==p.id);if(activePlanId===p.id)activePlanId=plans[0]?.id||'';persistPlans();planSheet='';selectedPlanId='';render();}));
 
     const backdrop=document.querySelector('[data-plan-backdrop]');
@@ -1937,7 +1937,7 @@
   function render(){
     const modalOpen=anySheetOpen()&&prepSheet!=='gear-manager';
     document.getElementById('app').innerHTML=`<div class="appShell ${modalOpen?'hasModal':''}">${header()}<main>${planPage()}${searchPage()}${prepPage()}${recordPage()}${memoryPage()}</main>${parkingRecallButton()}${nav()}${planSheetMarkup()}${prepSheetMarkup()}${sheetMarkup()}</div>`;
-    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if((anySheetOpen()&&prepSheet!=='gear-manager')||Date.now()<modalTapBlockUntil)return;if(prepSheet==='gear-manager'){prepSheet='';libraryCloseEditor();}active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';history.replaceState(null,'',`?tab=${active}&v=clean-v6-library10a`);render();window.scrollTo({top:0,behavior:'instant'});}));
+    document.querySelectorAll('.navBtn').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if((anySheetOpen()&&prepSheet!=='gear-manager')||Date.now()<modalTapBlockUntil)return;if(prepSheet==='gear-manager'){prepSheet='';libraryCloseEditor();}active=btn.dataset.tab;recordSheet='';planSheet='';prepSheet='';prepModuleId='';globalThis.OUTBASE_ROUTER.history.replace(null,`?tab=${active}&v=clean-v6-library10a`);render();window.scrollTo({top:0,behavior:'instant'});}));
     bindPlanActions();
     bindPrepActions();
     bindRecordActions();
@@ -2477,25 +2477,12 @@
   }
 
   async function restoreIndexedDb(stores){
-    if(!stores||typeof stores!=='object')return 0;
-    const db=await openDb();
-    if(!db)return 0;
-    let count=0;
-    for(const [storeName,serializedRows] of Object.entries(stores)){
-      if(!db.objectStoreNames.contains(storeName))continue;
-      const rows=await deserializeValue(serializedRows);
-      await new Promise((resolve,reject)=>{
-        const tx=db.transaction(storeName,'readwrite');
-        const store=tx.objectStore(storeName);
-        store.clear();
-        (Array.isArray(rows)?rows:[]).forEach(row=>store.put(row));
-        tx.oncomplete=resolve;
-        tx.onerror=()=>reject(tx.error);
-      });
-      count+=(Array.isArray(rows)?rows.length:0);
-    }
-    db.close();
-    return count;
+    void stores;
+    const error=new Error('Production in-place restore is disabled.');
+    error.name='ProductionRestoreDisabledError';
+    error.code='production_restore_disabled';
+    error.detail={currentDatabaseModified:false};
+    throw error;
   }
 
   async function exportBackup(){
@@ -2528,29 +2515,22 @@
 
   async function restoreBackup(file){
     try{
-      toast('バックアップを確認しています');
+      toast('隔離環境でバックアップを確認しています');
       const payload=JSON.parse(await file.text());
-      const valid=payload&&(
-        payload.format==='OUTBASE_COMPLETE_BACKUP'||
-        payload.format==='OUTBASE_BACKUP'
-      )&&typeof payload.localStorage==='object';
-      if(!valid)throw new Error('invalid backup');
-
-      const keys=Object.keys(payload.localStorage).filter(key=>key.startsWith(PREFIX));
-      if(!confirm(`${keys.length}件の設定・記録と保存メディアを復元します。
-現在の同名データは上書きされます。`))return;
-
-      keys.forEach(key=>{
-        const value=payload.localStorage[key];
-        if(value==null)localStorage.removeItem(key);
-        else localStorage.setItem(key,String(value));
-      });
-      const mediaCount=await restoreIndexedDb(payload.indexedDB||{});
-      toast(`${keys.length}件＋メディア${mediaCount}件を復元しました`);
-      setTimeout(()=>location.reload(),900);
+      const verifier=globalThis.OUTBASE_ISOLATED_ARCHIVE_VERIFIER_V1;
+      if(!verifier)throw new Error('OUTBASE isolated archive verifier is unavailable.');
+      if(payload?.manifest?.format!==verifier.FORMAT){
+        const error=new Error('Legacy in-place restore archives are disabled.');
+        error.code='legacy_restore_disabled';
+        throw error;
+      }
+      const result=await verifier.verify(payload,{explicit:true});
+      toast(`隔離検証が完了しました（DB ${result.databases.length}件）。本番復元は無効です`);
     }catch(error){
       console.error(error);
-      alert('OUTBASEバックアップを読み込めませんでした。');
+      alert(error?.code==='legacy_restore_disabled'
+        ?'旧形式バックアップの直接復元は停止しています。現行データは変更されていません。'
+        :`バックアップの隔離検証に失敗しました。現行データは変更されていません。\n${error?.message||error}`);
     }
   }
 
@@ -3131,18 +3111,11 @@
     return false;
   }
 
-  window.addEventListener('DOMContentLoaded',repairData);
+  globalThis.OUTBASE_EXPLICIT_MAINTENANCE_V1?.register(
+    'field03-repair-data',
+    ()=>repairData()
+  );
 
-  window.addEventListener('popstate',event=>{
-    if(closeTopOverlay()){
-      event.preventDefault();
-      history.pushState({outbase:true},'',location.href);
-    }
-  });
-
-  window.addEventListener('DOMContentLoaded',()=>{
-    if(!history.state?.outbase)history.replaceState({outbase:true},'',location.href);
-  });
 })();
 
 /* OUTBASE FIELD03 Integrated Production Cleanup */
@@ -3266,9 +3239,12 @@
   }
 
   window.addEventListener('DOMContentLoaded',()=>{
-    runCleanup();
     bindServiceWorkerUpdate();
   });
+  globalThis.OUTBASE_EXPLICIT_MAINTENANCE_V1?.register(
+    'field03-production-cleanup',
+    ()=>runCleanup()
+  );
 })();
 
 
@@ -3338,7 +3314,10 @@
     }));
   }
 
-  window.addEventListener('DOMContentLoaded',migrate);
+  globalThis.OUTBASE_EXPLICIT_MAINTENANCE_V1?.register(
+    'field03-sample-plan-migration',
+    ()=>migrate()
+  );
 })();
 
 
@@ -3386,5 +3365,8 @@
     }));
   }
 
-  window.addEventListener('DOMContentLoaded',migrate);
+  globalThis.OUTBASE_EXPLICIT_MAINTENANCE_V1?.register(
+    'field03-active-plan-compatibility',
+    ()=>migrate()
+  );
 })();

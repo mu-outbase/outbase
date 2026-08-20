@@ -3,8 +3,43 @@
 
   const LEGACY_DB_NAME='outbase_db';
   const PREFIX='outbase_';
+  const ALLOWED_KEYS=new Set([
+    'outbase_record_saved_records',
+    'outbase_plans_v1','outbase_plan_library_v1','outbase_plan_list_v1',
+    'outbase_core_v1_activities','outbase_core_v1_meta',
+    'outbase_pet_library_v1','outbase_gear_library_v1','outbase_plan_companions_v2',
+    'outbase_record_track_points','outbase_record_saved_pins',
+    'outbase_record_recoverable_session','outbase_activity_recovery_v1',
+    'outbase_core_activity_id','outbase_primary_activity_id_v2',
+    'outbase_active_plan_id','outbase_record_session_id','outbase_record_session_state',
+    'outbase_record_target','outbase_record_session_started_at'
+  ]);
+  const ALLOWED_STORES=new Set(['fieldRecords']);
+
+  function assertAllowedKey(key){
+    if(!ALLOWED_KEYS.has(key)){
+      const error=new Error(`Legacy key is not allowlisted: ${key}`);
+      error.name='LegacyAdapterError';
+      error.code='legacy_key_not_allowlisted';
+      error.detail={key};
+      throw error;
+    }
+    return key;
+  }
+
+  function assertAllowedStore(storeName){
+    if(!ALLOWED_STORES.has(storeName)){
+      const error=new Error(`Legacy store is not allowlisted: ${storeName}`);
+      error.name='LegacyAdapterError';
+      error.code='legacy_store_not_allowlisted';
+      error.detail={storeName};
+      throw error;
+    }
+    return storeName;
+  }
 
   const readJson=(key,fallback)=>{
+    assertAllowedKey(key);
     try{
       const value=JSON.parse(localStorage.getItem(key)||'null');
       return value??fallback;
@@ -15,7 +50,7 @@
     const values={};
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);
-      if(key?.startsWith(PREFIX))values[key]=localStorage.getItem(key);
+      if(key&&ALLOWED_KEYS.has(key))values[key]=localStorage.getItem(key);
     }
     return values;
   }
@@ -31,6 +66,7 @@
   }
 
   async function readLegacyStore(storeName){
+    assertAllowedStore(storeName);
     const db=await openLegacyDb();
     if(!db||!db.objectStoreNames.contains(storeName)){db?.close();return [];}
     const rows=await new Promise((resolve,reject)=>{
@@ -47,7 +83,7 @@
     const db=await openLegacyDb();
     if(!db)return {name:LEGACY_DB_NAME,version:null,stores:{}};
     const stores={};
-    for(const storeName of Array.from(db.objectStoreNames)){
+    for(const storeName of Array.from(db.objectStoreNames).filter(name=>ALLOWED_STORES.has(name))){
       stores[storeName]=await new Promise((resolve,reject)=>{
         const tx=db.transaction(storeName,'readonly');
         const request=tx.objectStore(storeName).count();
@@ -170,7 +206,9 @@
   }
 
   globalThis.OUTBASE_LEGACY_ADAPTER_V160=Object.freeze({
-    LEGACY_DB_NAME,PREFIX,readJson,localStorageSnapshot,openLegacyDb,readLegacyStore,legacyDbReport,
+    LEGACY_DB_NAME,PREFIX,
+    ALLOWED_KEYS:Object.freeze([...ALLOWED_KEYS]),ALLOWED_STORES:Object.freeze([...ALLOWED_STORES]),
+    assertAllowedKey,assertAllowedStore,readJson,localStorageSnapshot,openLegacyDb,readLegacyStore,legacyDbReport,
     records,plans,coreActivities,pets,gear,companions,trackPoints,savedPins,recoverableSession,
     currentRuntime,snapshot,getRecordBlob
   });

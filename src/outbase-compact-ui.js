@@ -263,7 +263,7 @@
   window.addEventListener('DOMContentLoaded',schedule);
   window.addEventListener('pageshow',schedule);
   window.addEventListener('hashchange',schedule);
-  window.addEventListener('popstate',schedule);
+  globalThis.OUTBASE_ROUTER.subscribePop(schedule);
   globalThis.addEventListener('outbase:core-ready',schedule);
   globalThis.addEventListener('outbase:activity-refresh',schedule);
 })();
