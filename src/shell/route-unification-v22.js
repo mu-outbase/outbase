@@ -100,9 +100,11 @@
     const name=allowed.has(query.returnShell)&&query.returnShell!==route.name?query.returnShell:defaultName;
     const activityId=query.returnActivityId||query.originActivityId||currentActivityId(route)||'';
     const values=activityId&&['activity','preparation','record'].includes(name)?{activityId,planId:route.planId||''}:{};
+    if(name==='record'){values.returnShell=query.recordReturnShell||'preparation';values.returnActivityId=activityId;}
     return {name,values};
   }
   function backOr(route,defaultName='home',values={}){
+    if(route.name==='memo'&&routeValues(route).returnShell==='record'&&route.activityId&&router.history.state()?.outbaseExecutionMemoOrigin===route.activityId){router.back();return;}
     const target=returnRoute(route,defaultName);
     router.navigate(target.name,{...target.values,...values},{replace:true,transition:false,skipTransition:true});
   }
@@ -128,9 +130,14 @@
     if(!rows.length){try{rows=await plans().list({states:['candidate','planned','preparing','active','paused'],limit:60});}catch(_error){rows=[];}}
     return {rows:safeArray(rows)};
   }
-  async function memoPayload(){
-    let rows=uniqueActivities(await homeRows(),await vaultRows()).filter(item=>item.state!=='archived');
-    if(!rows.length){try{rows=await plans().list({includeDeleted:false,limit:100});}catch(_error){rows=[];}}
+  async function memoPayload(route){
+    // HOME may contain readonly calendar projections, not writable activities.
+    let rows=await plans().list({includeDeleted:false,limit:100});
+    const requested=route.activityId;
+    if(requested&&!rows.some(item=>item.id===requested)){
+      const raw=await repos().activities.get(requested);
+      if(raw&&!raw.deleted_at){const item=await plans().get(requested);if(item)rows=[item,...rows];}
+    }
     return {rows:safeArray(rows).filter(item=>item.state!=='archived')};
   }
   async function placesPayload(){
@@ -254,14 +261,19 @@
   function memoMarkup(value){
     const rows=safeArray(value.routePayload?.rows);const route=value.route;const query=routeValues(route);const current=currentActivityId(route);const target=query.target||'memo';
     const requestId=globalThis.OUTBASE_IDS?.ulid?.()||`memo-request-${Date.now()}`;
+    const bound=query.returnShell==='record'&&route.activityId;
+    const missing=bound&&!rows.some(item=>item.id===bound);
     return `<section class="ob22-page ob22-memo" data-ob22-route-page="memo">
       ${routeHead(target==='improvement'?'改善メモ':'記録を残す','閉じる')}
       <section class="ob22-card ob22-page-title"><span>${target==='improvement'?icons.improve:icons.memo}</span><div><small>${target==='improvement'?'次回へつなぐ':'クイック記録'}</small><h1>${target==='improvement'?'改善メモを残す':'メモを残す'}</h1><p>旧FIELD03を開かず、選んだ活動へ直接保存します。</p></div></section>
       <form class="ob22-card ob22-form" data-ob22-memo-form data-ob22-target="${esc(target)}" data-ob22-request-id="${esc(requestId)}">
-        <label class="wide"><span>記録先</span><select name="activityId"><option value="">活動を選ばず保存</option>${rows.map(item=>`<option value="${esc(item.id)}"${String(item.id)===String(current)?' selected':''}>${esc(item.title)}｜${esc(activityRange(item))}</option>`).join('')}</select></label>
+        <input type="hidden" name="requestId" value="${esc(requestId)}">
+        ${bound?`<input type="hidden" name="activityId" value="${esc(bound)}">`:''}
+        <label class="wide"><span>記録先</span><select name="activityId" ${bound?'disabled':''}><option value="">活動を選ばず保存</option>${rows.map(item=>`<option value="${esc(item.id)}"${String(item.id)===String(current)?' selected':''}>${esc(item.title)}｜${esc(activityRange(item))}</option>`).join('')}</select></label>
         <label class="wide"><span>見出し</span><input name="title" maxlength="90" placeholder="あとで見つけやすい名前"></label>
         <label class="wide"><span>内容</span><textarea name="body" rows="8" required placeholder="今の気づき、確認したいこと、次回の改善など"></textarea></label>
-        <div class="ob22-form-actions wide"><button type="button" class="secondary" data-ob22-back>キャンセル</button><button type="submit" class="primary">保存</button></div>
+        <p class="wide" data-ob22-memo-status role="status" ${missing?'':'hidden'}>${missing?'記録先の活動を読み込めません。実行画面に戻って開き直してください。':''}</p>
+        <div class="ob22-form-actions wide"><button type="button" class="secondary" data-ob22-back>キャンセル</button><button type="submit" class="primary" ${missing?'disabled':''}>保存</button></div>
       </form>
     </section>`;
   }
@@ -354,8 +366,8 @@
     const item=await plans().get(saved.id);invalidate(saved.id);openExecution(item||{id:saved.id,title,type,metadata:meta},'start');
   }
   async function saveMemo(form,value){
-    const fd=new FormData(form);let activityId=text(fd.get('activityId'));const title=text(fd.get('title'));const body=text(fd.get('body'));if(!body)return;const target=form.dataset.ob22Target||'memo';
-    const displayedActivityId=activityId;
+    const fd=new FormData(form);let activityId=text(fd.get('activityId'));const title=text(fd.get('title'));const body=text(fd.get('body'));if(!body)throw new Error('memo_body_required');const target=form.dataset.ob22Target||'memo';
+    const displayedActivityId=routeValues(value.route).returnShell==='record'?value.route.activityId:activityId;
     const result=await globalThis.OUTBASE_SAFE_MEMO_V1.save({
       activityId,
       displayActivityId:displayedActivityId,
@@ -363,15 +375,40 @@
       body,
       target,
       kind:activityId?'activity':'quick',
-      requestId:form.dataset.ob22RequestId||''
+      requestId:text(fd.get('requestId'))||form.dataset.ob22RequestId||''
     });
     if(result.item){
+      globalThis.OUTBASE_EXECUTION_ROUTE_V19?.invalidate?.(result.activityId);
+      if(routeValues(value.route).returnShell==='record'){
+        invalidate(result.activityId);toast('メモを保存しました');
+        if(router.current().name==='memo')backOr(value.route,'record',{activityId:result.activityId});
+        return;
+      }
       activate(result.item,'memo-save');invalidate(result.activityId);toast(target==='improvement'?'改善メモを保存しました':'メモを保存しました');router.navigate('activity',{activityId:result.activityId},{replace:true,transition:false,skipTransition:true});
       return;
     }
     invalidate();toast(target==='improvement'?'未分類の改善メモを保存しました':'未分類メモを保存しました');router.navigate('home',{},{
       replace:true,transition:false,skipTransition:true
     });
+  }
+  const memoSubmissions=new Set();
+  async function submitMemo(form,value){
+    const requestId=new FormData(form).get('requestId')||form.dataset.ob22RequestId;
+    if(memoSubmissions.has(requestId))return;
+    memoSubmissions.add(requestId);
+    form.querySelector('[type="submit"]').disabled=true;
+    const status=form.querySelector('[data-ob22-memo-status]');status.hidden=false;status.textContent='メモを保存しています。';
+    try{await saveMemo(form,value);}
+    catch(_error){
+      const current=document.querySelector('[data-ob22-memo-form]');
+      if(current&&new FormData(current).get('requestId')===requestId){
+        const notice=current.querySelector('[data-ob22-memo-status]');notice.hidden=false;notice.textContent='保存できませんでした。入力内容は残っています。記録先を確認して、もう一度お試しください。';
+      }
+    }finally{
+      memoSubmissions.delete(requestId);
+      const current=document.querySelector('[data-ob22-memo-form]');
+      if(current&&new FormData(current).get('requestId')===requestId)current.querySelector('[type="submit"]').disabled=false;
+    }
   }
   async function addPlace(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;await repos().places.save({name,memo:text(fd.get('memo')),status:'active',source:'shell-route-unification-v22'});toast('場所を登録しました');router.navigate('places',{}, {replace:true,preserveScroll:true});}
   async function saveAsset(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;const id=form.dataset.ob22AssetId||'';const current=id?await repos().assets.get(id):null;await repos().assets.save({...current,name,asset_type:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')||1),storage:text(fd.get('storage')),memo:text(fd.get('memo')),status:current?.status||'active',payload:{...(current?.payload||{}),category:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')||1),storage:text(fd.get('storage')),memo:text(fd.get('memo'))},source:current?.source||'shell-route-unification-v22'});invalidate();toast(id?'持ち物を更新しました':'持ち物を登録しました');router.navigate('assets',{}, {replace:true});}
@@ -389,7 +426,7 @@
     main.querySelector('[data-ob22-prep-add]')?.addEventListener('submit',event=>{event.preventDefault();addPrep(event.currentTarget,value).catch(()=>toast('追加できませんでした'));});
     main.querySelectorAll('[data-ob22-start-plan]').forEach(button=>button.addEventListener('click',()=>{const item=safeArray(value.routePayload?.rows).find(row=>String(row.id)===String(button.dataset.ob22StartPlan));openExecution(item,'start');}));
     main.querySelector('[data-ob22-quick-start]')?.addEventListener('submit',event=>{event.preventDefault();quickStart(event.currentTarget).catch(()=>toast('活動を作成できませんでした'));});
-    main.querySelector('[data-ob22-memo-form]')?.addEventListener('submit',event=>{event.preventDefault();saveMemo(event.currentTarget,value).catch(()=>toast('保存できませんでした'));});
+    main.querySelector('[data-ob22-memo-form]')?.addEventListener('submit',event=>{event.preventDefault();submitMemo(event.currentTarget,value);});
     const search=main.querySelector('[data-ob22-place-search]');const filterPlaces=()=>{const q=text(search?.value).toLowerCase();let count=0;main.querySelectorAll('[data-ob22-place-row]').forEach(row=>{const visible=!q||String(row.dataset.ob22PlaceText||'').includes(q);row.hidden=!visible;if(visible)count++;});const node=main.querySelector('[data-ob22-place-count]');if(node)node.textContent=`${count}件`;};
     search?.addEventListener('input',filterPlaces);main.querySelector('[data-ob22-place-clear]')?.addEventListener('click',()=>{if(search){search.value='';filterPlaces();search.focus();}});
     main.querySelectorAll('[data-ob22-place-plan]').forEach(button=>button.addEventListener('click',()=>router.navigate('plan-editor',valuesWithReturn({place:button.dataset.ob22PlacePlan||''},value.route))));
@@ -470,6 +507,13 @@
         main.innerHTML=pageMarkup(value)||routeFailureMarkup(new Error(`OUTBASE v22.2 empty markup: ${requested.name}`));
         bind(main,value);
         restoreFormState(main,formState);
+        if(requested.name==='memo'){
+          const form=main.querySelector('[data-ob22-memo-form]');
+          if(form&&memoSubmissions.has(new FormData(form).get('requestId'))){
+            form.querySelector('[type="submit"]').disabled=true;
+            const status=form.querySelector('[data-ob22-memo-status]');status.hidden=false;status.textContent='メモを保存しています。';
+          }
+        }
         rendererBase.updateNav?.(root,value);
         globalThis.OUTBASE_THEME_V166?.sync?.('route-unification-v22-render');
         return value;

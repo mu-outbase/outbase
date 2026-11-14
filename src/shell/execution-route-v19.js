@@ -172,6 +172,15 @@
     return `<button type="button" class="ob19-quick" data-ob19-feature="${esc(key)}"><span>${icon}</span><b>${esc(label)}</b><small>${esc(sub)}</small></button>`;
   }
 
+  function savedNotes(item){
+    const notes=(item.records||[]).filter(row=>row.type==='note');
+    if(!notes.length)return '';
+    return `<section class="ob19-recording ob19-saved-notes ob36-card"><div class="ob19-card-head"><h2>保存したメモ</h2></div>${notes.slice(0,5).map(row=>{
+      const payload=row.payload||{};
+      return `<details><summary>${esc(payload.title||'メモ')}</summary><p>${esc(payload.text||payload.memo||'')}</p></details>`;
+    }).join('')}</section>`;
+  }
+
   function markup(result,route){
     if(result.status!=='ready'){
       const message=result.status==='missing'?'対象の予定が選ばれていません。':result.status==='error'?'実行画面を読み込めませんでした。':'予定が見つかりません。';
@@ -216,6 +225,8 @@
         </div>
         <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'この確認版では、写真・音声などはまだ保存されません。')}</p>
       </section>
+
+      ${savedNotes(item)}
 
       <section class="ob19-save ob36-card">
         <span>${icons.cloud}</span><div><b>活動状態を端末に保存</b><small>開始・一時停止・再開・終了に対応。写真・音声などの保存は未接続です。</small></div><em>状態保存</em>
@@ -318,6 +329,13 @@
     });
 
     main.querySelectorAll('[data-ob19-feature]').forEach(button=>button.addEventListener('click',()=>{
+      if(button.dataset.ob19Feature==='memo'){
+        clearTimer();
+        const api=globalThis.OUTBASE_ROUTER;
+        api.navigate('memo',{activityId:item.id,planId:planId(item),returnShell:'record',returnActivityId:item.id,recordReturnShell:route.returnShell||'preparation'},{transition:false,skipTransition:true});
+        api.history.replace({...api.history.state(),outbaseExecutionMemoOrigin:item.id});
+        return;
+      }
       const labels={photo:'写真',video:'動画',audio:'音声',memo:'メモ',pin:'場所ピン',parking:'駐車位置'};
       const notice=main.querySelector('[data-ob19-notice]');
       if(notice)notice.textContent=`${labels[button.dataset.ob19Feature]||'記録'}は、FIELD03の保存中核を移植した完成版で有効になります。`;
