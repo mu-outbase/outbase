@@ -175,13 +175,14 @@
     const newest=tracks.flat().reduce((latest,p)=>!latest||p.captured_at>latest.captured_at?p:latest,null);
     const current=position&&(!newest||position.time>=newest.captured_at)&&Number.isFinite(position.lat)&&Number.isFinite(position.lng)?{latitude:position.lat,longitude:position.lng}:null;
     const points=[...tracks.flat(),...pins.map(r=>r.payload),...(current?[current]:[])];
-    if(!points.length)return '<p data-walk-map-empty>GPS記録を開始するか、現在地を確認すると地図を表示します。</p>';
+    const unlocated=!points.length;
+    if(unlocated)points.push({latitude:36,longitude:138});
     const project=p=>{const lat=Math.max(-85.05112878,Math.min(85.05112878,p.latitude))*Math.PI/180;return {x:(p.longitude+180)/360,y:(1-Math.log(Math.tan(lat)+1/Math.cos(lat))/Math.PI)/2};};
     const anchor=project(points[0]).x;
     // Unwrap longitude so walks crossing the date line remain local.
     const unwrap=p=>{const v=project(p);v.x+=Math.round(anchor-v.x);return v;};
     const all=points.map(unwrap),minX=Math.min(...all.map(p=>p.x)),maxX=Math.max(...all.map(p=>p.x)),minY=Math.min(...all.map(p=>p.y)),maxY=Math.max(...all.map(p=>p.y));
-    const fit=Math.max(2,Math.min(17,Math.floor(Math.log2(Math.min(440/Math.max((maxX-minX)*256,0.001),248/Math.max((maxY-minY)*256,0.001))))));
+    const fit=unlocated?5:Math.max(2,Math.min(17,Math.floor(Math.log2(Math.min(440/Math.max((maxX-minX)*256,0.001),248/Math.max((maxY-minY)*256,0.001))))));
     const zoom=Math.max(2,Math.min(19,fit+(mapZooms.get(item.id)||0))),scale=256*2**zoom,left=(minX+maxX)/2*scale-256,top=(minY+maxY)/2*scale-160;
     const xy=p=>{const v=unwrap(p);return {x:v.x*scale-left,y:v.y*scale-top};};
     let tiles='';
@@ -193,7 +194,7 @@
     const lines=tracks.map(track=>`<polyline data-walk-track points="${track.map(p=>{const v=xy(p);return v.x+','+v.y;}).join(' ')}" fill="none" stroke="#176847" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
     const markers=pins.map(row=>{const p=xy(row.payload);return `<g data-walk-pin><circle cx="${p.x}" cy="${p.y}" r="11" fill="#a65c16" stroke="white" stroke-width="3"/><title>${row.payload.pin_kind==='parking'?'駐車位置':'場所ピン'}</title></g>`;}).join('');
     const last=current||newest,dot=last?xy(last):null;
-    return `<div data-walk-map style="margin-top:12px;border:1px solid #d8ded8;border-radius:16px;overflow:hidden;background:#edf1eb"><svg viewBox="0 0 512 320" role="img" aria-label="散歩の地図。緑線は歩いたルート、青点は現在地または最後の記録地点" style="display:block;width:100%;height:auto">${tiles}${lines}${markers}${dot?`<circle data-walk-position cx="${dot.x}" cy="${dot.y}" r="8" fill="#2474d8" stroke="white" stroke-width="3"/>`:''}</svg><div style="padding:8px;display:flex;gap:12px;align-items:center"><button type="button" data-walk-zoom="1" aria-label="地図を拡大">＋</button><button type="button" data-walk-zoom="-1" aria-label="地図を縮小">−</button><button type="button" data-walk-zoom="0">全体</button><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="margin-left:auto;font-size:12px">© OpenStreetMap contributors</a></div></div><p data-walk-map-status style="font-size:12px">背景地図には通信が必要です。緑線は保存したルート、青点は現在地または最後の記録地点です。</p>`;
+    return `${unlocated?'<p data-walk-map-empty>現在地は未取得です。日本付近の地図を表示しています。「現在地を確認」で移動できます。</p>':''}<div data-walk-map style="margin-top:12px;border:1px solid #d8ded8;border-radius:16px;overflow:hidden;background:#edf1eb"><svg viewBox="0 0 512 320" role="img" aria-label="散歩の地図。緑線は歩いたルート、青点は現在地または最後の記録地点" style="display:block;width:100%;height:auto">${tiles}${lines}${markers}${dot?`<circle data-walk-position cx="${dot.x}" cy="${dot.y}" r="8" fill="#2474d8" stroke="white" stroke-width="3"/>`:''}</svg><div style="padding:8px;display:flex;gap:12px;align-items:center"><button type="button" data-walk-zoom="1" aria-label="地図を拡大">＋</button><button type="button" data-walk-zoom="-1" aria-label="地図を縮小">−</button><button type="button" data-walk-zoom="0">全体</button><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="margin-left:auto;font-size:12px">© OpenStreetMap contributors</a></div></div><p data-walk-map-status style="font-size:12px">背景地図には通信が必要です。緑線は保存したルート、青点は現在地または最後の記録地点です。</p>`;
   }
 
   function mapMarkup(state,item){
@@ -209,7 +210,7 @@
       </div>
       ${walkMapMarkup(item,position,locations)}
       <button type="button" class="ob19-locate" data-ob19-locate>${icons.locate}<span><b>現在地を確認</b><small>端末の位置情報を一度取得</small></span>${icons.arrow}</button>
-      <button type="button" class="ob19-locate" data-ob19-gps ${!gps.tracking&&state.mode!=='active'?'disabled':''}>${gps.tracking?'GPS記録を停止':'GPS記録を開始'}</button>
+      <button type="button" class="ob19-locate" data-ob19-gps ${!gps.tracking&&state.mode!=='active'?'disabled':''}>${icons.locate}<span><b>${gps.tracking?'GPS記録を停止':'GPS記録を開始'}</b><small>歩いたルートを地図に残す</small></span>${icons.arrow}</button>
       <p role="status">${esc(gps.notice)}</p><p>画面を離れる・一時停止・終了でGPS記録は停止します。再開時は開始ボタンを押してください。距離は精度のよい位置情報からの概算です。</p>
       ${[locations.pins.find(r=>r.payload.pin_kind==='parking'),...locations.pins.filter(r=>r.payload.pin_kind==='place').slice(0,4)].filter(Boolean).map(r=>`<p>${r.payload.pin_kind==='parking'?'駐車位置':'場所ピン'} · ${esc(new Date(r.payload.captured_at).toLocaleString('ja-JP'))}<br><a href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(r.payload.latitude+','+r.payload.longitude)}" target="_blank" rel="noopener noreferrer">${esc(r.payload.latitude.toFixed(5)+', '+r.payload.longitude.toFixed(5))} を地図で開く</a></p>`).join('')}
     </section>`;
@@ -295,7 +296,7 @@
     const counts=api.summary(item.walkRecords||[]),ended=state.mode==='ended',awake=globalThis.OUTBASE_SCREEN_AWAKE.snapshot(item.id);
     return `<section class="ob19-recording ob36-card" data-kota-walk><h2>${ended?'コタ散歩のまとめ':'コタの様子を記録'}</h2>
       <div class="ob19-quick-grid">${Object.entries(api.EVENTS).map(([kind,label])=>`<button class="ob19-quick" type="button" data-kota-event="${kind}" ${state.mode!=='active'||walkSaving.has(item.id)?'disabled':''}><b>${esc(label)}</b><small>${counts[kind]}回${ended?'':' · タップで記録'}</small></button>`).join('')}</div>
-      ${!ended?`<button type="button" class="ob19-locate" data-kota-awake ${state.mode!=='active'?'disabled':''}>${awake.enabled?'点灯維持をやめる':'画面を点灯したままにする'}</button><p role="status" data-kota-awake-status>${esc(awake.notice)}</p><p>ONにした間は自動消灯を防ぎます。画面を手動で閉じた場合、GPSは停止します。復帰後はGPS開始ボタンを押してください。</p>`:''}
+      ${!ended?`<button type="button" class="ob19-locate" data-kota-awake ${state.mode!=='active'?'disabled':''}>${icons.play}<span><b>${awake.enabled?'点灯維持をやめる':'画面を点灯したままにする'}</b></span>${icons.arrow}</button><p role="status" data-kota-awake-status>${esc(awake.notice)}</p><p>ONにした間は自動消灯を防ぎます。画面を手動で閉じた場合、GPSは停止します。復帰後はGPS開始ボタンを押してください。</p>`:''}
       <p>${ended?'散歩の記録は端末に保存済みです。下の「散歩の履歴を見る」から振り返れます。':'時刻と一緒に端末へ保存します。一時停止中は追加できません。'}</p>
       ${!ended&&(item.walkRecords||[]).length?`<button type="button" data-kota-undo ${walkSaving.has(item.id)?'disabled':''}>直前の記録を取り消す</button>`:''}
       <details><summary>今回の出来事</summary>${(item.walkRecords||[]).slice().reverse().map(r=>`<p>${esc(new Date(r.occurredAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}))} · ${esc(api.EVENTS[r.payload?.walk_event]||'記録')}</p>`).join('')||'<p>まだ記録はありません。</p>'}</details></section>`;
@@ -331,8 +332,8 @@
         </div>
       </section>
 
-      ${walkMarkup(item,state)}
       ${mapMarkup(state,item)}
+      ${walkMarkup(item,state)}
 
       <section class="ob19-recording ob36-card">
         <div class="ob19-card-head"><div><small>クイック記録</small><h2>今これを残す</h2></div><span>${esc(item.title||'活動')}</span></div>
