@@ -15,8 +15,13 @@
   const savedSessions=new Map();
   const saving=new Set();
   const photoDrafts=new Map();
+  const videoDrafts=new Map();
   const photoUrls=new Set();
-  function clearPhotoUrls(){for(const url of photoUrls)URL.revokeObjectURL(url);photoUrls.clear();}
+  const videoPlayers=new Set();
+  function clearPhotoUrls(){
+    for(const video of videoPlayers){video.pause();video.removeAttribute('src');video.load();}videoPlayers.clear();
+    for(const url of photoUrls)URL.revokeObjectURL(url);photoUrls.clear();
+  }
   function photoUrl(blob){const url=URL.createObjectURL(blob);photoUrls.add(url);return url;}
   let tickTimer=null;
 
@@ -207,6 +212,27 @@
     });
   }
 
+  function videosMarkup(item){
+    const draft=videoDrafts.get(item.id),videos=item.videos||[];
+    const editor=draft?`<section class="ob19-recording ob36-card" data-ob19-video-editor><h2>動画を保存</h2><p>${esc(draft.file.name||'動画')}</p><video class="ob19-video-preview" controls playsinline preload="metadata" data-ob19-video-draft></video><p role="status">${esc(draft.error||(draft.saving?'動画を保存しています。':'端末内に保存します。MP4・WebM、50MBまで。'))}</p><button type="button" data-ob19-video-save ${draft.saving?'disabled':''}>動画を保存</button><button type="button" data-ob19-video-cancel ${draft.saving?'disabled':''}>キャンセル</button></section>`:'';
+    return `<input type="file" accept="video/mp4,video/webm" data-ob19-video-file hidden>${editor}${videos.length?`<section class="ob19-recording ob36-card"><h2>保存した動画（直近${videos.length}件）</h2><div class="ob19-video-grid">${videos.map(video=>`<figure><video class="ob19-video-preview" controls playsinline preload="metadata" data-ob19-video-key="${esc(video.key)}"></video><figcaption>${esc(video.filename)}</figcaption><small data-ob19-video-status>読み込み中</small></figure>`).join('')}</div></section>`:''}`;
+  }
+  function hydrateVideos(main,item){
+    const draft=videoDrafts.get(item.id),preview=main.querySelector('[data-ob19-video-draft]');
+    if(preview&&draft){videoPlayers.add(preview);preview.src=photoUrl(draft.file);}
+    main.querySelectorAll('[data-ob19-video-key]').forEach(async video=>{
+      videoPlayers.add(video);
+      try{
+        const blob=await globalThis.OUTBASE_VIDEO_RECORDS.readBlob(video.dataset.ob19VideoKey);
+        if(!video.isConnected)return;if(!blob)throw new Error('video_missing');
+        const status=video.parentElement.querySelector('[data-ob19-video-status]');
+        video.onloadedmetadata=()=>{status.textContent='端末に保存済み';};
+        video.onerror=()=>{status.textContent='この動画は再生できません。';};
+        video.src=photoUrl(blob);
+      }catch(_error){if(video.isConnected)video.parentElement.querySelector('[data-ob19-video-status]').textContent='動画を読み込めませんでした。';}
+    });
+  }
+
   function markup(result,route){
     if(result.status!=='ready'){
       const message=result.status==='missing'?'対象の予定が選ばれていません。':result.status==='error'?'実行画面を読み込めませんでした。':'予定が見つかりません。';
@@ -249,14 +275,15 @@
           ${actionButton('pin','場所ピン','あとで見返す',icons.pin)}
           ${actionButton('parking','駐車位置','車へ戻る',icons.parking)}
         </div>
-        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'メモ・写真を端末に保存できます。動画・音声などはまだ保存されません。')}</p>
+        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'メモ・写真・動画を端末に保存できます。音声などはまだ保存されません。')}</p>
       </section>
 
       ${savedNotes(item)}
       ${photosMarkup(item)}
+      ${videosMarkup(item)}
 
       <section class="ob19-save ob36-card">
-        <span>${icons.cloud}</span><div><b>活動状態・メモ・写真を端末に保存</b><small>動画・音声などの保存は未接続です。</small></div><em>端末保存</em>
+        <span>${icons.cloud}</span><div><b>活動状態・メモ・写真・動画を端末に保存</b><small>音声などの保存は未接続です。</small></div><em>端末保存</em>
       </section>
 
       <button type="button" class="ob19-detail-button" data-ob19-detail><span>予定詳細を見る</span>${icons.arrow}</button>
@@ -358,6 +385,7 @@
 
     main.querySelectorAll('[data-ob19-feature]').forEach(button=>button.addEventListener('click',()=>{
       if(button.dataset.ob19Feature==='photo'){main.querySelector('[data-ob19-photo-file]').click();return;}
+      if(button.dataset.ob19Feature==='video'){main.querySelector('[data-ob19-video-file]').click();return;}
       if(button.dataset.ob19Feature==='memo'){
         clearTimer();
         const api=globalThis.OUTBASE_ROUTER;
@@ -401,7 +429,27 @@
       }
     });
 
-    hydratePhotos(main,item);
+    main.querySelector('[data-ob19-video-file]')?.addEventListener('change',event=>{
+      const file=event.target.files?.[0];if(!file||videoDrafts.get(item.id)?.saving)return;
+      videoDrafts.set(item.id,{file,requestId:globalThis.OUTBASE_IDS.ulid(),saving:false,error:''});rerender(main,result,route);
+    });
+    main.querySelector('[data-ob19-video-cancel]')?.addEventListener('click',()=>{videoDrafts.delete(item.id);rerender(main,result,route);});
+    main.querySelector('[data-ob19-video-save]')?.addEventListener('click',async()=>{
+      const draft=videoDrafts.get(item.id);if(!draft||draft.saving)return;
+      draft.saving=true;draft.error='';rerender(main,result,route);let refreshed=result;
+      try{
+        await globalThis.OUTBASE_VIDEO_RECORDS.save({activityId:item.id,displayActivityId:route.activityId,file:draft.file,requestId:draft.requestId});
+        videoDrafts.delete(item.id);writeUiState(item.id,{notice:'動画を端末に保存しました。'});
+        cache.delete(String(item.id));globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.();
+        globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(item.id);globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();globalThis.OUTBASE_VAULT_ROUTE_V13?.invalidate?.();
+        const loaded=await loadFast(item.id,{force:true});
+        if(loaded.status==='ready'){refreshed=loaded;savedSessions.set(String(item.id),globalThis.OUTBASE_EXECUTION_SESSION.fromActivity(loaded.item));}
+        else writeUiState(item.id,{notice:'動画は保存済みですが、表示を更新できませんでした。実行画面を開き直してください。'});
+      }catch(error){draft.error=error?.message==='video_file_not_supported'?'MP4・WebMの動画（50MBまで）を選んでください。':'動画を保存できませんでした。選択した動画は残っています。再生できるファイルか確認して、もう一度お試しください。';}
+      finally{draft.saving=false;if(globalThis.OUTBASE_ROUTER.current().name==='record'&&globalThis.OUTBASE_ROUTER.current().activityId===item.id)rerender(main,refreshed,route);}
+    });
+
+    hydratePhotos(main,item);hydrateVideos(main,item);
     startTimer(main,item);
   }
 
@@ -414,6 +462,8 @@
   if(!globalThis.__OUTBASE_EXECUTION_PAGE_SHOW_V19__){
     globalThis.__OUTBASE_EXECUTION_PAGE_SHOW_V19__=true;
     addEventListener('pageshow',()=>clearLegacyLaunchState(document));
+    addEventListener('pagehide',clearPhotoUrls);
+    addEventListener('outbase:navigation',()=>{if(globalThis.OUTBASE_ROUTER?.current?.().name!=='record')clearPhotoUrls();});
   }
 
   const renderer=Object.freeze({

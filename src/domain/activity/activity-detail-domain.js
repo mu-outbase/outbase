@@ -70,6 +70,9 @@
       photos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='photo'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
         id:row.id,key:globalThis.OUTBASE_PHOTO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'写真'
       }))),
+      videos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='video'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
+        id:row.id,key:globalThis.OUTBASE_VIDEO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'動画'
+      }))),
       organization:Object.freeze({
         reviewCount:reviewRows.length,reviews:Object.freeze(reviewRows.slice(0,5)),
         improvementCount:improvementRows.length,openImprovementCount:improvementRows.filter(row=>row.status!=='completed').length,
