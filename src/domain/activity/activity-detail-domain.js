@@ -80,7 +80,9 @@
       organization:Object.freeze({
         reviewCount:reviewRows.length,reviews:Object.freeze(reviewRows.slice(0,5)),
         improvementCount:improvementRows.length,openImprovementCount:improvementRows.filter(row=>row.status!=='completed').length,
-        improvements:Object.freeze(improvementRows.slice(0,8))
+        improvements:Object.freeze(improvementRows.slice(0,8)),
+        openImprovements:Object.freeze(improvementRows.filter(row=>row.status!=='completed')),
+        appliedImprovements:Object.freeze(improvementRows.filter(row=>row.payload?.preparation_transfer))
       }),
       assets:Object.freeze(linkedAssets),mealCount:clean(meals).length,shoppingListCount:clean(shoppingLists).length,
       homeUrl:globalThis.OUTBASE_ROUTER.shellUrl('home'),

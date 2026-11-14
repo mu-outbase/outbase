@@ -227,7 +227,7 @@
     </section>`;
   }
 
-  function prepItemMarkup(item){const done=item.status==='completed'||Boolean(item.completedAt);return `<button type="button" class="ob22-prep-row ${done?'done':''}" data-ob22-prep-toggle="${esc(item.id||'')}"><span class="check">${done?icons.check:''}</span><span><b>${esc(item.title||'準備')}</b><small>${done?'完了':esc(prepDomain()?.CATEGORY_LABELS?.[item.category]||'未完了')}</small></span>${icons.arrow}</button>`;}
+  function prepItemMarkup(item){const done=item.status==='completed'||Boolean(item.completedAt);return `<button type="button" class="ob22-prep-row ${done?'done':''}" data-ob22-prep-toggle="${esc(item.id||'')}"><span class="check">${done?icons.check:''}</span><span><b>${esc(item.title||'準備')}</b><small>${done?'完了':esc((item.origin==='improvement'?globalThis.OUTBASE_IMPROVEMENT_PREPARATION?.CATEGORIES?.[item.category]:null)||prepDomain()?.CATEGORY_LABELS?.[item.category]||'未完了')}</small></span>${icons.arrow}</button>`;}
   function preparationMarkup(value){
     const result=value.routePayload||{};
     if(result.status==='loading'){

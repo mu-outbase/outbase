@@ -208,10 +208,23 @@
     </section>`;
   }
 
+  const improvementDrafts=new Map();
   function improve(item){
-    const rows = (item.organization?.improvements || []).filter(x => x.status!=='completed').slice(0,3);
-    if (!rows.length) return '';
-    return `<section class="ob16-section-card"><div class="ob16-section-head"><div><small>次回へつなぐ</small><h2>改善</h2></div><span>${Number(item.organization?.openImprovementCount||rows.length)}件</span></div><div class="ob16-improve-list">${rows.map(x=>`<div>${icons.improve}<b>${esc(x.title||x.summary||x.payload?.text||'改善項目')}</b></div>`).join('')}</div></section>`;
+    const rows=(item.organization?.openImprovements||item.organization?.improvements||[]).filter(x=>x.status!=='completed');
+    const categories=globalThis.OUTBASE_IMPROVEMENT_PREPARATION.CATEGORIES;
+    return `<section class="ob16-section-card"><div class="ob16-section-head"><div><small>次回へつなぐ</small><h2>改善</h2></div><span>${rows.length}件</span></div>
+      <a data-ob16-improvement-add href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('memo',{activityId:item.id,target:'improvement'}))}">改善メモを追加</a>
+      <p>改善を分類して、次の活動の準備へ追加します。</p>
+      ${rows.map(row=>{const draft=improvementDrafts.get(row.id)||{};return `<details data-ob16-improvement="${esc(row.id)}" ${draft.open?'open':''}><summary style="padding:12px 0">${esc(row.title||row.summary||'改善項目')}</summary><form class="ob22-form" data-ob16-transfer="${esc(row.id)}">
+        <label class="wide"><span>改善内容</span><textarea name="title" required maxlength="240" rows="3">${esc(draft.title??row.summary??row.payload?.text??row.title??'')}</textarea></label>
+        <label><span>分類</span><select name="category" required><option value="">分類を選択</option>${Object.entries(categories).map(([key,label])=>`<option value="${key}" ${draft.category===key?'selected':''}>${esc(label)}</option>`).join('')}</select></label>
+        <label><span>次の活動</span><select name="destination" required><option value="">活動を読み込んでいます</option></select></label>
+        <p class="wide" role="status" data-ob16-transfer-status hidden></p>
+        <div class="ob22-form-actions wide" style="grid-template-columns:minmax(0,1fr)"><button class="primary wide" type="submit" disabled>次回準備へ追加</button></div>
+      </form></details>`;}).join('')}
+      <p data-ob16-destinations-status role="status"></p>
+      ${(item.organization?.appliedImprovements||[]).length?`<details><summary>次回準備へ追加済み</summary>${item.organization.appliedImprovements.map(row=>`<p>${esc(row.summary||row.title)}<br>${esc(categories[row.payload.preparation_transfer.category]||'準備')} · <a data-ob16-destination="${esc(row.payload.preparation_transfer.activity_id)}" href="${esc(globalThis.OUTBASE_ROUTER.shellUrl('preparation-detail',{activityId:row.payload.preparation_transfer.activity_id}))}">追加先の準備を見る</a></p>`).join('')}</details>`:''}
+    </section>`;
   }
 
   function markup(model){
@@ -221,8 +234,50 @@
     return `<section class="ob16-activity">${hero(item)}${next(item)}${prep(item)}${memory(item)}${improve(item)}<button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button></section>`;
   }
 
-  function bind(main,model){
+  function bind(main,model,{loading=false}={}){
     const item=model?.detail?.activity||null;
+    const openPreparation=(event,id)=>{event.preventDefault();event.stopPropagation();globalThis.OUTBASE_ROUTER.navigate('preparation-detail',{activityId:id,returnShell:'activity'},{transition:false,skipTransition:true});};
+    main.querySelectorAll('[data-ob16-destination]').forEach(link=>link.addEventListener('click',event=>openPreparation(event,link.dataset.ob16Destination)));
+    main.querySelector('[data-ob16-improvement-add]')?.addEventListener('click',event=>{event.preventDefault();globalThis.OUTBASE_ROUTER.navigate('memo',{activityId:item.id,target:'improvement'},{transition:false,skipTransition:true});});
+    const forms=[...main.querySelectorAll('[data-ob16-transfer]')];
+    main.querySelectorAll('[data-ob16-improvement]').forEach(detail=>{
+      const id=detail.dataset.ob16Improvement;
+      detail.querySelector('summary').addEventListener('click',()=>improvementDrafts.set(id,{...(improvementDrafts.get(id)||{}),open:!detail.open}));
+    });
+    for(const form of forms){
+      const remember=()=>{const fields=new FormData(form);improvementDrafts.set(form.dataset.ob16Transfer,{...(improvementDrafts.get(form.dataset.ob16Transfer)||{}),title:fields.get('title'),category:fields.get('category'),destination:fields.get('destination')});};
+      form.addEventListener('input',remember);form.addEventListener('change',remember);
+    }
+    if(loading)for(const form of forms)form.querySelectorAll('textarea,select,button').forEach(input=>input.disabled=true);
+    if(forms.length&&!loading){
+      globalThis.OUTBASE_IMPROVEMENT_PREPARATION.destinations(item.id).then(rows=>{
+        if(!main.isConnected||globalThis.OUTBASE_ROUTER.current().activityId!==item.id)return;
+        for(const form of forms){
+          form.querySelector('[name=destination]').innerHTML='<option value="">次の活動を選択</option>'+rows.map(row=>`<option value="${esc(row.id)}">${esc(row.title)}</option>`).join('');
+          const selected=improvementDrafts.get(form.dataset.ob16Transfer)?.destination;if(rows.some(row=>row.id===selected))form.querySelector('[name=destination]').value=selected;
+          form.querySelector('[type=submit]').disabled=!rows.length;
+        }
+        if(!rows.length)main.querySelector('[data-ob16-destinations-status]').textContent='追加先の予定がありません。先に次の活動の予定を作成してください。';
+      }).catch(()=>{const status=main.querySelector('[data-ob16-destinations-status]');if(status)status.textContent='追加先を読み込めませんでした。画面を開き直してください。';});
+      for(const form of forms)form.addEventListener('submit',async event=>{
+        event.preventDefault();if(form.dataset.saving==='1')return;
+        form.dataset.saving='1';const button=form.querySelector('[type=submit]'),status=form.querySelector('[data-ob16-transfer-status]');button.disabled=true;
+        const data=new FormData(form);let committed=false;
+        status.hidden=false;status.textContent='次回準備へ保存しています。';
+        try{
+          await globalThis.OUTBASE_IMPROVEMENT_PREPARATION.apply({improvementId:form.dataset.ob16Transfer,displayActivityId:item.id,targetActivityId:data.get('destination'),category:data.get('category'),title:data.get('title')});
+          committed=true;status.textContent='次回準備へ追加しました。';
+          form.querySelectorAll('input,select,textarea').forEach(input=>input.disabled=true);button.textContent='追加済み';
+          globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.();
+          globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(item.id);
+          globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(data.get('destination'));
+          globalThis.OUTBASE_PREPARATION_ROUTE_V17?.invalidate?.(data.get('destination'));
+          globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();
+          const link=document.createElement('a');link.href=globalThis.OUTBASE_ROUTER.shellUrl('preparation-detail',{activityId:data.get('destination'),returnShell:'activity'});link.dataset.ob16Destination=data.get('destination');link.textContent='追加先の準備を見る';link.addEventListener('click',event=>openPreparation(event,data.get('destination')));form.append(link);
+        }catch(error){status.textContent=committed?'保存済みです。表示を更新するには画面を開き直してください。':error.message==='improvement_already_applied'?'この改善は既に別の内容で準備へ追加されています。画面を開き直してください。':'保存できませんでした。追加先の予定と空き容量を確認して再度お試しください。';}
+        finally{form.dataset.saving='0';button.disabled=committed;}
+      });
+    }
     main.querySelector('#outbaseCopyrightFooter')?.addEventListener('click',()=>globalThis.OUTBASE_ABOUT?.open?.());
     main.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',event=>{const target=main.querySelector(a.getAttribute('href'));if(!target)return;event.preventDefault();target.scrollIntoView({behavior:'smooth',block:'start'});}));
     main.querySelectorAll('[data-ob17-context]').forEach(link=>link.addEventListener('click',event=>{
@@ -274,7 +329,7 @@
         if(primed){
           beforeMain.innerHTML=markup(primed);
           base.hydrateMedia?.(beforeMain);
-          bind(beforeMain,primed);
+          bind(beforeMain,primed,{loading:true});
         }else{
           beforeMain.innerHTML=routeLoadingMarkup(requested);
         }
