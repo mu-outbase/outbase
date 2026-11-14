@@ -263,9 +263,10 @@
 
   function walkMarkup(item,state){
     const api=globalThis.OUTBASE_KOTA_WALK;if(!api.isWalk(item))return '';
-    const counts=api.summary(item.walkRecords||[]),ended=state.mode==='ended';
+    const counts=api.summary(item.walkRecords||[]),ended=state.mode==='ended',awake=globalThis.OUTBASE_SCREEN_AWAKE.snapshot(item.id);
     return `<section class="ob19-recording ob36-card" data-kota-walk><h2>${ended?'コタ散歩のまとめ':'コタの様子を記録'}</h2>
       <div class="ob19-quick-grid">${Object.entries(api.EVENTS).map(([kind,label])=>`<button class="ob19-quick" type="button" data-kota-event="${kind}" ${state.mode!=='active'||walkSaving.has(item.id)?'disabled':''}><b>${esc(label)}</b><small>${counts[kind]}回${ended?'':' · タップで記録'}</small></button>`).join('')}</div>
+      ${!ended?`<button type="button" class="ob19-locate" data-kota-awake ${state.mode!=='active'?'disabled':''}>${awake.enabled?'点灯維持をやめる':'画面を点灯したままにする'}</button><p role="status" data-kota-awake-status>${esc(awake.notice)}</p><p>ONにした間は自動消灯を防ぎます。画面を手動で閉じた場合、GPSは停止します。復帰後はGPS開始ボタンを押してください。</p>`:''}
       <p>${ended?'散歩の記録は端末に保存済みです。下の「散歩の履歴を見る」から振り返れます。':'時刻と一緒に端末へ保存します。一時停止中は追加できません。'}</p>
       ${!ended&&(item.walkRecords||[]).length?`<button type="button" data-kota-undo ${walkSaving.has(item.id)?'disabled':''}>直前の記録を取り消す</button>`:''}
       <details><summary>今回の出来事</summary>${(item.walkRecords||[]).slice().reverse().map(r=>`<p>${esc(new Date(r.occurredAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}))} · ${esc(api.EVENTS[r.payload?.walk_event]||'記録')}</p>`).join('')||'<p>まだ記録はありません。</p>'}</details></section>`;
@@ -392,6 +393,7 @@
     const item=result.item;
     activateContext(item,'execution-bind');
 
+    main.querySelector('[data-kota-awake]')?.addEventListener('click',()=>globalThis.OUTBASE_SCREEN_AWAKE.toggle(item.id));
     main.querySelector('[data-kota-more]')?.addEventListener('click',()=>{walkLimits.set(item.id,walkLimit(item)+5);rerender(main,result,route);});
     main.querySelectorAll('[data-kota-event],[data-kota-undo]').forEach(button=>button.addEventListener('click',async()=>{
       if(walkSaving.has(item.id))return;walkSaving.add(item.id);main.querySelectorAll('[data-kota-event]').forEach(node=>node.disabled=true);
@@ -414,7 +416,7 @@
 
     async function saveAction(action){
       if(saving.has(item.id))return;
-      if(action==='pause'||action==='end')globalThis.OUTBASE_LOCATION_RECORDER.stop();
+      if(action==='pause'||action==='end'){globalThis.OUTBASE_LOCATION_RECORDER.stop();globalThis.OUTBASE_SCREEN_AWAKE.disable();}
       saving.add(item.id);
       main.querySelectorAll('[data-ob19-control],[data-ob19-end]').forEach(button=>{button.disabled=true;});
       const notice=main.querySelector('[data-ob19-notice]');if(notice)notice.textContent='活動状態を保存しています。';
@@ -611,6 +613,12 @@
       }
     },
     updateNav(root,value){base.updateNav?.(root,value);}
+  });
+
+  globalThis.addEventListener('outbase:screen-awake-change',event=>{
+    const id=event.detail.activityId,route=globalThis.OUTBASE_ROUTER.current();if(route.name!=='record'||route.activityId!==id)return;
+    const snapshot=globalThis.OUTBASE_SCREEN_AWAKE.snapshot(id),button=document.querySelector('[data-kota-awake]'),status=document.querySelector('[data-kota-awake-status]');
+    if(button)button.textContent=snapshot.enabled?'点灯維持をやめる':'画面を点灯したままにする';if(status)status.textContent=snapshot.notice;
   });
 
   globalThis.addEventListener('outbase:location-change',async event=>{
