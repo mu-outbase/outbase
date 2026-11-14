@@ -21,9 +21,9 @@
   function valid(p){return p&&['latitude','longitude','accuracy','captured_at'].every(k=>Number.isFinite(p[k]))&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180&&p.accuracy>=0&&p.accuracy<=100;}
   function summary(records=[]){
     const points=records.filter(r=>!r.deleted_at&&r.type==='gps_point').map(r=>r.payload).filter(p=>valid(p)&&p.tracking_session_id).sort((a,b)=>a.captured_at-b.captured_at);
-    let meters=0;const last=new Map();
-    for(const p of points){const a=last.get(p.tracking_session_id);if(accepted(a,p)){if(a)meters+=distance(a,p);last.set(p.tracking_session_id,p);}}
-    return {meters,pins:records.filter(r=>!r.deleted_at&&r.type==='pin'&&valid(r.payload)&&['place','parking'].includes(r.payload?.pin_kind)).sort((a,b)=>b.payload.captured_at-a.payload.captured_at)};
+    let meters=0;const last=new Map(),tracks=new Map();
+    for(const p of points){const a=last.get(p.tracking_session_id);if(accepted(a,p)){if(a)meters+=distance(a,p);last.set(p.tracking_session_id,p);if(!tracks.has(p.tracking_session_id))tracks.set(p.tracking_session_id,[]);tracks.get(p.tracking_session_id).push(p);}}
+    return {meters,tracks:[...tracks.values()],pins:records.filter(r=>!r.deleted_at&&r.type==='pin'&&valid(r.payload)&&['place','parking'].includes(r.payload?.pin_kind)).sort((a,b)=>b.payload.captured_at-a.payload.captured_at)};
   }
   async function save(activityId,p,kind,segment,guard=()=>true){
     if(!guard())throw Error('location_cancelled');

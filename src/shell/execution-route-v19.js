@@ -169,9 +169,37 @@
     </section>`;
   }
 
+  const mapZooms=new Map();
+  function walkMapMarkup(item,position,locations){
+    const tracks=locations.tracks||[],pins=locations.pins||[];
+    const newest=tracks.flat().reduce((latest,p)=>!latest||p.captured_at>latest.captured_at?p:latest,null);
+    const current=position&&(!newest||position.time>=newest.captured_at)&&Number.isFinite(position.lat)&&Number.isFinite(position.lng)?{latitude:position.lat,longitude:position.lng}:null;
+    const points=[...tracks.flat(),...pins.map(r=>r.payload),...(current?[current]:[])];
+    if(!points.length)return '<p data-walk-map-empty>GPS記録を開始するか、現在地を確認すると地図を表示します。</p>';
+    const project=p=>{const lat=Math.max(-85.05112878,Math.min(85.05112878,p.latitude))*Math.PI/180;return {x:(p.longitude+180)/360,y:(1-Math.log(Math.tan(lat)+1/Math.cos(lat))/Math.PI)/2};};
+    const anchor=project(points[0]).x;
+    // Unwrap longitude so walks crossing the date line remain local.
+    const unwrap=p=>{const v=project(p);v.x+=Math.round(anchor-v.x);return v;};
+    const all=points.map(unwrap),minX=Math.min(...all.map(p=>p.x)),maxX=Math.max(...all.map(p=>p.x)),minY=Math.min(...all.map(p=>p.y)),maxY=Math.max(...all.map(p=>p.y));
+    const fit=Math.max(2,Math.min(17,Math.floor(Math.log2(Math.min(440/Math.max((maxX-minX)*256,0.001),248/Math.max((maxY-minY)*256,0.001))))));
+    const zoom=Math.max(2,Math.min(19,fit+(mapZooms.get(item.id)||0))),scale=256*2**zoom,left=(minX+maxX)/2*scale-256,top=(minY+maxY)/2*scale-160;
+    const xy=p=>{const v=unwrap(p);return {x:v.x*scale-left,y:v.y*scale-top};};
+    let tiles='';
+    for(let x=Math.floor(left/256);x<=Math.floor((left+512)/256);x++)for(let y=Math.floor(top/256);y<=Math.floor((top+320)/256);y++){
+      if(y<0||y>=2**zoom)continue;
+      const wrapped=((x%2**zoom)+2**zoom)%2**zoom;
+      tiles+=`<image data-walk-tile href="https://tile.openstreetmap.org/${zoom}/${wrapped}/${y}.png" x="${x*256-left}" y="${y*256-top}" width="256" height="256"/>`;
+    }
+    const lines=tracks.map(track=>`<polyline data-walk-track points="${track.map(p=>{const v=xy(p);return v.x+','+v.y;}).join(' ')}" fill="none" stroke="#176847" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+    const markers=pins.map(row=>{const p=xy(row.payload);return `<g data-walk-pin><circle cx="${p.x}" cy="${p.y}" r="11" fill="#a65c16" stroke="white" stroke-width="3"/><title>${row.payload.pin_kind==='parking'?'駐車位置':'場所ピン'}</title></g>`;}).join('');
+    const last=current||newest,dot=last?xy(last):null;
+    return `<div data-walk-map style="margin-top:12px;border:1px solid #d8ded8;border-radius:16px;overflow:hidden;background:#edf1eb"><svg viewBox="0 0 512 320" role="img" aria-label="散歩の地図。緑線は歩いたルート、青点は現在地または最後の記録地点" style="display:block;width:100%;height:auto">${tiles}${lines}${markers}${dot?`<circle data-walk-position cx="${dot.x}" cy="${dot.y}" r="8" fill="#2474d8" stroke="white" stroke-width="3"/>`:''}</svg><div style="padding:8px;display:flex;gap:12px;align-items:center"><button type="button" data-walk-zoom="1" aria-label="地図を拡大">＋</button><button type="button" data-walk-zoom="-1" aria-label="地図を縮小">−</button><button type="button" data-walk-zoom="0">全体</button><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="margin-left:auto;font-size:12px">© OpenStreetMap contributors</a></div></div><p data-walk-map-status style="font-size:12px">背景地図には通信が必要です。緑線は保存したルート、青点は現在地または最後の記録地点です。</p>`;
+  }
+
   function mapMarkup(state,item){
     const gps=globalThis.OUTBASE_LOCATION_RECORDER.snapshot(item.id),locations=globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]);
-    const position=state.position;
+    const latest=locations.tracks.flat().reduce((a,p)=>!a||p.captured_at>a.captured_at?p:a,null);
+    const position=latest&&(!state.position||latest.captured_at>state.position.time)?{lat:latest.latitude,lng:latest.longitude,accuracy:latest.accuracy,time:latest.captured_at}:state.position;
     const label=position?`現在地取得済み ±${Math.round(Number(position.accuracy||0))||'—'}m`:'現在地はまだ取得していません';
     const coordinates=position?`${Number(position.lat).toFixed(5)}, ${Number(position.lng).toFixed(5)}`:'現在地を取得すると、ここに表示します';
     return `<section class="ob19-map-card ob36-card">
@@ -179,6 +207,7 @@
       <div aria-label="現在地の座標">
         <p>${esc(coordinates)}</p>
       </div>
+      ${walkMapMarkup(item,position,locations)}
       <button type="button" class="ob19-locate" data-ob19-locate>${icons.locate}<span><b>現在地を確認</b><small>端末の位置情報を一度取得</small></span>${icons.arrow}</button>
       <button type="button" class="ob19-locate" data-ob19-gps ${!gps.tracking&&state.mode!=='active'?'disabled':''}>${gps.tracking?'GPS記録を停止':'GPS記録を開始'}</button>
       <p role="status">${esc(gps.notice)}</p><p>画面を離れる・一時停止・終了でGPS記録は停止します。再開時は開始ボタンを押してください。距離は精度のよい位置情報からの概算です。</p>
@@ -368,6 +397,14 @@
 
   function bindLocation(main,result,route){
     const item=result.item;
+    main.querySelectorAll('[data-walk-zoom]').forEach(button=>button.addEventListener('click',()=>{
+      const delta=Number(button.dataset.walkZoom);mapZooms.set(item.id,delta?Math.max(-17,Math.min(17,(mapZooms.get(item.id)||0)+delta)):0);
+      main.querySelector('.ob19-map-card').outerHTML=mapMarkup(uiState(item.id),item);bindLocation(main,result,route);
+    }));
+    main.querySelectorAll('[data-walk-tile]').forEach(tile=>tile.addEventListener('error',()=>{
+      tile.style.visibility='hidden';
+      const status=main.querySelector('[data-walk-map-status]');if(status)status.textContent='背景地図を取得できません。保存したルートと地点は表示しています。通信状況を確認してください。';
+    }));
     main.querySelector('[data-ob19-gps]')?.addEventListener('click',()=>{const gps=globalThis.OUTBASE_LOCATION_RECORDER;if(gps.snapshot(item.id).tracking)gps.stop();else gps.start(item.id);});
 
     main.querySelector('[data-ob19-locate]')?.addEventListener('click',event=>{
