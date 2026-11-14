@@ -1,5 +1,7 @@
-const CACHE_NAME='outbase-home-calendar-sync-v1';
+const CACHE_NAME='outbase-activity-calendar-sync-v1';
 const CORE_ASSETS=[
+  './src/calendar-v2/story-calendar-reader.js?v=activity-calendar-sync-v1',
+  './src/storage/persistence-guard.js?v=outbase-r1-gate2-contract-boundary-v1',
   './','./index.html','./manifest.json?v=outbase-v1663-visual','./icons/outbase-192.png','./icons/outbase-512.png',
   './assets/default-covers/lake.jpg','./assets/default-covers/group.jpg','./assets/default-covers/sea.jpg','./assets/default-covers/autumn.jpg','./assets/default-covers/festival.jpg',
   './style.css?v=outbase-field03-compact-2','./style-flow.css?v=outbase-field03-compact-2','./style-memo.css?v=outbase-field03-compact-2',

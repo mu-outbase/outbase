@@ -326,7 +326,10 @@
   async function deletePlan(value){
     const id=value.routePayload?.raw?.id||value.routePayload?.activity?.id;if(!id)return;
     if(globalThis.confirm&&!globalThis.confirm('この予定を削除しますか？'))return;
-    await repos().activities.softDelete(id);const rows=await repos().calendarEntries.byIndex('activity_id',id);for(const row of rows||[])await repos().calendarEntries.softDelete(row.id);
+    // Calendar rows must be retired while their referenced activity is live.
+    const rows=await repos().calendarEntries.byIndex('activity_id',id);
+    for(const row of rows||[])if(!row.deleted_at)await repos().calendarEntries.softDelete(row.id);
+    await repos().activities.softDelete(id);
     invalidate(id);toast('予定を削除しました');router.navigate('home',{}, {replace:true,transition:false,skipTransition:true});
   }
   async function togglePrep(value,id){

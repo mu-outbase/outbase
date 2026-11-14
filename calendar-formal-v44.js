@@ -100,7 +100,26 @@
     const color=cal(id)?.color||'#8d8178';
     return `--event-color:${color};--event-soft:${color}22;--event-line:${color}99`;
   }
-  function events(){return read(EVENT_KEY,sampleEvents)} function saveEvents(v){localStorage.setItem(EVENT_KEY,JSON.stringify(v))}
+  let storyEvents=[];
+  let storyReadSequence=0;
+  function events(){return [...read(EVENT_KEY,sampleEvents),...storyEvents]}
+  function saveEvents(v){localStorage.setItem(EVENT_KEY,JSON.stringify(v.filter(row=>!row.storyActivityId)))}
+  async function refreshStoryEvents(){
+    const sequence=++storyReadSequence;
+    try{
+      const rows=await globalThis.OUTBASE_STORY_CALENDAR_READER.load();
+      if(sequence!==storyReadSequence)return;
+      storyEvents=rows;
+      document.body.dataset.storyCalendarStatus='ready';
+      $('#storyCalendarStatus').hidden=true;
+      render();
+    }catch(error){
+      if(sequence!==storyReadSequence)return;
+      document.body.dataset.storyCalendarStatus='error';
+      const status=$('#storyCalendarStatus');status.textContent='活動予定を読み込めませんでした。カレンダーを開き直してください。';status.hidden=false;
+      console.warn('[OUTBASE calendar activities]',error);
+    }
+  }
   function todos(){return read(TODO_KEY,sampleTodos)} function saveTodos(v){localStorage.setItem(TODO_KEY,JSON.stringify(v))}
   function cal(id){return calendars.find(c=>c.id===id)||calendars[0]}
   function activeEvent(e){return state.filters.has(e.calendarId)&&(!e.participants?.length||e.participants.some(p=>state.people.has(p)))}
@@ -479,6 +498,13 @@
 
   function openEvent(id,forcedDate){
     const e=id?events().find(x=>x.id===id):null;
+    if(e?.storyActivityId){
+      // Activity editing stays with its owner; never copy it to v44 storage.
+      const values={activityId:e.storyActivityId};
+      if(parent!==window&&parent.OUTBASE_ROUTER){parent.OUTBASE_ROUTER.navigate('activity',values);return;}
+      const url=new URL('./',location.href);url.search=new URLSearchParams({shell:'1',view:'activity',...values}).toString();
+      location.assign(url.href);return;
+    }
     const base=forcedDate||state.selected;
     state.editing=e?.id||null;
     const selectedParticipants=new Set(e?.participants||[]);
@@ -689,6 +715,10 @@
   $('#nextBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list'){moveMonth(1);return;}state.date.setDate(state.date.getDate()+(state.view==='week'?7:1));state.selected=key(state.date);render()});
   $$('.view-tabs button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render()});
   render();
+  refreshStoryEvents();
+  addEventListener('pageshow',refreshStoryEvents);
+  addEventListener('focus',refreshStoryEvents);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshStoryEvents();});
 })();
 ;(() => {
   'use strict';
