@@ -18,7 +18,7 @@ test('haversine distance, jitter and impossible speed are filtered',()=>{
 });
 test('distance never bridges stopped sessions; all points count beyond display limits',()=>{
  const {api}=setup();let rows=[];for(let i=0;i<80;i++)rows.push({type:'gps_point',payload:p(35+i*.001,i*3000)});
- rows.push({type:'gps_point',payload:p(40,300000,'two')});assert.ok(api.summary(rows).meters>8700&&api.summary(rows).meters<8900);
+ rows.push({type:'gps_point',payload:p(40,300000,'two')});assert.equal(api.summary(rows).tracks.length,2);assert.equal(api.summary(rows).tracks[0].length,80);assert.equal(api.summary(rows).tracks[1].length,1);assert.ok(api.summary(rows).meters>8700&&api.summary(rows).meters<8900);
 });
 test('stale, inaccurate and out of range locations reject',()=>{
  const {api}=setup();for(const coords of [{latitude:91,longitude:139,accuracy:3},{latitude:35,longitude:139,accuracy:101}])assert.throws(()=>api.point({coords,timestamp:Date.now()}));
