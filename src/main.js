@@ -59,7 +59,7 @@
     document.getElementById('outbaseBootScreen')?.remove();
     const root=document.getElementById('app');
     if(root&&!root.childElementCount)root.innerHTML='<main style="padding:24px;font-family:system-ui"><h1>OUTBASEを起動できませんでした</h1><p>通信状態を確認して、もう一度開いてください。保存済みデータは削除されていません。</p><button type="button" onclick="location.reload()" style="min-height:48px;padding:0 18px">もう一度開く</button></main>';
-    throw error;
+    return Object.freeze({status:'failed',error:error?.message||String(error)});
   });
   globalThis.OUTBASE_APP=Object.freeze({ready,start,state:globalThis.OUTBASE_APP_STATE,router});
 })();

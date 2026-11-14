@@ -17,28 +17,27 @@
         resolve({source,url,reused:true});
         return;
       }
-
-      const script=existing||document.createElement('script');
-      script.src=url;
-      script.async=false;
-      script.dataset.outbaseRuntime='1';
-
-      let settled=false;
-      const timer=setTimeout(()=>finish(new Error(`Timed out while loading ${source}`)),timeoutMs);
-      function finish(error){
-        if(settled)return;
-        settled=true;
-        clearTimeout(timer);
-        script.onload=null;
-        script.onerror=null;
-        if(error){loaded.delete(url);reject(error);return;}
-        script.dataset.outbaseLoaded='1';
-        resolve({source,url,reused:Boolean(existing)});
+      let attempts=0;
+      function append(reusable){
+        const script=reusable||document.createElement('script');
+        script.src=url;script.async=false;script.dataset.outbaseRuntime='1';
+        let settled=false;
+        const timer=setTimeout(()=>finish(new Error(`Timed out while loading ${source}`),false),timeoutMs);
+        function finish(error,retry){
+          if(settled)return;settled=true;clearTimeout(timer);script.onload=null;script.onerror=null;
+          if(error){
+            script.remove?.();
+            // Retry only a failed request. A timed-out script may still execute late.
+            if(retry&&attempts++===0){append(null);return;}
+            loaded.delete(url);reject(error);return;
+          }
+          script.dataset.outbaseLoaded='1';resolve({source,url,reused:Boolean(reusable)});
+        }
+        script.onload=()=>finish();
+        script.onerror=()=>finish(new Error(`Unable to load ${source}`),true);
+        if(!reusable)document.head.appendChild(script);
       }
-
-      script.onload=()=>finish();
-      script.onerror=()=>finish(new Error(`Unable to load ${source}`));
-      if(!existing)document.head.appendChild(script);
+      append(existing);
     });
 
     loaded.set(url,promise);
