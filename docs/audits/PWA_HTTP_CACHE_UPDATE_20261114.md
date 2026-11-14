@@ -1,0 +1,7 @@
+# 旧HTTPキャッシュを残したPWA更新
+
+利用者のスクリーンショットは地図導入前の順序と点灯ボタン構造を示した。従来の更新テストは変更対象にCache-Control: no-storeを返しており、古いHTTPキャッシュがある条件を検証していなかった。
+
+修正: SWのインストール時にRequestのcache: reloadでアプリ資材を取得し、新キャッシュに古いHTTP応答を格納することを防ぐ。SW登録はupdateViaCache: noneを指定する。IndexedDB・localStorageは削除しない。
+
+追加テストは旧コードにmax-age=86400を付けてHTTPキャッシュを作り、同じURLで新版へ切り替える。修正後は新機能ロード、活動・メモ・Blob・localStorage・DBバージョンの保持、同タブの次回更新、オフライン実行が成功。

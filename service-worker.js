@@ -1,4 +1,4 @@
-const CACHE_NAME='outbase-kota-walk-map-visible-v3';
+const CACHE_NAME='outbase-pwa-fresh-assets-v1';
 const CORE_ASSETS=[
   './src/domain/activity/screen-awake.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/domain/activity/kota-walk.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
@@ -43,7 +43,7 @@ const CORE_ASSETS=[
   './src/shell/shell-renderer.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/search-route-v11.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/add-menu-v12.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/vault-route-v13.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/activity-route-v16.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/preparation-route-v17.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/execution-route-v19.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/route-unification-v22.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/plan-switch-v18.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/navigation-audit-v17.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/bootstrap.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/about-outbase.js?v=outbase-r3-route-cutover-fix-v222','./src/shell/shell-renderer-direct-fix.js?v=outbase-v16631-r3-route-cutover-fix-v222','./src/shell/navigation-audit-fix.js?v=outbase-v1663-home-v36-r34-nav1',
   './outbase_library10a/style.css?v=outbase-field03-compact-2'
 ];
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)));self.skipWaiting();});
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS.map(url=>new Request(url,{cache:'reload'})))));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 async function networkFirst(request,fallback){const cache=await caches.open(CACHE_NAME);try{const response=await fetch(request);if(response&&(response.ok||response.type==='opaque'))await cache.put(request,response.clone());return response;}catch(_error){return(await cache.match(request))||(fallback?await cache.match(fallback):undefined);}}
 async function cacheFirst(request){const cache=await caches.open(CACHE_NAME);const cached=await cache.match(request);if(cached)return cached;const response=await fetch(request);if(response&&(response.ok||response.type==='opaque'))await cache.put(request,response.clone());return response;}
