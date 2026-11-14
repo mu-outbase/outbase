@@ -3230,8 +3230,10 @@
       });
     }).catch(()=>{});
 
-    let refreshing=false;
+    let refreshing=false,previousController=navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!previousController){previousController=navigator.serviceWorker.controller;return;}
+      previousController=navigator.serviceWorker.controller;
       if(refreshing)return;
       refreshing=true;
       location.reload();
