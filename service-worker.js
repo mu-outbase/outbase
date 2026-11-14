@@ -1,5 +1,11 @@
-const CACHE_NAME='outbase-improvement-preparation-v1';
+const CACHE_NAME='outbase-startup-retry-v1';
 const CORE_ASSETS=[
+  "./src/runtime/startup-loader.js?v=outbase-startup-retry-v1",
+  "./src/config/version.js?v=outbase-r3-route-cutover-fix-v222",
+  "./src/config/module-manifest.js?v=outbase-r3-route-cutover-fix-v222",
+  "./src/router.js?v=outbase-v16631-r3-route-cutover-fix-v222-router",
+  "./src/design/theme-controller.js?v=outbase-v1663-visual",
+
   './src/domain/activity/improvement-preparation.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/domain/activity/location-recorder.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/domain/activity/audio-recorder.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
