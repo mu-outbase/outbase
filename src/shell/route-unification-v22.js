@@ -253,6 +253,7 @@
     return `<section class="ob22-page ob22-start" data-ob22-route-page="start">
       ${routeHead('活動を始める','閉じる')}
       <section class="ob22-card ob22-page-title"><span>${icons.play}</span><div><small>活動開始</small><h1>どの活動を始めますか？</h1><p>予定を選ぶと、新しい実行画面へそのまま進みます。</p></div></section>
+      <section class="ob22-card ob22-list-card"><h2>コタ散歩</h2><p>予定の作成なしで時間を記録します。記録中の散歩があれば、その散歩へ戻ります。GPSは実行画面で開始できます。</p><div class="ob22-form-actions" style="grid-template-columns:1fr"><button class="primary" type="button" data-ob22-kota-start>コタ散歩を始める</button></div><p role="status" data-ob22-kota-status hidden></p></section>
       <section class="ob22-card ob22-list-card"><div class="ob22-section-title"><h2>予定から始める</h2><span>${rows.length}件</span></div><div class="ob22-choice-list">${rows.length?rows.map(item=>activityChoice(item,current)).join(''):'<p class="ob22-muted">開始できる予定はまだありません。</p>'}</div></section>
       <form class="ob22-card ob22-form" data-ob22-quick-start><div class="ob22-section-title wide"><h2>予定なしで始める</h2></div><label class="wide"><span>活動名</span><input name="title" required value="${esc(routeValues(value.route).title||'')}" placeholder="例：コタ通常散歩"></label><label class="wide"><span>種類</span><select name="type">${typeOptions(routeValues(value.route).activityType||'walk')}</select></label><div class="ob22-form-actions wide"><button type="submit" class="primary">実行画面を開く</button></div></form>
     </section>`;
@@ -425,6 +426,12 @@
     main.querySelectorAll('[data-ob22-prep-toggle]').forEach(button=>button.addEventListener('click',()=>togglePrep(value,button.dataset.ob22PrepToggle).catch(()=>toast('更新できませんでした'))));
     main.querySelector('[data-ob22-prep-add]')?.addEventListener('submit',event=>{event.preventDefault();addPrep(event.currentTarget,value).catch(()=>toast('追加できませんでした'));});
     main.querySelectorAll('[data-ob22-start-plan]').forEach(button=>button.addEventListener('click',()=>{const item=safeArray(value.routePayload?.rows).find(row=>String(row.id)===String(button.dataset.ob22StartPlan));openExecution(item,'start');}));
+    const kota=main.querySelector('[data-ob22-kota-start]');
+    if(kota){const requestId=globalThis.OUTBASE_IDS.ulid();kota.addEventListener('click',async()=>{
+      if(kota.disabled)return;kota.disabled=true;const status=main.querySelector('[data-ob22-kota-status]');status.hidden=false;status.textContent='散歩を開いています。';
+      try{const saved=await globalThis.OUTBASE_KOTA_WALK.start(requestId);invalidate(saved.id);openExecution(saved,'start');}
+      catch(error){status.textContent='散歩を開始できませんでした。空き容量を確認して、もう一度お試しください。';kota.disabled=false;}
+    });}
     main.querySelector('[data-ob22-quick-start]')?.addEventListener('submit',event=>{event.preventDefault();quickStart(event.currentTarget).catch(()=>toast('活動を作成できませんでした'));});
     main.querySelector('[data-ob22-memo-form]')?.addEventListener('submit',event=>{event.preventDefault();submitMemo(event.currentTarget,value);});
     const search=main.querySelector('[data-ob22-place-search]');const filterPlaces=()=>{const q=text(search?.value).toLowerCase();let count=0;main.querySelectorAll('[data-ob22-place-row]').forEach(row=>{const visible=!q||String(row.dataset.ob22PlaceText||'').includes(q);row.hidden=!visible;if(visible)count++;});const node=main.querySelector('[data-ob22-place-count]');if(node)node.textContent=`${count}件`;};

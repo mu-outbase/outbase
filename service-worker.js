@@ -1,5 +1,6 @@
-const CACHE_NAME='outbase-pwa-start-shortcut-v1';
+const CACHE_NAME='outbase-kota-walk-v1';
 const CORE_ASSETS=[
+  './src/domain/activity/kota-walk.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   "./src/runtime/startup-loader.js?v=outbase-startup-retry-v1",
   "./src/config/version.js?v=outbase-r3-route-cutover-fix-v222",
   "./src/config/module-manifest.js?v=outbase-r3-route-cutover-fix-v222",

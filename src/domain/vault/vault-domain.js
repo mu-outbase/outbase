@@ -23,7 +23,7 @@
     const improvementGroups=utils().groupBy(improvements.filter(row=>!row.deleted_at),'activity_id');
     const rows=activities.map(activity=>Object.freeze({
       ...activity,
-      recordCount:(recordGroups.get(activity.id)||[]).length,
+      recordCount:(recordGroups.get(activity.id)||[]).filter(row=>activity.subtype!=='kota_walk'||row.type!=='gps_point').length,
       mediaCount:(mediaGroups.get(activity.id)||[]).length,
       previewMedia:previewMedia(mediaGroups.get(activity.id)||[]),
       reviewCount:(reviewGroups.get(activity.id)||[]).length,

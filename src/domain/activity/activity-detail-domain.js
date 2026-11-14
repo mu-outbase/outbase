@@ -51,7 +51,7 @@
     const people=home().participants(activity,book);
     const reviewRows=sortDesc(clean(reviews),'updated_at');
     const improvementRows=sortDesc(clean(improvements),'updated_at');
-    const recordRows=sortDesc(clean(records),'occurred_at').slice(0,Math.max(1,Number(recordLimit)||40)).map(recordView);
+    const recordRows=sortDesc(clean(records).filter(row=>activity.subtype!=='kota_walk'||row.type!=='gps_point'),'occurred_at').slice(0,Math.max(1,Number(recordLimit)||40)).map(recordView);
     const mediaInfo=mediaSummary(media);
     const planId=activity.legacyPlanId||null;
 
@@ -65,16 +65,18 @@
       endAt:utils().iso(activity.endAt||activity.calendar?.[0]?.endAt),
       calendar:Object.freeze(activity.calendar||[]),
       preparation,
+      walkNotes:Object.freeze(sortDesc(clean(records).filter(row=>row.type==='note'),'occurred_at').map(recordView)),
+      walkRecords:Object.freeze(sortDesc(clean(records).filter(row=>row.source==='kota-walk-v1'&&row.payload?.walk_event),'occurred_at').map(recordView)),
       locationRecords:Object.freeze(clean(records).filter(row=>['gps_point','pin'].includes(row.type)).map(recordView)),
-      records:Object.freeze(recordRows),recordCount:clean(records).length,
+      records:Object.freeze(recordRows),recordCount:clean(records).filter(row=>activity.subtype!=='kota_walk'||row.type!=='gps_point').length,
       media:mediaInfo,previewMedia:previewMedia(media),
-      photos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='photo'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
+      photos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='photo'&&row.local_ref?.key),'created_at').slice(0,activity.subtype==='kota_walk'?undefined:5).map(row=>Object.freeze({
         id:row.id,key:globalThis.OUTBASE_PHOTO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'写真'
       }))),
-      videos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='video'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
+      videos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='video'&&row.local_ref?.key),'created_at').slice(0,activity.subtype==='kota_walk'?undefined:5).map(row=>Object.freeze({
         id:row.id,key:globalThis.OUTBASE_VIDEO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'動画'
       }))),
-      audios:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='audio'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
+      audios:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='audio'&&row.local_ref?.key),'created_at').slice(0,activity.subtype==='kota_walk'?undefined:5).map(row=>Object.freeze({
         id:row.id,key:globalThis.OUTBASE_AUDIO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'音声'
       }))),
       organization:Object.freeze({
