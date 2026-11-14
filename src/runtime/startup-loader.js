@@ -3,11 +3,11 @@
   // Static entry dependencies must finish before their consumers execute.
   const sources=[
     [
-        "src/config/version.js?v=outbase-kota-map-release-20261114-pwa-start-v1",
+        "src/config/version.js?v=outbase-kota-map-release-20261114-pwa-resume-v1",
         "OUTBASE_VERSION"
     ],
     [
-        "src/config/module-manifest.js?v=outbase-kota-map-release-20261114-pwa-start-v1",
+        "src/config/module-manifest.js?v=outbase-kota-map-release-20261114-pwa-resume-v1",
         "OUTBASE_MODULE_MANIFEST"
     ],
     [

@@ -197,6 +197,15 @@
     return `${unlocated?'<p data-walk-map-empty>現在地は未取得です。日本付近の地図を表示しています。「現在地を確認」で移動できます。</p>':''}<div data-walk-map style="margin-top:12px;border:1px solid #d8ded8;border-radius:16px;overflow:hidden;background:#edf1eb"><svg viewBox="0 0 512 320" role="img" aria-label="散歩の地図。緑線は歩いたルート、青点は現在地または最後の記録地点" style="display:block;width:100%;height:auto">${tiles}${lines}${markers}${dot?`<circle data-walk-position cx="${dot.x}" cy="${dot.y}" r="8" fill="#2474d8" stroke="white" stroke-width="3"/>`:''}</svg><div style="padding:8px;display:flex;gap:12px;align-items:center"><button type="button" data-walk-zoom="1" aria-label="地図を拡大">＋</button><button type="button" data-walk-zoom="-1" aria-label="地図を縮小">−</button><button type="button" data-walk-zoom="0">全体</button><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" style="margin-left:auto;font-size:12px">© OpenStreetMap contributors</a></div></div><p data-walk-map-status style="font-size:12px">背景地図には通信が必要です。緑線は保存したルート、青点は現在地または最後の記録地点です。</p>`;
   }
 
+  function gpsStatusMarkup(state,item){
+    if(!globalThis.OUTBASE_KOTA_WALK.isWalk(item))return '';
+    const gps=globalThis.OUTBASE_LOCATION_RECORDER.snapshot(item.id);
+    const prior=(item.locationRecords||[]).some(row=>row.type==='gps_point');
+    const stopped=!gps.tracking&&(prior||!!gps.notice);
+    const title=gps.tracking?'GPS記録中':state.mode==='ended'?'GPS記録終了':state.mode==='paused'?'GPS停止中（一時停止）':stopped?'GPS停止中':'GPS未開始';
+    return `<div data-kota-gps-status role="status" style="margin-top:12px;padding:12px;border:1px solid ${gps.tracking?'#b7d6bd':'#dfd2ae'};border-radius:14px;background:${gps.tracking?'#eef6ef':'#fff9eb'}"><b>${title}</b><p style="margin:6px 0;font-size:13px">${gps.tracking?'画面を開いている間、ルートを記録しています。':state.mode==='active'?'時間の記録は続いています。GPSが止まっている間の移動はルート・距離に追加されません。':state.mode==='paused'?'散歩を再開したあと、GPSも再開してください。':'保存したルートを地図で見返せます。'}</p>${!gps.tracking&&state.mode==='active'?`<button type="button" data-kota-gps-resume style="min-height:44px;padding:8px 16px;border:0;border-radius:12px;background:#184f37;color:white;font:inherit">${stopped?'GPS記録を再開':'GPS記録を開始'}</button>`:''}</div>`;
+  }
+
   function mapMarkup(state,item){
     const gps=globalThis.OUTBASE_LOCATION_RECORDER.snapshot(item.id),locations=globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]);
     const latest=locations.tracks.flat().reduce((a,p)=>!a||p.captured_at>a.captured_at?p:a,null);
@@ -326,6 +335,7 @@
       <section class="ob19-session ob20-session-card ob36-card">
         <div class="ob19-card-head"><div><small>活動時間</small><h2>今の記録</h2></div><span>${esc(modeText(state.mode))}</span></div>
         <div class="ob19-metrics"><div><small>経過時間</small><b data-ob19-elapsed>${formatElapsed(currentElapsed(state))}</b></div><div><small>距離</small><b>${(globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]).meters/1000).toFixed(2)} <i>km</i></b></div></div>
+        ${gpsStatusMarkup(state,item)}
         <div class="ob19-controls">
           <button type="button" class="ob19-control primary" data-ob19-control ${state.mode==='ended'||saving.has(item.id)||!savedSessions.has(String(item.id))?'disabled':''}>${controlIcon(state.mode)}<span>${esc(controlText(state.mode))}</span></button>
           <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)&&!saving.has(item.id)&&savedSessions.has(String(item.id))?'':'disabled'}>${icons.stop}<span>${globalThis.OUTBASE_KOTA_WALK.isWalk(item)?'散歩を終了':'終了'}</span></button>
@@ -406,7 +416,7 @@
       tile.style.visibility='hidden';
       const status=main.querySelector('[data-walk-map-status]');if(status)status.textContent='背景地図を取得できません。保存したルートと地点は表示しています。通信状況を確認してください。';
     }));
-    main.querySelector('[data-ob19-gps]')?.addEventListener('click',()=>{const gps=globalThis.OUTBASE_LOCATION_RECORDER;if(gps.snapshot(item.id).tracking)gps.stop();else gps.start(item.id);});
+    main.querySelectorAll('[data-ob19-gps],[data-kota-gps-resume]').forEach(button=>{button.onclick=()=>{const gps=globalThis.OUTBASE_LOCATION_RECORDER;if(gps.snapshot(item.id).tracking)gps.stop();else gps.start(item.id);};});
 
     main.querySelector('[data-ob19-locate]')?.addEventListener('click',event=>{
       const button=event.currentTarget;
@@ -673,6 +683,7 @@
     const main=document.querySelector('.ob3-main-record');
     if(main&&current?.name==='record'&&current.activityId===id&&result.status==='ready'){
       main.querySelector('.ob19-map-card').outerHTML=mapMarkup(uiState(id),result.item);
+      const gpsStatus=main.querySelector('[data-kota-gps-status]');if(gpsStatus)gpsStatus.outerHTML=gpsStatusMarkup(uiState(id),result.item);
       bindLocation(main,result,current);
       const distance=main.querySelector('.ob19-metrics > div:last-child b');
       if(distance)distance.innerHTML=(globalThis.OUTBASE_LOCATION_RECORDER.summary(result.item.locationRecords||[]).meters/1000).toFixed(2)+' <i>km</i>';
