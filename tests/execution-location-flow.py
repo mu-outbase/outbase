@@ -1,0 +1,27 @@
+"""GPS, pins and parking regression; isolated storage and simulated positions only."""
+import os
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+ b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ c=b.new_context(viewport={'width':393,'height':852});page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ c.add_init_script('''window.outbaseTestGeo={cleared:[],watch:null,error:null,deny:false};Object.defineProperty(navigator,'geolocation',{value:{watchPosition(ok,fail){outbaseTestGeo.watch=ok;outbaseTestGeo.error=fail;return 0},clearWatch(id){outbaseTestGeo.cleared.push(id);outbaseTestGeo.watch=null},getCurrentPosition(ok,fail){if(outbaseTestGeo.deny)fail({code:1});else ok({coords:{latitude:35,longitude:139,accuracy:3},timestamp:Date.now()})}}});''')
+ base=os.environ.get('OUTBASE_TEST_URL','http://127.0.0.1:8766/').rstrip('/')+'/'
+ page.goto(base+'?shell=1&view=plan-editor&returnShell=home');form=page.locator('[data-ob22-plan-form]');form.wait_for();page.wait_for_timeout(1100);form.locator('[name=title]').fill('位置情報の検証');form.locator('button[type=submit]').click();page.wait_for_url('**view=activity**');aid=page.evaluate('OUTBASE_ROUTER.current().activityId')
+ page.goto(base+'?shell=1&view=record&activityId='+aid);page.locator('[data-ob19-control]').click();page.get_by_role('button',name='一時停止',exact=True).wait_for()
+ page.locator('[data-ob19-gps]').click();page.wait_for_function('window.outbaseTestGeo && outbaseTestGeo.watch!==null')
+ page.evaluate('outbaseTestGeo.watch({coords:{latitude:35,longitude:139,accuracy:3},timestamp:Date.now()})');page.wait_for_function('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length===1')
+ page.evaluate('outbaseTestGeo.watch({coords:{latitude:35.001,longitude:139,accuracy:3},timestamp:Date.now()+2000})');page.wait_for_function('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length===2')
+ page.wait_for_function('document.querySelector(".ob19-metrics").textContent.includes("0.11")');print('GPS saves points and calculates distance: PASS',flush=True)
+ page.get_by_role('button',name='一時停止',exact=True).click();page.wait_for_function('outbaseTestGeo.cleared.includes(0)');page.wait_for_timeout(300)
+ assert page.evaluate('OUTBASE_LOCATION_RECORDER.snapshot(OUTBASE_ROUTER.current().activityId).tracking') is False
+ page.locator('[data-ob19-feature=pin]').click();page.wait_for_function('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length===3')
+ page.locator('[data-ob19-feature=parking]').click();page.wait_for_function('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length===4');page.locator('a',has_text='35.00000, 139.00000').first.wait_for();print('Pause clears watch ID zero; pins and parking saved: PASS',flush=True)
+ page.reload();page.locator('[data-ob19-gps]').wait_for();page.wait_for_function('document.querySelector(".ob19-metrics").textContent.includes("0.11")');assert page.locator('a',has_text='35.00000, 139.00000').count()==2;assert page.evaluate('outbaseTestGeo.watch') is None;print('Saved distance and locations restored without automatic tracking: PASS',flush=True)
+ page.evaluate('outbaseTestGeo.deny=true');page.locator('[data-ob19-feature=pin]').click();page.get_by_text('位置情報の利用が許可されていません。',exact=True).wait_for();assert page.evaluate('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length')==4
+ page.evaluate('''()=>{outbaseTestGeo.deny=false;window.originalPut=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='records')throw new DOMException('test','QuotaExceededError');return originalPut.apply(this,args)}}''');page.locator('[data-ob19-feature=parking]').click();page.get_by_text('位置情報を取得・保存できませんでした。端末の空き容量や権限を確認してください。',exact=True).wait_for();assert page.evaluate('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length')==4;page.evaluate('()=>{IDBObjectStore.prototype.put=originalPut}');print('Permission denial and failed save create no records: PASS',flush=True)
+ page.get_by_role('button',name='再開',exact=True).click();page.get_by_role('button',name='一時停止',exact=True).wait_for();page.locator('[data-ob19-gps]').click();page.wait_for_function('outbaseTestGeo.watch!==null')
+ page.evaluate('outbaseTestGeo.watch({coords:{latitude:36,longitude:139,accuracy:3},timestamp:Date.now()})');page.wait_for_function('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length===5')
+ page.evaluate('outbaseTestGeo.watch({coords:{latitude:36.001,longitude:139,accuracy:3},timestamp:Date.now()+2000})');page.wait_for_function('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length===6');page.wait_for_function('document.querySelector(".ob19-metrics").textContent.includes("0.22")');print('Resume starts a new segment without bridging the pause: PASS',flush=True)
+ page.evaluate('window.lateFix=outbaseTestGeo.watch;OUTBASE_ROUTER.navigate("home")');page.wait_for_url('**view=home**');page.wait_for_function('outbaseTestGeo.watch===null');page.evaluate('lateFix({coords:{latitude:36.002,longitude:139,accuracy:3},timestamp:Date.now()+4000})');page.wait_for_timeout(250);assert page.evaluate('async()=> (await OUTBASE_REPOSITORIES_V160.records.all()).length')==6;print('Navigation releases GPS and ignores late callbacks: PASS',flush=True)
+ assert not errors,errors
+ c.close();b.close()

@@ -166,17 +166,20 @@
     </section>`;
   }
 
-  function mapMarkup(state){
+  function mapMarkup(state,item){
+    const gps=globalThis.OUTBASE_LOCATION_RECORDER.snapshot(item.id),locations=globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]);
     const position=state.position;
     const label=position?`現在地取得済み ±${Math.round(Number(position.accuracy||0))||'—'}m`:'現在地はまだ取得していません';
     const coordinates=position?`${Number(position.lat).toFixed(5)}, ${Number(position.lng).toFixed(5)}`:'現在地を取得すると、ここに表示します';
     return `<section class="ob19-map-card ob36-card">
       <div class="ob19-card-head"><div><small>現在地</small><h2>地図と場所の記録</h2></div><span class="${position?'ready':''}">${esc(label)}</span></div>
-      <div class="ob19-map-stage" aria-label="実行画面の地図領域">
-        <div class="ob19-map-grid"></div><span class="ob19-map-road r1"></span><span class="ob19-map-road r2"></span><span class="ob19-map-park"></span><i class="ob19-map-dot"></i>
+      <div aria-label="現在地の座標">
         <p>${esc(coordinates)}</p>
       </div>
       <button type="button" class="ob19-locate" data-ob19-locate>${icons.locate}<span><b>現在地を確認</b><small>端末の位置情報を一度取得</small></span>${icons.arrow}</button>
+      <button type="button" class="ob19-locate" data-ob19-gps ${!gps.tracking&&state.mode!=='active'?'disabled':''}>${gps.tracking?'GPS記録を停止':'GPS記録を開始'}</button>
+      <p role="status">${esc(gps.notice)}</p><p>画面を離れる・一時停止・終了でGPS記録は停止します。再開時は開始ボタンを押してください。距離は精度のよい位置情報からの概算です。</p>
+      ${[locations.pins.find(r=>r.payload.pin_kind==='parking'),...locations.pins.filter(r=>r.payload.pin_kind==='place').slice(0,4)].filter(Boolean).map(r=>`<p>${r.payload.pin_kind==='parking'?'駐車位置':'場所ピン'} · ${esc(new Date(r.payload.captured_at).toLocaleString('ja-JP'))}<br><a href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(r.payload.latitude+','+r.payload.longitude)}" target="_blank" rel="noopener noreferrer">${esc(r.payload.latitude.toFixed(5)+', '+r.payload.longitude.toFixed(5))} を地図で開く</a></p>`).join('')}
     </section>`;
   }
 
@@ -278,14 +281,14 @@
 
       <section class="ob19-session ob20-session-card ob36-card">
         <div class="ob19-card-head"><div><small>活動時間</small><h2>今の記録</h2></div><span>${esc(modeText(state.mode))}</span></div>
-        <div class="ob19-metrics"><div><small>経過時間</small><b data-ob19-elapsed>${formatElapsed(currentElapsed(state))}</b></div><div><small>距離</small><b>0.00 <i>km</i></b></div></div>
+        <div class="ob19-metrics"><div><small>経過時間</small><b data-ob19-elapsed>${formatElapsed(currentElapsed(state))}</b></div><div><small>距離</small><b>${(globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]).meters/1000).toFixed(2)} <i>km</i></b></div></div>
         <div class="ob19-controls">
           <button type="button" class="ob19-control primary" data-ob19-control ${state.mode==='ended'||saving.has(item.id)||!savedSessions.has(String(item.id))?'disabled':''}>${controlIcon(state.mode)}<span>${esc(controlText(state.mode))}</span></button>
           <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)&&!saving.has(item.id)&&savedSessions.has(String(item.id))?'':'disabled'}>${icons.stop}<span>終了</span></button>
         </div>
       </section>
 
-      ${mapMarkup(state)}
+      ${mapMarkup(state,item)}
 
       <section class="ob19-recording ob36-card">
         <div class="ob19-card-head"><div><small>クイック記録</small><h2>今これを残す</h2></div><span>${esc(item.title||'活動')}</span></div>
@@ -347,6 +350,27 @@
     globalThis.OUTBASE_ROUTER.navigate(fallback.name,fallback.values,{replace:true,transition:false,skipTransition:true});
   }
 
+  function bindLocation(main,result,route){
+    const item=result.item;
+    main.querySelector('[data-ob19-gps]')?.addEventListener('click',()=>{const gps=globalThis.OUTBASE_LOCATION_RECORDER;if(gps.snapshot(item.id).tracking)gps.stop();else gps.start(item.id);});
+
+    main.querySelector('[data-ob19-locate]')?.addEventListener('click',event=>{
+      const button=event.currentTarget;
+      const notice=main.querySelector('[data-ob19-notice]');
+      if(!navigator.geolocation){if(notice)notice.textContent='この端末では位置情報を利用できません。';return;}
+      button.disabled=true;button.classList.add('is-loading');
+      navigator.geolocation.getCurrentPosition(position=>{
+        writeUiState(item.id,{position:{lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp}});
+        const current=globalThis.OUTBASE_ROUTER?.current?.();
+        if(current?.name==='record'&&current.activityId===item.id){main.querySelector('.ob19-map-card').outerHTML=mapMarkup(uiState(item.id),item);bindLocation(main,result,current);}
+      },error=>{
+        button.disabled=false;button.classList.remove('is-loading');
+        if(notice)notice.textContent=error?.code===1?'位置情報の利用が許可されていません。':'現在地を取得できませんでした。';
+      },{enableHighAccuracy:true,timeout:12000,maximumAge:15000});
+    });
+
+  }
+
   function bind(main,result,route){
     main.querySelector('[data-ob19-home]')?.addEventListener('click',()=>globalThis.OUTBASE_ROUTER.navigate('home',{}, {replace:true}));
     if(result.status!=='ready')return;
@@ -362,6 +386,7 @@
 
     async function saveAction(action){
       if(saving.has(item.id))return;
+      if(action==='pause'||action==='end')globalThis.OUTBASE_LOCATION_RECORDER.stop();
       saving.add(item.id);
       main.querySelectorAll('[data-ob19-control],[data-ob19-end]').forEach(button=>{button.disabled=true;});
       const notice=main.querySelector('[data-ob19-notice]');if(notice)notice.textContent='活動状態を保存しています。';
@@ -394,19 +419,7 @@
       saveAction('end');
     });
 
-    main.querySelector('[data-ob19-locate]')?.addEventListener('click',event=>{
-      const button=event.currentTarget;
-      const notice=main.querySelector('[data-ob19-notice]');
-      if(!navigator.geolocation){if(notice)notice.textContent='この端末では位置情報を利用できません。';return;}
-      button.disabled=true;button.classList.add('is-loading');
-      navigator.geolocation.getCurrentPosition(position=>{
-        writeUiState(item.id,{position:{lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,time:position.timestamp}});
-        rerender(main,result,route);
-      },error=>{
-        button.disabled=false;button.classList.remove('is-loading');
-        if(notice)notice.textContent=error?.code===1?'位置情報の利用が許可されていません。':'現在地を取得できませんでした。';
-      },{enableHighAccuracy:true,timeout:12000,maximumAge:15000});
-    });
+    bindLocation(main,result,route);
 
     main.querySelectorAll('[data-ob19-feature]').forEach(button=>button.addEventListener('click',()=>{
       if(button.dataset.ob19Feature==='photo'){main.querySelector('[data-ob19-photo-file]').click();return;}
@@ -419,6 +432,7 @@
         api.history.replace({...api.history.state(),outbaseExecutionMemoOrigin:item.id});
         return;
       }
+      if(['pin','parking'].includes(button.dataset.ob19Feature)){globalThis.OUTBASE_LOCATION_RECORDER.pin(item.id,button.dataset.ob19Feature==='pin'?'place':'parking');return;}
       const labels={photo:'写真',video:'動画',audio:'音声',memo:'メモ',pin:'場所ピン',parking:'駐車位置'};
       const notice=main.querySelector('[data-ob19-notice]');
       if(notice)notice.textContent=`${labels[button.dataset.ob19Feature]||'記録'}は、FIELD03の保存中核を移植した完成版で有効になります。`;
@@ -569,6 +583,25 @@
       }
     },
     updateNav(root,value){base.updateNav?.(root,value);}
+  });
+
+  globalThis.addEventListener('outbase:location-change',async event=>{
+    const id=event.detail.activityId;
+    cache.delete(String(id));
+    globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.();
+    globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(id);
+    globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();
+    const route=globalThis.OUTBASE_ROUTER?.current?.();
+    if(route?.name!=='record'||route.activityId!==id)return;
+    const result=await loadFast(id,{force:true});
+    const current=globalThis.OUTBASE_ROUTER?.current?.();
+    const main=document.querySelector('.ob3-main-record');
+    if(main&&current?.name==='record'&&current.activityId===id&&result.status==='ready'){
+      main.querySelector('.ob19-map-card').outerHTML=mapMarkup(uiState(id),result.item);
+      bindLocation(main,result,current);
+      const distance=main.querySelector('.ob19-metrics > div:last-child b');
+      if(distance)distance.innerHTML=(globalThis.OUTBASE_LOCATION_RECORDER.summary(result.item.locationRecords||[]).meters/1000).toFixed(2)+' <i>km</i>';
+    }
   });
 
   globalThis.OUTBASE_EXECUTION_ROUTE_V19=Object.freeze({
