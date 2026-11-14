@@ -168,6 +168,10 @@
     const weather=planWeather(item);const classes=['ob36-plan',selected?'selected':'',item.sample?'is-sample':''].filter(Boolean).join(' ');
     const content=`<span class="ob36-plan-tag">${esc(item.typeLabel||'活動')}</span>${activityVisual(item,{className:'ob36-plan-photo',label:false})}<h3>${esc(item.title)}</h3><p>${esc(dateRange(item))}</p><div class="ob36-plan-temp"><span>${esc(weather[0])}</span><em>${esc(weather[1])}</em></div>`;
     if(item.sample)return `<button type="button" class="${classes}" data-ob36-sample-plan="${esc(item.id)}" aria-label="${esc(item.title)}・表示サンプル">${content}</button>`;
+    if(item.calendarEventId){
+      const href=globalThis.OUTBASE_ROUTER.shellUrl('calendar',{month:item.calendarMonth});
+      return `<a class="${classes}" href="${esc(href)}" data-ob5-nav data-ob5-route="calendar" data-ob5-month="${esc(item.calendarMonth)}">${content}</a>`;
+    }
     const href=globalThis.OUTBASE_ROUTER.shellUrl('activity',{activityId:item.id});
     return `<a class="${classes}" href="${esc(href)}" data-ob5-nav data-ob5-route="activity" data-ob5-activity-id="${esc(item.id)}">${content}</a>`;
   }

@@ -15,7 +15,9 @@
   async function routePayload(route,{force=false}={}){
     const key=keyFor(route);
     const existing=cache.get(key);
-    if(!force&&valid(existing))return existing.value;
+    const calendarSnapshot=route.name==='home'
+      ?globalThis.OUTBASE_HOME_SCREEN_MODEL_V164.calendarSnapshot?.():undefined;
+    if(!force&&valid(existing)&&existing.calendarSnapshot===calendarSnapshot)return existing.value;
 
     let value={};
     if(route.name==='home'){
@@ -27,7 +29,7 @@
     }else if(route.name==='calendar'){
       value={calendar:await globalThis.OUTBASE_CALENDAR_SCREEN_MODEL_V165.build({month:route.month,selected:route.people})};
     }
-    cache.set(key,{createdAt:Date.now(),value});
+    cache.set(key,{createdAt:Date.now(),value,calendarSnapshot});
     return value;
   }
   async function build(options={}){
