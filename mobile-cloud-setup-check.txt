@@ -1,0 +1,6 @@
+OUTBASE mobile cloud setup check
+
+Purpose: verify GitHub save and pull request creation from Codex Cloud.
+This file changes no application code or configuration.
+Validation: npm run check.
+Do not merge this verification PR.
