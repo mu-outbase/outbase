@@ -12,6 +12,8 @@
   const CACHE_TTL_MS=90000;
   const UI_STATE_KEY='outbase_execution_ui_state_v19';
   const cache=new Map();
+  const savedSessions=new Map();
+  const saving=new Set();
   let tickTimer=null;
 
   const esc=value=>String(value??'')
@@ -63,9 +65,8 @@
   }
   function uiState(activityId){
     const value=safeSessionRead();
-    if(String(value.activityId||'')!==String(activityId||''))return defaultState(activityId);
-    const mode=['idle','active','paused','ended'].includes(value.mode)?value.mode:'idle';
-    return {...defaultState(activityId),...value,mode};
+    const transient=String(value.activityId||'')===String(activityId||'')?value:{};
+    return {...defaultState(activityId),...transient,...(savedSessions.get(String(activityId))||{mode:'idle',elapsedMs:0,startedAt:0})};
   }
   function writeUiState(activityId,patch={}){
     const value={...uiState(activityId),...patch,activityId:String(activityId||''),updatedAt:Date.now()};
@@ -107,7 +108,13 @@
       const payload=await shellModel?.preload?.('activity',{activityId});
       const result=payload?.detail;
       if(result?.status==='ready'&&result.activity){
-        const value=Object.freeze({status:'ready',item:result.activity,detail:result});
+        let item=result.activity;
+        if(force){
+          const saved=await globalThis.OUTBASE_REPOSITORIES_V160.activities.get(activityId);
+          if(!saved||saved.deleted_at)return {status:'not_found'};
+          item={...item,state:saved.state,metadata:saved.metadata,updatedAt:saved.updated_at};
+        }
+        const value=Object.freeze({status:'ready',item,detail:result});
         cache.set(String(activityId),{createdAt:Date.now(),value});
         return value;
       }
@@ -125,13 +132,13 @@
   function modeText(mode){
     if(mode==='active')return '記録中';
     if(mode==='paused')return '一時停止中';
-    if(mode==='ended')return '終了確認';
+    if(mode==='ended')return '終了・整理待ち';
     return '開始前';
   }
   function controlText(mode){
     if(mode==='active')return '一時停止';
     if(mode==='paused')return '再開';
-    if(mode==='ended')return 'もう一度確認';
+    if(mode==='ended')return '活動終了';
     return '活動を始める';
   }
   function controlIcon(mode){return mode==='active'?icons.pause:icons.play;}
@@ -190,8 +197,8 @@
         <div class="ob19-card-head"><div><small>活動時間</small><h2>今の記録</h2></div><span>${esc(modeText(state.mode))}</span></div>
         <div class="ob19-metrics"><div><small>経過時間</small><b data-ob19-elapsed>${formatElapsed(currentElapsed(state))}</b></div><div><small>距離</small><b>0.00 <i>km</i></b></div></div>
         <div class="ob19-controls">
-          <button type="button" class="ob19-control primary" data-ob19-control>${controlIcon(state.mode)}<span>${esc(controlText(state.mode))}</span></button>
-          <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)?'':'disabled'}>${icons.stop}<span>終了</span></button>
+          <button type="button" class="ob19-control primary" data-ob19-control ${state.mode==='ended'||saving.has(item.id)||!savedSessions.has(String(item.id))?'disabled':''}>${controlIcon(state.mode)}<span>${esc(controlText(state.mode))}</span></button>
+          <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)&&!saving.has(item.id)&&savedSessions.has(String(item.id))?'':'disabled'}>${icons.stop}<span>終了</span></button>
         </div>
       </section>
 
@@ -207,11 +214,11 @@
           ${actionButton('pin','場所ピン','あとで見返す',icons.pin)}
           ${actionButton('parking','駐車位置','車へ戻る',icons.parking)}
         </div>
-        <p class="ob19-inline-notice" data-ob19-notice>この確認版では、写真・音声などはまだ保存されません。</p>
+        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'この確認版では、写真・音声などはまだ保存されません。')}</p>
       </section>
 
       <section class="ob19-save ob36-card">
-        <span>${icons.cloud}</span><div><b>端末保存とオフライン復元</b><small>記録中核の接続後に有効になります</small></div><em>準備中</em>
+        <span>${icons.cloud}</span><div><b>活動状態を端末に保存</b><small>開始・一時停止・再開・終了に対応。写真・音声などの保存は未接続です。</small></div><em>状態保存</em>
       </section>
 
       <button type="button" class="ob19-detail-button" data-ob19-detail><span>予定詳細を見る</span>${icons.arrow}</button>
@@ -262,20 +269,38 @@
       globalThis.OUTBASE_ROUTER.navigate('activity',contextApi()?.params?.(context)||{activityId:item.id,planId:planId(item)},{transition:false,skipTransition:true});
     });
 
+    async function saveAction(action){
+      if(saving.has(item.id))return;
+      saving.add(item.id);
+      main.querySelectorAll('[data-ob19-control],[data-ob19-end]').forEach(button=>{button.disabled=true;});
+      const notice=main.querySelector('[data-ob19-notice]');if(notice)notice.textContent='活動状態を保存しています。';
+      try{
+        const saved=await globalThis.OUTBASE_EXECUTION_SESSION.transition(item.id,action,{expectedMode:uiState(item.id).mode});
+        savedSessions.set(String(item.id),globalThis.OUTBASE_EXECUTION_SESSION.fromActivity(saved));
+        writeUiState(item.id,{notice:{start:'活動を開始しました',pause:'一時停止しました',resume:'再開しました',end:'活動を終了し、整理待ちとして保存しました'}[action]});
+        cache.delete(String(item.id));
+        globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.();
+        globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(item.id);
+        globalThis.OUTBASE_PREPARATION_ROUTE_V17?.invalidate?.(item.id);
+        globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();
+      }catch(error){
+        writeUiState(item.id,{notice:error?.message==='execution_state_changed'
+          ?'別の操作で活動状態が変わりました。画面を開き直してください。'
+          :'活動状態を保存できませんでした。操作前の状態を保っています。もう一度お試しください。'});
+      }finally{
+        saving.delete(item.id);
+        if(globalThis.OUTBASE_ROUTER?.current?.().name==='record'&&globalThis.OUTBASE_ROUTER.current().activityId===item.id)rerender(main,result,route);
+      }
+    }
+
     main.querySelector('[data-ob19-control]')?.addEventListener('click',()=>{
       const current=uiState(item.id);
-      let patch={};
-      if(current.mode==='active')patch={mode:'paused',elapsedMs:currentElapsed(current),startedAt:0,notice:'一時停止しました'};
-      else if(current.mode==='paused')patch={mode:'active',startedAt:Date.now(),notice:'再開しました'};
-      else patch={mode:'active',elapsedMs:0,startedAt:Date.now(),notice:'活動を開始しました'};
-      writeUiState(item.id,patch);
-      rerender(main,result,route);
+      if(current.mode==='ended')return;
+      saveAction(current.mode==='active'?'pause':current.mode==='paused'?'resume':'start');
     });
 
     main.querySelector('[data-ob19-end]')?.addEventListener('click',()=>{
-      const current=uiState(item.id);
-      writeUiState(item.id,{mode:'ended',elapsedMs:currentElapsed(current),startedAt:0,notice:'終了状態を確認中'});
-      rerender(main,result,route);
+      saveAction('end');
     });
 
     main.querySelector('[data-ob19-locate]')?.addEventListener('click',event=>{
@@ -351,8 +376,9 @@
         const shellModel=globalThis.OUTBASE_SHELL_MODEL_V166||globalThis.OUTBASE_SHELL_MODEL_V165||globalThis.OUTBASE_SHELL_MODEL_V164;
         const primed=cached(requested.activityId);
         const modelPromise=shellModel?.build?Promise.resolve(shellModel.build(options)):Promise.resolve(Object.freeze({route:requested,online:navigator.onLine}));
-        const resultPromise=primed?Promise.resolve(primed):loadFast(requested.activityId);
+        const resultPromise=loadFast(requested.activityId,{force:true});
         [value,result]=await Promise.all([modelPromise,resultPromise]);
+        if(result?.status==='ready')savedSessions.set(String(requested.activityId),globalThis.OUTBASE_EXECUTION_SESSION.fromActivity(result.item));
         base.updateNetwork?.(shell,value?.online);
         base.updateNav?.(root,value||Object.freeze({route:requested,online:navigator.onLine}));
         if(main&&globalThis.OUTBASE_ROUTER?.current?.().name==='record')rerender(main,result||{status:'error'},requested,{preserveScroll:false});
