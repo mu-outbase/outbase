@@ -1,5 +1,6 @@
-const CACHE_NAME='outbase-execution-video-v1';
+const CACHE_NAME='outbase-execution-audio-v1';
 const CORE_ASSETS=[
+  './src/domain/activity/audio-recorder.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/data/photo-records.js?v=outbase-r1-gate2-contract-boundary-v1-data',
   './src/domain/activity/execution-session.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/calendar-v2/story-calendar-reader.js?v=activity-calendar-sync-v1',
