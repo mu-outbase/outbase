@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  let session=null,lifecycle=0;
+  let session=null,lifecycle=0,pendingStart=null;
   const notices=new Map(),busy=new Set();
   const repo=()=>globalThis.OUTBASE_REPOSITORIES_V160;
   function point(position){
@@ -51,7 +51,7 @@
     if(old.watch!==undefined)navigator.geolocation?.clearWatch(old.watch);
     notices.set(old.id,message);emit(old.id);
   }
-  function message(error){return error?.code===1?'位置情報の利用が許可されていません。':error?.message==='location_invalid'?'位置情報の精度や時刻を確認できません。屋外で再度お試しください。':'位置情報を取得・保存できませんでした。端末の空き容量や権限を確認してください。';}
+  function message(error){return error?.code===1?'位置情報が許可されていません。OUTBASE／Chromeのサイト設定で位置情報を許可してください。':error?.message==='location_invalid'?'位置情報の精度や時刻を確認できません。屋外で再度お試しください。':'位置情報を取得・保存できませんでした。端末の空き容量や権限を確認してください。';}
   async function start(id){
     if(session)return;
     const s={id,closed:false,segment:globalThis.OUTBASE_IDS.ulid(),queue:Promise.resolve(),last:null};session=s;
@@ -89,8 +89,8 @@
     }catch(error){notices.set(id,error.message==='location_cancelled'?'画面を離れたため場所の保存を中止しました。':message(error));}
     finally{busy.delete(id);emit(id);}
   }
-  globalThis.addEventListener('pagehide',()=>{lifecycle++;stop('画面を離れたためGPS記録を停止しました。');});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){lifecycle++;stop('画面が非表示になったためGPS記録を停止しました。');}});
-  globalThis.addEventListener('outbase:navigation',()=>{lifecycle++;const r=globalThis.OUTBASE_ROUTER?.current?.();if(session&&(r?.name!=='record'||r.activityId!==session.id))stop('画面を離れたためGPS記録を停止しました。');});
-  globalThis.OUTBASE_LOCATION_RECORDER=Object.freeze({start,stop,pin,summary,distance,point,accepted,snapshot:id=>({tracking:session?.id===id,busy:busy.has(id),notice:notices.get(id)||''})});
+  globalThis.addEventListener('pagehide',()=>{lifecycle++;pendingStart=null;stop('画面を離れたためGPS記録を停止しました。');});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){lifecycle++;pendingStart=null;stop('画面が非表示になったためGPS記録を停止しました。');}});
+  globalThis.addEventListener('outbase:navigation',()=>{lifecycle++;const r=globalThis.OUTBASE_ROUTER?.current?.();if(pendingStart&&(r?.name!=='record'||r.activityId!==pendingStart))pendingStart=null;if(session&&(r?.name!=='record'||r.activityId!==session.id))stop('画面を離れたためGPS記録を停止しました。');});
+  globalThis.OUTBASE_LOCATION_RECORDER=Object.freeze({requestStart:id=>{pendingStart=id;},startRequested:id=>{if(pendingStart!==id)return;pendingStart=null;const r=globalThis.OUTBASE_ROUTER?.current?.();if(r?.name==='record'&&r.activityId===id&&!document.hidden)return start(id);},start,stop,pin,summary,distance,point,accepted,snapshot:id=>({tracking:session?.id===id,busy:busy.has(id),notice:notices.get(id)||''})});
 })();

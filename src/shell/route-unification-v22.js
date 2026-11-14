@@ -253,7 +253,7 @@
     return `<section class="ob22-page ob22-start" data-ob22-route-page="start">
       ${routeHead('活動を始める','閉じる')}
       <section class="ob22-card ob22-page-title"><span>${icons.play}</span><div><small>活動開始</small><h1>どの活動を始めますか？</h1><p>予定を選ぶと、新しい実行画面へそのまま進みます。</p></div></section>
-      <section class="ob22-card ob22-list-card"><h2>コタ散歩</h2><p>予定の作成なしで時間を記録します。記録中の散歩があれば、その散歩へ戻ります。GPSは実行画面で開始できます。</p><div class="ob22-form-actions" style="grid-template-columns:1fr"><button class="primary" type="button" data-ob22-kota-start>コタ散歩を始める</button></div><p role="status" data-ob22-kota-status hidden></p></section>
+      <section class="ob22-card ob22-list-card"><h2>コタ散歩</h2><p>予定の作成なしで時間を記録します。記録中の散歩があれば、その散歩へ戻ります。GPS記録も一緒に始めるか選べます。</p><label style="display:flex;align-items:center;gap:10px;padding:12px 0"><input type="checkbox" data-kota-start-gps ${kotaGpsPreference()?'checked':''}>散歩開始と一緒にGPS記録を開始</label><p>この選択は次回も使います。位置情報の許可は端末の設定に従います。別アプリの使用中や消灯中はGPS記録が停止します。</p><div class="ob22-form-actions" style="grid-template-columns:1fr"><button class="primary" type="button" data-ob22-kota-start>コタ散歩を始める</button></div><p role="status" data-ob22-kota-status hidden></p></section>
       <section class="ob22-card ob22-list-card"><div class="ob22-section-title"><h2>予定から始める</h2><span>${rows.length}件</span></div><div class="ob22-choice-list">${rows.length?rows.map(item=>activityChoice(item,current)).join(''):'<p class="ob22-muted">開始できる予定はまだありません。</p>'}</div></section>
       <form class="ob22-card ob22-form" data-ob22-quick-start><div class="ob22-section-title wide"><h2>予定なしで始める</h2></div><label class="wide"><span>活動名</span><input name="title" required value="${esc(routeValues(value.route).title||'')}" placeholder="例：コタ通常散歩"></label><label class="wide"><span>種類</span><select name="type">${typeOptions(routeValues(value.route).activityType||'walk')}</select></label><div class="ob22-form-actions wide"><button type="submit" class="primary">実行画面を開く</button></div></form>
     </section>`;
@@ -355,6 +355,7 @@
     const current=await repos().activities.get(activityId);await repos().preparationItems.save({household_id:current?.household_id||'',activity_id:activityId,category:text(fd.get('category'))||'note',title,status:'pending',sort_order:999,origin:'user',source:'shell-route-unification-v22'});
     invalidate(activityId);toast('準備項目を追加しました');router.navigate('preparation-detail',{activityId},{replace:true,preserveScroll:true,transition:false,skipTransition:true});
   }
+  function kotaGpsPreference(){try{return localStorage.getItem('outbase-kota-start-gps')==='yes';}catch(_error){return false;}}
   function openExecution(item,returnShell='start'){
     if(!item?.id)return;activate(item,'start-to-execution');globalThis.OUTBASE_EXECUTION_ROUTE_V19?.prime?.(item);
     router.navigate('record',{activityId:item.id,planId:item.legacyPlanId||'',activityType:item.type||'',activityTitle:item.title||'',returnShell,returnActivityId:item.id},{transition:false,skipTransition:true});
@@ -429,7 +430,7 @@
     const kota=main.querySelector('[data-ob22-kota-start]');
     if(kota){const requestId=globalThis.OUTBASE_IDS.ulid();kota.addEventListener('click',async()=>{
       if(kota.disabled)return;kota.disabled=true;const status=main.querySelector('[data-ob22-kota-status]');status.hidden=false;status.textContent='散歩を開いています。';
-      try{const saved=await globalThis.OUTBASE_KOTA_WALK.start(requestId);invalidate(saved.id);openExecution(saved,'start');}
+      try{const useGps=!!main.querySelector('[data-kota-start-gps]')?.checked;const saved=await globalThis.OUTBASE_KOTA_WALK.start(requestId);try{localStorage.setItem('outbase-kota-start-gps',useGps?'yes':'no');}catch(_error){}if(useGps)globalThis.OUTBASE_LOCATION_RECORDER.requestStart(saved.id);invalidate(saved.id);openExecution(saved,'start');}
       catch(error){status.textContent='散歩を開始できませんでした。空き容量を確認して、もう一度お試しください。';kota.disabled=false;}
     });}
     main.querySelector('[data-ob22-quick-start]')?.addEventListener('submit',event=>{event.preventDefault();quickStart(event.currentTarget).catch(()=>toast('活動を作成できませんでした'));});
