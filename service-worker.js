@@ -1,5 +1,6 @@
-const CACHE_NAME='outbase-activity-calendar-sync-v1';
+const CACHE_NAME='outbase-execution-state-v1';
 const CORE_ASSETS=[
+  './src/domain/activity/execution-session.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/calendar-v2/story-calendar-reader.js?v=activity-calendar-sync-v1',
   './src/storage/persistence-guard.js?v=outbase-r1-gate2-contract-boundary-v1',
   './','./index.html','./manifest.json?v=outbase-v1663-visual','./icons/outbase-192.png','./icons/outbase-512.png',
