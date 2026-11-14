@@ -1,4 +1,4 @@
-const CACHE_NAME='outbase-execution-location-v1';
+const CACHE_NAME='outbase-pwa-repeated-update-v1';
 const CORE_ASSETS=[
   './src/domain/activity/location-recorder.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
   './src/domain/activity/audio-recorder.js?v=outbase-r1-gate2-contract-boundary-v1-shell',
