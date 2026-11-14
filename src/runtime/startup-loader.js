@@ -3,11 +3,11 @@
   // Static entry dependencies must finish before their consumers execute.
   const sources=[
     [
-        "src/config/version.js?v=outbase-r3-route-cutover-fix-v222",
+        "src/config/version.js?v=outbase-kota-map-release-20261114",
         "OUTBASE_VERSION"
     ],
     [
-        "src/config/module-manifest.js?v=outbase-r3-route-cutover-fix-v222",
+        "src/config/module-manifest.js?v=outbase-kota-map-release-20261114",
         "OUTBASE_MODULE_MANIFEST"
     ],
     [
