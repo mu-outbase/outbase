@@ -146,7 +146,7 @@
 
   function people(item){
     const rows = item?.participants?.rows || [];
-    if (!rows.length) return '<span class="ob16-person">参加者未設定</span>';
+    if (!rows.length) return globalThis.OUTBASE_KOTA_WALK.isWalk(item)?'<span class="ob16-person">コタと散歩</span>':'<span class="ob16-person">参加者未設定</span>';
     return rows.slice(0,8).map(row => `<span class="ob16-person">${row.type==='pet'||row.kind==='pet'?'🐾 ':''}${esc(row.name||'名前未設定')}</span>`).join('');
   }
 
@@ -208,6 +208,13 @@
     </section>`;
   }
 
+  function walkHistory(item){
+    const api=globalThis.OUTBASE_KOTA_WALK;if(!api.isWalk(item))return '';
+    const counts=api.summary(item.walkRecords||[]),session=globalThis.OUTBASE_EXECUTION_SESSION.fromActivity(item);
+    const distance=globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]).meters/1000,elapsed=session.elapsedMs+(session.mode==='active'?Math.max(0,Date.now()-session.startedAt):0);
+    return `<section class="ob16-section-card" data-kota-history><h2>コタ散歩の記録</h2><p>記録時間 ${Math.floor(elapsed/60000)}分${Math.floor(elapsed/1000)%60}秒 · 距離 ${distance.toFixed(2)} km</p><p>${Object.entries(api.EVENTS).map(([kind,label])=>`${esc(label)} ${counts[kind]}回`).join(' · ')}</p><p>写真 ${Number(item.media?.types?.photo||0)}件 · 音声 ${Number(item.media?.types?.audio||0)}件</p><a href="${esc(recordHref(item))}" data-ob17-context="record">散歩の記録・写真・音声を見る</a></section>`;
+  }
+
   const improvementDrafts=new Map();
   function improve(item){
     const rows=(item.organization?.openImprovements||item.organization?.improvements||[]).filter(x=>x.status!=='completed');
@@ -231,7 +238,7 @@
     const result = model?.detail;
     if (!result || result.status!=='ready' || !result.activity) return '<section class="ob16-not-found"><h1>活動が見つかりません</h1><p>削除されたか、まだ移行されていない可能性があります。</p></section>';
     const item = result.activity;
-    return `<section class="ob16-activity">${hero(item)}${next(item)}${prep(item)}${memory(item)}${improve(item)}<button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button></section>`;
+    return `<section class="ob16-activity">${hero(item)}${next(item)}${walkHistory(item)}${prep(item)}${memory(item)}${improve(item)}<button id="outbaseCopyrightFooter" type="button" class="ob-copyright-footer">© 2026 OUTBASE</button></section>`;
   }
 
   function bind(main,model,{loading=false}={}){

@@ -14,6 +14,9 @@
   const cache=new Map();
   const savedSessions=new Map();
   const saving=new Set();
+  const walkSaving=new Set();
+  const walkLimits=new Map();
+  const walkLimit=item=>globalThis.OUTBASE_KOTA_WALK.isWalk(item)?walkLimits.get(item.id)||5:5;
   const photoDrafts=new Map();
   const videoDrafts=new Map();
   const audioOpen=new Set();
@@ -188,9 +191,9 @@
   }
 
   function savedNotes(item){
-    const notes=(item.records||[]).filter(row=>row.type==='note');
+    const notes=(globalThis.OUTBASE_KOTA_WALK.isWalk(item)?item.walkNotes||[]:item.records||[]).filter(row=>row.type==='note');
     if(!notes.length)return '';
-    return `<section class="ob19-recording ob19-saved-notes ob36-card"><div class="ob19-card-head"><h2>保存したメモ</h2></div>${notes.slice(0,5).map(row=>{
+    return `<section class="ob19-recording ob19-saved-notes ob36-card"><div class="ob19-card-head"><h2>保存したメモ</h2></div>${notes.slice(0,walkLimit(item)).map(row=>{
       const payload=row.payload||{};
       return `<details><summary>${esc(payload.title||'メモ')}</summary><p>${esc(payload.text||payload.memo||'')}</p></details>`;
     }).join('')}</section>`;
@@ -199,7 +202,7 @@
   function photosMarkup(item){
     const draft=photoDrafts.get(item.id);
     const editor=draft?`<section class="ob19-recording ob36-card" data-ob19-photo-editor><h2>写真を保存</h2><p>${esc(draft.file.name||'写真')}</p><img class="ob19-photo-preview" data-ob19-photo-draft alt="選択した写真"><p role="status">${esc(draft.error||(draft.saving?'写真を保存しています。':'端末内に保存します。JPEG・PNG・WebP・GIF、20MBまで。'))}</p><button type="button" data-ob19-photo-save ${draft.saving?'disabled':''}>写真を保存</button><button type="button" data-ob19-photo-cancel ${draft.saving?'disabled':''}>キャンセル</button></section>`:'';
-    const photos=item.photos||[];
+    const photos=(item.photos||[]).slice(0,walkLimit(item));
     return `<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-ob19-photo-file hidden>${editor}${photos.length?`<section class="ob19-recording ob36-card"><h2>保存した写真</h2><div class="ob19-photo-grid">${photos.map(photo=>`<figure><img class="ob19-photo-preview" data-ob19-photo-key="${esc(photo.key)}" alt="${esc(photo.filename)}"><figcaption>${esc(photo.filename)}</figcaption><small data-ob19-photo-status>読み込み中</small></figure>`).join('')}</div></section>`:''}`;
   }
   function hydratePhotos(main,item){
@@ -219,7 +222,7 @@
   }
 
   function videosMarkup(item){
-    const draft=videoDrafts.get(item.id),videos=item.videos||[];
+    const draft=videoDrafts.get(item.id),videos=(item.videos||[]).slice(0,walkLimit(item));
     const editor=draft?`<section class="ob19-recording ob36-card" data-ob19-video-editor><h2>動画を保存</h2><p>${esc(draft.file.name||'動画')}</p><video class="ob19-video-preview" controls playsinline preload="metadata" data-ob19-video-draft></video><p role="status">${esc(draft.error||(draft.saving?'動画を保存しています。':'端末内に保存します。MP4・WebM、50MBまで。'))}</p><button type="button" data-ob19-video-save ${draft.saving?'disabled':''}>動画を保存</button><button type="button" data-ob19-video-cancel ${draft.saving?'disabled':''}>キャンセル</button></section>`:'';
     return `<input type="file" accept="video/mp4,video/webm" data-ob19-video-file hidden>${editor}${videos.length?`<section class="ob19-recording ob36-card"><h2>保存した動画（直近${videos.length}件）</h2><div class="ob19-video-grid">${videos.map(video=>`<figure><video class="ob19-video-preview" controls playsinline preload="metadata" data-ob19-video-key="${esc(video.key)}"></video><figcaption>${esc(video.filename)}</figcaption><small data-ob19-video-status>読み込み中</small></figure>`).join('')}</div></section>`:''}`;
   }
@@ -242,7 +245,7 @@
   function audioMarkup(item){
     const draft=globalThis.OUTBASE_AUDIO_RECORDER.snapshot(item.id),busy=audioSaving.has(item.id);
     const editor=audioOpen.has(item.id)?`<section class="ob19-recording ob36-card" data-ob19-audio-editor><h2>音声を録音</h2><p>最長5分・20MBまで。画面を離れると録音を停止します。文字起こしは行いません。</p><p role="status">${esc(audioNotices.get(item.id)||draft.notice||'「録音開始」でマイクを使用します。')}</p>${draft.status==='recording'?'<b data-ob19-audio-elapsed>00:00</b>':''}${draft.file?'<audio controls preload="metadata" data-ob19-audio-draft></audio>':''}<div>${['idle','error'].includes(draft.status)?'<button type="button" data-ob19-audio-start>録音開始</button>':''}${draft.status==='recording'?'<button type="button" data-ob19-audio-stop>録音停止</button>':''}${draft.status==='ready'?`<button type="button" data-ob19-audio-save ${busy?'disabled':''}>音声を保存</button>`:''}<button type="button" data-ob19-audio-cancel ${busy?'disabled':''}>キャンセル</button></div></section>`:'';
-    const audios=item.audios||[];
+    const audios=(item.audios||[]).slice(0,walkLimit(item));
     return `${editor}${audios.length?`<section class="ob19-recording ob36-card"><h2>保存した音声（直近${audios.length}件）</h2>${audios.map(audio=>`<figure class="ob19-audio-item"><figcaption>${esc(audio.filename)}</figcaption><audio controls preload="metadata" data-ob19-audio-key="${esc(audio.key)}"></audio><small data-ob19-audio-status>読み込み中</small></figure>`).join('')}</section>`:''}`;
   }
   function hydrateAudio(main,item){
@@ -256,6 +259,16 @@
         audio.onloadedmetadata=()=>{status.textContent='端末に保存済み・文字起こしなし';};audio.onerror=()=>{status.textContent='音声を再生できません。';};audio.src=photoUrl(blob);
       }catch(_error){if(audio.isConnected)audio.parentElement.querySelector('[data-ob19-audio-status]').textContent='音声を読み込めませんでした。';}
     });
+  }
+
+  function walkMarkup(item,state){
+    const api=globalThis.OUTBASE_KOTA_WALK;if(!api.isWalk(item))return '';
+    const counts=api.summary(item.walkRecords||[]),ended=state.mode==='ended';
+    return `<section class="ob19-recording ob36-card" data-kota-walk><h2>${ended?'コタ散歩のまとめ':'コタの様子を記録'}</h2>
+      <div class="ob19-quick-grid">${Object.entries(api.EVENTS).map(([kind,label])=>`<button class="ob19-quick" type="button" data-kota-event="${kind}" ${state.mode!=='active'||walkSaving.has(item.id)?'disabled':''}><b>${esc(label)}</b><small>${counts[kind]}回${ended?'':' · タップで記録'}</small></button>`).join('')}</div>
+      <p>${ended?'散歩の記録は端末に保存済みです。下の「散歩の履歴を見る」から振り返れます。':'時刻と一緒に端末へ保存します。一時停止中は追加できません。'}</p>
+      ${!ended&&(item.walkRecords||[]).length?`<button type="button" data-kota-undo ${walkSaving.has(item.id)?'disabled':''}>直前の記録を取り消す</button>`:''}
+      <details><summary>今回の出来事</summary>${(item.walkRecords||[]).slice().reverse().map(r=>`<p>${esc(new Date(r.occurredAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}))} · ${esc(api.EVENTS[r.payload?.walk_event]||'記録')}</p>`).join('')||'<p>まだ記録はありません。</p>'}</details></section>`;
   }
 
   function markup(result,route){
@@ -284,10 +297,11 @@
         <div class="ob19-metrics"><div><small>経過時間</small><b data-ob19-elapsed>${formatElapsed(currentElapsed(state))}</b></div><div><small>距離</small><b>${(globalThis.OUTBASE_LOCATION_RECORDER.summary(item.locationRecords||[]).meters/1000).toFixed(2)} <i>km</i></b></div></div>
         <div class="ob19-controls">
           <button type="button" class="ob19-control primary" data-ob19-control ${state.mode==='ended'||saving.has(item.id)||!savedSessions.has(String(item.id))?'disabled':''}>${controlIcon(state.mode)}<span>${esc(controlText(state.mode))}</span></button>
-          <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)&&!saving.has(item.id)&&savedSessions.has(String(item.id))?'':'disabled'}>${icons.stop}<span>終了</span></button>
+          <button type="button" class="ob19-control secondary" data-ob19-end ${['active','paused'].includes(state.mode)&&!saving.has(item.id)&&savedSessions.has(String(item.id))?'':'disabled'}>${icons.stop}<span>${globalThis.OUTBASE_KOTA_WALK.isWalk(item)?'散歩を終了':'終了'}</span></button>
         </div>
       </section>
 
+      ${walkMarkup(item,state)}
       ${mapMarkup(state,item)}
 
       <section class="ob19-recording ob36-card">
@@ -307,12 +321,13 @@
       ${photosMarkup(item)}
       ${videosMarkup(item)}
       ${audioMarkup(item)}
+      ${globalThis.OUTBASE_KOTA_WALK.isWalk(item)&&[item.walkNotes,item.photos,item.videos,item.audios].some(rows=>(rows||[]).length>walkLimit(item))?'<button type="button" class="ob19-detail-button" data-kota-more>保存した記録をさらに表示（各5件）</button>':''}
 
       <section class="ob19-save ob36-card">
         <span>${icons.cloud}</span><div><b>活動状態と記録を端末に保存</b><small>メモ・写真・動画・音声に対応。文字起こしは行いません。</small></div><em>端末保存</em>
       </section>
 
-      <button type="button" class="ob19-detail-button" data-ob19-detail><span>予定詳細を見る</span>${icons.arrow}</button>
+      <button type="button" class="ob19-detail-button" data-ob19-detail><span>${globalThis.OUTBASE_KOTA_WALK.isWalk(item)&&state.mode==='ended'?'散歩の履歴を見る':'予定詳細を見る'}</span>${icons.arrow}</button>
     </section>`;
   }
 
@@ -377,6 +392,19 @@
     const item=result.item;
     activateContext(item,'execution-bind');
 
+    main.querySelector('[data-kota-more]')?.addEventListener('click',()=>{walkLimits.set(item.id,walkLimit(item)+5);rerender(main,result,route);});
+    main.querySelectorAll('[data-kota-event],[data-kota-undo]').forEach(button=>button.addEventListener('click',async()=>{
+      if(walkSaving.has(item.id))return;walkSaving.add(item.id);main.querySelectorAll('[data-kota-event]').forEach(node=>node.disabled=true);
+      let committed=false,refreshed=result;
+      try{
+        if(button.hasAttribute('data-kota-undo'))await globalThis.OUTBASE_KOTA_WALK.undo({activityId:item.id,displayActivityId:route.activityId,recordId:item.walkRecords[0].id});
+        else await globalThis.OUTBASE_KOTA_WALK.addEvent({activityId:item.id,displayActivityId:route.activityId,kind:button.dataset.kotaEvent,requestId:globalThis.OUTBASE_IDS.ulid()});committed=true;
+        cache.delete(String(item.id));globalThis.OUTBASE_SHELL_MODEL_V166.invalidate();globalThis.OUTBASE_ACTIVITY_ROUTE_V16.invalidate(item.id);globalThis.OUTBASE_ROUTE_UNIFICATION_V22.clearPayloadCache();globalThis.OUTBASE_VAULT_ROUTE_V13?.invalidate?.();
+        writeUiState(item.id,{notice:button.hasAttribute('data-kota-undo')?'直前の記録を取り消しました。':'コタの様子を保存しました。'});const loaded=await loadFast(item.id,{force:true});
+        if(loaded.status==='ready')refreshed=loaded;else writeUiState(item.id,{notice:'記録は保存済みです。表示を更新するには画面を開き直してください。'});
+      }catch(error){writeUiState(item.id,{notice:committed?'記録は保存済みです。画面を開き直してください。':'記録できませんでした。散歩の状態と空き容量を確認して再度お試しください。'});}
+      finally{walkSaving.delete(item.id);const current=globalThis.OUTBASE_ROUTER.current();if(main.isConnected&&current.name==='record'&&current.activityId===item.id)rerender(main,refreshed,current);}
+    }));
     main.querySelector('[data-ob19-back]')?.addEventListener('click',()=>backToOrigin(route,item));
     main.querySelector('[data-ob19-detail]')?.addEventListener('click',()=>{
       clearTimer();
