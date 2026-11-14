@@ -1,4 +1,4 @@
-const CACHE_NAME='outbase-r1-gate2-contract-boundary-v1';
+const CACHE_NAME='outbase-home-calendar-sync-v1';
 const CORE_ASSETS=[
   './','./index.html','./manifest.json?v=outbase-v1663-visual','./icons/outbase-192.png','./icons/outbase-512.png',
   './assets/default-covers/lake.jpg','./assets/default-covers/group.jpg','./assets/default-covers/sea.jpg','./assets/default-covers/autumn.jpg','./assets/default-covers/festival.jpg',
