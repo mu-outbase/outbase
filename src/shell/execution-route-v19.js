@@ -430,6 +430,7 @@
     if(result.status!=='ready')return;
     const item=result.item;
     activateContext(item,'execution-bind');
+    globalThis.OUTBASE_LOCATION_RECORDER.startRequested(item.id);
 
     main.querySelector('[data-kota-awake]')?.addEventListener('click',()=>globalThis.OUTBASE_SCREEN_AWAKE.toggle(item.id));
     main.querySelector('[data-kota-more]')?.addEventListener('click',()=>{walkLimits.set(item.id,walkLimit(item)+5);rerender(main,result,route);});

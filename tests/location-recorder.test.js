@@ -34,3 +34,11 @@ test('navigation during activity lookup cancels before asking for GPS',async()=>
 test('synchronous watch failure still releases the returned watch',async()=>{
  const f=setup();f.context.navigator.geolocation.watchPosition=(_ok,fail)=>{fail({code:1});return 0;};await f.api.start('a');assert.deepEqual(f.cleared,[0]);assert.equal(f.api.snapshot('a').tracking,false);
 });
+test('explicit queued GPS start is consumed once on the requested record route',async()=>{
+ const f=setup();f.context.OUTBASE_ROUTER={current:()=>({name:'record',activityId:'a'})};
+ f.api.requestStart('a');await f.api.startRequested('a');const callback=f.success;
+ assert.equal(typeof callback,'function');f.api.stop();await f.api.startRequested('a');assert.equal(f.api.snapshot('a').tracking,false);
+});
+test('navigation elsewhere cancels an unconsumed GPS start',async()=>{
+ const f=setup();let route={name:'home'};f.context.OUTBASE_ROUTER={current:()=>route};f.api.requestStart('a');f.listeners['outbase:navigation']();route={name:'record',activityId:'a'};await f.api.startRequested('a');assert.equal(f.success,undefined);
+});
