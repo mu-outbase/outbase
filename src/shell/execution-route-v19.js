@@ -656,7 +656,7 @@
   globalThis.addEventListener('outbase:screen-awake-change',event=>{
     const id=event.detail.activityId,route=globalThis.OUTBASE_ROUTER.current();if(route.name!=='record'||route.activityId!==id)return;
     const snapshot=globalThis.OUTBASE_SCREEN_AWAKE.snapshot(id),button=document.querySelector('[data-kota-awake]'),status=document.querySelector('[data-kota-awake-status]');
-    if(button)button.textContent=snapshot.enabled?'点灯維持をやめる':'画面を点灯したままにする';if(status)status.textContent=snapshot.notice;
+    if(button){const label=button.querySelector('b')||button;label.textContent=snapshot.enabled?'点灯維持をやめる':'画面を点灯したままにする';}if(status)status.textContent=snapshot.notice;
   });
 
   globalThis.addEventListener('outbase:location-change',async event=>{
