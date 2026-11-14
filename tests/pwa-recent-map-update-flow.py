@@ -55,7 +55,7 @@ try:
    sessionStorage.removeItem('pwaChanged');navigator.serviceWorker.addEventListener('controllerchange',()=>sessionStorage.setItem('pwaChanged','yes'),{once:true});
    const reg=await navigator.serviceWorker.getRegistration();await reg.update();
   }''')
-  try:page.wait_for_function("sessionStorage.getItem('pwaChanged')==='yes' && window.OUTBASE_VERSION?.shell==='outbase-kota-map-release-20261114-map-pan-v1'",timeout=60000)
+  try:page.wait_for_function("sessionStorage.getItem('pwaChanged')==='yes' && window.OUTBASE_VERSION?.shell==='outbase-pwa-first-install-20261114-v1'",timeout=60000)
   except Exception:
    print(page.evaluate("async()=>({marker:sessionStorage.getItem('pwaChanged'),gps:typeof OUTBASE_LOCATION_RECORDER,caches:await caches.keys(),sw:(await navigator.serviceWorker.getRegistration())?.active?.scriptURL})"),errors,flush=True)
    raise
