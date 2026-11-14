@@ -54,6 +54,7 @@
   </section>
 
   <section id="filterPanel" class="panel filter-drawer hidden"></section>
+  <p id="storyCalendarStatus" role="status" hidden></p>
   <section id="calendarArea" class="calendar-area" aria-live="polite"></section>
 
   <section id="agendaSection" class="agenda">
@@ -96,6 +97,9 @@
 <input id="icsFile" type="file" accept=".ics,text/calendar" hidden>
 <input id="csvFile" type="file" accept=".csv,text/csv" hidden>
 <input id="jsonFile" type="file" accept=".json,application/json" hidden>
+<script src="src/storage/persistence-guard.js?v=outbase-r1-gate2-contract-boundary-v1"></script>
+<script src="src/data/database.js?v=outbase-r1-gate2-contract-boundary-v1-data"></script>
+<script src="src/calendar-v2/story-calendar-reader.js?v=activity-calendar-sync-v1"></script>
 <script src="calendar-formal-v44.js?v=outbase-calendar-route-cutover-v22"></script>
 </body>
 </html>
