@@ -65,6 +65,7 @@
       endAt:utils().iso(activity.endAt||activity.calendar?.[0]?.endAt),
       calendar:Object.freeze(activity.calendar||[]),
       preparation,
+      locationRecords:Object.freeze(clean(records).filter(row=>['gps_point','pin'].includes(row.type)).map(recordView)),
       records:Object.freeze(recordRows),recordCount:clean(records).length,
       media:mediaInfo,previewMedia:previewMedia(media),
       photos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='photo'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
