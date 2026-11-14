@@ -1,4 +1,4 @@
-const CACHE_NAME='outbase-runtime-retry-v1';
+const CACHE_NAME='outbase-pwa-start-shortcut-v1';
 const CORE_ASSETS=[
   "./src/runtime/startup-loader.js?v=outbase-startup-retry-v1",
   "./src/config/version.js?v=outbase-r3-route-cutover-fix-v222",
