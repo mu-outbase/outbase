@@ -2826,6 +2826,10 @@ body.outbaseNorth .ob3-main.ob3-main-preparation{
 .ob19-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .ob19-photo-grid figure{margin:0;min-width:0}
 .ob19-photo-grid figcaption{overflow-wrap:anywhere;font-size:12px}
+.ob19-video-preview{display:block;width:100%;max-height:360px;background:#102b23;border-radius:12px}
+.ob19-video-grid{display:grid;gap:14px}
+.ob19-video-grid figure{margin:0;min-width:0}
+.ob19-video-grid figcaption{overflow-wrap:anywhere;font-size:12px}
 .ob19-quick-grid{margin-top:11px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .ob19-quick{min-height:82px;padding:9px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #e3e1da;border-radius:16px;background:#fbfaf7;color:var(--ob19-deep)}
 .ob19-quick>span{width:34px;height:34px;display:grid;place-items:center;border-radius:13px;background:#eef3e9;color:var(--ob19-green)}

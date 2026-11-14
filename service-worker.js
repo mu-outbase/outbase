@@ -1,4 +1,4 @@
-const CACHE_NAME='outbase-execution-photo-v1';
+const CACHE_NAME='outbase-execution-video-v1';
 const CORE_ASSETS=[
   './src/data/photo-records.js?v=outbase-r1-gate2-contract-boundary-v1-data',
   './src/domain/activity/execution-session.js?v=outbase-r1-gate2-contract-boundary-v1-shell',

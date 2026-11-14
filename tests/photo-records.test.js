@@ -10,10 +10,10 @@ function fixture(options={}){
  const context=vm.createContext({Blob,File,
   OUTBASE_IDS:{isUlid:value=>/^[0-9A-Z]{26}$/.test(value)},
   OUTBASE_REPOSITORIES_V160:{activities:{get:async()=>options.activity===null?null:{id:'a'}}},
-  OUTBASE_DB_V160:{transaction:()=>{calls.transactions++;throw Error('unexpected write');},get:async(_store,id)=>id==='present'?{media_type:'photo',blob}:undefined},
+  OUTBASE_DB_V160:{transaction:()=>{calls.transactions++;throw Error('unexpected write');},get:async(_store,id)=>id==='present'?{media_type:'photo',blob}:id==='video'?{media_type:'video',blob:new Blob(['video'],{type:'video/webm'})}:undefined},
   OUTBASE_LEGACY_ADAPTER_V160:{getRecordBlob:async()=>{calls.legacy++;return blob;}},
   createImageBitmap:options.decode|| (async()=>{calls.decodes++;throw Error('invalid image');})
- });vm.runInContext(source,context);return {api:context.OUTBASE_PHOTO_RECORDS,calls};
+ });vm.runInContext(source,context);return {api:context.OUTBASE_PHOTO_RECORDS,video:context.OUTBASE_VIDEO_RECORDS,calls};
 }
 const photo=()=>new File(['image bytes'],'photo.png',{type:'image/png'});
 const input=file=>({activityId:'a',displayActivityId:'a',requestId,file});
@@ -43,4 +43,19 @@ test('in-flight request IDs cannot be reused for another activity or file',async
  const file=photo();const first=api.save(input(file));const rejected=assert.rejects(first);
  await assert.rejects(api.save({...input(file),activityId:'b',displayActivityId:'b'}));
  await assert.rejects(api.save(input(photo())));rejectDecode(Error('cancel decoding'));await rejected;
+});
+
+test('video keys and reads remain separate from photo keys and legacy storage',async()=>{
+ const {video,calls}=fixture();assert.equal(video.keyFor({media_type:'video',local_ref:{database:'outbase_story_db',store:'media',key:'x'}}),'story-video:x');
+ assert.equal((await video.readBlob('story-video:video')).type,'video/webm');assert.equal(await video.readBlob('story-video:present'),null);assert.equal(calls.legacy,0);
+});
+test('video format, size and empty-file validation happen before a write',async()=>{
+ const {video,calls}=fixture();class TooBig extends Blob{get size(){return 50*1024*1024+1;}}
+ for(const file of [photo(),new File([],'empty.webm',{type:'video/webm'}),new TooBig([],{type:'video/mp4'})])await assert.rejects(video.save(input(file)));
+ assert.equal(video.MAX_BYTES,50*1024*1024);assert.equal(calls.transactions,0);
+});
+test('video context, request ID and missing activity reject before decoding',async()=>{
+ const file=new File(['video'],'test.webm',{type:'video/webm'});const {video,calls}=fixture();
+ await assert.rejects(video.save({...input(file),displayActivityId:'b'}));await assert.rejects(video.save({...input(file),requestId:'bad'}));assert.equal(calls.transactions,0);
+ const missing=fixture({activity:null});await assert.rejects(missing.video.save(input(file)));assert.equal(missing.calls.transactions,0);
 });
