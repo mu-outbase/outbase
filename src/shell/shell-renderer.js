@@ -77,7 +77,7 @@
   }
   async function previewUrl(key){
     if(!key)return null;if(previewUrls.has(key))return previewUrls.get(key);if(previewPromises.has(key))return previewPromises.get(key);
-    const task=(async()=>{try{const blob=await globalThis.OUTBASE_LEGACY_ADAPTER_V160?.getRecordBlob?.(key);if(!(blob instanceof Blob)||!String(blob.type||'').startsWith('image/'))return null;const url=URL.createObjectURL(blob);previewUrls.set(key,url);return url;}catch(_error){return null;}finally{previewPromises.delete(key);}})();
+    const task=(async()=>{try{const blob=await (globalThis.OUTBASE_PHOTO_RECORDS?globalThis.OUTBASE_PHOTO_RECORDS.readBlob(key):globalThis.OUTBASE_LEGACY_ADAPTER_V160?.getRecordBlob?.(key));if(!(blob instanceof Blob)||!String(blob.type||'').startsWith('image/'))return null;const url=URL.createObjectURL(blob);previewUrls.set(key,url);return url;}catch(_error){return null;}finally{previewPromises.delete(key);}})();
     previewPromises.set(key,task);return task;
   }
   async function loadPreview(element){

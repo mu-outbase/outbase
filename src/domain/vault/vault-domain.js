@@ -8,7 +8,7 @@
   function previewMedia(rows=[]){
     const row=(rows||[]).find(item=>item?.media_type==='photo'&&item?.local_ref?.key);
     if(!row)return null;
-    return Object.freeze({key:String(row.local_ref.key),type:'photo',mimeType:String(row.mime_type||''),size:Number(row.size||0)});
+    return Object.freeze({key:globalThis.OUTBASE_PHOTO_RECORDS?.keyFor(row)||String(row.local_ref.key),type:'photo',mimeType:String(row.mime_type||''),size:Number(row.size||0)});
   }
 
   async function activityRows(options={}){

@@ -26,7 +26,7 @@
   ];
   const data=[
     'src/data/ids.js','src/data/contracts.js','src/data/validation.js','src/data/database.js','src/data/repositories.js',
-    'src/data/safe-memo.js','src/data/legacy-adapter.js','src/data/migrations.js','src/data/bootstrap.js'
+    'src/data/safe-memo.js','src/data/legacy-adapter.js','src/data/photo-records.js','src/data/migrations.js','src/data/bootstrap.js'
   ].map(path=>withVersion(path,version.data));
   data.unshift(...storage);
   const domain=[

@@ -14,6 +14,10 @@
   const cache=new Map();
   const savedSessions=new Map();
   const saving=new Set();
+  const photoDrafts=new Map();
+  const photoUrls=new Set();
+  function clearPhotoUrls(){for(const url of photoUrls)URL.revokeObjectURL(url);photoUrls.clear();}
+  function photoUrl(blob){const url=URL.createObjectURL(blob);photoUrls.add(url);return url;}
   let tickTimer=null;
 
   const esc=value=>String(value??'')
@@ -181,6 +185,28 @@
     }).join('')}</section>`;
   }
 
+  function photosMarkup(item){
+    const draft=photoDrafts.get(item.id);
+    const editor=draft?`<section class="ob19-recording ob36-card" data-ob19-photo-editor><h2>写真を保存</h2><p>${esc(draft.file.name||'写真')}</p><img class="ob19-photo-preview" data-ob19-photo-draft alt="選択した写真"><p role="status">${esc(draft.error||(draft.saving?'写真を保存しています。':'端末内に保存します。JPEG・PNG・WebP・GIF、20MBまで。'))}</p><button type="button" data-ob19-photo-save ${draft.saving?'disabled':''}>写真を保存</button><button type="button" data-ob19-photo-cancel ${draft.saving?'disabled':''}>キャンセル</button></section>`:'';
+    const photos=item.photos||[];
+    return `<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-ob19-photo-file hidden>${editor}${photos.length?`<section class="ob19-recording ob36-card"><h2>保存した写真</h2><div class="ob19-photo-grid">${photos.map(photo=>`<figure><img class="ob19-photo-preview" data-ob19-photo-key="${esc(photo.key)}" alt="${esc(photo.filename)}"><figcaption>${esc(photo.filename)}</figcaption><small data-ob19-photo-status>読み込み中</small></figure>`).join('')}</div></section>`:''}`;
+  }
+  function hydratePhotos(main,item){
+    const draft=photoDrafts.get(item.id);
+    const preview=main.querySelector('[data-ob19-photo-draft]');if(preview&&draft)preview.src=photoUrl(draft.file);
+    main.querySelectorAll('[data-ob19-photo-key]').forEach(async image=>{
+      try{
+        const blob=await globalThis.OUTBASE_PHOTO_RECORDS.readBlob(image.dataset.ob19PhotoKey);
+        if(!image.isConnected)return;
+        if(!blob)throw new Error('photo_missing');
+        const status=image.parentElement.querySelector('[data-ob19-photo-status]');
+        image.onload=()=>{status.textContent='端末に保存済み';};
+        image.onerror=()=>{status.textContent='写真を表示できませんでした。';};
+        image.src=photoUrl(blob);
+      }catch(_error){if(image.isConnected)image.parentElement.querySelector('[data-ob19-photo-status]').textContent='写真を読み込めませんでした。';}
+    });
+  }
+
   function markup(result,route){
     if(result.status!=='ready'){
       const message=result.status==='missing'?'対象の予定が選ばれていません。':result.status==='error'?'実行画面を読み込めませんでした。':'予定が見つかりません。';
@@ -223,13 +249,14 @@
           ${actionButton('pin','場所ピン','あとで見返す',icons.pin)}
           ${actionButton('parking','駐車位置','車へ戻る',icons.parking)}
         </div>
-        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'この確認版では、写真・音声などはまだ保存されません。')}</p>
+        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'メモ・写真を端末に保存できます。動画・音声などはまだ保存されません。')}</p>
       </section>
 
       ${savedNotes(item)}
+      ${photosMarkup(item)}
 
       <section class="ob19-save ob36-card">
-        <span>${icons.cloud}</span><div><b>活動状態を端末に保存</b><small>開始・一時停止・再開・終了に対応。写真・音声などの保存は未接続です。</small></div><em>状態保存</em>
+        <span>${icons.cloud}</span><div><b>活動状態・メモ・写真を端末に保存</b><small>動画・音声などの保存は未接続です。</small></div><em>端末保存</em>
       </section>
 
       <button type="button" class="ob19-detail-button" data-ob19-detail><span>予定詳細を見る</span>${icons.arrow}</button>
@@ -249,6 +276,7 @@
 
   function rerender(main,result,route,{preserveScroll=true}={}){
     const y=preserveScroll?window.scrollY:0;
+    clearPhotoUrls();
     main.innerHTML=markup(result,route);
     bind(main,result,route);
     if(preserveScroll)requestAnimationFrame(()=>window.scrollTo(0,y));
@@ -329,6 +357,7 @@
     });
 
     main.querySelectorAll('[data-ob19-feature]').forEach(button=>button.addEventListener('click',()=>{
+      if(button.dataset.ob19Feature==='photo'){main.querySelector('[data-ob19-photo-file]').click();return;}
       if(button.dataset.ob19Feature==='memo'){
         clearTimer();
         const api=globalThis.OUTBASE_ROUTER;
@@ -343,6 +372,36 @@
       setTimeout(()=>button.classList.remove('is-selected'),500);
     }));
 
+    main.querySelector('[data-ob19-photo-file]')?.addEventListener('change',event=>{
+      const file=event.target.files?.[0];if(!file)return;
+      if(photoDrafts.get(item.id)?.saving)return;
+      photoDrafts.set(item.id,{file,requestId:globalThis.OUTBASE_IDS.ulid(),saving:false,error:''});
+      rerender(main,result,route);
+    });
+    main.querySelector('[data-ob19-photo-cancel]')?.addEventListener('click',()=>{photoDrafts.delete(item.id);rerender(main,result,route);});
+    main.querySelector('[data-ob19-photo-save]')?.addEventListener('click',async()=>{
+      const draft=photoDrafts.get(item.id);if(!draft||draft.saving)return;
+      draft.saving=true;draft.error='';rerender(main,result,route);
+      let refreshed=result;
+      try{
+        await globalThis.OUTBASE_PHOTO_RECORDS.save({activityId:item.id,displayActivityId:route.activityId,file:draft.file,requestId:draft.requestId});
+        photoDrafts.delete(item.id);writeUiState(item.id,{notice:'写真を端末に保存しました。'});
+        cache.delete(String(item.id));globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.();
+        globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(item.id);
+        globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();
+        globalThis.OUTBASE_VAULT_ROUTE_V13?.invalidate?.();
+        const loaded=await loadFast(item.id,{force:true});
+        if(loaded.status==='ready'){
+          refreshed=loaded;savedSessions.set(String(item.id),globalThis.OUTBASE_EXECUTION_SESSION.fromActivity(loaded.item));
+        }else writeUiState(item.id,{notice:'写真は保存済みですが、表示を更新できませんでした。実行画面を開き直してください。'});
+      }catch(error){draft.error=error?.message==='photo_file_not_supported'?'JPEG・PNG・WebP・GIFの画像（20MBまで）を選んでください。':'写真を保存できませんでした。選択した写真は残っています。もう一度お試しください。';}
+      finally{
+        draft.saving=false;
+        if(globalThis.OUTBASE_ROUTER.current().name==='record'&&globalThis.OUTBASE_ROUTER.current().activityId===item.id)rerender(main,refreshed,route);
+      }
+    });
+
+    hydratePhotos(main,item);
     startTimer(main,item);
   }
 
@@ -364,6 +423,7 @@
       const requested=globalThis.OUTBASE_ROUTER?.current?.()||{};
       if(requested.name!=='record'){
         clearTimer();
+        clearPhotoUrls();
         return base.mount(root,options);
       }
 

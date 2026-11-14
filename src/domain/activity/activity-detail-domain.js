@@ -25,7 +25,7 @@
   function previewMedia(rows){
     const row=clean(rows).find(item=>item?.media_type==='photo'&&item?.local_ref?.key);
     if(!row)return null;
-    return Object.freeze({key:String(row.local_ref.key),type:'photo',mimeType:String(row.mime_type||''),size:Number(row.size||0)});
+    return Object.freeze({key:globalThis.OUTBASE_PHOTO_RECORDS?.keyFor(row)||String(row.local_ref.key),type:'photo',mimeType:String(row.mime_type||''),size:Number(row.size||0)});
   }
 
   function mediaSummary(rows){
@@ -67,6 +67,9 @@
       preparation,
       records:Object.freeze(recordRows),recordCount:clean(records).length,
       media:mediaInfo,previewMedia:previewMedia(media),
+      photos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='photo'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
+        id:row.id,key:globalThis.OUTBASE_PHOTO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'写真'
+      }))),
       organization:Object.freeze({
         reviewCount:reviewRows.length,reviews:Object.freeze(reviewRows.slice(0,5)),
         improvementCount:improvementRows.length,openImprovementCount:improvementRows.filter(row=>row.status!=='completed').length,

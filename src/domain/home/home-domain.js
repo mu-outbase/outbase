@@ -81,7 +81,7 @@
       const key=row?.local_ref?.key;
       if(!activityId||!key||row?.media_type!=='photo'||map.has(activityId))continue;
       map.set(activityId,Object.freeze({
-        key:String(key),type:'photo',mimeType:String(row?.mime_type||''),size:Number(row?.size||0)
+        key:globalThis.OUTBASE_PHOTO_RECORDS?.keyFor(row)||String(key),type:'photo',mimeType:String(row?.mime_type||''),size:Number(row?.size||0)
       }));
     }
     return map;
