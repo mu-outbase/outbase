@@ -16,6 +16,9 @@
   const saving=new Set();
   const photoDrafts=new Map();
   const videoDrafts=new Map();
+  const audioOpen=new Set();
+  const audioSaving=new Set();
+  const audioNotices=new Map();
   const photoUrls=new Set();
   const videoPlayers=new Set();
   function clearPhotoUrls(){
@@ -233,6 +236,25 @@
     });
   }
 
+  function audioMarkup(item){
+    const draft=globalThis.OUTBASE_AUDIO_RECORDER.snapshot(item.id),busy=audioSaving.has(item.id);
+    const editor=audioOpen.has(item.id)?`<section class="ob19-recording ob36-card" data-ob19-audio-editor><h2>音声を録音</h2><p>最長5分・20MBまで。画面を離れると録音を停止します。文字起こしは行いません。</p><p role="status">${esc(audioNotices.get(item.id)||draft.notice||'「録音開始」でマイクを使用します。')}</p>${draft.status==='recording'?'<b data-ob19-audio-elapsed>00:00</b>':''}${draft.file?'<audio controls preload="metadata" data-ob19-audio-draft></audio>':''}<div>${['idle','error'].includes(draft.status)?'<button type="button" data-ob19-audio-start>録音開始</button>':''}${draft.status==='recording'?'<button type="button" data-ob19-audio-stop>録音停止</button>':''}${draft.status==='ready'?`<button type="button" data-ob19-audio-save ${busy?'disabled':''}>音声を保存</button>`:''}<button type="button" data-ob19-audio-cancel ${busy?'disabled':''}>キャンセル</button></div></section>`:'';
+    const audios=item.audios||[];
+    return `${editor}${audios.length?`<section class="ob19-recording ob36-card"><h2>保存した音声（直近${audios.length}件）</h2>${audios.map(audio=>`<figure class="ob19-audio-item"><figcaption>${esc(audio.filename)}</figcaption><audio controls preload="metadata" data-ob19-audio-key="${esc(audio.key)}"></audio><small data-ob19-audio-status>読み込み中</small></figure>`).join('')}</section>`:''}`;
+  }
+  function hydrateAudio(main,item){
+    const draft=globalThis.OUTBASE_AUDIO_RECORDER.snapshot(item.id),preview=main.querySelector('[data-ob19-audio-draft]');
+    if(preview&&draft.file){videoPlayers.add(preview);preview.src=photoUrl(draft.file);}
+    main.querySelectorAll('[data-ob19-audio-key]').forEach(async audio=>{
+      videoPlayers.add(audio);
+      try{
+        const blob=await globalThis.OUTBASE_AUDIO_RECORDS.readBlob(audio.dataset.ob19AudioKey);if(!audio.isConnected)return;if(!blob)throw new Error('audio_missing');
+        const status=audio.parentElement.querySelector('[data-ob19-audio-status]');
+        audio.onloadedmetadata=()=>{status.textContent='端末に保存済み・文字起こしなし';};audio.onerror=()=>{status.textContent='音声を再生できません。';};audio.src=photoUrl(blob);
+      }catch(_error){if(audio.isConnected)audio.parentElement.querySelector('[data-ob19-audio-status]').textContent='音声を読み込めませんでした。';}
+    });
+  }
+
   function markup(result,route){
     if(result.status!=='ready'){
       const message=result.status==='missing'?'対象の予定が選ばれていません。':result.status==='error'?'実行画面を読み込めませんでした。':'予定が見つかりません。';
@@ -275,15 +297,16 @@
           ${actionButton('pin','場所ピン','あとで見返す',icons.pin)}
           ${actionButton('parking','駐車位置','車へ戻る',icons.parking)}
         </div>
-        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'メモ・写真・動画を端末に保存できます。音声などはまだ保存されません。')}</p>
+        <p class="ob19-inline-notice" data-ob19-notice role="status">${esc(state.notice||'メモ・写真・動画・音声を端末に保存できます。音声の文字起こしは行いません。')}</p>
       </section>
 
       ${savedNotes(item)}
       ${photosMarkup(item)}
       ${videosMarkup(item)}
+      ${audioMarkup(item)}
 
       <section class="ob19-save ob36-card">
-        <span>${icons.cloud}</span><div><b>活動状態・メモ・写真・動画を端末に保存</b><small>音声などの保存は未接続です。</small></div><em>端末保存</em>
+        <span>${icons.cloud}</span><div><b>活動状態と記録を端末に保存</b><small>メモ・写真・動画・音声に対応。文字起こしは行いません。</small></div><em>端末保存</em>
       </section>
 
       <button type="button" class="ob19-detail-button" data-ob19-detail><span>予定詳細を見る</span>${icons.arrow}</button>
@@ -297,6 +320,8 @@
       const node=main?.querySelector?.('[data-ob19-elapsed]');
       if(!node||!main.isConnected){clearTimer();return;}
       node.textContent=formatElapsed(currentElapsed(uiState(item.id)));
+      const audio=main.querySelector('[data-ob19-audio-elapsed]'),draft=globalThis.OUTBASE_AUDIO_RECORDER.snapshot(item.id);
+      if(audio&&draft.status==='recording')audio.textContent=formatElapsed(Date.now()-draft.startedAt);
     };
     update();tickTimer=setInterval(update,1000);
   }
@@ -386,6 +411,7 @@
     main.querySelectorAll('[data-ob19-feature]').forEach(button=>button.addEventListener('click',()=>{
       if(button.dataset.ob19Feature==='photo'){main.querySelector('[data-ob19-photo-file]').click();return;}
       if(button.dataset.ob19Feature==='video'){main.querySelector('[data-ob19-video-file]').click();return;}
+      if(button.dataset.ob19Feature==='audio'){if(audioSaving.has(item.id))return;audioOpen.add(item.id);audioNotices.delete(item.id);rerender(main,result,route);return;}
       if(button.dataset.ob19Feature==='memo'){
         clearTimer();
         const api=globalThis.OUTBASE_ROUTER;
@@ -449,7 +475,24 @@
       finally{draft.saving=false;if(globalThis.OUTBASE_ROUTER.current().name==='record'&&globalThis.OUTBASE_ROUTER.current().activityId===item.id)rerender(main,refreshed,route);}
     });
 
-    hydratePhotos(main,item);hydrateVideos(main,item);
+    main.querySelector('[data-ob19-audio-start]')?.addEventListener('click',()=>{audioNotices.delete(item.id);globalThis.OUTBASE_AUDIO_RECORDER.start(item.id);});
+    main.querySelector('[data-ob19-audio-stop]')?.addEventListener('click',()=>globalThis.OUTBASE_AUDIO_RECORDER.stop(item.id));
+    main.querySelector('[data-ob19-audio-cancel]')?.addEventListener('click',()=>{audioOpen.delete(item.id);audioNotices.delete(item.id);globalThis.OUTBASE_AUDIO_RECORDER.cancel(item.id);rerender(main,result,route);});
+    main.querySelector('[data-ob19-audio-save]')?.addEventListener('click',async()=>{
+      const draft=globalThis.OUTBASE_AUDIO_RECORDER.snapshot(item.id);if(!draft.file||audioSaving.has(item.id))return;
+      audioSaving.add(item.id);audioNotices.set(item.id,'音声を保存しています。');rerender(main,result,route);let refreshed=result;
+      try{
+        await globalThis.OUTBASE_AUDIO_RECORDS.save({activityId:item.id,displayActivityId:route.activityId,file:draft.file,requestId:draft.requestId});
+        audioOpen.delete(item.id);audioNotices.delete(item.id);globalThis.OUTBASE_AUDIO_RECORDER.cancel(item.id);writeUiState(item.id,{notice:'音声を端末に保存しました。文字起こしは行っていません。'});
+        cache.delete(String(item.id));globalThis.OUTBASE_SHELL_MODEL_V166?.invalidate?.();globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(item.id);globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();globalThis.OUTBASE_VAULT_ROUTE_V13?.invalidate?.();
+        const loaded=await loadFast(item.id,{force:true});
+        if(loaded.status==='ready'){refreshed=loaded;savedSessions.set(String(item.id),globalThis.OUTBASE_EXECUTION_SESSION.fromActivity(loaded.item));}
+        else writeUiState(item.id,{notice:'音声は保存済みですが、表示を更新できませんでした。実行画面を開き直してください。'});
+      }catch(_error){audioNotices.set(item.id,'音声を保存できませんでした。録音は残っています。もう一度お試しください。');}
+      finally{audioSaving.delete(item.id);if(globalThis.OUTBASE_ROUTER.current().name==='record'&&globalThis.OUTBASE_ROUTER.current().activityId===item.id)rerender(main,refreshed,route);}
+    });
+
+    hydratePhotos(main,item);hydrateVideos(main,item);hydrateAudio(main,item);
     startTimer(main,item);
   }
 
@@ -464,6 +507,7 @@
     addEventListener('pageshow',()=>clearLegacyLaunchState(document));
     addEventListener('pagehide',clearPhotoUrls);
     addEventListener('outbase:navigation',()=>{if(globalThis.OUTBASE_ROUTER?.current?.().name!=='record')clearPhotoUrls();});
+    addEventListener('outbase:audio-change',event=>{const route=globalThis.OUTBASE_ROUTER?.current?.();if(route?.name==='record'&&route.activityId===event.detail.activityId&&audioOpen.has(route.activityId))globalThis.OUTBASE_SHELL_V166?.render?.('audio-change');});
   }
 
   const renderer=Object.freeze({

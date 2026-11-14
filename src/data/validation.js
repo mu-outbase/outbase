@@ -8,7 +8,7 @@
   const ACTIVITY_TYPES=new Set(['camp','walk','drive','shopping','event','other']);
   const VISIBILITY_VALUES=new Set(['private','household','public_candidate']);
   const RECORD_TYPES=new Set([
-    'note','photo','video','audio_transcript','location','gps_point','pin','weather',
+    'note','photo','video','audio','audio_transcript','location','gps_point','pin','weather',
     'checklist','measurement','review_fact','legacy'
   ]);
   const PARTICIPANT_TYPES=new Set(['member','pet']);

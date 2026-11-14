@@ -10,10 +10,10 @@ function fixture(options={}){
  const context=vm.createContext({Blob,File,
   OUTBASE_IDS:{isUlid:value=>/^[0-9A-Z]{26}$/.test(value)},
   OUTBASE_REPOSITORIES_V160:{activities:{get:async()=>options.activity===null?null:{id:'a'}}},
-  OUTBASE_DB_V160:{transaction:()=>{calls.transactions++;throw Error('unexpected write');},get:async(_store,id)=>id==='present'?{media_type:'photo',blob}:id==='video'?{media_type:'video',blob:new Blob(['video'],{type:'video/webm'})}:undefined},
+  OUTBASE_DB_V160:{transaction:()=>{calls.transactions++;throw Error('unexpected write');},get:async(_store,id)=>id==='present'?{media_type:'photo',blob}:id==='video'?{media_type:'video',blob:new Blob(['video'],{type:'video/webm'})}:id==='audio'?{media_type:'audio',blob:new Blob(['audio'],{type:'audio/webm'})}:undefined},
   OUTBASE_LEGACY_ADAPTER_V160:{getRecordBlob:async()=>{calls.legacy++;return blob;}},
   createImageBitmap:options.decode|| (async()=>{calls.decodes++;throw Error('invalid image');})
- });vm.runInContext(source,context);return {api:context.OUTBASE_PHOTO_RECORDS,video:context.OUTBASE_VIDEO_RECORDS,calls};
+ });vm.runInContext(source,context);return {api:context.OUTBASE_PHOTO_RECORDS,video:context.OUTBASE_VIDEO_RECORDS,audio:context.OUTBASE_AUDIO_RECORDS,calls};
 }
 const photo=()=>new File(['image bytes'],'photo.png',{type:'image/png'});
 const input=file=>({activityId:'a',displayActivityId:'a',requestId,file});
@@ -58,4 +58,19 @@ test('video context, request ID and missing activity reject before decoding',asy
  const file=new File(['video'],'test.webm',{type:'video/webm'});const {video,calls}=fixture();
  await assert.rejects(video.save({...input(file),displayActivityId:'b'}));await assert.rejects(video.save({...input(file),requestId:'bad'}));assert.equal(calls.transactions,0);
  const missing=fixture({activity:null});await assert.rejects(missing.video.save(input(file)));assert.equal(missing.calls.transactions,0);
+});
+
+test('audio keys and reads remain separate from video, photo and legacy keys',async()=>{
+ const {audio,calls}=fixture();assert.equal(audio.keyFor({media_type:'audio',local_ref:{database:'outbase_story_db',store:'media',key:'x'}}),'story-audio:x');
+ assert.equal((await audio.readBlob('story-audio:audio')).type,'audio/webm');assert.equal(await audio.readBlob('story-audio:present'),null);assert.equal(calls.legacy,0);
+});
+test('audio rejects unsupported, empty and oversized blobs before a write',async()=>{
+ const {audio,calls}=fixture();class TooBig extends Blob{get size(){return 20*1024*1024+1;}}
+ for(const file of [photo(),new File([],'empty.webm',{type:'audio/webm'}),new TooBig([],{type:'audio/webm;codecs=opus'})])await assert.rejects(audio.save(input(file)));
+ assert.equal(audio.MAX_BYTES,20*1024*1024);assert.equal(calls.transactions,0);
+});
+test('audio destination and missing activity cannot produce an orphan record',async()=>{
+ const file=new File(['audio'],'voice.webm',{type:'audio/webm;codecs=opus'});const {audio,calls}=fixture();
+ await assert.rejects(audio.save({...input(file),displayActivityId:'b'}));assert.equal(calls.transactions,0);
+ const missing=fixture({activity:null});await assert.rejects(missing.audio.save(input(file)));assert.equal(missing.calls.transactions,0);
 });

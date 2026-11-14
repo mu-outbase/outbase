@@ -73,6 +73,9 @@
       videos:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='video'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
         id:row.id,key:globalThis.OUTBASE_VIDEO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'動画'
       }))),
+      audios:Object.freeze(sortDesc(clean(media).filter(row=>row.media_type==='audio'&&row.local_ref?.key),'created_at').slice(0,5).map(row=>Object.freeze({
+        id:row.id,key:globalThis.OUTBASE_AUDIO_RECORDS?.keyFor(row)||String(row.local_ref.key),filename:row.filename||'音声'
+      }))),
       organization:Object.freeze({
         reviewCount:reviewRows.length,reviews:Object.freeze(reviewRows.slice(0,5)),
         improvementCount:improvementRows.length,openImprovementCount:improvementRows.filter(row=>row.status!=='completed').length,
