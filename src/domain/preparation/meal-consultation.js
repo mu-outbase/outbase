@@ -1,7 +1,12 @@
 (() => {
   'use strict';
   const SOURCE='meal-consultation-v1';
-  const TOOLS=Object.freeze({stove:'バーナー・コンロ',pan:'フライパン',pot:'鍋',knife:'包丁',board:'まな板',plate:'皿・ボウル',hotsand:'ホットサンドメーカー'});
+  const TOOLS=Object.freeze({stove:'ガスコンロ・バーナー',pan:'フライパン',pot:'鍋',knife:'包丁',board:'まな板',plate:'皿・ボウル',hotsand:'ホットサンドメーカー',firepit:'焚火台',charcoalgrill:'炭火グリル',grillpan:'グリルパン',seppouen:'雪峰苑',dutchgrill:'ダッチグリル（機種の対応確認が必要）',yaennabe:'野宴鍋',grillnet:'焼き網',firestand:'焚火用五徳・調理スタンド',tongs:'調理用トング（耐熱・金属製）',firetongs:'焚火用の火ばさみ・長い金属トング',heatglove:'耐熱手袋'});
+  const HEAT_SOURCES=Object.freeze({gas:'ガス',charcoal:'炭火',campfire:'焚火',none:'火を使わない'});
+  const PLACES=Object.freeze({outdoors:'屋根のない屋外',tarp:'タープ下',tent:'テント内'});
+  const FOCUS_TOOLS=Object.freeze({any:'指定しない',firepit:'焚火台',charcoalgrill:'炭火グリル',grillpan:'グリルパン',seppouen:'雪峰苑',dutchgrill:'ダッチグリル',yaennabe:'野宴鍋'});
+  const FUEL=Object.freeze({gas:'ガス缶（器具の指定燃料・残量を確認）',charcoal:'炭（必要量を確認）',campfire:'薪（必要量を確認）'});
+
   const SLOTS=Object.freeze({breakfast:'朝食',lunch:'昼食',dinner:'夕食',side:'追加の一品'});
   const recipes=[
     {id:'caprese',name:'トマトとチーズのカプレーゼ',minutes:10,fire:false,tools:['knife','board','plate'],ingredients:[['トマト',1,'個'],['モッツァレラチーズ',50,'g'],['オリーブオイル',5,'ml'],['塩',.5,'g']],steps:['トマトとチーズを切って皿に並べる。','オリーブオイルと塩をかける。']},
@@ -11,7 +16,15 @@
     {id:'pasta',name:'ワンポット・トマトパスタ',minutes:25,fire:true,tools:['stove','pot'],ingredients:[['パスタ',100,'g'],['カットトマト缶',100,'g'],['水',250,'ml'],['コンソメ',3,'g'],['オリーブオイル',5,'ml']],steps:['鍋で水とトマト・コンソメを沸かす。','パスタを加え、袋のゆで時間を目安に混ぜながら加熱する。','水分や塩味を確認し、オリーブオイルで仕上げる。']},
     {id:'soup',name:'ソーセージとキャベツのスープ',minutes:20,fire:true,tools:['stove','pot','knife','board'],ingredients:[['ソーセージ',2,'本'],['キャベツ',100,'g'],['水',250,'ml'],['コンソメ',3,'g']],steps:['具材を食べやすく切る。','水とコンソメ、具材を鍋に入れ、火が通るまで煮る。']},
     {id:'friedrice',name:'ツナとコーンのチャーハン',minutes:15,fire:true,tools:['stove','pan'],ingredients:[['ご飯',200,'g'],['ツナ缶',.5,'缶'],['コーン缶',50,'g'],['しょうゆ',10,'ml'],['油',5,'ml']],steps:['フライパンに油を熱し、ツナとコーンを炒める。','ご飯を加えてほぐしながら炒め、しょうゆで味を調える。']}
-  ].map(r=>Object.freeze({...r,tools:Object.freeze(r.tools),ingredients:Object.freeze(r.ingredients.map(([name,quantity,unit])=>Object.freeze({name,quantity,unit}))),steps:Object.freeze(r.steps)}));
+,
+    {id:'charcoal-vegetables',name:'炭火で焼く彩り野菜',minutes:25,fire:true,tools:['knife','board','plate','tongs','heatglove','charcoalgrill','grillnet'],heatSources:['charcoal'],ingredients:[['パプリカ',.5,'個'],['ズッキーニ',.5,'本'],['しいたけ',2,'枚'],['オリーブオイル',5,'ml'],['塩',.5,'g']],steps:['野菜を切って油と塩をまぶす。','調理に対応した炭火グリルを屋外に安定して設置し、指定の焼き網で焼く。','トングで返しながら、食べられる状態まで加熱する。炭の準備時間は別に確保する。']},
+    {id:'campfire-potato',name:'焚火のじゃがバター包み',minutes:40,fire:true,tools:['firepit','firetongs','heatglove','knife','board'],heatSources:['campfire'],ingredients:[['じゃがいも',1,'個'],['バター',10,'g'],['塩',.5,'g']],supplies:['調理用アルミホイル','調理用ペーパー'],steps:['洗ったじゃがいもを、濡らした調理用ペーパーとアルミホイルで包む。','調理対応の焚火台を屋外に安定して設置し、炎が落ち着いた熾火で、トングを使い向きを変えながら加熱する。','中心まで火が通ったら耐熱手袋とトングで取り出し、蒸気に注意して開きバターと塩を添える。焚火の準備時間は別に確保する。']},
+    {id:'campfire-bread',name:'焚火で焼くガーリックバゲット',minutes:15,fire:true,tools:['firepit','grillnet','firetongs','heatglove'],heatSources:['campfire'],ingredients:[['カットバゲット',3,'枚'],['オリーブオイル',5,'ml'],['ガーリックパウダー',1,'g']],steps:['バゲットに油とガーリックパウダーを塗る。','調理対応の焚火台と指定の焼き網を屋外に安定して設置し、炎が落ち着いた熾火でトングを使い両面を焼く。','焦げ方を確認しながら火からの距離を調整する。焚火の準備時間は別に確保する。']},
+    {id:'seppouen-grill',name:'雪峰苑できのことソーセージ',minutes:20,fire:true,tools:['seppouen','tongs','knife','board','plate'],heatSources:['gas'],ingredients:[['ソーセージ',3,'本'],['しいたけ',2,'枚'],['玉ねぎ',.5,'個'],['油',5,'ml']],steps:['食材を食べやすく切る。','雪峰苑を屋根のない屋外に設置し、メーカー指定の方法で本体と付属・指定プレートを準備する。','指定プレートで食材を焼き、トングで返しながら火の通りを確認する。他の鍋を上に載せる提案ではありません。']},
+    {id:'grillpan-vegetables',name:'グリルパンで焼き野菜',minutes:20,fire:true,tools:['grillpan','knife','board','tongs','plate'],special:true,heatSources:['gas','charcoal','campfire'],ingredients:[['パプリカ',.5,'個'],['ズッキーニ',.5,'本'],['しいたけ',2,'枚'],['オリーブオイル',5,'ml'],['塩',.5,'g']],steps:['野菜を切って油と塩をまぶす。','選んだ熱源で使用できることを確認したグリルパンを、メーカー指定の方法で安定して設置する。','野菜を並べて返しながら焼く。塗装やコーティングの耐熱範囲を超えないよう取扱説明書に従う。']},
+    {id:'dutchgrill-roots',name:'ダッチグリルで根菜のグリル',minutes:30,fire:true,tools:['dutchgrill','knife','board','tongs','heatglove'],special:true,heatSources:['gas','charcoal','campfire'],ingredients:[['じゃがいも',1,'個'],['にんじん',.5,'本'],['玉ねぎ',.5,'個'],['オリーブオイル',5,'ml'],['塩',.5,'g']],steps:['根菜を火が通りやすい大きさに切り、油と塩をまぶす。','機種が選んだ熱源・調理方法に対応していることを取扱説明書で確認する。','メーカー指定の調理面・容器で根菜を加熱し、途中で返して中心まで火を通す。蓋や上火は機種に適合する場合のみ使用する。']},
+    {id:'yaennabe-hotpot',name:'野宴鍋で豆腐ときのこの鍋',minutes:25,fire:true,tools:['yaennabe','stove','knife','board'],special:true,heatSources:['gas'],ingredients:[['豆腐',150,'g'],['白菜',100,'g'],['しめじ',50,'g'],['水',250,'ml'],['鍋つゆ',30,'ml']],steps:['食材を食べやすく切る。','野宴鍋とガスコンロの組み合わせが取扱説明書の対応範囲内であることを確認し、屋根のない屋外に安定して設置する。','水と鍋つゆを入れて温め、食材を加えて火を通す。焚火・炭火での使用を認める提案ではありません。']}
+  ].map(r=>Object.freeze({...r,heatSources:Object.freeze(r.heatSources||(r.fire?['gas']:['none'])),supplies:Object.freeze(r.supplies||[]),tools:Object.freeze(r.tools),ingredients:Object.freeze(r.ingredients.map(([name,quantity,unit])=>Object.freeze({name,quantity,unit}))),steps:Object.freeze(r.steps)}));
   const repo=()=>globalThis.OUTBASE_REPOSITORIES_V160;
   const clean=v=>String(v??'').normalize('NFKC').trim();
   const tokens=v=>clean(v).split(/[\n、,]+/).map(clean).filter(Boolean);
@@ -20,15 +33,21 @@
   function normalize(input={}){
     const people=Number(input.people),minutes=Number(input.minutes);
     if(!Number.isInteger(people)||people<1||people>20||!Number.isFinite(minutes)||minutes<5||minutes>180||String(input.stock||'').length>2000||String(input.exclude||'').length>1000)throw Error('meal_conditions_invalid');
-    return {people,minutes,noFire:!!input.noFire,tools:[...new Set((input.tools||[]).filter(k=>Object.hasOwn(TOOLS,k)))].sort(),stock:clean(input.stock),exclude:clean(input.exclude)};
+    const heatSource=input.heatSource||(input.noFire?'none':'gas'),place=input.place||'outdoors',focusTool=input.focusTool||'any';
+    if(!Object.hasOwn(HEAT_SOURCES,heatSource)||!Object.hasOwn(PLACES,place)||!Object.hasOwn(FOCUS_TOOLS,focusTool))throw Error('meal_conditions_invalid');
+    return {people,minutes,noFire:!!input.noFire||heatSource==='none',tools:[...new Set((input.tools||[]).filter(k=>Object.hasOwn(TOOLS,k)))].sort(),stock:clean(input.stock),exclude:clean(input.exclude),heatSource,place,focusTool,heatCompatible:input.heatCompatible===true};
   }
   function suggest(input){
     const c=normalize(input),stock=tokens(c.stock),exclude=tokens(c.exclude);
-    return recipes.filter(r=>r.minutes<=c.minutes&&(!c.noFire||!r.fire)&&r.tools.every(k=>c.tools.includes(k))&&!r.ingredients.some(i=>exclude.some(x=>match(i.name,x)))).map(r=>({...r,people:c.people,ingredients:r.ingredients.map(i=>({...i,quantity:Math.round(i.quantity*c.people*10)/10,stockMatch:stock.some(x=>match(x,i.name)||match(i.name,x))})),stockMatches:r.ingredients.filter(i=>stock.some(x=>match(x,i.name)||match(i.name,x))).length})).sort((a,b)=>b.stockMatches-a.stockMatches||a.minutes-b.minutes);
+    return recipes.map(r=>{
+      let tools=[...r.tools];
+      if(r.special&&r.heatSources.length>1)tools.push(...(c.heatSource==='gas'?['stove']:c.heatSource==='charcoal'?['charcoalgrill','heatglove']:['firepit','firestand','heatglove']));
+      return {...r,tools:[...new Set(tools)],heatSource:r.fire?c.heatSource:'none',place:c.place};
+    }).filter(r=>r.minutes<=c.minutes&&(!r.fire||(!c.noFire&&c.place==='outdoors'&&r.heatSources.includes(c.heatSource)&&(!r.special||c.heatCompatible)))&&r.tools.every(k=>c.tools.includes(k))&&(c.noFire||c.place!=='outdoors'||c.focusTool==='any'||r.tools.includes(c.focusTool))&&!r.ingredients.some(i=>exclude.some(x=>match(i.name,x)))).map(r=>({...r,people:c.people,ingredients:r.ingredients.map(i=>({...i,quantity:Math.round(i.quantity*c.people*10)/10,stockMatch:stock.some(x=>match(x,i.name)||match(i.name,x))})),stockMatches:r.ingredients.filter(i=>stock.some(x=>match(x,i.name)||match(i.name,x))).length})).sort((a,b)=>b.stockMatches-a.stockMatches||Number(b.fire)-Number(a.fire)||a.minutes-b.minutes);
   }
   function inferredTools(assets){
-    const patterns={stove:/バーナー|コンロ|ストーブ|フラットバーナー/,pan:/フライパン|スキレット/,pot:/鍋|クッカー/,knife:/包丁|ナイフ/,board:/まな板|カッティングボード/,plate:/皿|ボウル|シェラカップ/,hotsand:/ホットサンド/};
-    return Object.keys(TOOLS).filter(k=>(assets||[]).some(a=>!a.deleted_at&&Number(a.payload?.quantity??a.quantity??1)>0&&patterns[k].test(a.name||'')));
+    const patterns={stove:/ガス.*コンロ|ガス.*バーナー|カセットコンロ|フラットバーナー|シングルバーナー|ツーバーナー|^コンロ$|^バーナー$/,pan:/フライパン|スキレット/,pot:/^(?!.*野宴鍋).*鍋|クッカー/,knife:/包丁|ナイフ/,board:/まな板|カッティングボード/,plate:/皿|ボウル|シェラカップ/,hotsand:/ホットサンド/,firepit:/焚(?:き)?火台/,charcoalgrill:/炭火|炭.*グリル|焼武者/,grillpan:/グリルパン/,seppouen:/雪峰苑/,dutchgrill:/ダッチグリル/,yaennabe:/野宴鍋/,grillnet:/焼[き]?網/,firestand:/五徳|焚火用.*スタンド/,tongs:/トング/,firetongs:/火ばさみ|焚火.*トング|ファイヤープレーストング/,heatglove:/耐熱.*手袋|耐熱.*グローブ/};
+    return Object.keys(TOOLS).filter(k=>(assets||[]).some(a=>!a.deleted_at&&Number(a.payload?.quantity??a.quantity??1)>0&&patterns[k].test(a.name||'')&&!(k==='stove'&&/雪峰苑/.test(a.name||''))&&!(k==='pot'&&/野宴鍋|ダッチグリル/.test(a.name||''))&&!(k==='pan'&&/グリルパン|ダッチグリル/.test(a.name||''))&&!(k==='hotsand'&&/電気|電動|IH専用/.test(a.name||''))));
   }
   async function load({activityId,nativeEventId=null}){
     const parent=nativeEventId?await globalThis.OUTBASE_CAMP_EXPLORATION.loadCalendar(nativeEventId):null;
@@ -62,10 +81,10 @@
         const reads=[tx.objectStore('meals').get(requestId),tx.objectStore('shopping_lists').index('activity_id').getAll(activity.id),tx.objectStore('preparation_items').index('activity_id').getAll(activity.id)];let loaded=0;
         for(const r of reads)r.onsuccess=()=>{if(++loaded!==3)return;try{
           if(!guard())throw Error('meal_cancelled');const [previous,lists,prep]=reads.map(r=>r.result);
-          if(previous){if(previous.deleted_at||previous.activity_id!==activity.id||previous.payload?.signature!==signature)throw Error('meal_request_conflict');result=previous;return;}
+          if(previous){if(previous.deleted_at||previous.activity_id!==activity.id||(previous.payload?.signature!==signature&&JSON.stringify({recipeId:previous.payload?.recipe_id,date:previous.date,slot:previous.slot,conditions:normalize(previous.payload?.conditions),ingredients:previous.payload?.ingredients})!==signature))throw Error('meal_request_conflict');result=previous;return;}
           const put=(store,row)=>{globalThis.OUTBASE_VALIDATION.assertEntity(store,row);tx.objectStore(store).put(row);};
           const title=`${date} ${SLOTS[slot]}：${candidate.name}`;
-          const meal=repo().meals.normalize({id:requestId,activity_id:activity.id,title,name:candidate.name,date,slot,people:normalized.people,status:'planned',source:SOURCE,payload:{recipe_id:recipeId,signature,conditions:normalized,ingredients:items,steps:candidate.steps,tools:candidate.tools}});
+          const meal=repo().meals.normalize({id:requestId,activity_id:activity.id,title,name:candidate.name,date,slot,people:normalized.people,status:'planned',source:SOURCE,payload:{recipe_id:recipeId,signature,conditions:normalized,ingredients:items,steps:candidate.steps,tools:candidate.tools,heatSource:candidate.heatSource,place:normalized.place,supplies:[...candidate.supplies,...(candidate.fire?[FUEL[candidate.heatSource]]:[])]}});
           const makePrep=(category,title,payload={})=>repo().preparationItems.normalize({activity_id:activity.id,category,title,status:'pending',origin:'meal',sort_order:999,source:SOURCE,payload:{meal_id:meal.id,...payload}});
           const list=lists.find(l=>!l.deleted_at&&l.source===SOURCE)||repo().shoppingLists.normalize({activity_id:activity.id,title:'キャンプ料理の買い物',source:SOURCE});
           put('activities',activity);put('meals',meal);if(items.some(i=>i.buy))put('shopping_lists',list);
@@ -76,7 +95,8 @@
             if(item.buy){const shopping=repo().shoppingItems.normalize({activity_id:activity.id,shopping_list_id:list.id,name:item.name,quantity:item.quantity,unit:item.unit,status:'pending',source:SOURCE,payload:{meal_id:meal.id,date,slot}});put('shopping_items',shopping);put('preparation_items',makePrep('shopping',`${amount}（${date} ${SLOTS[slot]}）`,{shopping_item_id:shopping.id}));}
             else put('preparation_items',makePrep('gear',`持参：${amount}（${date} ${SLOTS[slot]}）`));
           }
-          for(const tool of candidate.tools){const name=TOOLS[tool];if(!prep.some(p=>!p.deleted_at&&p.category==='gear'&&p.title===name))put('preparation_items',makePrep('gear',name,{tool}));}
+          for(const tool of candidate.tools){const name=TOOLS[tool];if(!prep.some(p=>!p.deleted_at&&p.category==='gear'&&(p.payload?.tool===tool||p.title===name)))put('preparation_items',makePrep('gear',name,{tool}));}
+          for(const name of [...candidate.supplies,...(candidate.fire?[FUEL[candidate.heatSource]]:[])])if(name&&!prep.some(p=>!p.deleted_at&&p.category==='gear'&&p.title===name))put('preparation_items',makePrep('gear',name,{cooking_supply:true}));
           result=meal;
         }catch(error){fail(error);}};
       }catch(error){fail(error);}};
@@ -90,5 +110,5 @@
       }catch(error){failure=error;tx.abort();}};
     });}catch(error){throw failure||error;}
   }
-  globalThis.OUTBASE_MEAL_CONSULTATION=Object.freeze({TOOLS,SLOTS,normalize,suggest,inferredTools,load,approve,toggleShopping});
+  globalThis.OUTBASE_MEAL_CONSULTATION=Object.freeze({TOOLS,SLOTS,HEAT_SOURCES,PLACES,FOCUS_TOOLS,FUEL,normalize,suggest,inferredTools,load,approve,toggleShopping});
 })();
