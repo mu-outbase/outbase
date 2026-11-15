@@ -30,7 +30,7 @@
   ].map(path=>withVersion(path,version.data));
   data.unshift(...storage);
   const domain=[
-    'src/domain/shared/read-utils.js','src/domain/plans/plan-domain.js','src/domain/plans/plan-location.js','src/domain/preparation/preparation-domain.js',
+    'src/domain/shared/read-utils.js','src/domain/import/reservation-import.js','src/domain/plans/plan-domain.js','src/domain/plans/plan-location.js','src/domain/preparation/preparation-domain.js',
     'src/domain/vault/vault-domain.js','src/screens/plan/plan-screen-model.js',
     'src/screens/preparation/preparation-screen-model.js','src/screens/vault/vault-screen-model.js','src/domain/bootstrap.js',
     'src/domain/home/home-domain.js','src/screens/home/home-screen-model.js','src/screens/home/home-real-data-only-v18.js',
