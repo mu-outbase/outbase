@@ -586,12 +586,18 @@
 
         <div class="balanced-actions">
           ${e?'<button type="button" id="deleteEvent" class="danger">削除</button><button type="button" id="duplicateEvent">複製</button>':''}
+          ${e&&selectedCalendar==='camp'?'<button type="button" id="openCampExploration">場内探索・記録</button>':''}
           <button type="submit" class="primary">保存</button>
         </div>
       </form>
     `);
 
     const f=$('#eventForm');
+    $('#openCampExploration')?.addEventListener('click',()=>{
+      const values={mode:'explore',calendarEventId:e.id,activityId:'calendar-camp:'+e.id};
+      if(parent!==window&&parent.OUTBASE_ROUTER){parent.OUTBASE_ROUTER.navigate('places',values,{transition:false,skipTransition:true});return;}
+      const url=new URL('./',location.href);url.search=new URLSearchParams({shell:'1',view:'places',...values}).toString();location.assign(url.href);
+    });
     if(e){
       f.freq.value=e.repeat?.freq||'none';
       f.reminder.value=e.reminders?.[0]||'';

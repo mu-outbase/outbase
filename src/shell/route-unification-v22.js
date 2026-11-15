@@ -141,7 +141,8 @@
     }
     return {rows:safeArray(rows).filter(item=>item.state!=='archived')};
   }
-  async function placesPayload(){
+  async function placesPayload(route){
+    if(routeValues(route).mode==='explore')return routeValues(route).calendarEventId?globalThis.OUTBASE_CAMP_EXPLORATION.loadCalendar(routeValues(route).calendarEventId):globalThis.OUTBASE_CAMP_EXPLORATION.load(currentActivityId(route));
     const [placeRows,homeActivityRows,vaultActivityRows]=await Promise.all([repos().places.all(),homeRows(),vaultRows()]);
     return {places:safeArray(placeRows).filter(row=>!row.deleted_at),activities:uniqueActivities(homeActivityRows,vaultActivityRows)};
   }
@@ -160,6 +161,7 @@
     return {};
   }
   async function buildPayload(route,{force=false}={}){
+    if(route.name==='places'&&routeValues(route).mode==='explore')return loadPayload(route);
     if(!force){const cached=cachedPayload(route);if(cached)return cached;const job=payloadJobs.get(routeKey(route));if(job)return job;}
     const job=Promise.resolve().then(()=>loadPayload(route)).then(payload=>cachePayload(route,payload)).catch(error=>({status:'error',error})).finally(()=>payloadJobs.delete(routeKey(route)));
     payloadJobs.set(routeKey(route),job);return job;
@@ -169,6 +171,7 @@
     return Promise.allSettled(safeArray(names).map(name=>buildPayload({...current,name,query:{...routeValues(current)}})));
   }
   function provisionalPayload(route){
+    if(route.name==='places'&&routeValues(route).mode==='explore')return {status:'loading'};
     const cached=cachedPayload(route);if(cached)return cached;
     const item=currentContextItem(route);
     if(route.name==='plan-editor')return {raw:null,activity:routeValues(route).activityId?item:null,calendar:[]};
@@ -346,7 +349,7 @@
     if(value.route.name==='preparation-detail')return preparationMarkup(value);
     if(value.route.name==='start')return startMarkup(value);
     if(value.route.name==='memo')return memoMarkup(value);
-    if(value.route.name==='places')return placesMarkup(value);
+    if(value.route.name==='places')return routeValues(value.route).mode==='explore'?globalThis.OUTBASE_CAMP_EXPLORATION_UI.markup(value):placesMarkup(value);
     if(value.route.name==='assets')return assetsMarkup(value);
     return '';
   }
@@ -458,6 +461,7 @@
   async function deleteAsset(value){const id=value.routePayload?.selected?.id;if(!id)return;if(globalThis.confirm&&!globalThis.confirm('この持ち物を削除しますか？'))return;await repos().assets.softDelete(id);invalidate();toast('持ち物を削除しました');router.navigate('assets',{}, {replace:true});}
 
   function bind(main,value){
+    globalThis.OUTBASE_CAMP_EXPLORATION_UI.bind(main,value);
     main.querySelectorAll('[data-ob22-back]').forEach(button=>button.addEventListener('click',()=>{
       const defaultName=value.route.name==='preparation-detail'?'preparation':value.route.name==='places'?'search':value.route.name==='assets'?'vault':value.route.name==='plan-editor'&&value.routePayload?.activity?'activity':'home';
       const values=currentActivityId(value.route)?{activityId:currentActivityId(value.route),planId:value.route.planId||''}:{};
@@ -542,6 +546,9 @@
       const main=shell?.querySelector?.('.ob3-main');
       if(!shell||!main)throw new Error('OUTBASE v22.2 route shell is not ready');
 
+      if(requested.name==='places'&&routeValues(requested).mode==='explore'&&(routeValues(requested).calendarEventId?main.querySelector('[data-camp-exploration]')?.dataset.explorationCalendarId===routeValues(requested).calendarEventId:main.querySelector('[data-camp-exploration]')?.dataset.campExploration===String(currentActivityId(requested)))){
+        try{await globalThis.OUTBASE_CAMP_EXPLORATION_UI.refresh(main);}catch(_error){}return {route:requested,online:navigator.onLine};
+      }
       shell.dataset.ob6Route=requested.name;
       main.className='ob3-main ob3-main-ob22';
       const immediate=provisionalValue(requested);
