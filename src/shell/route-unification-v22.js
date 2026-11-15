@@ -228,6 +228,17 @@
   }
 
   function prepItemMarkup(item){const done=item.status==='completed'||Boolean(item.completedAt);return `<button type="button" class="ob22-prep-row ${done?'done':''}" data-ob22-prep-toggle="${esc(item.id||'')}"><span class="check">${done?icons.check:''}</span><span><b>${esc(item.title||'準備')}</b><small>${done?'完了':esc((item.origin==='improvement'?globalThis.OUTBASE_IMPROVEMENT_PREPARATION?.CATEGORIES?.[item.category]:null)||prepDomain()?.CATEGORY_LABELS?.[item.category]||'未完了')}</small></span>${icons.arrow}</button>`;}
+  function preparationShareText(item,sections){
+    const lines=[`${item.title||'予定'}の準備リスト`,activityRange(item),metadataPlace(item)||'場所未設定'];
+    for(const section of sections){lines.push('',`【${section.label||'準備'}】`);for(const row of safeArray(section.items))lines.push(`${row.status==='completed'||row.completedAt?'☑':'☐'} ${row.title||'準備'}`);}
+    return lines.join('\n');
+  }
+  async function sharePreparation(form,mode){
+    const field=form.querySelector('textarea');const status=form.querySelector('[role="status"]');
+    if(mode==='share'&&navigator.share){try{await navigator.share({title:'準備リスト',text:field.value});status.textContent='共有先へ渡しました。';return;}catch(error){if(error.name==='AbortError'){status.textContent='共有を取り消しました。';return;}}}
+    try{await navigator.clipboard.writeText(field.value);status.textContent='コピーしました。LINEなどに貼り付けて送れます。';}
+    catch{field.focus();field.select();field.setSelectionRange(0,field.value.length);status.textContent='本文を選択しました。長押ししてコピーできます。';}
+  }
   function preparationMarkup(value){
     const result=value.routePayload||{};
     if(result.status==='loading'){
@@ -241,6 +252,7 @@
       <section class="ob22-card ob22-page-title"><span>${icons.prep}</span><div><small>${esc(typeLabel(item.type))}</small><h1>${esc(item.title||'予定')}</h1><p>${esc(activityRange(item))}・${esc(metadataPlace(item)||'場所未設定')}</p></div><em>${Number(summary.progress||0)}%</em></section>
       <section class="ob22-card ob22-progress"><strong>${Number(summary.completed||0)}<i>/ ${Number(summary.total||0)}</i></strong><div><span style="width:${Math.max(0,Math.min(100,Number(summary.progress||0)))}%"></span></div><b>${Number(summary.pending||0)}件 未完了</b></section>
       <div class="ob22-prep-groups">${sections.map(section=>`<section class="ob22-card ob22-prep-group"><header><span>${ui.categoryIcons?.[section.key]||icons.prep}</span><div><small>${esc(section.label||'準備')}</small><h2>${esc(section.label||'準備')}</h2></div></header><div>${safeArray(section.items).map(prepItemMarkup).join('')}</div></section>`).join('')}</div>
+      <section class="ob22-card ob22-inline-form" data-ob22-prep-share><h2>準備リストを送る</h2><p>リンや同行者に、分類と完了状態をまとめて送れます。</p><textarea aria-label="共有する準備リスト" readonly rows="6">${esc(preparationShareText(item,sections))}</textarea><button type="button" data-ob22-prep-share-action="share">共有する</button><button type="button" data-ob22-prep-share-action="copy">コピーする</button><p role="status" aria-live="polite"></p></section>
       <form class="ob22-card ob22-inline-form" data-ob22-prep-add><h2>準備項目を追加</h2><select name="category"><option value="gear">持ち物</option><option value="weather">天気</option><option value="route">行き方</option><option value="meal">料理</option><option value="shopping">買い物</option><option value="pet">ペット</option><option value="parking">駐車</option><option value="ticket">予約・チケット</option><option value="note">メモ</option></select><input name="title" required placeholder="確認すること"><button type="submit">追加</button></form>
     </section>`;
   }
@@ -425,6 +437,7 @@
     main.querySelector('[data-ob22-plan-form]')?.addEventListener('submit',event=>{event.preventDefault();event.currentTarget.querySelector('[type="submit"]').disabled=true;savePlan(event.currentTarget,value).catch(error=>{console.error(error);toast('予定を保存できませんでした');event.currentTarget.querySelector('[type="submit"]').disabled=false;});});
     main.querySelector('[data-ob22-plan-delete]')?.addEventListener('click',()=>deletePlan(value).catch(()=>toast('予定を削除できませんでした')));
     main.querySelectorAll('[data-ob22-prep-toggle]').forEach(button=>button.addEventListener('click',()=>togglePrep(value,button.dataset.ob22PrepToggle).catch(()=>toast('更新できませんでした'))));
+    main.querySelectorAll('[data-ob22-prep-share-action]').forEach(button=>button.addEventListener('click',()=>sharePreparation(button.closest('[data-ob22-prep-share]'),button.dataset.ob22PrepShareAction)));
     main.querySelector('[data-ob22-prep-add]')?.addEventListener('submit',event=>{event.preventDefault();addPrep(event.currentTarget,value).catch(()=>toast('追加できませんでした'));});
     main.querySelectorAll('[data-ob22-start-plan]').forEach(button=>button.addEventListener('click',()=>{const item=safeArray(value.routePayload?.rows).find(row=>String(row.id)===String(button.dataset.ob22StartPlan));openExecution(item,'start');}));
     const kota=main.querySelector('[data-ob22-kota-start]');
