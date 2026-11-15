@@ -30,7 +30,7 @@
   ].map(path=>withVersion(path,version.data));
   data.unshift(...storage);
   const domain=[
-    'src/domain/shared/read-utils.js','src/domain/import/reservation-import.js','src/domain/plans/plan-domain.js','src/domain/plans/plan-location.js','src/domain/preparation/preparation-domain.js',
+    'src/domain/shared/read-utils.js','src/domain/import/reservation-import.js','src/domain/activity/camp-exploration.js','src/domain/plans/plan-domain.js','src/domain/plans/plan-location.js','src/domain/preparation/preparation-domain.js',
     'src/domain/vault/vault-domain.js','src/screens/plan/plan-screen-model.js',
     'src/screens/preparation/preparation-screen-model.js','src/screens/vault/vault-screen-model.js','src/domain/bootstrap.js',
     'src/domain/home/home-domain.js','src/screens/home/home-screen-model.js','src/screens/home/home-real-data-only-v18.js',
@@ -43,7 +43,7 @@
     uiModule,
     ...[
       'src/shell/legacy-adapter.js','src/shell/modal-stack.js','src/shell/shell-model.js',
-      'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/domain/activity/improvement-preparation.js','src/domain/activity/kota-walk.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/domain/activity/execution-session.js','src/domain/activity/audio-recorder.js','src/domain/activity/location-recorder.js','src/domain/activity/screen-awake.js','src/shell/execution-route-v19.js','src/shell/route-unification-v22.js','src/shell/plan-switch-v18.js','src/shell/navigation-audit-v17.js','src/shell/bootstrap.js'
+      'src/shell/shell-renderer.js','src/shell/shell-renderer-direct-fix.js','src/shell/search-route-v11.js','src/shell/add-menu-v12.js','src/shell/vault-route-v13.js','src/domain/activity/improvement-preparation.js','src/domain/activity/kota-walk.js','src/shell/activity-route-v16.js','src/shell/preparation-route-v17.js','src/domain/activity/execution-session.js','src/domain/activity/audio-recorder.js','src/domain/activity/location-recorder.js','src/domain/activity/screen-awake.js','src/shell/execution-route-v19.js','src/shell/camp-exploration-ui.js','src/shell/route-unification-v22.js','src/shell/plan-switch-v18.js','src/shell/navigation-audit-v17.js','src/shell/bootstrap.js'
     ].map(path=>withVersion(path,version.shell))
   ];
   globalThis.OUTBASE_MODULE_MANIFEST=Object.freeze({

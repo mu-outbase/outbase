@@ -32,3 +32,19 @@
 @keyframes ob22spin{to{transform:rotate(360deg)}}
 @keyframes ob22shimmer{to{background-position:-220% 0}}
 @media(prefers-reduced-motion:reduce){.ob22-loading-inline>span,.ob22-loading>span,.ob16-loading-page .ob20-skeleton{animation:none}}
+
+/* Camp exploration retains native hidden state inside grid forms. */
+.ob-explore [hidden]{display:none!important}
+.ob-explore button{min-height:44px;padding:10px 14px}
+.ob-explore input,.ob-explore select,.ob-explore textarea{max-width:100%;min-width:0}
+.ob-explore h1,.ob-explore h2,.ob-explore p{overflow-wrap:anywhere}
+.ob-explore select{min-height:44px}
+.ob-explore .ob22-card{padding:18px}
+.ob-explore h1{font-size:22px;line-height:1.4;margin:0 0 10px}
+.ob-explore h2{font-size:18px;line-height:1.5;margin:0 0 10px}
+.ob-explore p{font-size:14px;line-height:1.6;margin:10px 0}
+.ob-explore button{border:1px solid #d8ded8;border-radius:12px;background:#f7f8f4;color:#184f37;font:inherit;font-size:14px}
+.ob-explore [data-explore-start],.ob-explore [type=submit]{background:#184f37;color:white}
+.ob-explore [data-explore-session] button{width:100%;font-weight:700}
+.ob-explore label{font-size:14px}
+.ob-explore [data-explore-list] summary{font-weight:700;font-size:15px;line-height:1.5}

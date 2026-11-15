@@ -43,6 +43,7 @@
     const stateSet=options.states?.length?new Set(options.states):null;
     const rows=activities
       .filter(row=>options.includeDeleted||!row.deleted_at)
+      .filter(row=>row.source!=='camp-exploration-context-v1')
       .filter(row=>!stateSet||stateSet.has(row.state))
       .map(row=>{
         const activity=utils().publicActivity(row);
