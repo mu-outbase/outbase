@@ -63,3 +63,13 @@
 .ob-meals details{padding:12px 0;border-top:1px solid #e0e5df}
 .ob-meals summary{min-height:44px;font-weight:700;overflow-wrap:anywhere}
 .ob-meals [data-meal-candidate-list] article{padding:12px 0;border-top:1px solid #e0e5df}
+
+.ob-meals .ob-day-meal{margin-top:14px;padding:12px;border:1px solid #e0e5df;border-radius:14px}
+.ob-meals .ob-day-meal h3{margin:0 0 10px}
+.ob-meals .ob-day-meal h3 small{font-weight:400;font-size:12px}
+.ob-meals [data-day-meal-cell]{padding:12px 0;border-top:1px solid #e0e5df}
+.ob-meals .ob-day-meal-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ob-meals .ob-day-meal-head>b{font-size:18px}
+.ob-meals .ob-day-meal-head>button{margin-left:auto}
+.ob-meals .ob-day-shopping-row{padding:10px 0;border-top:1px solid #e0e5df;overflow-wrap:anywhere}
+.ob-meals .ob-day-shopping-row small{font-size:12px}
