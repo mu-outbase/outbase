@@ -330,7 +330,7 @@
       const requested=globalThis.OUTBASE_ROUTER?.current?.()||{};
       const primed=requested.name==='activity'?cached(requested.activityId):null;
       const beforeMain=root?.querySelector?.('.ob3-shell')?.querySelector?.('.ob3-main');
-      if(beforeMain){
+      if(beforeMain&&requested.name==='activity'){
         beforeMain.classList.add('ob3-main-activity');
         beforeMain.classList.remove('ob3-main-calendar','ob3-main-preparation');
         if(primed){

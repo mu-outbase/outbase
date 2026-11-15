@@ -295,6 +295,7 @@
   }
   function weatherDetailMarkup(detail){
     if(!detail||detail.status==='loading')return `<section class="ob36-detail-empty"><b>予報を取得しています</b><p>場所と日付を確認して最新データへ接続します。</p></section>`;
+    if(detail.status!=='ready'&&detail.status!=='sample')return `<section class="ob36-detail-empty"><b>${esc(detail.condition||'天気を取得できません')}</b><p>${esc(detail.message||'通信状態と場所を確認して、もう一度更新してください。')}</p></section>`;
     const hourlyRows=Array.isArray(detail.hourly)?detail.hourly:[];
     const judgements=(detail.judgements||[]).map(row=>`<div><b>${esc(row.label==='外活動'?'外で過ごしやすい時間':row.label)}</b><span><strong>${esc(row.value)}</strong><small>${esc(row.detail)}</small></span></div>`).join('');
     const comparisons=(detail.comparisons||[]).map(row=>`<div><b>${esc(row.source)}</b><span>${esc(row.summary||'取得済み')}</span><em>${row.status==='reference'?'確認先':`${esc(row.rainProbability)}%・瞬間${esc(row.windGust)}m/s`}</em></div>`).join('');
@@ -362,15 +363,15 @@
   async function scheduleWeatherRefresh(){clearWeatherTimer();if(!mounted)return;const {selected}=await weatherContext();const meta=homeModel()?.weatherUpdateMeta?.(selected,new Date());if(!meta)return;const delay=Math.max(15000,Math.min(2147480000,Number(meta.nextUpdateAt)-Date.now()));weatherTimer=setTimeout(()=>performWeatherRefresh('timer',{silent:true}),delay);}
   async function performWeatherRefresh(reason='manual',{silent=false,custom=null,planOverride=null,plansOverride=null,scopeOverride=null}={}){
     if(weatherRefreshing)return false;weatherRefreshing=true;document.body.classList.add('ob36-weather-refreshing');
-    let connected=false,failed=false;
+    let connected=false,failed=false,partial=false;
     try{
       const {selected,plans}=await weatherContext();const service=globalThis.OUTBASE_WEATHER_SERVICE_V1;const activePlan=planOverride||selected;const scope=scopeOverride||homeModel()?.weatherPreview?.(new Date(),activePlan)?.scope||'home';
       if(!service?.refresh)throw new Error('weather_service_unavailable');
-      await service.refresh({reason,plan:activePlan,plans:plansOverride||plans,scope,custom});connected=true;
-      homeModel()?.markWeatherUpdated?.(new Date(),activePlan);modelApi?.invalidate?.('home');await render('data-change');
-    }catch(error){failed=true;console.warn('[OUTBASE weather refresh]',error);modelApi?.invalidate?.('home');await render('data-change');}
+      const result=await service.refresh({reason,plan:activePlan,plans:plansOverride||plans,scope,custom});connected=true;partial=!!result?.partial;
+      homeModel()?.markWeatherUpdated?.(new Date(),activePlan);modelApi?.invalidate?.('home');if(router?.current?.()?.name==='home')await render('data-change');
+    }catch(error){failed=true;console.warn('[OUTBASE weather refresh]',error);modelApi?.invalidate?.('home');if(router?.current?.()?.name==='home')await render('data-change');}
     finally{weatherRefreshing=false;document.body.classList.remove('ob36-weather-refreshing');scheduleWeatherRefresh();}
-    if(!silent){if(failed)toast('更新できませんでした。前回の予報を表示します');else if(connected)toast('天気を更新しました');}
+    if(!silent){if(failed)toast('更新できませんでした。前回の予報を表示します');else if(connected)toast(partial?'取得できた地点の天気を更新しました。未取得の予定は場所を確認してください。':'天気を更新しました');}
     return !failed;
   }
   async function maybeAutoRefresh(reason='timer'){

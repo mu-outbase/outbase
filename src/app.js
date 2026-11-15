@@ -3236,7 +3236,7 @@
       previousController=navigator.serviceWorker.controller;
       if(refreshing)return;
       refreshing=true;
-      location.reload();
+      if(globalThis.OUTBASE_REQUEST_PWA_RELOAD)globalThis.OUTBASE_REQUEST_PWA_RELOAD();else location.reload();
     });
   }
 

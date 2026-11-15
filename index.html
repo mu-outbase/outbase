@@ -60,13 +60,43 @@
 <div id="outbaseBootScreen" aria-hidden="true"><div class="outbaseBootBrand"><span class="outbaseBootMark"><i></i><i></i><i></i></span><b>OUTBASE</b></div></div>
 <div id="app"></div>
 <input id="fileInput" type="file" accept=".json,.txt,.csv,.md,.xlsx,.xls,image/*,video/*" multiple hidden>
-<script src="src/runtime/startup-loader.js?v=outbase-calendar-editor-touch-20261115-v1" defer></script>
+<script src="src/runtime/startup-loader.js?v=outbase-weather-calendar-stable-20261115-v1" defer></script>
 
 <script>
 if(!globalThis.__OUTBASE_FAST_SHELL__){['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js','https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js'].forEach(src=>{const script=document.createElement('script');script.src=src;script.async=true;document.head.appendChild(script);});}
 </script>
 <script>
-if('serviceWorker'in navigator){window.addEventListener('load',async()=>{let reloading=false,previousController=navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!previousController){previousController=navigator.serviceWorker.controller;return;}previousController=navigator.serviceWorker.controller;if(reloading)return;reloading=true;location.reload();});try{const registration=await navigator.serviceWorker.register('./service-worker.js?v=outbase-r3-route-cutover-fix-v222',{updateViaCache:'none'});await registration.update();if(registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});}catch(error){console.warn('Service Worker registration failed:',error);}});}
+if('serviceWorker' in navigator){
+  let reloading=false;
+  const editing=()=>{
+    if(document.querySelector('[data-ob22-plan-form]'))return true;
+    try{const frame=document.getElementById('outbaseIntegratedCalendar');return !!frame?.contentDocument?.querySelector('#modal:not(.hidden) #eventForm,#modal:not(.hidden) #todoForm');}catch(_error){return false;}
+  };
+  globalThis.OUTBASE_REQUEST_PWA_RELOAD=()=>{
+    if(reloading)return;
+    if(editing()){
+      if(!globalThis.OUTBASE_PWA_UPDATE_PENDING)globalThis.OUTBASE_HOME_V36_BRIDGE?.toast?.('更新があります。入力を保存・終了してから切り替えます。');
+      globalThis.OUTBASE_PWA_UPDATE_PENDING=true;return;
+    }
+    reloading=true;location.reload();
+  };
+  addEventListener('message',event=>{
+    const frame=document.getElementById('outbaseIntegratedCalendar');
+    if(globalThis.OUTBASE_PWA_UPDATE_PENDING&&event.origin===location.origin&&event.source===frame?.contentWindow&&event.data?.type==='OUTBASE_CALENDAR_EDITOR_CLOSED')globalThis.OUTBASE_REQUEST_PWA_RELOAD();
+  });
+  addEventListener('focus',()=>{if(globalThis.OUTBASE_PWA_UPDATE_PENDING)globalThis.OUTBASE_REQUEST_PWA_RELOAD();});
+  window.addEventListener('load',async()=>{
+    let previousController=navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!previousController){previousController=navigator.serviceWorker.controller;return;}
+      previousController=navigator.serviceWorker.controller;globalThis.OUTBASE_REQUEST_PWA_RELOAD();
+    });
+    try{
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=outbase-r3-route-cutover-fix-v222',{updateViaCache:'none'});
+      await registration.update();if(registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});
+    }catch(error){console.warn('Service Worker registration failed:',error);}
+  });
+}
 </script>
 <script>(()=>{const lockPortrait=()=>{try{if(screen.orientation?.lock)screen.orientation.lock('portrait').catch(()=>{});}catch(_error){}};addEventListener('load',lockPortrait,{once:true});addEventListener('fullscreenchange',lockPortrait);addEventListener('pointerdown',lockPortrait,{once:true,passive:true});addEventListener('orientationchange',()=>setTimeout(lockPortrait,150));})();</script>
 </body></html>
