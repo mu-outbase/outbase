@@ -10,6 +10,7 @@
   if(!router||!modelBase||!rendererBase||!ui)throw new Error('OUTBASE route unification dependencies are not ready');
 
   const icons=ui.icons;
+  const reservationDrafts=new WeakMap();
   const ROUTES=new Set(['plan-editor','preparation-detail','start','memo','places','assets']);
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const text=value=>String(value??'').trim();
@@ -211,6 +212,7 @@
     return `<section class="ob22-page ob22-plan-editor" data-ob22-route-page="plan-editor">
       ${routeHead(editing?'予定を編集':'予定を追加',editing?'予定詳細へ':'閉じる')}
       <section class="ob22-card ob22-page-title"><span>${icons.calendar}</span><div><small>${editing?'予定の設定':'新しい予定'}</small><h1>${editing?esc(item.title):'予定を追加'}</h1><p>日程・場所・種類を、新しいOUTBASE画面のまま登録します。</p></div></section>
+      ${!editing?`<section class="ob22-card ob22-inline-form" data-ob22-reservation><h2>予約メール・本文から取り込む</h2><p>本文から候補を作り、下の入力欄で確認して保存します。画像・PDFの読み取りはまだ対応していません。</p><textarea data-ob22-reservation-source aria-label="予約本文" maxlength="20000" rows="6" placeholder="施設名、年を含む日程、チェックイン・アウト時刻がある予約本文"></textarea><button type="button" data-ob22-reservation-extract>候補を確認する</button><p role="status" aria-live="polite"></p><div data-ob22-reservation-preview hidden><pre style="white-space:pre-wrap;overflow-wrap:anywhere" data-ob22-reservation-summary></pre><button type="button" data-ob22-reservation-apply>候補を入力欄へ反映</button></div></section>`:''}
       <form class="ob22-card ob22-form" data-ob22-plan-form>
         <label class="wide"><span>予定名</span><input name="title" required maxlength="120" value="${esc(title)}" placeholder="例：湖畔キャンプ"></label>
         <label><span>種類</span><select name="type">${typeOptions(item?.type||query.activityType||'camp')}</select></label>
@@ -221,12 +223,32 @@
         <label><span>終了時刻</span><input type="time" name="endTime" value="${localTime(end)||'11:00'}"></label>
         <label class="wide"><span>場所</span><input name="place" value="${esc(place)}" placeholder="キャンプ場・公園・目的地"></label>
         <label class="wide"><span>メモ</span><textarea name="note" rows="4" placeholder="予約、集合、確認したいこと">${esc(note)}</textarea></label>
+        ${!editing?'<fieldset class="wide" data-ob22-reservation-prep hidden><legend>一緒に作成する準備候補</legend><label class="ob22-check"><input type="checkbox" data-ob22-reservation-pet><span>コタも同行する</span></label><div data-ob22-reservation-prep-items></div><p>不要な候補はチェックを外せます。日程・場所も確認してから保存してください。</p></fieldset>':''}
         <div class="ob22-form-actions wide"><button type="button" class="secondary" data-ob22-back>キャンセル</button><button type="submit" class="primary">${editing?'変更を保存':'予定を追加'}</button></div>
         ${editing?'<button type="button" class="ob22-danger wide" data-ob22-plan-delete>この予定を削除</button>':''}
       </form>
     </section>`;
   }
 
+  function bindReservation(main,form){
+    const panel=main.querySelector('[data-ob22-reservation]');if(!panel||!form)return;
+    form.dataset.reservationRequest=globalThis.OUTBASE_IDS.ulid();let candidate=null;
+    const status=panel.querySelector('[role="status"]'),preview=panel.querySelector('[data-ob22-reservation-preview]');
+    panel.querySelector('[data-ob22-reservation-source]').addEventListener('input',()=>{candidate=null;preview.hidden=true;status.textContent='本文を変更しました。候補を確認し直してください。';});
+    panel.querySelector('[data-ob22-reservation-extract]').addEventListener('click',()=>{try{
+      candidate=globalThis.OUTBASE_RESERVATION_IMPORT.extract(panel.querySelector('textarea').value);preview.hidden=false;
+      panel.querySelector('[data-ob22-reservation-summary]').textContent=[candidate.place||'施設名：未取得',`${candidate.startDate||'開始日：未取得'} ${candidate.startTime||'開始時刻：未取得'}`,`${candidate.endDate||'終了日：未取得'} ${candidate.endTime||'終了時刻：未取得'}`,...candidate.warnings].join('\n');
+      status.textContent='候補です。まだ保存していません。';
+    }catch{candidate=null;preview.hidden=true;status.textContent='予約本文を入力してください（2万文字まで）。';}});
+    const renderPrep=()=>{const pet=form.querySelector('[data-ob22-reservation-pet]').checked;form.querySelector('[data-ob22-reservation-prep-items]').innerHTML=globalThis.OUTBASE_RESERVATION_IMPORT.suggestions({pet}).map(row=>`<label class="ob22-check"><input type="checkbox" checked data-ob22-reservation-prep-item data-category="${esc(row.category)}" value="${esc(row.title)}"><span>${esc(row.title)}</span></label>`).join('');};
+    form.querySelector('[data-ob22-reservation-pet]').addEventListener('change',()=>{
+      const selected=new Map([...form.querySelectorAll('[data-ob22-reservation-prep-item]')].map(n=>[n.dataset.category,n.checked]));renderPrep();form.querySelectorAll('[data-ob22-reservation-prep-item]').forEach(n=>{if(selected.has(n.dataset.category))n.checked=selected.get(n.dataset.category);});
+    });
+    panel.querySelector('[data-ob22-reservation-apply]').addEventListener('click',()=>{if(!candidate)return;
+      for(const name of ['title','place','startDate','endDate','startTime','endTime'])form.elements[name].value=candidate[name]||'';
+      form.elements.type.value='camp';form.elements.allDay.checked=false;form.elements.startTime.required=true;form.elements.endTime.required=true;reservationDrafts.set(form,{source:candidate.source});form.querySelector('[data-ob22-reservation-prep]').hidden=false;renderPrep();status.textContent='入力欄へ反映しました。未取得の日程・時刻を補い、確認してから保存してください。';form.elements.title.focus();
+    });
+  }
   function prepItemMarkup(item){const done=item.status==='completed'||Boolean(item.completedAt);return `<button type="button" class="ob22-prep-row ${done?'done':''}" data-ob22-prep-toggle="${esc(item.id||'')}"><span class="check">${done?icons.check:''}</span><span><b>${esc(item.title||'準備')}</b><small>${done?'完了':esc((item.origin==='improvement'?globalThis.OUTBASE_IMPROVEMENT_PREPARATION?.CATEGORIES?.[item.category]:null)||prepDomain()?.CATEGORY_LABELS?.[item.category]||'未完了')}</small></span>${icons.arrow}</button>`;}
   function preparationShareText(item,sections){
     const lines=[`${item.title||'予定'}の準備リスト`,activityRange(item),metadataPlace(item)||'場所未設定'];
@@ -308,7 +330,7 @@
     </section>`;
   }
 
-  function assetPayload(row){const p=row?.payload||{};return {name:text(row?.name),category:text(p.category||row?.asset_type||row?.type||'ギア'),quantity:Number(p.quantity||row?.quantity||1)||1,storage:text(p.storage||row?.storage),memo:text(p.memo||row?.memo)};}
+  function assetPayload(row){const p=row?.payload||{};return {name:text(row?.name),category:text(p.category||row?.asset_type||row?.type||'ギア'),quantity:Number(p.quantity??row?.quantity??1),storage:text(p.storage||row?.storage),memo:text(p.memo||row?.memo)};}
   function assetsMarkup(value){
     const payload=value.routePayload||{};const rows=safeArray(payload.rows);const selected=payload.selected;const query=routeValues(value.route);const editing=Boolean(selected||query.mode==='add');const data=assetPayload(selected||{});
     return `<section class="ob22-page ob22-assets" data-ob22-route-page="assets">
@@ -338,6 +360,13 @@
     const fd=new FormData(form);const title=text(fd.get('title'));if(!title)return;
     const allDay=fd.get('allDay')==='on';const startAt=dateTimeIso(fd.get('startDate'),fd.get('startTime'),allDay,false);const endAt=dateTimeIso(fd.get('endDate'),fd.get('endTime'),allDay,true);
     if(!startAt||!endAt||new Date(endAt)<new Date(startAt)){toast('終了日時を確認してください');return;}
+    const imported=reservationDrafts.get(form);
+    if(imported){
+      if(allDay||text(fd.get('type'))!=='camp'||!fd.get('startTime')||!fd.get('endTime')){toast('予約取込は時刻を指定したキャンプとして保存してください');return;}
+      const preparation=[...form.querySelectorAll('[data-ob22-reservation-prep-item]:checked')].map(n=>({category:n.dataset.category,title:n.value}));
+      const saved=await globalThis.OUTBASE_RESERVATION_IMPORT.approve({requestId:form.dataset.reservationRequest,title,place:text(fd.get('place')),note:text(fd.get('note')),startAt,endAt,source:imported.source,preparation});
+      invalidate(saved.id);const item=await plans().get(saved.id);activate(item||saved,'reservation-import');toast('予約と準備候補を保存しました');router.navigate('activity',{activityId:saved.id},{replace:true,transition:false,skipTransition:true});return;
+    }
     const payload=value.routePayload||{};const current=payload.raw||null;const place=text(fd.get('place'));const note=text(fd.get('note'));const type=text(fd.get('type'))||'other';
     const meta={...(current?.metadata||{}),location:place,placeName:place,note,source:'shell-route-unification-v22'};
     meta.legacy_plan={...(meta.legacy_plan||{}),title,location:place,placeName:place,activityType:type,startAt,endAt,memo:note};
@@ -425,7 +454,7 @@
     }
   }
   async function addPlace(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;await repos().places.save({name,memo:text(fd.get('memo')),status:'active',source:'shell-route-unification-v22'});toast('場所を登録しました');router.navigate('places',{}, {replace:true,preserveScroll:true});}
-  async function saveAsset(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;const id=form.dataset.ob22AssetId||'';const current=id?await repos().assets.get(id):null;await repos().assets.save({...current,name,asset_type:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')||1),storage:text(fd.get('storage')),memo:text(fd.get('memo')),status:current?.status||'active',payload:{...(current?.payload||{}),category:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')||1),storage:text(fd.get('storage')),memo:text(fd.get('memo'))},source:current?.source||'shell-route-unification-v22'});invalidate();toast(id?'持ち物を更新しました':'持ち物を登録しました');router.navigate('assets',{}, {replace:true});}
+  async function saveAsset(form){const fd=new FormData(form);const name=text(fd.get('name'));if(!name)return;const id=form.dataset.ob22AssetId||'';const current=id?await repos().assets.get(id):null;await repos().assets.save({...current,name,asset_type:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')??1),storage:text(fd.get('storage')),memo:text(fd.get('memo')),status:current?.status||'active',payload:{...(current?.payload||{}),category:text(fd.get('category'))||'ギア',quantity:Number(fd.get('quantity')??1),storage:text(fd.get('storage')),memo:text(fd.get('memo'))},source:current?.source||'shell-route-unification-v22'});invalidate();toast(id?'持ち物を更新しました':'持ち物を登録しました');router.navigate('assets',{}, {replace:true});}
   async function deleteAsset(value){const id=value.routePayload?.selected?.id;if(!id)return;if(globalThis.confirm&&!globalThis.confirm('この持ち物を削除しますか？'))return;await repos().assets.softDelete(id);invalidate();toast('持ち物を削除しました');router.navigate('assets',{}, {replace:true});}
 
   function bind(main,value){
@@ -434,7 +463,9 @@
       const values=currentActivityId(value.route)?{activityId:currentActivityId(value.route),planId:value.route.planId||''}:{};
       backOr(value.route,defaultName,values);
     }));
-    main.querySelector('[data-ob22-plan-form]')?.addEventListener('submit',event=>{event.preventDefault();event.currentTarget.querySelector('[type="submit"]').disabled=true;savePlan(event.currentTarget,value).catch(error=>{console.error(error);toast('予定を保存できませんでした');event.currentTarget.querySelector('[type="submit"]').disabled=false;});});
+    const planForm=main.querySelector('[data-ob22-plan-form]');
+    bindReservation(main,planForm);
+    planForm?.addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type="submit"]');if(button.disabled)return;button.disabled=true;savePlan(form,value).catch(error=>{console.error(error);toast('予定を保存できませんでした。入力は残っています。');}).finally(()=>{if(button.isConnected)button.disabled=false;});});
     main.querySelector('[data-ob22-plan-delete]')?.addEventListener('click',()=>deletePlan(value).catch(()=>toast('予定を削除できませんでした')));
     main.querySelectorAll('[data-ob22-prep-toggle]').forEach(button=>button.addEventListener('click',()=>togglePrep(value,button.dataset.ob22PrepToggle).catch(()=>toast('更新できませんでした'))));
     main.querySelectorAll('[data-ob22-prep-share-action]').forEach(button=>button.addEventListener('click',()=>sharePreparation(button.closest('[data-ob22-prep-share]'),button.dataset.ob22PrepShareAction)));
