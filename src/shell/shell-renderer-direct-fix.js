@@ -61,7 +61,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',defaultToday:'1',source:'shell-renderer-fix',release:'formal-v44-swipe-today-bg-v1'});
+    const query=new URLSearchParams({embedded:'1',defaultToday:'1',source:'shell-renderer-fix',release:'calendar-editor-touch-20261115-v1'});
     if(route?.month)query.delete('defaultToday');
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];

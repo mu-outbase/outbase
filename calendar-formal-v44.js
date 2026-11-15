@@ -345,16 +345,22 @@
     const sheet=$('#modalSheet');
     if(!sheet||sheet.dataset.swipeBound==='1')return;
     sheet.dataset.swipeBound='1';
-    let startY=0,delta=0,tracking=false;
+    let startY=0,startX=0,delta=0,tracking=false;
+    const cancelSwipe=()=>{tracking=false;delta=0;sheet.style.transform='';sheet.style.transition='';};
     sheet.addEventListener('touchstart',event=>{
-      if(sheet.scrollTop>0)return;
+      cancelSwipe();
+      if(sheet.scrollTop>0||event.touches.length!==1||!event.target.closest('.grab,.sheet-head')||event.target.closest('button,input,select,textarea,a'))return;
+      startX=event.touches[0].clientX;
       startY=event.touches[0].clientY;
       delta=0;tracking=true;
       sheet.style.transition='none';
     },{passive:true});
     sheet.addEventListener('touchmove',event=>{
       if(!tracking)return;
-      delta=Math.max(0,event.touches[0].clientY-startY);
+      if(event.touches.length!==1){cancelSwipe();return;}
+      const dx=Math.abs(event.touches[0].clientX-startX),dy=event.touches[0].clientY-startY;
+      if(dx>Math.abs(dy)){cancelSwipe();return;}
+      delta=Math.max(0,dy);
       if(delta>0)sheet.style.transform=`translateY(${Math.min(delta,180)}px)`;
     },{passive:true});
     sheet.addEventListener('touchend',()=>{
@@ -368,6 +374,7 @@
         sheet.style.transform='';
       }
     },{passive:true});
+    sheet.addEventListener('touchcancel',cancelSwipe,{passive:true});
   }
 
   let calendarSwipeBlockUntil=0;
