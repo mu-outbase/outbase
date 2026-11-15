@@ -147,6 +147,7 @@
     return {places:safeArray(placeRows).filter(row=>!row.deleted_at),activities:uniqueActivities(homeActivityRows,vaultActivityRows)};
   }
   async function assetsPayload(route){
+    if(routeValues(route).mode==='meal')return globalThis.OUTBASE_MEAL_CONSULTATION.load({activityId:currentActivityId(route),nativeEventId:routeValues(route).calendarEventId||null});
     const rows=safeArray(await repos().assets.all()).filter(row=>!row.deleted_at);
     const id=routeValues(route).assetId||'';
     return {rows,selected:id?rows.find(row=>String(row.id)===String(id))||null:null};
@@ -161,6 +162,7 @@
     return {};
   }
   async function buildPayload(route,{force=false}={}){
+    if(route.name==='assets'&&routeValues(route).mode==='meal')return loadPayload(route);
     if(route.name==='places'&&routeValues(route).mode==='explore')return loadPayload(route);
     if(!force){const cached=cachedPayload(route);if(cached)return cached;const job=payloadJobs.get(routeKey(route));if(job)return job;}
     const job=Promise.resolve().then(()=>loadPayload(route)).then(payload=>cachePayload(route,payload)).catch(error=>({status:'error',error})).finally(()=>payloadJobs.delete(routeKey(route)));
@@ -171,6 +173,7 @@
     return Promise.allSettled(safeArray(names).map(name=>buildPayload({...current,name,query:{...routeValues(current)}})));
   }
   function provisionalPayload(route){
+    if(route.name==='assets'&&routeValues(route).mode==='meal')return {status:'loading'};
     if(route.name==='places'&&routeValues(route).mode==='explore')return {status:'loading'};
     const cached=cachedPayload(route);if(cached)return cached;
     const item=currentContextItem(route);
@@ -276,6 +279,7 @@
       ${routeHead('詳細な準備','準備へ')}
       <section class="ob22-card ob22-page-title"><span>${icons.prep}</span><div><small>${esc(typeLabel(item.type))}</small><h1>${esc(item.title||'予定')}</h1><p>${esc(activityRange(item))}・${esc(metadataPlace(item)||'場所未設定')}</p></div><em>${Number(summary.progress||0)}%</em></section>
       <section class="ob22-card ob22-progress"><strong>${Number(summary.completed||0)}<i>/ ${Number(summary.total||0)}</i></strong><div><span style="width:${Math.max(0,Math.min(100,Number(summary.progress||0)))}%"></span></div><b>${Number(summary.pending||0)}件 未完了</b></section>
+      ${item.type==='camp'?`<section class="ob22-card ob22-inline-form"><h2>料理相談・献立</h2><p>人数・食材・器具から料理を選び、買い物と持ち物に反映します。</p><button type="button" data-meal-open="${esc(item.id)}">献立を考える</button></section>`:''}
       <div class="ob22-prep-groups">${sections.map(section=>`<section class="ob22-card ob22-prep-group"><header><span>${ui.categoryIcons?.[section.key]||icons.prep}</span><div><small>${esc(section.label||'準備')}</small><h2>${esc(section.label||'準備')}</h2></div></header><div>${safeArray(section.items).map(prepItemMarkup).join('')}</div></section>`).join('')}</div>
       <section class="ob22-card ob22-inline-form" data-ob22-prep-share><h2>準備リストを送る</h2><p>リンや同行者に、分類と完了状態をまとめて送れます。</p><textarea aria-label="共有する準備リスト" readonly rows="6">${esc(preparationShareText(item,sections))}</textarea><button type="button" data-ob22-prep-share-action="share">共有する</button><button type="button" data-ob22-prep-share-action="copy">コピーする</button><p role="status" aria-live="polite"></p></section>
       <form class="ob22-card ob22-inline-form" data-ob22-prep-add><h2>準備項目を追加</h2><select name="category"><option value="gear">持ち物</option><option value="weather">天気</option><option value="route">行き方</option><option value="meal">料理</option><option value="shopping">買い物</option><option value="pet">ペット</option><option value="parking">駐車</option><option value="ticket">予約・チケット</option><option value="note">メモ</option></select><input name="title" required placeholder="確認すること"><button type="submit">追加</button></form>
@@ -350,7 +354,7 @@
     if(value.route.name==='start')return startMarkup(value);
     if(value.route.name==='memo')return memoMarkup(value);
     if(value.route.name==='places')return routeValues(value.route).mode==='explore'?globalThis.OUTBASE_CAMP_EXPLORATION_UI.markup(value):placesMarkup(value);
-    if(value.route.name==='assets')return assetsMarkup(value);
+    if(value.route.name==='assets')return routeValues(value.route).mode==='meal'?globalThis.OUTBASE_MEAL_CONSULTATION_UI.markup(value):assetsMarkup(value);
     return '';
   }
 
@@ -391,7 +395,7 @@
   }
   async function togglePrep(value,id){
     if(!id)return;const row=await repos().preparationItems.get(id);if(!row)return;const done=row.status==='completed'||Boolean(row.completed_at);
-    await repos().preparationItems.save({...row,status:done?'pending':'completed',completed_at:done?null:new Date().toISOString()});
+    if(row.source==='meal-consultation-v1'&&row.payload?.shopping_item_id)await globalThis.OUTBASE_MEAL_CONSULTATION.toggleShopping(id,currentActivityId(value.route));else await repos().preparationItems.save({...row,status:done?'pending':'completed',completed_at:done?null:new Date().toISOString()});
     const activityId=currentActivityId(value.route);invalidate(activityId);router.navigate('preparation-detail',{activityId},{replace:true,preserveScroll:true,transition:false,skipTransition:true});
   }
   async function addPrep(form,value){
@@ -461,6 +465,7 @@
   async function deleteAsset(value){const id=value.routePayload?.selected?.id;if(!id)return;if(globalThis.confirm&&!globalThis.confirm('この持ち物を削除しますか？'))return;await repos().assets.softDelete(id);invalidate();toast('持ち物を削除しました');router.navigate('assets',{}, {replace:true});}
 
   function bind(main,value){
+    globalThis.OUTBASE_MEAL_CONSULTATION_UI.bind(main,value);
     globalThis.OUTBASE_CAMP_EXPLORATION_UI.bind(main,value);
     main.querySelectorAll('[data-ob22-back]').forEach(button=>button.addEventListener('click',()=>{
       const defaultName=value.route.name==='preparation-detail'?'preparation':value.route.name==='places'?'search':value.route.name==='assets'?'vault':value.route.name==='plan-editor'&&value.routePayload?.activity?'activity':'home';
@@ -471,6 +476,7 @@
     bindReservation(main,planForm);
     planForm?.addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type="submit"]');if(button.disabled)return;button.disabled=true;savePlan(form,value).catch(error=>{console.error(error);toast('予定を保存できませんでした。入力は残っています。');}).finally(()=>{if(button.isConnected)button.disabled=false;});});
     main.querySelector('[data-ob22-plan-delete]')?.addEventListener('click',()=>deletePlan(value).catch(()=>toast('予定を削除できませんでした')));
+    main.querySelector('[data-meal-open]')?.addEventListener('click',event=>router.navigate('assets',{activityId:event.currentTarget.dataset.mealOpen,mode:'meal'},{transition:false,skipTransition:true}));
     main.querySelectorAll('[data-ob22-prep-toggle]').forEach(button=>button.addEventListener('click',()=>togglePrep(value,button.dataset.ob22PrepToggle).catch(()=>toast('更新できませんでした'))));
     main.querySelectorAll('[data-ob22-prep-share-action]').forEach(button=>button.addEventListener('click',()=>sharePreparation(button.closest('[data-ob22-prep-share]'),button.dataset.ob22PrepShareAction)));
     main.querySelector('[data-ob22-prep-add]')?.addEventListener('submit',event=>{event.preventDefault();addPrep(event.currentTarget,value).catch(()=>toast('追加できませんでした'));});
@@ -548,6 +554,9 @@
 
       if(requested.name==='places'&&routeValues(requested).mode==='explore'&&(routeValues(requested).calendarEventId?main.querySelector('[data-camp-exploration]')?.dataset.explorationCalendarId===routeValues(requested).calendarEventId:main.querySelector('[data-camp-exploration]')?.dataset.campExploration===String(currentActivityId(requested)))){
         try{await globalThis.OUTBASE_CAMP_EXPLORATION_UI.refresh(main);}catch(_error){}return {route:requested,online:navigator.onLine};
+      }
+      if(requested.name==='assets'&&routeValues(requested).mode==='meal'&&(routeValues(requested).calendarEventId?main.querySelector('[data-meal-consultation]')?.dataset.mealCalendarId===routeValues(requested).calendarEventId:main.querySelector('[data-meal-consultation]')?.dataset.mealConsultation===String(currentActivityId(requested)))){
+        try{await globalThis.OUTBASE_MEAL_CONSULTATION_UI.refresh(main);}catch(_error){}return {route:requested,online:navigator.onLine};
       }
       shell.dataset.ob6Route=requested.name;
       main.className='ob3-main ob3-main-ob22';

@@ -48,3 +48,18 @@
 .ob-explore [data-explore-session] button{width:100%;font-weight:700}
 .ob-explore label{font-size:14px}
 .ob-explore [data-explore-list] summary{font-weight:700;font-size:15px;line-height:1.5}
+
+.ob-meals [hidden]{display:none!important}
+.ob-meals .ob22-card{padding:18px}
+.ob-meals h1{font-size:22px;line-height:1.4;margin:0 0 10px}
+.ob-meals h2{font-size:18px;line-height:1.5;margin:0 0 10px}
+.ob-meals h3{font-size:16px;line-height:1.5}
+.ob-meals p,.ob-meals li,.ob-meals label{font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.ob-meals button{min-height:44px;padding:10px 14px;border:1px solid #d8ded8;border-radius:12px;background:#f7f8f4;color:#184f37;font:inherit;font-size:14px}
+.ob-meals button[type=submit]{background:#184f37;color:white}
+.ob-meals input,.ob-meals select,.ob-meals textarea{max-width:100%;min-width:0}
+.ob-meals .ob-meal-ingredient{padding:12px 0;border-top:1px solid #e0e5df}
+.ob-meals .ob-meal-ingredient input[type=number]{width:100%;min-height:44px}
+.ob-meals details{padding:12px 0;border-top:1px solid #e0e5df}
+.ob-meals summary{min-height:44px;font-weight:700;overflow-wrap:anywhere}
+.ob-meals [data-meal-candidate-list] article{padding:12px 0;border-top:1px solid #e0e5df}
