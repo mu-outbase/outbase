@@ -3,11 +3,11 @@
   // Static entry dependencies must finish before their consumers execute.
   const sources=[
     [
-        "src/config/version.js?v=outbase-gear-meal-link-20261115-v1",
+        "src/config/version.js?v=outbase-fieldoven-meal-basis-20261115-v1",
         "OUTBASE_VERSION"
     ],
     [
-        "src/config/module-manifest.js?v=outbase-gear-meal-link-20261115-v1",
+        "src/config/module-manifest.js?v=outbase-fieldoven-meal-basis-20261115-v1",
         "OUTBASE_MODULE_MANIFEST"
     ],
     [
@@ -31,11 +31,11 @@
         "OUTBASE_THEME_V166"
     ],
     [
-        "src/services/weather-service.js?v=outbase-gear-meal-link-20261115-v1",
+        "src/services/weather-service.js?v=outbase-fieldoven-meal-basis-20261115-v1",
         null
     ],
     [
-        "src/services/weather-custom-location-fix.js?v=outbase-gear-meal-link-20261115-v1",
+        "src/services/weather-custom-location-fix.js?v=outbase-fieldoven-meal-basis-20261115-v1",
         null
     ],
     [
