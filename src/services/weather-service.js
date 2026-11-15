@@ -190,7 +190,11 @@
     const condition=representativeCondition(hours,days[0]?.condition||'天気変化あり');
     const confidence=summaryConfidence(hours.length?hours:days);
     const message=rainPeak>=50?'予定時間内は雨対策を優先。':windGustMax>=8?'予定時間内の強風に注意。':Number.isFinite(high)&&high>=28?'暑さを避けて休憩と水分を。':'予定時間内は大きな崩れが少なめ。';
-    return Object.freeze({status:'ready',sample:false,place:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,condition,high:Number.isFinite(high)?high:null,low:Number.isFinite(low)?low:null,rainPeak,windMax,windGustMax,confidence,confidenceLabel:confidence,message,alerts:Object.freeze(alerts.slice(0,3)),provider:forecast.provider,attribution:forecast.attribution,geocodeAttribution:forecast.geocodeAttribution||'',fetchedAt:forecast.fetchedAt});
+    const daily=days.map(day=>{
+      const rows=hours.filter(row=>isoDate(row.at)===day.date),temps=rows.map(row=>row.temperature).filter(Number.isFinite);
+      return Object.freeze({date:day.date,condition:representativeCondition(rows,day.condition),high:temps.length?Math.max(...temps):day.high,low:temps.length?Math.min(...temps):day.low,hourCount:rows.length,firstAt:rows[0]?.at||null,lastAt:rows.at(-1)?.at||null});
+    });
+    return Object.freeze({status:'ready',sample:false,place:forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,daily:Object.freeze(daily),condition,high:Number.isFinite(high)?high:null,low:Number.isFinite(low)?low:null,rainPeak,windMax,windGustMax,confidence,confidenceLabel:confidence,message,alerts:Object.freeze(alerts.slice(0,3)),provider:forecast.provider,attribution:forecast.attribution,geocodeAttribution:forecast.geocodeAttribution||'',fetchedAt:forecast.fetchedAt});
   }
   function todayDetailView(forecast,now=new Date()){
     if(!forecast)return null;
@@ -221,12 +225,13 @@
     const hourly=hoursFor(forecast,startValue,endValue);
     const days=(forecast.daily||[]).filter(row=>row.date>=isoDate(startValue)&&row.date<=isoDate(endValue));
     const planSummary=planView(forecast,{...plan,startAt:startValue,endAt:endValue});
+    if(!hourly.length&&!days.length)return Object.freeze({...planSummary,startAt:startValue,endAt:endValue,hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([])});
     const outdoor=bestOutdoorRow(hourly,{minHour:5,maxHour:22});
     const hottest=hourly.reduce((best,row)=>(row.feelsLike??row.temperature??-99)>(best?.feelsLike??best?.temperature??-99)?row:best,null);
     const windGust=planSummary?.windGustMax??0;
     const comparisons=[{source:forecast.provider,summary:planSummary?.condition||'取得済み',rainProbability:planSummary?.rainPeak??0,windGust,status:'live'}];
     const rainPeak=planSummary?.rainPeak??0;const confidence=planSummary?.confidence||'—';
-    return Object.freeze({status:'ready',sample:false,place:place||forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,activityType:plan?.type||'',condition:planSummary?.condition||days[0]?.condition||'天気情報',high:planSummary?.high,low:planSummary?.low,rainPeak,windAverageMax:planSummary?.windMax??0,windGust,confidence,confidenceDescription:confidenceDescription(confidence),hourly:Object.freeze(hourly),judgements:Object.freeze([
+    return Object.freeze({status:'ready',sample:false,startAt:startValue,endAt:endValue,partial:!!hourly.length&&(new Date(hourly[0].at).getTime()>Math.ceil(new Date(startValue).getTime()/3600000)*3600000||new Date(hourly.at(-1).at).getTime()<Math.floor(new Date(endValue).getTime()/3600000)*3600000),place:place||forecast.label,latitude:forecast.latitude,longitude:forecast.longitude,locationKey:forecast.key,activityType:plan?.type||'',condition:planSummary?.condition||days[0]?.condition||'天気情報',high:planSummary?.high,low:planSummary?.low,rainPeak,windAverageMax:planSummary?.windMax??0,windGust,confidence,confidenceDescription:confidenceDescription(confidence),hourly:Object.freeze(hourly),judgements:Object.freeze([
       {label:'雨対策',value:rainPeak>=70?'雨具を準備':rainPeak>=40?'雨具があると安心':'大きな心配は小さめ',detail:rainPeak>=70?'雨の強まる時間は時間別予報で確認':rainPeak>=40?'時間帯により降る可能性':'予定全体では大きな崩れは少なめ'},
       {label:'風対策',value:windGust>=8?'強風注意':windGust>=6?'やや注意':'概ね安心',detail:`予定期間内 平均最大 ${planSummary?.windMax??0}m/s・瞬間最大 ${windGust}m/s`},
       {label:'暑さ',value:hottest&&(hottest.feelsLike??hottest.temperature)>=30?'強い暑さ':hottest&&(hottest.feelsLike??hottest.temperature)>=28?'暑さ注意':'概ね安心',detail:hottest?`予定期間内の最高体感 ${hottest.feelsLike??hottest.temperature}°・日陰と水分を確認`:'気温データ未取得'},

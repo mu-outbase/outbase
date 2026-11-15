@@ -12,6 +12,7 @@ test('PWA precaches every actual runtime URL without duplicate requests',()=>{
  const html=fs.readFileSync(new URL('index.html',root),'utf8');
  const entry=html.match(/src="(src\/runtime\/startup-loader.js[^\"]+)"/)[1];
  assert.ok(assets.includes('./'+entry),'Missing startup loader URL');
+ for(const match of html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g))assert.ok(assets.includes('./'+match[1]),'Missing stylesheet URL: '+match[1]);
  const calendar=fs.readFileSync(new URL('calendar-formal-v44.html',root),'utf8');
  for(const match of calendar.matchAll(/<script src="([^"]+)"/g))assert.ok(assets.includes('./'+match[1]),'Missing calendar script URL: '+match[1]);
 });
