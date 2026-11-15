@@ -27,7 +27,8 @@
 
   async function items(activityId){
     if(!activityId)return [];
-    const rows=await repos().preparationItems.byIndex('activity_id',activityId);
+    let rows=await repos().preparationItems.byIndex('activity_id',activityId);
+    if(globalThis.OUTBASE_MEAL_DAY_PLAN)rows=globalThis.OUTBASE_MEAL_DAY_PLAN.preparationFor(await repos().meals.byIndex('activity_id',activityId),rows);
     return rows.filter(row=>!row.deleted_at).sort((a,b)=>{
       if(Boolean(a.completed_at)!==Boolean(b.completed_at))return a.completed_at?1:-1;
       return Number(a.sort_order??999)-Number(b.sort_order??999)||String(a.created_at||'').localeCompare(String(b.created_at||''));

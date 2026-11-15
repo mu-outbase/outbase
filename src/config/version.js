@@ -2,10 +2,10 @@
   'use strict';
   const VERSION=Object.freeze({
     app:'outbase-r1-gate2-contract-boundary-v1',
-    legacy:'outbase-fieldoven-meal-basis-20261115-v1-legacy',
+    legacy:'outbase-day-meals-shopping-20261115-v1-legacy',
     data:'outbase-r1-gate2-contract-boundary-v1-data',
-    domain:'outbase-fieldoven-meal-basis-20261115-v1-domain',
-    shell:'outbase-fieldoven-meal-basis-20261115-v1',
+    domain:'outbase-day-meals-shopping-20261115-v1-domain',
+    shell:'outbase-day-meals-shopping-20261115-v1',
     design:'outbase-v16631-home-master-ui-v222',
     cache:'outbase-r1-gate2-contract-boundary-v1',
     storage:'outbase-r1-gate2-contract-boundary-v1-storage'

@@ -82,8 +82,8 @@
     if(nativeEventId){const events=JSON.parse(localStorage.getItem('outbase_calendar_complete_v3_events')||'[]');const event=Array.isArray(events)?events.find(e=>e.id===nativeEventId&&!e.deleted_at&&e.calendarId==='camp'):null;if(event)activity={...activity,title:event.title,start_at:event.start,end_at:event.end};}
     if(!activity||activity.deleted_at||activity.type!=='camp')throw Error('meal_camp_missing');
     const isReal=globalThis.OUTBASE_IDS.isUlid(activity.id);
-    const [meals,assets,preparation]=await Promise.all([isReal?repo().meals.byIndex('activity_id',activity.id):[],repo().assets.all(),isReal?repo().preparationItems.byIndex('activity_id',activity.id):[]]);
-    return {status:'ready',activity,nativeEventId,nativeMonth:parent?.nativeMonth||'',meals:meals.filter(m=>!m.deleted_at&&m.source===SOURCE).sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.slot).localeCompare(String(b.slot))),assets:assets.filter(a=>!a.deleted_at),preparation:preparation.filter(r=>!r.deleted_at),tools:inferredTools(assets),bindings:gearBindings(assets),startDate:dateKey(activity.start_at),endDate:dateKey(activity.end_at)};
+    const [meals,assets,preparation,shopping]=await Promise.all([isReal?repo().meals.byIndex('activity_id',activity.id):[],repo().assets.all(),isReal?repo().preparationItems.byIndex('activity_id',activity.id):[],isReal?repo().shoppingItems.byIndex('activity_id',activity.id):[]]);
+    return {schedule:globalThis.OUTBASE_MEAL_DAY_PLAN.schedule(dateKey(activity.start_at),dateKey(activity.end_at),meals),slotPlans:[...globalThis.OUTBASE_MEAL_DAY_PLAN.context(meals).plans.values()],shopping:globalThis.OUTBASE_MEAL_DAY_PLAN.shoppingView(meals,shopping),allMeals:meals,status:'ready',activity,nativeEventId,nativeMonth:parent?.nativeMonth||'',meals:meals.filter(m=>!m.deleted_at&&m.source===SOURCE).sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.slot).localeCompare(String(b.slot))),assets:assets.filter(a=>!a.deleted_at),preparation:preparation.filter(r=>!r.deleted_at),tools:inferredTools(assets),bindings:gearBindings(assets),startDate:dateKey(activity.start_at),endDate:dateKey(activity.end_at)};
   }
   async function approve({activityId,displayActivityId,nativeEventId=null,requestId,recipeId,date,slot,conditions,ingredients,guard=()=>true}){
     if(activityId!==displayActivityId||!globalThis.OUTBASE_IDS.isUlid(requestId)||!Object.hasOwn(SLOTS,slot)||!/^20\d{2}-\d{2}-\d{2}$/.test(date)||dateKey(date+'T12:00:00+09:00')!==date)throw Error('meal_invalid');
@@ -105,9 +105,9 @@
         }else activity=req.result;
         if(!activity||activity.deleted_at||activity.type!=='camp')throw Error('meal_camp_missing');
         const min=dateKey(sourceEvent?.start||activity.start_at),max=dateKey(sourceEvent?.end||activity.end_at);if((min&&date<min)||(max&&date>max))throw Error('meal_date_outside');
-        const reads=[tx.objectStore('meals').get(requestId),tx.objectStore('shopping_lists').index('activity_id').getAll(activity.id),tx.objectStore('preparation_items').index('activity_id').getAll(activity.id),tx.objectStore('assets').get(normalized.focusAssetId||'__none__'),tx.objectStore('activity_assets').index('activity_id').getAll(activity.id)];let loaded=0;
-        for(const r of reads)r.onsuccess=()=>{if(++loaded!==5)return;try{
-          if(!guard())throw Error('meal_cancelled');const [previous,lists,prep,focusAsset,assetLinks]=reads.map(r=>r.result);
+        const reads=[tx.objectStore('meals').get(requestId),tx.objectStore('shopping_lists').index('activity_id').getAll(activity.id),tx.objectStore('preparation_items').index('activity_id').getAll(activity.id),tx.objectStore('assets').get(normalized.focusAssetId||'__none__'),tx.objectStore('activity_assets').index('activity_id').getAll(activity.id),tx.objectStore('meals').index('activity_id').getAll(activity.id)];let loaded=0;
+        for(const r of reads)r.onsuccess=()=>{if(++loaded!==6)return;try{
+          if(!guard())throw Error('meal_cancelled');const [previous,lists,prep,focusAsset,assetLinks,allMeals]=reads.map(r=>r.result);
           if(previous){if(previous.deleted_at||previous.activity_id!==activity.id||(previous.payload?.signature!==signature&&JSON.stringify({recipeId:canonicalRecipe(previous.payload?.recipe_id),date:previous.date,slot:previous.slot,conditions:normalize(previous.payload?.conditions),ingredients:previous.payload?.ingredients})!==signature))throw Error('meal_request_conflict');result=previous;return;}
           const binding=normalized.focusAssetId?gearBindings(focusAsset?[focusAsset]:[])[0]:null;
           const verifiedCandidate=normalized.focusAssetId?suggest(normalized,focusAsset?[focusAsset]:[]).find(r=>r.id===recipeId):candidate;
@@ -117,6 +117,7 @@
           const meal=repo().meals.normalize({id:requestId,activity_id:activity.id,title,name:candidate.name,date,slot,people:normalized.people,status:'planned',source:SOURCE,payload:{recipe_id:recipeId,signature,conditions:normalized,ingredients:items,steps:candidate.steps,tools:candidate.tools,heatSource:candidate.heatSource,place:normalized.place,proposal_mode:normalized.proposalMode,reasons:verifiedCandidate.reasons,asset_ids:binding?[binding.id]:[],gear_names:binding?[binding.name]:[],supplies:[...candidate.supplies,...(candidate.fire?[FUEL[candidate.heatSource]]:[])]}});
           const makePrep=(category,title,payload={})=>repo().preparationItems.normalize({activity_id:activity.id,category,title,status:'pending',origin:'meal',sort_order:999,source:SOURCE,payload:{meal_id:meal.id,...payload}});
           const list=lists.find(l=>!l.deleted_at&&l.source===SOURCE)||repo().shoppingLists.normalize({activity_id:activity.id,title:'キャンプ料理の買い物',source:SOURCE});
+          globalThis.OUTBASE_MEAL_DAY_PLAN.resumeCookSlot(tx,allMeals,date,slot);
           put('activities',activity);put('meals',meal);if(items.some(i=>i.buy))put('shopping_lists',list);
           put('preparation_items',makePrep('meal',title));
           for(const item of items){
