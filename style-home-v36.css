@@ -1124,3 +1124,16 @@ button.ob36-place-choice{
 .ob36-detail-decision-metrics>span:nth-child(3){grid-column:1/-1}
 @media (max-width:360px){.ob36-detail-decision-metrics{grid-template-columns:1fr!important}.ob36-detail-decision-metrics>span:nth-child(3){grid-column:auto}.ob36-hourly-highlights>div{grid-template-columns:76px minmax(0,1fr)}}
 @media (orientation:landscape) and (max-height:600px){html,body{background:#e9ece7}#app,#outbaseBootScreen{width:min(430px,100vw);max-width:430px;margin:0 auto;background:#fbfaf7;box-shadow:0 0 30px rgba(17,54,40,.16)}body{overflow-x:hidden}}
+
+/* Whole-trip weather: each date remains directly reachable on mobile. */
+.ob36-period-days{margin-top:14px}
+.ob36-period-days h3{font-size:15px;margin:0 0 9px}
+.ob36-period-days>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
+.ob36-period-days button{min-width:0;min-height:108px;padding:10px 7px;border:1px solid #dfe6db;border-radius:14px;background:#f9fbf7;color:#204b35;text-align:left;display:flex;flex-direction:column;gap:5px}
+.ob36-period-days button>b{font-size:13px}.ob36-period-days button>span{font-size:12px;overflow-wrap:anywhere}.ob36-period-days button>strong{font-size:15px}.ob36-period-days button>small{font-size:10px}
+.ob36-hourly-days{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.ob36-hourly-days button{min-height:44px;padding:8px 12px;border:1px solid #dce4d6;border-radius:12px;background:#fff;color:#294c36;font:inherit;font-size:13px}
+.ob36-hourly-days button.active{background:#20563c;color:#fff;border-color:#20563c}
+.ob36-hourly-density button{min-height:44px}
+.ob36-hourly-highlights b{white-space:normal;overflow:visible;text-overflow:clip}
+.ob36-weather-detail-sheet>header{position:sticky;top:0;z-index:3;background:#fff;padding:8px 0}

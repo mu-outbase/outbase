@@ -1,0 +1,25 @@
+"""Three-day hourly weather, date selection, nights and exact camp start/end on mobile."""
+import os,json
+from datetime import datetime,timedelta
+from playwright.sync_api import sync_playwright
+dates=[(datetime(2026,11,15)+timedelta(days=i)).strftime('%Y-%m-%d') for i in range(16)];times=[(datetime(2026,11,15)+timedelta(hours=i)).strftime('%Y-%m-%dT%H:00') for i in range(16*24)]
+forecast={'current':{'temperature_2m':12,'weather_code':1},'daily':{'time':dates,'temperature_2m_max':[15]*16,'temperature_2m_min':[2]*16,'weather_code':[1]*16},'hourly':{'time':times,'temperature_2m':[-4 if t=='2026-11-24T05:00' else 10 for t in times],'apparent_temperature':[-6 if t=='2026-11-24T05:00' else 8 for t in times],'weather_code':[1]*len(times),'precipitation_probability':[90 if t=='2026-11-23T16:00' else 10 for t in times],'precipitation':[2 if t=='2026-11-23T16:00' else 0 for t in times],'wind_speed_10m':[5 if t=='2026-11-23T16:00' else 2 for t in times],'wind_gusts_10m':[12 if t=='2026-11-23T16:00' else 3 for t in times]}}
+seed=[{'id':'period-camp','title':'朝霧ジャンボ','place':'朝霧ジャンボリーオートキャンプ場','start':'2026-11-22T09:00','end':'2026-11-24T10:00','calendarId':'camp','repeat':{'freq':'none'},'weatherLocation':{'latitude':35.382436,'longitude':138.579448,'source':'openstreetmap-photon'}}]
+with sync_playwright() as p:
+ b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);c=b.new_context(**p.devices['Pixel 7'],timezone_id='Asia/Tokyo');page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ c.route('https://api.open-meteo.com/**',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps(forecast)))
+ c.add_init_script("if(!sessionStorage.getItem('periodSeed')){localStorage.setItem('outbase_calendar_complete_v3_events',"+json.dumps(json.dumps(seed,ensure_ascii=False))+");sessionStorage.setItem('periodSeed','yes')}")
+ base=os.environ.get('OUTBASE_TEST_URL','http://127.0.0.1:8766/').rstrip('/')+'/'
+ page.goto(base+'?shell=1&view=home');page.locator('[data-ob36-weather-day="2026-11-24"]').wait_for();assert page.locator('[data-ob36-weather-day]').count()==3
+ page.locator('[data-ob36-weather-day="2026-11-23"]').click();page.locator('[data-ob36-hourly-day="2026-11-24"]').wait_for();assert page.locator('[data-ob36-hourly-card]').count()==50
+ visible=lambda:page.locator('[data-ob36-hourly-card]:not([hidden])')
+ page.wait_for_timeout(100);assert page.locator('[data-ob36-hourly-rail]').evaluate('e=>e.getBoundingClientRect().top<innerHeight-100')
+ assert visible().count()==24;assert page.locator('[data-ob36-hourly-density="1"]').get_attribute('aria-pressed')=='true';assert page.locator('[data-ob36-hourly-day="2026-11-23"]').get_attribute('aria-pressed')=='true';assert '11/22' in page.locator('[data-ob36-hourly-period]').inner_text();assert '11/24' in page.locator('[data-ob36-hourly-period]').inner_text()
+ page.locator('[data-hourly-date="2026-11-23"]').filter(has=page.get_by_text('16時',exact=True)).click();selected=page.locator('[data-ob36-hourly-selected]').inner_text();assert '11/23' in selected;assert '90%' in selected;assert '12m/s' in selected
+ page.locator('[data-ob36-hourly-day="2026-11-24"]').click();assert visible().count()==11;assert '00時' in visible().first.inner_text();assert '10時' in visible().last.inner_text();page.locator('[data-hourly-date="2026-11-24"]').filter(has=page.get_by_text('05時',exact=True)).click();assert '-4°' in page.locator('[data-ob36-hourly-selected]').inner_text()
+ page.locator('[data-ob36-hourly-density="3"]').click();assert visible().count()==5;assert '10時' in visible().last.inner_text();page.locator('[data-ob36-hourly-density="1"]').click();assert visible().count()==11
+ page.locator('[data-ob36-hourly-day="2026-11-22"]').click();assert visible().count()==15;assert '09時' in visible().first.inner_text();assert '23時' in visible().last.inner_text();page.locator('[data-ob36-hourly-day="all"]').click();assert visible().count()==50
+ page.locator('[data-ob36-hourly-day="2026-11-23"]').click();page.locator('[data-ob36-hourly-density="3"]').click();page.evaluate("window.periodHostBefore=document.querySelector('.ob36-weather-detail-sheet')");page.locator('[data-ob36-detail-refresh]').click();page.wait_for_function("document.querySelector('.ob36-weather-detail-sheet')!==periodHostBefore");assert page.locator('[data-ob36-hourly-density="3"]').get_attribute('aria-pressed')=='true'
+ page.locator('[data-ob36-modal-close]').click();page.locator('[data-ob36-weather-detail]').click();page.locator('[data-ob36-hourly-day="all"]').wait_for();assert visible().count()==50;assert page.locator('[data-ob36-hourly-density="1"]').get_attribute('aria-pressed')=='true';assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert not errors,errors
+ page.wait_for_timeout(100);page.screenshot(path='/tmp/weather-whole-period.png',full_page=False)
+ print('HOME exposes all three dates; hourly view retains all 50 exact camp slots; date/night selection, first/last boundaries, refresh and all-period reopening pass: PASS',flush=True);c.close();b.close()
