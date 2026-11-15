@@ -97,7 +97,7 @@
     if(kind==='current'){try{return await currentPosition();}catch(_error){return {...HOME_LOCATION,key:'current-fallback',label:'千葉県 柏市（現在地未取得）'};}}
     if(kind==='home')return HOME_LOCATION;
     const coords=coordinateFromPlan(plan);const label=String(place||plan?.place||'').trim();
-    if(coords)return {key:`plan:${plan?.id||hash(label)}`,label:label||'予定の場所',...coords,source:'plan-coordinate'};
+    if(coords)return {key:`plan:${plan?.id||hash(label)}`,label:label||'予定の場所',...coords,source:plan?.locationSource||'plan-coordinate'};
     let geo;try{geo=await geocode(label);}catch(error){const poi=globalThis.OUTBASE_WEATHER_SERVICE_V1?.poiGeocode;if(error.message!=='weather_place_not_found'||!poi)throw error;geo=await poi(label);}
     return {key:`plan:${plan?.id||hash(label)}`,label:label||geo.label,...geo,source:geo.source||'geocode'};
   }
@@ -254,15 +254,15 @@
     const reason=code||failures.get(key)||'';
     const missing=reason==='weather_place_missing',notFound=['weather_place_not_found','weather_pinpoint_place_not_found'].includes(reason);
     return Object.freeze({status:missing?'place-required':notFound?'place-not-found':'unavailable',sample:false,place,locationLabel:place,
-      condition:missing?'予定の場所を設定してください':notFound?'予定の場所を確認してください':'天気を取得できません',
-      message:missing?'予定の「場所」欄にキャンプ場名や市区町村を入力して保存してください。予定名だけでは予報地点を特定できません。':notFound?'場所名を特定できませんでした。予定の「場所」欄を市区町村名などで確認してください。':'通信状態を確認して、更新ボタンで再度取得してください。',
+      condition:missing?'予定の場所を選んでください':notFound?'予定の場所を確認してください':'天気を取得できません',
+      message:missing?'予定名から場所の候補を探せます。地名・住所を確認して候補を選んでください。':notFound?'場所名を特定できませんでした。予定の「場所」欄を市区町村名などで確認してください。':'通信状態を確認して、更新ボタンで再度取得してください。',
       temperature:null,high:null,low:null,rain:null,wind:null,rainPeak:null,windMax:null,confidence:'—',confidenceLabel:'—',alerts:[],hourly:[],judgements:[],comparisons:[],provider:PROVIDER,fetchedAt:null});
   }
   function stale(view,key){return failures.has(key)?Object.freeze({...view,stale:true,message:'最新の予報を取得できませんでした。前回取得した予報を表示しています。'}):view;}
   function getToday({scope='home',now=new Date()}={}){const key=scope==='current'?'current':'home';const data=weatherTargetForScope(scope);return data?stale(todayView(data,now),key):unavailable(key,scope==='current'?'現在地':HOME_LOCATION.label);}
   function getTodayDetail({scope='home',now=new Date()}={}){const key=scope==='current'?'current':'home',data=weatherTargetForScope(scope);return data?stale(todayDetailView(data,now),key):unavailable(key,scope==='current'?'現在地':HOME_LOCATION.label);}
-  function getPlan(plan){const key=targetKeyForPlan(plan),data=readTarget(key);return data?stale(planView(data,plan),key):unavailable(key,plan?.place||'',(!plan?.place&&!coordinateFromPlan(plan))?'weather_place_missing':'');}
-  function getDetail(plan,options={}){const key=options.place?targetKeyForCustom(options.place):targetKeyForPlan(plan),forecast=readTarget(key);return forecast?stale(detailView(forecast,plan,options),key):unavailable(key,options.place||plan?.place||'',(!options.place&&!plan?.place&&!coordinateFromPlan(plan))?'weather_place_missing':'');}
+  function getPlan(plan){const key=targetKeyForPlan(plan),cached=readTarget(key),coords=coordinateFromPlan(plan),data=cached&&(!coords||(Math.abs(cached.latitude-coords.latitude)<0.00001&&Math.abs(cached.longitude-coords.longitude)<0.00001))?cached:null;return data?stale(planView(data,plan),key):unavailable(key,plan?.place||'',(!plan?.place&&!coordinateFromPlan(plan))?'weather_place_missing':'');}
+  function getDetail(plan,options={}){const key=options.place?targetKeyForCustom(options.place):targetKeyForPlan(plan),cached=readTarget(key),coords=options.place?null:coordinateFromPlan(plan),forecast=cached&&(!coords||(Math.abs(cached.latitude-coords.latitude)<0.00001&&Math.abs(cached.longitude-coords.longitude)<0.00001))?cached:null;return forecast?stale(detailView(forecast,plan,options),key):unavailable(key,options.place||plan?.place||'',(!options.place&&!plan?.place&&!coordinateFromPlan(plan))?'weather_place_missing':'');}
   function cacheInfo(){const state=cacheState();return Object.freeze({count:Object.keys(state.targets).length,targets:Object.freeze(Object.keys(state.targets))});}
 
   globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({refresh,getToday,getTodayDetail,getPlan,getDetail,geocode,cacheInfo,conditionFromCode,provider:PROVIDER,modelLabel:MODEL_LABEL,attribution:ATTRIBUTION,HOME_LOCATION,PLACE_COORDINATES,CACHE_KEY});
