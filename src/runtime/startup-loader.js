@@ -3,11 +3,11 @@
   // Static entry dependencies must finish before their consumers execute.
   const sources=[
     [
-        "src/config/version.js?v=outbase-pwa-first-install-20261114-v1",
+        "src/config/version.js?v=outbase-calendar-editor-touch-20261115-v1",
         "OUTBASE_VERSION"
     ],
     [
-        "src/config/module-manifest.js?v=outbase-pwa-first-install-20261114-v1",
+        "src/config/module-manifest.js?v=outbase-calendar-editor-touch-20261115-v1",
         "OUTBASE_MODULE_MANIFEST"
     ],
     [
