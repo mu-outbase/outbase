@@ -97,7 +97,7 @@
     if(kind==='current'){try{return await currentPosition();}catch(_error){return {...HOME_LOCATION,key:'current-fallback',label:'千葉県 柏市（現在地未取得）'};}}
     if(kind==='home')return HOME_LOCATION;
     const coords=coordinateFromPlan(plan);const label=String(place||plan?.place||'').trim();
-    if(coords)return {key:`plan:${plan?.id||hash(label)}`,label:label||'予定の場所',...coords,source:'plan-coordinate'};
+    if(coords)return {key:`plan:${plan?.id||hash(label)}`,label:label||'予定の場所',...coords,source:plan?.locationSource||'plan-coordinate'};
     let geo;try{geo=await geocode(label);}catch(error){const poi=globalThis.OUTBASE_WEATHER_SERVICE_V1?.poiGeocode;if(error.message!=='weather_place_not_found'||!poi)throw error;geo=await poi(label);}
     return {key:`plan:${plan?.id||hash(label)}`,label:label||geo.label,...geo,source:geo.source||'geocode'};
   }

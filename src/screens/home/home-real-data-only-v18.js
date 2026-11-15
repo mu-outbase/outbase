@@ -52,7 +52,7 @@
           plans.push(Object.freeze({
             id:`calendar-v44:${event.id}:${cursor.toISOString()}`,calendarEventId:event.id,
             calendarMonth:dateKey(cursor).slice(0,7),title:event.title,place:event.place||'',
-            latitude:event.weatherLocation?.latitude,longitude:event.weatherLocation?.longitude,
+            latitude:event.weatherLocation?.latitude,longitude:event.weatherLocation?.longitude,locationSource:event.weatherLocation?.source,
             type:event.calendarId||'other',typeLabel:labels.get(event.calendarId)||'活動',
             startAt:cursor.toISOString(),endAt:finish.toISOString(),allDay:Boolean(event.allDay),
             participants:Object.freeze({rows:Object.freeze((Array.isArray(event.participants)?event.participants:[]).map(name=>({name,type:'member'})))}),

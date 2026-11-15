@@ -153,7 +153,7 @@
       typeLabel:TYPE_LABELS[activity.type]||TYPE_LABELS.other,
       stateLabel:STATE_LABELS[activity.state]||'活動',
       visibilityLabel:VISIBILITY_LABELS[activity.visibility]||VISIBILITY_LABELS.private,
-      place:place(activity),participants:people,latitude:activity.metadata?.weather_location?.latitude,longitude:activity.metadata?.weather_location?.longitude,
+      place:place(activity),participants:people,latitude:activity.metadata?.weather_location?.latitude,longitude:activity.metadata?.weather_location?.longitude,locationSource:activity.metadata?.weather_location?.source,
       startAt:start?.toISOString()||activity.startAt||null,endAt:end?.toISOString()||activity.endAt||null,
       relativeDay:relativeDay(activity,base),daysUntil:dayDistance(activity,base),
       recordCount:recordCounts.get(activity.id)||Number(activity.recordCount||0),
