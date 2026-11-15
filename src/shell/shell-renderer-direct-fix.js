@@ -61,7 +61,7 @@
   }
 
   function calendarUrl(route){
-    const query=new URLSearchParams({embedded:'1',defaultToday:'1',source:'shell-renderer-fix',release:'calendar-editor-touch-20261115-v1'});
+    const query=new URLSearchParams({embedded:'1',defaultToday:'1',source:'shell-renderer-fix',release:'weather-calendar-stable-20261115-v1'});
     if(route?.month)query.delete('defaultToday');
     ['month','people','activityId','planId','sheet'].forEach(key=>{
       const value=route?.[key];
@@ -149,7 +149,8 @@
       main.querySelectorAll('.ob36-topbar').forEach(node=>node.remove());
 
       if(route==='calendar'){
-        main.innerHTML=`<section class="ob-calendar-direct" aria-label="カレンダー"><iframe id="outbaseIntegratedCalendar" title="OUTBASE カレンダー" src="${calendarUrl(model.route)}" loading="eager" scrolling="no"></iframe></section>`;
+        const existing=main.querySelector('#outbaseIntegratedCalendar');
+        if(!existing||existing.getAttribute('src')!==calendarUrl(model.route))main.innerHTML=`<section class="ob-calendar-direct" aria-label="カレンダー"><iframe id="outbaseIntegratedCalendar" title="OUTBASE カレンダー" src="${calendarUrl(model.route)}" loading="eager" scrolling="no"></iframe></section>`;
       }
 
       ensureCopyright(main);

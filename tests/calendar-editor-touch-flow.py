@@ -13,6 +13,7 @@ with sync_playwright() as p:
  closed=f.locator('#modal').evaluate("e=>e.classList.contains('hidden')");print('Form gesture dismissed editor:',closed,flush=True);assert not closed
  f.locator('.sheet-head').evaluate("e=>{const touch=y=>new Touch({identifier:2,target:e,clientX:100,clientY:y});e.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:[touch(100)]}));e.dispatchEvent(new TouchEvent('touchmove',{bubbles:true,touches:[touch(230)]}));e.dispatchEvent(new TouchEvent('touchcancel',{bubbles:true,touches:[]}));e.dispatchEvent(new TouchEvent('touchend',{bubbles:true,touches:[]}));}")
  page.wait_for_timeout(250);assert not f.locator('#modal').evaluate("e=>e.classList.contains('hidden')")
+ f.locator('#modal').evaluate("e=>e.dispatchEvent(new MouseEvent('click',{bubbles:true}))");assert not f.locator('#modal').evaluate("e=>e.classList.contains('hidden')")
  assert f.locator('#eventForm [name=title]').input_value()=='閉じずに登録';assert f.locator('#eventForm [name=memo]').input_value()=='入力中の内容を保持'
  f.locator('#eventForm button[type=submit]').click();page.wait_for_function("JSON.parse(localStorage.getItem('outbase_calendar_complete_v3_events')||'[]').some(e=>e.title==='閉じずに登録')")
  rows=page.evaluate("JSON.parse(localStorage.getItem('outbase_calendar_complete_v3_events'))");assert len(rows)==1;assert rows[0]['memo']=='入力中の内容を保持';page.reload();f=page.frame_locator('#outbaseIntegratedCalendar');f.locator('[data-view=list]').click();f.get_by_text('閉じずに登録',exact=True).first.wait_for()

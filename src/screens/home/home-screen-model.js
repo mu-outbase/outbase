@@ -143,11 +143,15 @@
   function weatherNeedsRefresh(item,now=new Date(),reason='timer'){
     const meta=weatherUpdateMeta(item,now);if(reason==='resume')return meta.elapsedMs>=30*60*1000;return meta.needsRefresh;
   }
+  function weatherViewUpdate(live,item,now=new Date()){
+    const meta=weatherUpdateMeta(item,now),fetched=Number(live?.fetchedAt)||0;
+    return Object.freeze({...meta,updatedAt:fetched||null,updatedLabel:fetched?clockLabel(fetched):'未取得',nextUpdateLabel:fetched?meta.nextUpdateLabel:'—'});
+  }
   function weatherPreview(now,item){
     const scope=weatherScope();const live=liveService()?.getToday?.({scope,plan:item,now});
-    if(live)return Object.freeze({...live,scope,update:weatherUpdateMeta(item,new Date(live.fetchedAt||now))});
+    if(live)return Object.freeze({...live,scope,update:weatherViewUpdate(live,item,now)});
     return Object.freeze({
-      status:'loading',sample:false,scope,locationLabel:scope==='current'?'現在地':'千葉県 柏市',condition:'予報を取得しています',
+      status:'unavailable',sample:false,scope,locationLabel:scope==='current'?'現在地':'千葉県 柏市',condition:'天気を取得できません',
       temperature:null,high:null,low:null,rain:null,wind:null,sourceType:'live',provider:liveService()?.provider||'Open-Meteo',
       update:weatherUpdateMeta(item,now)
     });
@@ -155,11 +159,11 @@
   function alertTime(item,dayOffset,hourLabel){const d=new Date(item?.startAt||Date.now());d.setDate(d.getDate()+dayOffset);return `${d.getMonth()+1}/${d.getDate()} ${hourLabel}`;}
   function weatherIntel(item,now=new Date()){
     const live=liveService()?.getPlan?.(item);
-    if(live)return Object.freeze({...live,activityId:item?.id||null,durationLabel:durationLabel(item),update:weatherUpdateMeta(item,new Date(live.fetchedAt||now))});
+    if(live)return Object.freeze({...live,activityId:item?.id||null,durationLabel:durationLabel(item),update:weatherViewUpdate(live,item,now)});
     return Object.freeze({
-      status:'loading',sample:false,activityId:item?.id||null,place:item?.place||'場所未設定',durationLabel:durationLabel(item),
-      condition:'予報を取得しています',high:null,low:null,rainPeak:null,windMax:null,confidence:'—',confidenceLabel:'—',
-      message:'場所と日程を確認して、最新予報を自動取得します。',alerts:Object.freeze([]),provider:liveService()?.provider||'Open-Meteo',update:weatherUpdateMeta(item,now)
+      status:'unavailable',sample:false,activityId:item?.id||null,place:item?.place||'場所未設定',durationLabel:durationLabel(item),
+      condition:'天気を取得できません',high:null,low:null,rainPeak:null,windMax:null,confidence:'—',confidenceLabel:'—',
+      message:'通信状態と予定の場所を確認し、更新ボタンで再度取得してください。',alerts:Object.freeze([]),provider:liveService()?.provider||'Open-Meteo',update:weatherUpdateMeta(item,now)
     });
   }
   function weatherSettings(){
@@ -183,15 +187,15 @@
   }
   function todayWeatherDetail(now=new Date()){
     const scope=weatherScope();const live=liveService()?.getTodayDetail?.({scope,now});
-    const update=weatherUpdateMeta(null,new Date(live?.fetchedAt||now));const settings=weatherSettings();
+    const update=weatherViewUpdate(live,null,now);const settings=weatherSettings();
     if(live)return Object.freeze({...live,scope,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,externalProviderIds:Object.freeze([settings.primary,...settings.compare]),updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});
-    return Object.freeze({status:'loading',kind:'today',sample:false,place:scope==='current'?'現在地':'千葉県 柏市',condition:'予報を取得しています',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),primarySource:liveService()?.provider||'Open-Meteo',compareSources:Object.freeze([]),provider:liveService()?.provider||'Open-Meteo',attribution:liveService()?.attribution||'',updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});
+    return Object.freeze({status:'unavailable',kind:'today',sample:false,place:scope==='current'?'現在地':'千葉県 柏市',condition:'天気を取得できません',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),primarySource:liveService()?.provider||'Open-Meteo',compareSources:Object.freeze([]),provider:liveService()?.provider||'Open-Meteo',attribution:liveService()?.attribution||'',updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});
   }
   function weatherDetail(item,{place='',start='',end=''}={}){
     const live=liveService()?.getDetail?.(item,{place,start,end});
-    if(live){const update=weatherUpdateMeta(item,new Date(live.fetchedAt||Date.now()));const settings=weatherSettings();return Object.freeze({...live,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,externalProviderIds:Object.freeze([settings.primary,...settings.compare]),updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});}
+    if(live){const update=weatherViewUpdate(live,item);const settings=weatherSettings();return Object.freeze({...live,compareSources:settings.compareLabels,referencePrimary:settings.primaryLabel,externalProviderIds:Object.freeze([settings.primary,...settings.compare]),updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update});}
     const update=weatherUpdateMeta(item,new Date());return Object.freeze({
-      status:'loading',sample:false,place:place||item?.place||'場所未設定',condition:'予報を取得しています',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',
+      status:'unavailable',sample:false,place:place||item?.place||'場所未設定',condition:'天気を取得できません',high:null,low:null,rainPeak:null,windGust:null,confidence:'—',
       hourly:Object.freeze([]),judgements:Object.freeze([]),comparisons:Object.freeze([]),primarySource:liveService()?.provider||'Open-Meteo',compareSources:Object.freeze([]),
       provider:liveService()?.provider||'Open-Meteo',attribution:liveService()?.attribution||'',updatedLabel:update.updatedLabel,nextUpdateLabel:update.nextUpdateLabel,update
     });

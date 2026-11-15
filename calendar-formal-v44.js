@@ -340,6 +340,7 @@
     if(sheet){sheet.style.transform='';sheet.style.transition=''}
     state.editing=null;
     reportEmbeddedHeight();
+    if(parent!==window)parent.postMessage({type:'OUTBASE_CALENDAR_EDITOR_CLOSED'},location.origin);
   }
   function bindSheetSwipe(){
     const sheet=$('#modalSheet');
@@ -349,7 +350,7 @@
     const cancelSwipe=()=>{tracking=false;delta=0;sheet.style.transform='';sheet.style.transition='';};
     sheet.addEventListener('touchstart',event=>{
       cancelSwipe();
-      if(sheet.scrollTop>0||event.touches.length!==1||!event.target.closest('.grab,.sheet-head')||event.target.closest('button,input,select,textarea,a'))return;
+      if($('#eventForm')||$('#todoForm')||sheet.scrollTop>0||event.touches.length!==1||!event.target.closest('.grab,.sheet-head')||event.target.closest('button,input,select,textarea,a'))return;
       startX=event.touches[0].clientX;
       startY=event.touches[0].clientY;
       delta=0;tracking=true;
@@ -716,7 +717,7 @@
   $('#notificationBtn')?.addEventListener('click',()=>alert('通知はHOMEの通知センターへ統合予定です。'));
   $('#agendaToggle')?.addEventListener('click',()=>{const section=$('#agendaSection');const collapsed=section.classList.toggle('collapsed');$('#agendaToggle')?.setAttribute('aria-expanded',String(!collapsed));writeUiState();reportEmbeddedHeight();});
   $('#periodButton')?.addEventListener('click',()=>{const value=prompt('表示する年月を入力してください（例：2026-07）',`${state.date.getFullYear()}-${pad(state.date.getMonth()+1)}`);if(!value||!/^[0-9]{4}-[0-9]{2}$/.test(value))return;const [y,m]=value.split('-').map(Number);state.date=new Date(y,m-1,1,12);state.selected=key(state.date);render();});
-  $('#addEventBtn')?.addEventListener('click',()=>openEvent());$('#quickAddBtn')?.addEventListener('click',()=>openEvent());$('#navAdd')?.addEventListener('click',()=>openEvent());$('#settingsBtn')?.addEventListener('click',openSettings);$('#filterBtn')?.addEventListener('click',()=>{$('#filterPanel')?.classList.toggle('hidden');reportEmbeddedHeight();});$('#closeModal')?.addEventListener('click',close);$('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal')close()});
+  $('#addEventBtn')?.addEventListener('click',()=>openEvent());$('#quickAddBtn')?.addEventListener('click',()=>openEvent());$('#navAdd')?.addEventListener('click',()=>openEvent());$('#settingsBtn')?.addEventListener('click',openSettings);$('#filterBtn')?.addEventListener('click',()=>{$('#filterPanel')?.classList.toggle('hidden');reportEmbeddedHeight();});$('#closeModal')?.addEventListener('click',close);$('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'&&!$('#eventForm')&&!$('#todoForm'))close()});
   $('#todayBtn')?.addEventListener('click',()=>{state.date=new Date();state.selected=key(new Date());render()});
   $('#prevBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list'){moveMonth(-1);return;}state.date.setDate(state.date.getDate()-(state.view==='week'?7:1));state.selected=key(state.date);render()});
   $('#nextBtn')?.addEventListener('click',()=>{if(state.view==='todo')return;if(state.view==='month'||state.view==='list'){moveMonth(1);return;}state.date.setDate(state.date.getDate()+(state.view==='week'?7:1));state.selected=key(state.date);render()});
