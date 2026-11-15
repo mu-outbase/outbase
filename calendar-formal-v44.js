@@ -586,13 +586,14 @@
 
         <div class="balanced-actions">
           ${e?'<button type="button" id="deleteEvent" class="danger">削除</button><button type="button" id="duplicateEvent">複製</button>':''}
-          ${e&&selectedCalendar==='camp'?'<button type="button" id="openCampExploration">場内探索・記録</button>':''}
+          ${e&&selectedCalendar==='camp'?'<button type="button" id="openCampExploration">場内探索・記録</button><button type="button" id="openMealConsultation">料理相談・献立</button>':''}
           <button type="submit" class="primary">保存</button>
         </div>
       </form>
     `);
 
     const f=$('#eventForm');
+    $('#openMealConsultation')?.addEventListener('click',()=>{const values={mode:'meal',calendarEventId:e.id,activityId:'calendar-camp:'+e.id};if(parent!==window&&parent.OUTBASE_ROUTER){parent.OUTBASE_ROUTER.navigate('assets',values,{transition:false,skipTransition:true});return;}const url=new URL('./',location.href);url.search=new URLSearchParams({shell:'1',view:'assets',...values}).toString();location.assign(url.href);});
     $('#openCampExploration')?.addEventListener('click',()=>{
       const values={mode:'explore',calendarEventId:e.id,activityId:'calendar-camp:'+e.id};
       if(parent!==window&&parent.OUTBASE_ROUTER){parent.OUTBASE_ROUTER.navigate('places',values,{transition:false,skipTransition:true});return;}
