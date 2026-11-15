@@ -31,3 +31,7 @@ test('plan campground lookup can use the existing POI resolver while keeping the
  const f=setup();let called='';f.context.OUTBASE_WEATHER_SERVICE_V1={...f.api,poiGeocode:async place=>{called=place;return {latitude:35.4,longitude:138.6,label:place,source:'openstreetmap-photon'};}};
  const plan={id:'camp-poi',place:'キャンプ場テスト',startAt:f.date,endAt:f.date};await f.api.refresh({plan});assert.equal(called,plan.place);assert.equal(f.api.getPlan(plan).status,'ready');assert.ok(f.requests.some(url=>url.includes('latitude=35.4')&&url.includes('longitude=138.6')));assert.match(f.api.getDetail(plan).geocodeAttribution,/Photon/);
 });
+
+test('changing selected coordinates cannot reuse a forecast for a different place',async()=>{
+ const f=setup(),plan={id:'selected',place:'キャンプ場',latitude:35,longitude:139,startAt:f.date,endAt:f.date};await f.api.refresh({plan});const changed={...plan,latitude:36,longitude:138};assert.equal(f.api.getPlan(changed).status,'unavailable');assert.equal(f.api.getDetail(changed).status,'unavailable');
+});

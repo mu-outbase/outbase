@@ -148,7 +148,7 @@
   function poiName(row){return normalizedDisplay(poiProperties(row).name||'');}
   function poiCoordinates(row){
     const coordinates=Array.isArray(row?.geometry?.coordinates)?row.geometry.coordinates:[];
-    const longitude=Number(coordinates[0]),latitude=Number(coordinates[1]);
+    const longitude=typeof coordinates[0]==='number'?coordinates[0]:NaN,latitude=typeof coordinates[1]==='number'?coordinates[1]:NaN;
     return {latitude,longitude};
   }
   function poiDisplayName(row){
@@ -171,13 +171,35 @@
     const coordinates=poiCoordinates(row);if(!Number.isFinite(coordinates.latitude)||!Number.isFinite(coordinates.longitude))return -999;
     return score;
   }
+  const candidateRequests=new Map();
+  async function placeCandidates(place,{kind=''}={}){
+    const query=normalizedDisplay(place),requestKey=query+'|'+kind;if(query.length<2)throw new Error('weather_place_missing');
+    if(candidateRequests.has(requestKey))return candidateRequests.get(requestKey);
+    const request=(async()=>{
+      const fixed=pinpointSpot(query);if(fixed)return Object.freeze([Object.freeze({label:fixed.label,address:fixed.label,latitude:fixed.latitude,longitude:fixed.longitude,source:'place-catalog'})]);
+      const found=new Map();
+      for(const q of poiQueries(query)){
+        const params=new URLSearchParams({q,limit:'12',lang:'default',countrycode:'JP'});
+        for(const row of await fetchPoiJson(`${PHOTON_ENDPOINT}?${params}`)){
+          const p=poiProperties(row),coords=poiCoordinates(row),score=poiScore(row,query,kind==='camp'?`${q} キャンプ`:q);
+          if(score<100||!poiName(row)||Math.abs(coords.latitude)>90||Math.abs(coords.longitude)>180||(p.countrycode&&String(p.countrycode).toLowerCase()!=='jp'))continue;
+          const key=`${coords.latitude},${coords.longitude}`;
+          const value={label:poiName(row),address:poiDisplayName(row),...coords,source:'openstreetmap-photon',score};
+          if(!found.has(key)||found.get(key).score<score)found.set(key,value);
+        }
+        if(found.size)break;
+      }
+      return Object.freeze([...found.values()].sort((a,b)=>b.score-a.score).slice(0,8).map(Object.freeze));
+    })();
+    candidateRequests.set(requestKey,request);try{return await request;}finally{candidateRequests.delete(requestKey);}
+  }
   async function poiGeocode(place){
     const original=normalizedDisplay(place);if(!original)throw new Error('weather_place_missing');
     const fixed=pinpointSpot(original);if(fixed)return {...fixed,query:original};
     const cached=cachedPoi(original);if(cached)return cached;
     let best=null;
     for(const query of poiQueries(original)){
-      const params=new URLSearchParams({q:query,limit:'8',lang:'ja',countrycode:'JP'});
+      const params=new URLSearchParams({q:query,limit:'8',lang:'default',countrycode:'JP'});
       const rows=await fetchPoiJson(`${PHOTON_ENDPOINT}?${params}`);
       for(const row of rows){const score=poiScore(row,original,query);if(!best||score>best.score)best={row,score,query};}
       if(best&&best.score>=220)break;
@@ -261,5 +283,5 @@
     return detail;
   }
 
-  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,poiGeocode,pinpointSpot,PINPOINT_SPOTS,POI_CACHE_KEY,customLocationFixVersion:'r29'});
+  globalThis.OUTBASE_WEATHER_SERVICE_V1=Object.freeze({...base,refresh,getDetail,poiGeocode,placeCandidates,pinpointSpot,PINPOINT_SPOTS,POI_CACHE_KEY,customLocationFixVersion:'r29'});
 })();

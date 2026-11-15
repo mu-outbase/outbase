@@ -10,7 +10,7 @@
   const WEATHER_PLACE_HISTORY_LIMIT=8;
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   let root=null,mounted=false,bound=false,previousScrollRestoration=null,renderPromise=null,pendingReason=null;
-  let weatherTimer=null,weatherRefreshing=false,radarTimer=null;
+  let weatherTimer=null,weatherRefreshing=false,queuedWeatherRefresh=null,radarTimer=null;
   let sheetSwipe=null;
 
   function modalHost(){return document.getElementById('outbaseShellModal');}
@@ -358,11 +358,52 @@
     host.__ob36HourlyRows=Array.isArray(detail.hourly)?detail.hourly:[];bindHourlyRows(host);bindExternalWeatherLinks(host,{detail,mode,place:targetPlace,start:targetStart,end:targetEnd});
   }
 
+  const planPlaceViews=new Map();
+  function bindWeatherPlacePicker(model){
+    const plan=model?.home?.selectedPlan,initial=root?.querySelector('[data-plan-place-picker]');if(!plan||!initial)return;
+    let state=planPlaceViews.get(plan.id);
+    if(!state||state.place!==plan.place){state={place:plan.place,query:plan.place||plan.title||'',rows:null,busy:false,saving:false,message:'',started:false};planPlaceViews.set(plan.id,state);}
+    const host=()=>planPlaceViews.get(plan.id)===state?[...root.querySelectorAll('[data-plan-place-picker]')].find(node=>node.dataset.planId===String(plan.id)):null;
+    const paint=()=>{
+      const node=host();if(!node)return;
+      node.querySelector('[data-plan-place-status]').textContent=state.message;
+      node.querySelector('[data-plan-place-search]').disabled=state.busy||state.saving;
+      node.querySelector('[data-plan-place-query]').disabled=state.saving;
+      const results=node.querySelector('[data-plan-place-results]');results.replaceChildren();
+      for(const row of state.rows||[]){
+        const button=document.createElement('button');button.type='button';button.disabled=state.saving;button.style.cssText='display:block;width:100%;text-align:left;min-height:60px;margin:8px 0;padding:12px;border:1px solid #d6dfd6;border-radius:12px;background:white';
+        const title=document.createElement('b'),address=document.createElement('small');title.textContent=row.label;address.textContent=row.address;address.style.cssText='display:block;margin-top:4px';button.append(title,address);results.append(button);
+        button.onclick=async()=>{
+          if(state.saving)return;state.saving=true;state.message='選んだ場所を予定に保存しています。';paint();
+          try{
+            await globalThis.OUTBASE_PLAN_LOCATION.select(plan,row);planPlaceViews.delete(plan.id);modelApi?.invalidate?.('home');
+            globalThis.OUTBASE_ACTIVITY_ROUTE_V16?.invalidate?.(plan.id);globalThis.OUTBASE_ROUTE_UNIFICATION_V22?.clearPayloadCache?.();
+            toast('選んだ場所を保存しました。');await performWeatherRefresh('place-choice',{silent:false,plansOverride:[]});
+          }catch(error){state.message=error?.message==='changed_plan'?'予定が別の画面で変更されました。画面を開き直して選び直してください。':'場所を保存できませんでした。空き容量や通信状態を確認してください。';state.saving=false;paint();}
+        };
+      }
+    };
+    const search=async()=>{
+      if(state.busy||state.saving)return;const query=state.query.trim();if(query.length<2){state.message='場所の名前を2文字以上入力してください。';paint();return;}
+      state.busy=true;state.started=true;state.rows=null;state.message='予定名・場所名から候補を探しています。';paint();
+      try{
+        const rows=await globalThis.OUTBASE_WEATHER_SERVICE_V1.placeCandidates(query,{kind:plan.type});
+        if(state.query.trim()!==query)return;
+        state.rows=rows;state.message=rows.length?`${rows.length}件の候補があります。地名・住所を確認して選んでください。`:'候補が見つかりませんでした。正式名称や市区町村を加えて検索してください。';
+      }catch(_error){if(state.query.trim()===query)state.message='候補を取得できませんでした。通信状態を確認し、もう一度検索してください。';}
+      finally{state.busy=false;paint();}
+    };
+    const input=initial.querySelector('[data-plan-place-query]');input.value=state.query;
+    input.oninput=()=>{state.query=input.value;state.rows=null;state.message='';paint();};
+    input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();search();}};
+    initial.querySelector('[data-plan-place-search]').onclick=search;paint();
+    if(!state.started&&(!Number.isFinite(plan.latitude)||!Number.isFinite(plan.longitude))&&(plan.type==='camp'||/キャンプ|camp/i.test(plan.title||'')))search();
+  }
   async function weatherContext(){const model=await homeModel()?.build?.();return {model,selected:model?.selectedPlan||model?.next?.[0]||null,plans:model?.next||[]};}
   function clearWeatherTimer(){if(weatherTimer){clearTimeout(weatherTimer);weatherTimer=null;}}
   async function scheduleWeatherRefresh(){clearWeatherTimer();if(!mounted)return;const {selected}=await weatherContext();const meta=homeModel()?.weatherUpdateMeta?.(selected,new Date());if(!meta)return;const delay=Math.max(15000,Math.min(2147480000,Number(meta.nextUpdateAt)-Date.now()));weatherTimer=setTimeout(()=>performWeatherRefresh('timer',{silent:true}),delay);}
   async function performWeatherRefresh(reason='manual',{silent=false,custom=null,planOverride=null,plansOverride=null,scopeOverride=null}={}){
-    if(weatherRefreshing)return false;weatherRefreshing=true;document.body.classList.add('ob36-weather-refreshing');
+    if(weatherRefreshing){if(reason==='place-choice')queuedWeatherRefresh={reason,options:{silent,custom,planOverride,plansOverride,scopeOverride}};return false;}weatherRefreshing=true;document.body.classList.add('ob36-weather-refreshing');
     let connected=false,failed=false,partial=false;
     try{
       const {selected,plans}=await weatherContext();const service=globalThis.OUTBASE_WEATHER_SERVICE_V1;const activePlan=planOverride||selected;const scope=scopeOverride||homeModel()?.weatherPreview?.(new Date(),activePlan)?.scope||'home';
@@ -370,7 +411,7 @@
       const result=await service.refresh({reason,plan:activePlan,plans:plansOverride||plans,scope,custom});connected=true;partial=!!result?.partial;
       homeModel()?.markWeatherUpdated?.(new Date(),activePlan);modelApi?.invalidate?.('home');if(router?.current?.()?.name==='home')await render('data-change');
     }catch(error){failed=true;console.warn('[OUTBASE weather refresh]',error);modelApi?.invalidate?.('home');if(router?.current?.()?.name==='home')await render('data-change');}
-    finally{weatherRefreshing=false;document.body.classList.remove('ob36-weather-refreshing');scheduleWeatherRefresh();}
+    finally{weatherRefreshing=false;document.body.classList.remove('ob36-weather-refreshing');scheduleWeatherRefresh();if(queuedWeatherRefresh){const next=queuedWeatherRefresh;queuedWeatherRefresh=null;queueMicrotask(()=>performWeatherRefresh(next.reason,next.options));}}
     if(!silent){if(failed)toast('更新できませんでした。前回の予報を表示します');else if(connected)toast(partial?'取得できた地点の天気を更新しました。未取得の予定は場所を確認してください。':'天気を更新しました');}
     return !failed;
   }
@@ -417,7 +458,7 @@
       }else setTimeout(run,0);
     });
   }
-  async function performRender(reason){if(!mounted||!root)return;const before=currentScrollY();const force=reason==='data-change';await renderer.mount(root,{force});await applyScroll(routeScrollTarget(reason,before));}
+  async function performRender(reason){if(!mounted||!root)return;const before=currentScrollY();const force=reason==='data-change';const model=await renderer.mount(root,{force});if(model?.route?.name==='home')bindWeatherPlacePicker(model);await applyScroll(routeScrollTarget(reason,before));}
   function render(reason='refresh'){
     if(!mounted||!root)return Promise.resolve();pendingReason=reason;if(renderPromise)return renderPromise;
     renderPromise=(async()=>{while(pendingReason){const next=pendingReason;pendingReason=null;await performRender(next);}})().catch(error=>{console.error('[OUTBASE v166.3 HOME v36 r10] shell render failed',error);fallback('render_failed');}).finally(()=>{renderPromise=null;});return renderPromise;
